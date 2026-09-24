@@ -30,6 +30,7 @@ class FeatureFlag(Enum):
     """Encapsulates feature-flag keys shared by the application domains."""
 
     ALLOW_DELETE_OPERATIONAL_DATA = "ALLOW_DELETE_OPERATIONAL_DATA"
+    ALLOW_DELETE_REF_DATA = "ALLOW_DELETE_REF_DATA"
 
 
 class Role(Enum):
