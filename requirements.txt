@@ -7,11 +7,11 @@ fastapi[standard]>=0.129.0,<0.137.0
 gunicorn==26.2.*
 starlette==1.6.*
 httpx==0.28.1
-urllib3==2.7.0
+urllib3==2.8.0
 pyjwt==2.14.0
 
 #database handling
-sqlalchemy==2.0.52
+sqlalchemy==2.0.54
 sqlalchemy_utils==0.42.1
 alembic==1.20.0
 
@@ -32,7 +32,7 @@ numpy==2.5.3
 biopython==1.88
 
 # other
-cachetools==7.1.8
+cachetools==7.2.0
 slowapi==0.1.10
 python-dateutil==2.9.0.post0
 types-python-dateutil==2.9.*
