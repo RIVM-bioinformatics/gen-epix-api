@@ -13,8 +13,7 @@ from typing import Any, Literal
 import jwt
 
 from gen_epix.commondb import api
-from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain import command, enum, model, util
 from gen_epix.fastapp import Client, HttpProtocol, exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
@@ -568,7 +567,9 @@ class CommondbClient(Client):
         if "app_cfg" in local_client_props:
             app_cfg = local_client_props.pop("app_cfg")
         else:
-            app_cfg = AppCfg(app_type, service_type_enum, repository_type_enum)
+            app_cfg = util.get_app_cfg_class(app_type)(
+                app_type, service_type_enum, repository_type_enum
+            )
         log_setup = local_client_props.get("log_setup", logger is not None)
         # Create local app and user
         app_composer = app_composer_class(app_cfg, log_setup=log_setup)

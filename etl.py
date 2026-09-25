@@ -34,14 +34,20 @@ import datetime
 import importlib
 import os
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, cast
 
 from alembic import command
 from alembic.config import Config
 
+from gen_epix.casedb.config.cfg_types import ResolvedCasedbAppCfgSettingsDict
 from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.config.cfg_types import (
+    ResolvedAppCfgSettingsDict,
+    ResolvedRepositoryEntryDict,
+)
 from gen_epix.commondb.domain.enum import (
     AppType,
     AppTypeSet,
@@ -51,6 +57,7 @@ from gen_epix.commondb.domain.enum import (
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.util import (
     create_demo_data_from_repository,
+    get_app_cfg_class,
     set_env_variables,
 )
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
@@ -87,6 +94,37 @@ def _connect_args(connection_string: str) -> dict[str, float]:
     if "pyodcb" in connection_string:
         return {"connect_timeout": CONNECTION_TIMEOUT, "timeout": CONNECTION_TIMEOUT}
     return {}
+
+
+def _resolved_cfg_for_app(
+    app_type: AppType, app_cfg: AppCfg
+) -> ResolvedAppCfgSettingsDict | ResolvedCasedbAppCfgSettingsDict:
+    """Return the app-specific resolved cfg type for dynamic repository lookup."""
+    if app_type == AppType.CASEDB:
+        return cast(ResolvedCasedbAppCfgSettingsDict, app_cfg.cfg)
+    return app_cfg.cfg
+
+
+def _repository_cfg(
+    app_type: AppType, app_cfg: AppCfg, service_type_value: str
+) -> ResolvedRepositoryEntryDict | None:
+    """Return the repository config for a dynamic service type key, if present."""
+    resolved_cfg = _resolved_cfg_for_app(app_type, app_cfg)
+    if "repository" not in resolved_cfg:
+        return None
+    return cast(
+        Mapping[str, ResolvedRepositoryEntryDict], resolved_cfg["repository"]
+    ).get(service_type_value)
+
+
+def _require_repository_cfg(
+    app_type: AppType, app_cfg: AppCfg, service_type_value: str
+) -> ResolvedRepositoryEntryDict:
+    """Return the repository config for a service type, raising if it is absent."""
+    repository_cfg = _repository_cfg(app_type, app_cfg, service_type_value)
+    if repository_cfg is None:
+        raise KeyError(service_type_value)
+    return repository_cfg
 
 
 def run_migrate(module_root: str, connection_string: str) -> None:
@@ -126,13 +164,15 @@ def run_reset_database(
     for service_type in service_type_enum.ServiceType:
         print(f" STARTING RESET FOR {app_type.value} - {service_type.value} =====")
 
-        sa_sql_app_cfg = AppCfg(
+        sa_sql_app_cfg = get_app_cfg_class(app_type)(
             app_type.value,
             service_type_enum.ServiceType,
             service_type_enum.RepositoryType,
             log_setup=False,
         )
-        sa_sql_repository_cfg = sa_sql_app_cfg.cfg["repository"].get(service_type.value)
+        sa_sql_repository_cfg = _repository_cfg(
+            app_type, sa_sql_app_cfg, service_type.value
+        )
         if not sa_sql_repository_cfg:
             continue
         entities = domain.get_dag_sorted_entities(
@@ -175,13 +215,15 @@ def run_migrate_database(
     """
     migrate_connection_string: str | None = None
     for service_type in service_type_enum.ServiceType:
-        sa_sql_app_cfg = AppCfg(
+        sa_sql_app_cfg = get_app_cfg_class(app_type)(
             app_type.value,
             service_type_enum.ServiceType,
             service_type_enum.RepositoryType,
             log_setup=False,
         )
-        sa_sql_repository_cfg = sa_sql_app_cfg.cfg["repository"].get(service_type.value)
+        sa_sql_repository_cfg = _repository_cfg(
+            app_type, sa_sql_app_cfg, service_type.value
+        )
         if not sa_sql_repository_cfg:
             continue
         sa_repository_class: type[SARepository] = sa_sql_repository_cfg["class"]
@@ -222,13 +264,13 @@ def run_load_demodata(
             envvar_prefix + "LOG_CONFIG_FILE", original_log_config_file_environ
         )
 
-        dict_app_cfg = AppCfg(
+        dict_app_cfg = get_app_cfg_class(app_type)(
             app_type.value,
             service_type_enum.ServiceType,
             service_type_enum.RepositoryType,
             log_setup=False,
         )
-        dict_repository_cfg = dict_app_cfg.cfg["repository"].get(service_type.value)
+        dict_repository_cfg = _repository_cfg(app_type, dict_app_cfg, service_type.value)
         if not dict_repository_cfg:
             continue
         entities = domain.get_dag_sorted_entities(
@@ -248,13 +290,15 @@ def run_load_demodata(
             envvar_prefix + "LOG_CONFIG_FILE", original_log_config_file_environ
         )
 
-        sa_sql_app_cfg = AppCfg(
+        sa_sql_app_cfg = get_app_cfg_class(app_type)(
             app_type.value,
             service_type_enum.ServiceType,
             service_type_enum.RepositoryType,
             log_setup=False,
         )
-        sa_sql_repository_cfg = sa_sql_app_cfg.cfg["repository"][service_type.value]
+        sa_sql_repository_cfg = _require_repository_cfg(
+            app_type, sa_sql_app_cfg, service_type.value
+        )
         sa_repository_class: type[SARepository] = sa_sql_repository_cfg["class"]
         connection_string = sa_sql_repository_cfg["props"]["connection_string"]
 

@@ -1,3 +1,3 @@
-"""Mark the casedb configuration directory as a discoverable Python package."""
+"""Expose the casedb-specific AppCfg subclass."""
 
-# Needed for it to be included in the package
+from gen_epix.casedb.config.cfg import CasedbAppCfg as CasedbAppCfg

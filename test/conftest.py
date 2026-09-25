@@ -1,3 +1,4 @@
+import os
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -5,6 +6,20 @@ from typing import Any
 import polars as pl
 import pytest
 import xlsxwriter
+
+# SA_SQL repository defaults no longer hardcode uid/pwd (they must be
+# supplied explicitly so a deployment that forgets a credential fails
+# closed instead of silently connecting with a known password). The test
+# suite's SA_SQL tests connect to the local docker-compose SQL Server
+# (docker-compose.sql*.yml), which is provisioned with these credentials —
+# set them here, once, for the whole suite, mirroring how docker-compose
+# sets them for the app containers. setdefault() so a test/settings file
+# that supplies its own override still wins.
+for _prefix in ("COMMONDB_", "CASEDB_", "SEQDB_", "OMOPDB_"):
+    os.environ.setdefault(f"{_prefix}REPOSITORY__DEFAULTS__PROPS__UID", "sa")
+    os.environ.setdefault(
+        f"{_prefix}REPOSITORY__DEFAULTS__PROPS__PWD", "Your_password123"
+    )
 
 # Initialize non-aggregated test data: tests incl. their result, scenarios, and the link between them
 tests: list[dict[str, Any]] = []

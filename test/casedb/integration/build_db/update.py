@@ -19,6 +19,7 @@ import pydantic
 import pytest
 
 from gen_epix.casedb.domain import enum, exc, model
+from gen_epix.commondb.domain.enum import FeatureFlag
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 
@@ -348,7 +349,7 @@ class TestUpdate:
     def test_update_update_user_own_organization(self, env: Env) -> None:
         if env.verbose:
             print("\nTEMP User own organization update:")
-        env.app.set_feature_flag("update_own_organization", True)
+        env.app.set_feature_flag(FeatureFlag.UPDATE_OWN_ORGANIZATION, True)
         for role in sorted(env.role_set_map[CommonRoleSet.ALL]):
             # if role == CommonRole.ROOT:
             #     continue
@@ -378,7 +379,7 @@ class TestUpdate:
     ) -> None:
         if env.verbose:
             print("\nTEMP User own organization update feature disabled:")
-        env.app.set_feature_flag("update_own_organization", False)
+        env.app.set_feature_flag(FeatureFlag.UPDATE_OWN_ORGANIZATION, False)
         for role in sorted(env.role_set_map[CommonRoleSet.ALL]):
             user_str = f"{env.rev_role_map[role].name.lower()}1_1"
             if env.verbose:

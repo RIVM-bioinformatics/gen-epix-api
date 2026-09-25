@@ -43,22 +43,26 @@ The trailing `app = FAST_API` alias exists only for backwards compatibility with
 
 ### 2b. Settings Loading (`_init_load_settings`)
 
-1. Constructs a `SettingsManager` with the env-var prefix `COMMONDB_`.
-2. `SettingsManager.load_settings()` reads the list of TOML settings files from the env var `COMMONDB_SETTINGS_FILES`, then initialises a `Dynaconf` object. Dynaconf merges the files in order, so later files override earlier ones. Runtime env vars (e.g. `COMMONDB__LOG__LEVEL`) override everything via the `__` separator convention.
+1. Constructs a `SettingsManager` with the env-var prefix `COMMONDB_`, and calls `AppCfg._get_default_settings()`/`_get_validators()` to build the two things it seeds Dynaconf with in addition to any settings files.
+2. `SettingsManager.load_settings()` passes those hardcoded defaults into `Dynaconf` as constructor keyword arguments — the lowest-precedence layer, below any settings file — then reads the list of TOML settings files from the env var `COMMONDB_SETTINGS_FILES`. Dynaconf merges the files in order, so later files override earlier ones, and any of them can override a default. Runtime env vars (e.g. `COMMONDB__LOG__LEVEL`) override everything via the `__` separator convention. The registered validators then run immediately, raising `dynaconf.validator.ValidationError` for the first value that doesn't fit its expected type, allowed set, or presence.
 
-   The settings files that ship with COMMONDB are:
-   - `settings.toml` — base config (host, port, HTTP headers, service class names, default factories).
-   - `feature_flags.toml` — feature flag configuration.
-   - `settings.repository.dict.toml` or `settings.repository.sa.toml` — swaps in the Dict or SQLAlchemy repository classes for each service type.
-   - Secret/overlay files (prefixed `.example.secrets.*`) — connection strings, file paths, IdP tokens. These are never checked in; they are supplied per environment.
+   COMMONDB's own values are the hardcoded defaults themselves (`AppCfg._DEFAULT_SETTINGS` in `gen_epix/commondb/config/cfg.py`) — no per-app subclass or settings file is needed to reproduce them. The settings files COMMONDB ships are the ones needed for a genuine runtime choice, not filler:
+   - `settings.toml` — present, but typically empty of anything the defaults don't already cover.
+   - `settings.repository.dict.toml` / `settings.repository.sa_sqlite.toml` — swap in the Dict or SQLite repository classes and demo-data paths; loaded only for `DICT_*`/`SA_SQLITE_*` repository modes. `SA_SQL` (the default backend) needs no repository file at all, unless a local `secrets.repository.sa_sql.toml` override is present.
+   - Root-level identity-provider files (`identity_providers.toml` / `mock_identity_provider.toml` / `no_identity_providers.toml`) — selected per `DevIdpConfig`.
 
 ### 2c. Settings Validation (`_init_validate_settings`)
 
-Dynaconf returns plain strings for class references and factory names. This phase resolves them into actual Python objects:
+By the time this phase runs, `dynaconf.Validator`s (§2b) have already
+rejected any value with the wrong type or an unrecognized name, so a bad
+config value is a startup failure with a specific message rather than an
+opaque `AttributeError` here. Dynaconf still returns plain strings for
+class references and factory names; this phase resolves them into actual
+Python objects:
 
 1. **Factory resolution** — The strings `"DATETIME_NOW"` and `"ULID"` in `service.defaults.props` are replaced by the corresponding callables from `TimestampFactory` and `IdFactory` (both simple `Enum` classes wrapping `datetime.now(UTC)` and `ulid.new().uuid`).
-2. **Service class resolution** — For every `ServiceType`, the `module` + `class_name` pair in `service.<type>` is turned into an actual class via `importlib.import_module`.
-3. **Repository class resolution** — Same treatment for every entry in `repository.<type>`.
+2. **Service class resolution** — For every `ServiceType`, the `module` + `class_name` pair in `service.<type>` is turned into an actual class via `importlib.import_module`, wrapped so a resolution failure raises `InitializationServiceError` naming the app, the key, and the module/class string that failed.
+3. **Repository class resolution** — Same treatment for every entry in `repository.<type>`, raising `RepositoryInitializationServiceError` on failure.
 4. **Default merging** — The `service.defaults` and `repository.defaults` blocks are shallow-merged into each per-type block so that every service and repository inherits the common `timestamp_factory` / `id_factory` without repeating them.
 
 ---

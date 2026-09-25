@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from dynaconf import Dynaconf
+from dynaconf import Dynaconf, Validator
 
 
 class SettingsManager:
@@ -34,6 +34,8 @@ class SettingsManager:
         settings_files_envvar: str | None = None,
         envvar_separator: str | None = None,
         post_hooks: Callable | list[Callable] | None = None,
+        defaults: dict[str, Any] | None = None,
+        validators: list[Validator] | None = None,
     ) -> Dynaconf:
         """
         Load settings from configured files or an environment variable.
@@ -45,22 +47,39 @@ class SettingsManager:
             settings_files_envvar: Environment variable containing settings paths.
             envvar_separator: Separator used by Dynaconf nested environment overrides.
             post_hooks: Optional Dynaconf hooks executed after loading settings.
+            defaults: Business-config defaults, given the lowest precedence
+                under settings files and environment variables. Ignored when
+                this manager was constructed with an explicit
+                `settings_files` list: that mode's contract is complete
+                control over the configuration, so the given files are the
+                sole source of truth.
+            validators: Dynaconf validators applied immediately after
+                loading; a failing validator raises
+                dynaconf.validator.ValidationError. Also applied in the
+                explicit-`settings_files` mode described above.
 
         Returns:
-            Loaded Dynaconf settings instance.
+            Loaded, validated Dynaconf settings instance.
 
         Raises:
             ValueError: If no settings files are configured.
             FileNotFoundError: If a configured settings file does not exist.
+            dynaconf.validator.ValidationError: If a validator fails.
         """
         if self._settings_files:
-            # Load only settings files into Dynaconf, ignoring environment variables
+            # Load only settings files into Dynaconf, ignoring environment
+            # variables and defaults: this mode's contract is complete
+            # control over the configuration for testing, so the given files
+            # are the sole source of truth. Validators still run, so an
+            # incomplete or malformed file fails with a specific message.
             settings_files = self._settings_files
             settings = Dynaconf(
                 settings_files=settings_files,
                 lowercase_read=self.lowercase_keys,
                 merge_enabled=True,
+                validators=validators,
             )
+            settings.validators.validate_all()
             return settings
         settings_files_envvar = (
             settings_files_envvar or self.DEFAULT_SETTINGS_FILES_ENVVAR
@@ -95,6 +114,7 @@ class SettingsManager:
 
         # Load settings using dynaconf for environment variable support
         settings = Dynaconf(
+            **(defaults or {}),
             envvar_prefix=self.prefix_without_underscore,
             settings_files=settings_files,
             envvar_separator=envvar_separator,  # Support nested keys like API__HOST
@@ -102,7 +122,9 @@ class SettingsManager:
             ignore_unknown_envvars=True,
             merge_enabled=True,
             post_hooks=post_hooks,
+            validators=validators,
         )
+        settings.validators.validate_all()
         self._settings_cache = settings
 
         return self._settings_cache

@@ -1,11 +1,23 @@
+[repository.defaults]
+type = "DICT"
+
+[repository.defaults.props]
+dir = "./data/commondb/demo"
+
 [repository.abac]
 module = "gen_epix.commondb.repositories"
 class_name = "AbacDictRepository"
+[repository.abac.props]
+file = "@format {this.repository.defaults.props.dir}/commondb.dict.abac.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.organization]
 module = "gen_epix.commondb.repositories"
 class_name = "OrganizationDictRepository"
+[repository.organization.props]
+file = "@format {this.repository.defaults.props.dir}/commondb.dict.organization.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.system]
 module = "gen_epix.commondb.repositories"
 class_name = "SystemDictRepository"
+[repository.system.props]
+file = "@format {this.repository.defaults.props.dir}/commondb.dict.system.{this.repository.defaults.props.variant}.pkl.gz"

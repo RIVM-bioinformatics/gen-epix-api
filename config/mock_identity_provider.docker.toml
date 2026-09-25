@@ -18,8 +18,9 @@ __key__ = "sub"
 
 # The client_credentials grant sets sub=client_id, so the lsp-data "mock"
 # client's JWT carries sub="mock". Overriding root.user.key to "mock" here
-# (this file is loaded after .example.secrets.service.toml, so it wins)
-# makes is_root_user_claims() match on the first request and lets
-# create_root_user_from_claims() auto-create the root org+user idempotently.
+# (a settings file always outranks AppCfg's own hardcoded default, which is
+# "root@dummy.org") makes is_root_user_claims() match on the first request
+# and lets create_root_user_from_claims() auto-create the root org+user
+# idempotently.
 [service.auth.props.root.user]
 key = "mock"
