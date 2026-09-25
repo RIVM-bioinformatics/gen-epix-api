@@ -11,7 +11,7 @@ urllib3==2.8.0
 pyjwt==2.14.0
 
 #database handling
-sqlalchemy==2.0.54
+sqlalchemy==2.1.1
 sqlalchemy_utils==0.42.1
 alembic==1.20.0
 
