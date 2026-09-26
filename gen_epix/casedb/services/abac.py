@@ -99,7 +99,7 @@ class AbacService(BaseAbacService):
         if cmd.user is None or cmd.user.id is None:
             raise exc.UnauthorizedAuthError("94c7218c", "Command has no user")
         user_id: UUID = cmd.user.id  # type: ignore[assignment]
-        return self._get_case_abac_cached(user_id)  # type: ignore
+        return self._get_case_abac_cached(user_id)
 
     def get_ref_data_access(self, cmd: command.Command) -> model.RefDataAccess:
         """Return the reference-data scope for the command user.

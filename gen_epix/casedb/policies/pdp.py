@@ -3,6 +3,7 @@ from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
+from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import OnException
 
 
@@ -73,32 +74,65 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
 
         return all(is_readable.values())
 
-    def filter_readable_case_sets(
+    def filter_case_set_ids(
         self,
-        user: model.User,
-        case_sets: Iterable[model.CaseSet],
-        case_set_data_collection_ids: Iterable[frozenset[UUID]],
-        on_filtered: Literal[OnException.IGNORE, OnException.RAISE] = OnException.RAISE,
-    ) -> Iterable[model.CaseSet]:
+        cmd: command.CaseSetCrudCommand,
+        case_set_data_collection_ids: Iterable[tuple[UUID, UUID, frozenset[UUID]]],
+        right: enum.CaseRight,
+        on_filtered: Literal[OnException.SKIP, OnException.RAISE] = OnException.RAISE,
+    ) -> Iterable[UUID]:
         """See parent class."""
-        __doc__ = BasePolicyDecisionPoint.filter_readable_case_sets.__doc__
+        __doc__ = BasePolicyDecisionPoint.filter_case_set_ids.__doc__
 
-        case_abac = self.get_case_abac
-        for case_set, data_collection_ids in zip(
-            case_sets, case_set_data_collection_ids
-        ):
-            if self.is_readable_columns_for_data_collections(
-                complete_case_type=case_set.complete_case_type,
-                data_collection_ids=data_collection_ids,
-                col_ids=frozenset(case_set.col_ids),
-            ):
-                filtered_case_sets.append(case_set)
-            elif on_filtered == OnException.RAISE:
-                raise UnauthorizedAuthError(
-                    f"User {user} is not authorized to access case set {case_set.id}"
-                )
+        # Parse input
+        if right not in enum.CaseRightSet.CASE_SET.value:
+            raise ValueError(f"Invalid case right for case set: {right}")
 
-        return filtered_case_sets
+        case_abac = self.get_case_abac(cmd)
+
+        # Special case: full access
+        if case_abac.is_full_access:
+            for case_set_id, _, _ in case_set_data_collection_ids:
+                yield case_set_id
+            return
+
+        # Loop over each (case_set_id, case_type_id, data_collection_ids) and determine if the CaseSet is readable
+        cache: dict[tuple[UUID, frozenset[UUID]], bool] = {}
+        for (
+            case_set_id,
+            case_type_id,
+            data_collection_ids,
+        ) in case_set_data_collection_ids:
+            is_accessible = cache.get((case_type_id, data_collection_ids))
+            if is_accessible is None:
+                # Not cached
+                # Determine if the case set is accessible from at least one of the data collections
+                cache[(case_type_id, data_collection_ids)] = False
+                if case_type_id not in case_abac.case_type_access_abacs:
+                    continue
+                case_abac_for_case_type = case_abac.case_type_access_abacs[case_type_id]
+                is_accessible = False
+                for data_collection_id in data_collection_ids:
+                    if data_collection_id not in case_abac_for_case_type:
+                        continue
+                    is_accessible = case_abac_for_case_type[
+                        data_collection_id
+                    ].is_allowed(right)
+                    if is_accessible:
+                        cache[(case_type_id, data_collection_ids)] = is_accessible
+                        break
+            # If the case set is not accessible, handle according to the on_filtered policy
+            if not is_accessible:
+                if on_filtered == OnException.SKIP:
+                    continue
+                elif on_filtered == OnException.RAISE:
+                    user_id = self.get_command_user_id(cmd)
+                    raise exc.UnauthorizedAuthError(
+                        "dad1bec1",
+                        f"User {user_id} is not authorized to access case set {case_set_id}",
+                    )
+            # Yield the case set ID since accessible
+            yield case_set_id
 
     # def get_readable_cols_by_data_collection(
     #     self, case_type_id: UUID

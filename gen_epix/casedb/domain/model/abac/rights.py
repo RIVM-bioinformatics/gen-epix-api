@@ -61,6 +61,40 @@ class CaseTypeAccessAbac(BaseModel):
             or self.write_case_set
         )
 
+    def is_allowed(
+        self, right: CaseRight, col_ids: frozenset[UUID] | None = None
+    ) -> bool:
+        """Check if the specified right is allowed for this case type access.
+
+        Args:
+            right: The case right to check.
+
+        Returns:
+            bool: True if the right is allowed, False otherwise.
+        """
+        if right == CaseRight.ADD_CASE:
+            return self.add_case
+        elif right == CaseRight.REMOVE_CASE:
+            return self.remove_case
+        elif right == CaseRight.ADD_CASE_SET:
+            return self.add_case_set
+        elif right == CaseRight.REMOVE_CASE_SET:
+            return self.remove_case_set
+        elif right == CaseRight.READ_CASE:
+            if col_ids is None:
+                return len(self.read_col_ids) > 0
+            return col_ids.issubset(self.read_col_ids)
+        elif right == CaseRight.WRITE_CASE:
+            if col_ids is None:
+                return len(self.write_col_ids) > 0
+            return col_ids.issubset(self.write_col_ids)
+        elif right == CaseRight.READ_CASE_SET:
+            return self.read_case_set
+        elif right == CaseRight.WRITE_CASE_SET:
+            return self.write_case_set
+        else:
+            raise ValueError(f"Unknown case right: {right}")
+
 
 class CaseTypeShareAbac(BaseModel):
     """Represents source-dependent share rights into one target collection."""

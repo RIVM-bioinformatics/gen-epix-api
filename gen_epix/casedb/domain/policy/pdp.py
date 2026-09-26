@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Any, Iterable, Literal
 from uuid import UUID
 
-from gen_epix.casedb.domain import command, model
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.service.abac import BaseAbacService
 from gen_epix.commondb.policies import PolicyDecisionPoint as CommonPolicyDecisionPoint
 from gen_epix.fastapp import OnException
@@ -40,26 +40,26 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
         raise NotImplementedError()
 
     @abstractmethod
-    def filter_readable_case_sets(
+    def filter_case_set_ids(
         self,
-        user: model.User,
-        case_sets: Iterable[model.CaseSet],
-        case_set_data_collection_ids: Iterable[frozenset[UUID]],
-        on_filtered: Literal[OnException.IGNORE, OnException.RAISE] = OnException.RAISE,
-    ) -> Iterable[model.CaseSet]:
-        """Check if the case set is readable for the specified data collections.
+        cmd: command.CaseSetCrudCommand,
+        case_set_data_collection_ids: Iterable[tuple[UUID, UUID, frozenset[UUID]]],
+        right: enum.CaseRight,
+        on_filtered: Literal[OnException.SKIP, OnException.RAISE] = OnException.RAISE,
+    ) -> Iterable[UUID]:
+        """Check if the case set is accessible for the specified data collections with the given right.
 
         Args:
-            user: The user for whom readability is being checked.
-            case_sets: The list of case sets to check for readability.
-            case_set_data_collection_ids: The list of sets of data collection IDs corresponding to each case set.
-            on_filtered: The action to take when a case set is filtered out (ignored or raised as an exception).
+            cmd: The command containing the user and operation for which accessibility is being checked.
+            case_set_data_collection_ids: An iterable of tuple[case_set_id, case_type_id, frozenset[data_collection_ids]]
+            right: The specific case right to check for each case set.
+            on_filtered: The action to take when a case set is filtered out (skipped or raised as an exception).
 
-        Returns:
-            Iterable[model.CaseSet]: The subset of case sets that are readable for the specified data collections.
+        Yields:
+            UUID: The next case_set_id in the iterable that is accessible with the given right
 
         Raises:
-            UnauthorizedAuthError: If on_filtered is set to RAISE and a case set is not readable.
+            UnauthorizedAuthError: If on_filtered is set to RAISE and a case set is not accessible with the given right.
         """
         raise NotImplementedError()
 
