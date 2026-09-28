@@ -719,12 +719,10 @@ class SampleBatchForUpload(BaseBatchForUpload):
         present = {x.id for x in (self.alleles or [])}
         return self.get_referenced_allele_ids() - present
 
-    def prune_alleles(
-        self, *, exclude_allele_ids: Iterable[UUID] | None = None
-    ) -> None:
+    def trim_alleles(self, *, also_exclude: Iterable[UUID] | None = None) -> None:
         """Drop alleles from self.alleles that no profile references, in place.
 
-        exclude_allele_ids additionally drops alleles already known to exist
+        also_exclude additionally drops alleles already known to exist
         elsewhere (e.g. already stored on a remote seqdb instance) even
         though they are referenced: the server only needs to be sent alleles
         it doesn't have yet. This is the one place allele trimming happens,
@@ -735,13 +733,13 @@ class SampleBatchForUpload(BaseBatchForUpload):
         if not self.alleles:
             return
         referenced = self.get_referenced_allele_ids()
-        exclude = set(exclude_allele_ids) if exclude_allele_ids is not None else None
-        pruned = [
+        exclude = set(also_exclude) if also_exclude is not None else None
+        trimmed = [
             x
             for x in self.alleles
             if x.id in referenced and (not exclude or x.id not in exclude)
         ]
-        self.alleles = pruned or None
+        self.alleles = trimmed or None
 
     def _rebuild_with_parents(
         self,
@@ -750,9 +748,9 @@ class SampleBatchForUpload(BaseBatchForUpload):
         id: UUID | None = None,
         created_at: datetime.datetime | None = None,
     ) -> Self:
-        """Rebuild with a new parent list, then re-prune alleles to match it."""
+        """Rebuild with a new parent list, then re-trim alleles to match it."""
         result = super()._rebuild_with_parents(parents, id=id, created_at=created_at)
-        result.prune_alleles()
+        result.trim_alleles()
         return result
 
     @classmethod
@@ -772,19 +770,10 @@ class SampleBatchForUpload(BaseBatchForUpload):
         a non-None result here can manufacture a spurious "missing allele"
         requirement out of nothing.
         """
-        if not batches:
-            raise ValueError(
-                "Cannot merge an empty sequence of batches: a merge of nothing "
-                "has no defensible identity."
-            )
+        cls._check_mergeable(batches)
         allele_map: dict[UUID, AlleleForUpload] = {}
         any_alleles_present = False
         for batch in batches:
-            if type(batch) is not cls:
-                raise ValueError(
-                    f"Cannot merge a batch of type {type(batch).__name__} as a "
-                    f"{cls.__name__}."
-                )
             if batch.alleles is not None:
                 any_alleles_present = True
                 for allele in batch.alleles:

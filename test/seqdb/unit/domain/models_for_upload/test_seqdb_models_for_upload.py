@@ -1613,7 +1613,7 @@ class TestModelSampleBatchForUpload:
 @pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestSampleBatchForUploadAlleleHandling:
     """Covers SampleBatchForUpload's allele-reference bookkeeping:
-    get_referenced_allele_ids, get_missing_allele_ids, prune_alleles, and the
+    get_referenced_allele_ids, get_missing_allele_ids, trim_alleles, and the
     subset/merge overrides that keep self.alleles consistent with the parent
     list.
     """
@@ -1718,7 +1718,7 @@ class TestSampleBatchForUploadAlleleHandling:
 
         assert batch.get_missing_allele_ids() == set()
 
-    def test_prune_alleles_drops_unreferenced(self) -> None:
+    def test_trim_alleles_drops_unreferenced(self) -> None:
         allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
         allele2 = model.AlleleForUpload(locus_id=uuid4(), seq="CCCC")
         profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
@@ -1728,19 +1728,19 @@ class TestSampleBatchForUploadAlleleHandling:
             samples=[self._make_sample(profile)], alleles=[allele1, allele2]
         )
 
-        batch.prune_alleles()
+        batch.trim_alleles()
 
         assert batch.alleles == [allele1]
 
-    def test_prune_alleles_to_empty_yields_none(self) -> None:
+    def test_trim_alleles_to_empty_yields_none(self) -> None:
         allele = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
         batch = model.SampleBatchForUpload(samples=[], alleles=[allele])
 
-        batch.prune_alleles()
+        batch.trim_alleles()
 
         assert batch.alleles is None
 
-    def test_prune_alleles_excludes_given_ids_even_if_referenced(self) -> None:
+    def test_trim_alleles_excludes_given_ids_even_if_referenced(self) -> None:
         # Simulates trimming a batch to only the alleles a remote instance
         # doesn't have yet: allele1 is referenced but already exists remotely.
         allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
@@ -1752,11 +1752,11 @@ class TestSampleBatchForUploadAlleleHandling:
             samples=[self._make_sample(profile)], alleles=[allele1, allele2]
         )
 
-        batch.prune_alleles(exclude_allele_ids={allele1.id})
+        batch.trim_alleles(also_exclude={allele1.id})
 
         assert batch.alleles == [allele2]
 
-    def test_prune_alleles_excludes_all_yields_none(self) -> None:
+    def test_trim_alleles_excludes_all_yields_none(self) -> None:
         allele = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
         profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
             [allele.id]
@@ -1765,11 +1765,11 @@ class TestSampleBatchForUploadAlleleHandling:
             samples=[self._make_sample(profile)], alleles=[allele]
         )
 
-        batch.prune_alleles(exclude_allele_ids={allele.id})
+        batch.trim_alleles(also_exclude={allele.id})
 
         assert batch.alleles is None
 
-    def test_subset_prunes_alleles_not_referenced_by_kept_samples(self) -> None:
+    def test_subset_trims_alleles_not_referenced_by_kept_samples(self) -> None:
         allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
         allele2 = model.AlleleForUpload(locus_id=uuid4(), seq="CCCC")
         sample1 = self._make_sample(
@@ -1787,7 +1787,7 @@ class TestSampleBatchForUploadAlleleHandling:
         assert result.samples == [sample1]
         assert result.alleles == [allele1]
 
-    def test_merge_unions_alleles_from_both_sources_then_prunes(self) -> None:
+    def test_merge_unions_alleles_from_both_sources_then_trims(self) -> None:
         allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
         allele2 = model.AlleleForUpload(locus_id=uuid4(), seq="CCCC")
         sample1 = self._make_sample(

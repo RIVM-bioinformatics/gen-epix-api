@@ -909,7 +909,17 @@ class BaseBatchForUpload(Model):
             if created_at is None
             else created_at
         )
-        return type(self)(**kwargs)
+        result = type(self)(**kwargs)
+        # type(self)(**kwargs) passes every field explicitly, so pydantic
+        # would otherwise mark all of them "set" even if most were only ever
+        # sitting at their default on self. Restore that distinction so a
+        # future caller can still rely on model_dump(exclude_unset=True).
+        result.__pydantic_fields_set__ = self.model_fields_set | {
+            self.PARENTS_FOR_UPLOAD_FIELD_NAME,
+            "id",
+            "created_at",
+        }
+        return result
 
     def subset(
         self,
@@ -940,6 +950,26 @@ class BaseBatchForUpload(Model):
         return self._rebuild_with_parents(parents, id=id, created_at=created_at)
 
     @classmethod
+    def _check_mergeable(cls, batches: Sequence[Self]) -> None:
+        """Raise if batches is empty or contains a batch of the wrong type.
+
+        Shared by merge() and subclass overrides that add their own
+        pre-merge bookkeeping (e.g. allele union), so both paths reject the
+        same inputs without duplicating the checks.
+        """
+        if not batches:
+            raise ValueError(
+                "Cannot merge an empty sequence of batches: a merge of nothing "
+                "has no defensible identity."
+            )
+        for batch in batches:
+            if type(batch) is not cls:
+                raise ValueError(
+                    f"Cannot merge a batch of type {type(batch).__name__} as a "
+                    f"{cls.__name__}."
+                )
+
+    @classmethod
     def merge(
         cls,
         batches: Sequence[Self],
@@ -957,17 +987,7 @@ class BaseBatchForUpload(Model):
         The merged batch is fully re-validated (duplicate parent/child ids and
         cross-parent links are exactly the violations a merge can manufacture).
         """
-        if not batches:
-            raise ValueError(
-                "Cannot merge an empty sequence of batches: a merge of nothing "
-                "has no defensible identity."
-            )
-        for batch in batches:
-            if type(batch) is not cls:
-                raise ValueError(
-                    f"Cannot merge a batch of type {type(batch).__name__} as a "
-                    f"{cls.__name__}."
-                )
+        cls._check_mergeable(batches)
         parents = [
             parent for batch in batches for parent in batch.get_parents_for_upload()
         ]
