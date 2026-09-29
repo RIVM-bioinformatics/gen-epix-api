@@ -1,7 +1,14 @@
+"""Validate and normalize uploaded case content against case-type metadata.
+
+The module exposes :class:`CaseValidator`, which loads reference metadata through
+the case application and updates batch validation results and case values in place.
+"""
+
 import re
+from collections.abc import Callable
 from decimal import Decimal, InvalidOperation
 from itertools import combinations
-from typing import NoReturn
+from typing import NoReturn, cast
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
@@ -10,6 +17,7 @@ from gen_epix.casedb.domain.enum import (
     ColTypeSet,
     ConceptRelationType,
     RegionRelationType,
+    Unit,
 )
 from gen_epix.casedb.domain.model.case.upload import CaseBatchUploadResult
 from gen_epix.casedb.services.case.base import BaseCaseService
@@ -44,7 +52,23 @@ from gen_epix.util import map_paired_elements
 
 
 class CaseValidator:
-    N_DECIMALS = {
+    """Encapsulates validation and transformation of uploaded case content.
+
+    The validator resolves concept, region, organization, interval, and regular
+    expression metadata during initialization. Validation mutates batch result
+    content, issue lists, and derived case dates in place. These mutations are not
+    rolled back when a later validation step raises an exception.
+
+    Attributes:
+        case_service: Service used to retrieve reference metadata.
+        complete_case_type: Complete metadata defining valid case content.
+        user_id: Identifier of the user for whom validation is performed.
+        concept_value_maps: Normalized concept lookup values by concept set.
+        region_value_maps: Normalized region lookup values by region set.
+        organization_value_map: Normalized organization lookup values.
+    """
+
+    N_DECIMALS: dict[ColType, int] = {
         ColType.DECIMAL_0: 0,
         ColType.DECIMAL_1: 1,
         ColType.DECIMAL_2: 2,
@@ -54,7 +78,7 @@ class CaseValidator:
         ColType.DECIMAL_6: 6,
     }
 
-    TIME_MATCHERS = {
+    TIME_MATCHERS: dict[ColType, Callable] = {
         ColType.TIME_YEAR: lambda x: (
             x if x is None or TIME_YEAR_PATTERN.match(x) else NoReturn
         ),
@@ -71,8 +95,30 @@ class CaseValidator:
             x if x is None or TIME_DAY_PATTERN.match(x) else NoReturn
         ),
     }
-
-    COL_TYPE_TO_TIME_UNIT = {
+    # Multipliers (from, to) for unit conversions
+    UNIT_PAIR_MULTIPLIER_MAP: dict[tuple[Unit, Unit], float] = {
+        (Unit.YEAR, Unit.QUARTER): 4.0,
+        (Unit.YEAR, Unit.MONTH): 12.0,
+        (Unit.YEAR, Unit.WEEK): 365.25 / 7.0,
+        (Unit.YEAR, Unit.DAY): 365.25,
+        (Unit.QUARTER, Unit.YEAR): 1.0 / 4.0,
+        (Unit.QUARTER, Unit.MONTH): 3.0,
+        (Unit.QUARTER, Unit.WEEK): 365.25 / (4.0 * 7.0),
+        (Unit.QUARTER, Unit.DAY): 365.25 / 4.0,
+        (Unit.MONTH, Unit.YEAR): 1.0 / 12.0,
+        (Unit.MONTH, Unit.QUARTER): 1.0 / 3.0,
+        (Unit.MONTH, Unit.WEEK): 365.25 / (12.0 * 7.0),
+        (Unit.MONTH, Unit.DAY): 365.25 / 12.0,
+        (Unit.WEEK, Unit.YEAR): 7.0 / 365.25,
+        (Unit.WEEK, Unit.QUARTER): (4.0 * 7.0) / 365.25,
+        (Unit.WEEK, Unit.MONTH): (12.0 * 7.0) / 365.25,
+        (Unit.WEEK, Unit.DAY): 7.0,
+        (Unit.DAY, Unit.YEAR): 1.0 / 365.25,
+        (Unit.DAY, Unit.QUARTER): 4.0 / 365.25,
+        (Unit.DAY, Unit.MONTH): 12.0 / 365.25,
+        (Unit.DAY, Unit.WEEK): 1.0 / 7.0,
+    }
+    COL_TYPE_TO_TIME_UNIT: dict[ColType, TimeUnit] = {
         ColType.TIME_YEAR: TimeUnit.YEAR,
         ColType.TIME_QUARTER: TimeUnit.QUARTER,
         ColType.TIME_MONTH: TimeUnit.MONTH,
@@ -82,6 +128,15 @@ class CaseValidator:
 
     @staticmethod
     def _transform_decimal(value: str | None, n_decimals: int) -> str | None | NoReturn:
+        """Normalize a decimal string or return the invalid-value sentinel.
+
+        Args:
+            value: Decimal text to normalize, or ``None``.
+            n_decimals: Number of decimal places to retain.
+
+        Returns:
+            The rounded decimal text, ``None``, or ``NoReturn`` for invalid text.
+        """
         if value is None:
             return None
         if DECIMAL_PATTERN.match(value) is None:
@@ -98,6 +153,16 @@ class CaseValidator:
         complete_case_type: model.CompleteCaseType,
         user_id: UUID,
     ):
+        """Initialize the validator and retrieve its reference metadata.
+
+        Args:
+            case_service: Service used to dispatch metadata retrieval commands.
+            complete_case_type: Complete case-type metadata used for validation.
+            user_id: Identifier of the user for whom content is validated.
+
+        Raises:
+            ValueError: If interval concepts lack required boundary metadata.
+        """
         self.case_service = case_service
         self.complete_case_type = complete_case_type
         self.user_id = user_id
@@ -131,14 +196,27 @@ class CaseValidator:
         cmd: command.UploadCasesCommand,
         batch_result: model.CaseBatchUploadResult,
     ) -> model.CaseBatchUploadResult:
-        """
-        Validate and transform the content of the cases in batch upload command.
+        """Validate and transform the cases in a batch upload command.
+
         Where applicable, individual values are transformed from synonymous values to
         standard values, and combinations of values are transformed based on defined
         relations.
 
-        The method adds resulting ValidatedCaseForUpload to the upload result,
-        including any data issues found during validation and transformation.
+        The method mutates and returns ``batch_result``. It updates validated content
+        and issue lists in place and may update uploaded cases' derived case dates.
+        Mutations completed before an exception are not rolled back.
+
+        Args:
+            cmd: Upload command containing original case content.
+            batch_result: Existing per-case validation results to update.
+
+        Returns:
+            The same batch result instance after validation and transformation.
+
+        Raises:
+            ValueError: If the command and validator use different case types.
+            AssertionError: If an internal transformed value violates an invariant.
+            NotImplementedError: If a numeric unit pair has no conversion multiplier.
         """
         contents, updated_contents, data_issues_list = self._get_content_references(
             cmd, batch_result
@@ -159,9 +237,21 @@ class CaseValidator:
         list[dict[UUID, str | None] | None],
         list[list[model.CaseDataIssue] | None],
     ]:
-        """
-        Get references to contents, updated_contents and data_issues for all cases,
-        as a convenience for easily updating these in-place.
+        """Return mutable content and issue-list references for all batch cases.
+
+        The returned dictionaries and lists alias the command and batch result. Changes
+        through them therefore mutate those input objects in place.
+
+        Args:
+            cmd: Upload command containing original cases.
+            batch_result: Validation result containing mutable per-case state.
+
+        Returns:
+            Original content, validated content, and issue-list references in matching
+            case order.
+
+        Raises:
+            ValueError: If the command and validator use different case types.
         """
         if cmd.case_type_id != self.complete_case_type.id:
             raise ValueError("Cases are not for the correct CaseType")
@@ -184,7 +274,12 @@ class CaseValidator:
         contents: list[dict[UUID, str | None] | None],
         data_issues_list: list[list[model.CaseDataIssue] | None],
     ) -> None:
-        """Validate if any unknown columns are present in contents."""
+        """Append issues for unknown columns without removing their content.
+
+        Args:
+            contents: Original case content dictionaries in batch order.
+            data_issues_list: Issue lists to mutate in the same order.
+        """
         for content, data_issues in zip(contents, data_issues_list):
             if content is None:
                 continue
@@ -210,7 +305,21 @@ class CaseValidator:
         updated_contents: list[dict[UUID, str | None] | None],
         data_issues_list: list[list[model.CaseDataIssue] | None],
     ) -> None:
-        """Validate and transform individual values."""
+        """Normalize individual values into validated content in place.
+
+        Invalid values produce issues and are omitted from validated content. Changed
+        values produce transformation issues. Earlier updates remain if a later value
+        violates an asserted invariant.
+
+        Args:
+            contents: Original case content dictionaries in batch order.
+            updated_contents: Validated content dictionaries to mutate.
+            data_issues_list: Issue lists to append to in the same order.
+
+        Raises:
+            AssertionError: If aligned result state is missing or a transformation
+                unexpectedly produces ``None`` from a non-``None`` value.
+        """
         msg_template = "{orig_value}"
         for col in self.complete_case_type.cols.values():
             col_id = col.id
@@ -314,11 +423,20 @@ class CaseValidator:
         updated_contents: list[dict[UUID, str | None] | None],
         data_issues_list: list[list[model.CaseDataIssue] | None],
     ) -> None:
-        """
-        Validate and transform pairs of values.
-        This method assumes that only standard values are present in updated_contents.
-        """
+        """Validate and derive related values across dimension columns.
 
+        This method assumes that only standard values are present in updated_contents.
+        It mutates validated content and issue lists in place, and sorts the complete
+        case type's ordered time-column lists by descending resolution.
+
+        Args:
+            contents: Original case content dictionaries in batch order.
+            updated_contents: Validated content dictionaries to mutate.
+            data_issues_list: Issue lists to append to in the same order.
+
+        Raises:
+            NotImplementedError: If a numeric unit pair has no conversion multiplier.
+        """
         # Go over each Dim
         for dim in self.complete_case_type.dims.values():
             assert dim.id is not None
@@ -360,7 +478,21 @@ class CaseValidator:
         batch_result: CaseBatchUploadResult,
         updated_contents: list[dict[UUID, str | None] | None],
     ) -> None:
-        """Calculate case date based on TIME dimension columns."""
+        """Update uploaded cases' dates from the highest-resolution time value.
+
+        The command's case objects and corresponding result issue information are
+        mutated in place. Cases without configured or populated date columns are left
+        unchanged.
+
+        Args:
+            cmd: Upload command whose case dates may be updated.
+            batch_result: Result receiving informational date-change entries.
+            updated_contents: Validated values used to derive dates.
+
+        Raises:
+            AssertionError: If aligned result state is missing or a selected date value
+                is not in ISO date form.
+        """
         # Determine Cols from which the case date needs to be derived
         # Calculate case date where possible
         case_date_dim_id = self.complete_case_type.case_date_dim_id
@@ -398,9 +530,9 @@ class CaseValidator:
                     raise AssertionError(
                         f"Unexpected non-ISO datetime value {iso_datetime_value} for case date calculation"
                     )
-                orig_case_date = case.case_date
-                case.case_date = mapper(iso_datetime_value)
-                if case.case_date != orig_case_date:
+                orig_case_date = case.timed_at
+                case.timed_at = mapper(iso_datetime_value)
+                if case.timed_at != orig_case_date:
                     case_result.add_info(
                         code="b2c3d4e5",
                         message="Case date updated based on TIME dimension column",
@@ -414,8 +546,8 @@ class CaseValidator:
         data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pairs: list[tuple[UUID, UUID]],
     ) -> None:
-        """
-        Validate and transform GEO pairs of values.
+        """Validate and transform GEO pairs of values.
+
         Applies only to GEO_REGION-GEO_REGION column pairs.
         """
         for col_pair in col_pairs:
@@ -541,9 +673,18 @@ class CaseValidator:
         data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pairs: list[tuple[UUID, UUID]],
     ) -> None:
-        """
-        Validate and transform NUMBER pairs of values.
+        """Derive related numeric and interval values in place.
+
         Applies only to DECIMAL_XXX-INTERVAL and INTERVAL-INTERVAL column pairs.
+
+        Args:
+            contents: Original case content dictionaries in batch order.
+            updated_contents: Validated content dictionaries to mutate.
+            data_issues_list: Issue lists to append to in the same order.
+            col_pairs: Directed column pairs to inspect.
+
+        Raises:
+            NotImplementedError: If a source and target unit pair has no multiplier.
         """
         for col_pair in col_pairs:
             ref_col1 = self.complete_case_type.ref_cols[
@@ -552,6 +693,17 @@ class CaseValidator:
             ref_col2 = self.complete_case_type.ref_cols[
                 self.complete_case_type.cols[col_pair[1]].ref_col_id
             ]
+            multiplier = (
+                1.0
+                if ref_col1.unit == ref_col2.unit
+                else self.UNIT_PAIR_MULTIPLIER_MAP.get(
+                    (ref_col1.unit, ref_col2.unit)  # type: ignore[arg-type]
+                )
+            )
+            if multiplier is None:
+                raise NotImplementedError(
+                    f"No multiplier found for unit pair ({ref_col1.unit}, {ref_col2.unit})"
+                )
 
             # Only handle DECIMAL_XXX-INTERVAL and INTERVAL-INTERVAL pairs
             is_col1_decimal = ref_col1.col_type in ColTypeSet.NUMBER.value
@@ -566,6 +718,7 @@ class CaseValidator:
                     data_issues_list,
                     col_pair,
                     ref_col2,
+                    multiplier,
                 )
 
             # INTERVAL -> INTERVAL transformation using IntervalToIntervalTransformer
@@ -577,7 +730,9 @@ class CaseValidator:
                     col_pair,
                     ref_col1,
                     ref_col2,
+                    multiplier,
                 )
+            pass
 
     def _transform_decimal_to_interval(
         self,
@@ -586,6 +741,7 @@ class CaseValidator:
         data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pair: tuple[UUID, UUID],
         col2: model.RefCol,
+        multiplier: float,
     ) -> None:
         """Process DECIMAL_XXX -> INTERVAL transformation."""
         # Check if we have an interval transformer for col2's concept set
@@ -611,7 +767,7 @@ class CaseValidator:
                 continue
 
             # Use the interval transformer with "value" field name
-            adapter = ObjectAdapter({"value": from_number})
+            adapter = ObjectAdapter({"value": from_number * multiplier})
             transformed_adapter = interval_transformer.transform(adapter)
             to_interval_id = transformed_adapter.get("value")
             if to_interval_id is None:
@@ -635,21 +791,22 @@ class CaseValidator:
         updated_contents: list[dict[UUID, str | None] | None],
         data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pair: tuple[UUID, UUID],
-        col1: model.RefCol,
-        col2: model.RefCol,
+        ref_col1: model.RefCol,
+        ref_col2: model.RefCol,
+        multiplier: float,
     ) -> None:
         """Process INTERVAL -> INTERVAL transformation using IntervalToIntervalTransformer."""
         # Check if both columns have concept sets
-        if col1.concept_set_id is None or col2.concept_set_id is None:
+        if ref_col1.concept_set_id is None or ref_col2.concept_set_id is None:
             return
 
         # Skip if trying to map to the same concept set
-        if col1.concept_set_id == col2.concept_set_id:
+        if ref_col1.concept_set_id == ref_col2.concept_set_id:
             return
 
         # Get interval transformers for both concept sets
-        src_transformer = self.interval_transformers.get(col1.concept_set_id)
-        tgt_transformer = self.interval_transformers.get(col2.concept_set_id)
+        src_transformer = self.interval_transformers.get(ref_col1.concept_set_id)
+        tgt_transformer = self.interval_transformers.get(ref_col2.concept_set_id)
 
         if src_transformer is None or tgt_transformer is None:
             return
@@ -659,11 +816,15 @@ class CaseValidator:
             interval_to_interval_transformer = IntervalToIntervalTransformer(
                 src_field="interval_value",
                 src_interval_names=src_transformer._interval_names,
-                src_lower_bounds=src_transformer._lower_bounds,  # type: ignore[arg-type]
-                src_upper_bounds=src_transformer._upper_bounds,  # type: ignore[arg-type]
+                src_lower_bounds=[
+                    float(x) * multiplier for x in src_transformer._lower_bounds
+                ],
+                src_upper_bounds=[
+                    float(x) * multiplier for x in src_transformer._upper_bounds
+                ],
                 tgt_interval_names=tgt_transformer._interval_names,
-                tgt_lower_bounds=tgt_transformer._lower_bounds,  # type: ignore[arg-type]
-                tgt_upper_bounds=tgt_transformer._upper_bounds,  # type: ignore[arg-type]
+                tgt_lower_bounds=[float(x) for x in tgt_transformer._lower_bounds],
+                tgt_upper_bounds=[float(x) for x in tgt_transformer._upper_bounds],
                 src_lower_bound_is_inclusive=src_transformer._lower_bound_is_inclusive,
                 src_upper_bound_is_inclusive=src_transformer._upper_bound_is_inclusive,
                 tgt_lower_bound_is_inclusive=tgt_transformer._lower_bound_is_inclusive,
@@ -724,6 +885,16 @@ class CaseValidator:
         col_pair: tuple,
         new_value: str,
     ) -> None:
+        """Set a derived value and append its issue record in place.
+
+        Args:
+            content: Original content used to describe the derivation.
+            updated_content: Validated content dictionary to mutate.
+            data_issues: Issue list to append to.
+            code: Data issue code for the derivation.
+            col_pair: Source and target column identifiers.
+            new_value: Derived target value.
+        """
         # Add derived value to updated_content
         orig_updated_value = updated_content.get(col_pair[1])
         if new_value == orig_updated_value:
@@ -762,6 +933,7 @@ class CaseValidator:
             )
 
     def _init_metadata(self) -> None:
+        """Initialize all lookup metadata used by validation."""
         self._init_set_metadata()
         self._init_regex_metadata()
         self._init_concept_metadata()
@@ -769,6 +941,7 @@ class CaseValidator:
         self._init_organization_metadata()
 
     def _init_set_metadata(self) -> None:
+        """Collect unique concept, interval, and region set identifiers."""
         self.concept_set_ids = set()
         self.interval_concept_set_ids = set()
         self.region_set_ids = set()
@@ -784,6 +957,7 @@ class CaseValidator:
                 self.region_set_ids.add(ref_col.region_set_id)
 
     def _init_regex_metadata(self) -> None:
+        """Compile regular-language patterns by reference-column identifier."""
         self.regex_patterns = {}
         for ref_col in self.complete_case_type.ref_cols.values():
             if ref_col.col_type != ColType.REGULAR_LANGUAGE:
@@ -793,6 +967,12 @@ class CaseValidator:
             self.regex_patterns[ref_col.id] = re.compile(ref_col.regex)
 
     def _init_concept_metadata(self) -> None:
+        """Initialize concept lookups, relations, and interval transformers.
+
+        Raises:
+            ValueError: If an interval concept lacks a lower or upper boundary or an
+                inclusivity flag.
+        """
         self.concept_value_maps = {}
         self.concept_relation_maps = {}
         self.interval_transformers = {}
@@ -806,13 +986,9 @@ class CaseValidator:
         for concept_set_id, concept_ids in concept_set_concepts_map.items():
             self.concept_value_maps[concept_set_id] = (
                 {str(x).lower(): str(x) for x in concept_ids}
+                | {concepts[x].code.lower(): str(x) for x in concept_ids}
                 | {
-                    concepts[x].code.lower(): str(x)
-                    for x in concept_ids
-                    if concepts[x].code is not None
-                }
-                | {
-                    concepts[x].name.lower(): str(x)  # type: ignore[index]
+                    concepts[x].name.lower(): str(x)  # type: ignore[union-attr]
                     for x in concept_ids
                     if concepts[x].name is not None
                 }
@@ -835,16 +1011,33 @@ class CaseValidator:
             interval_concepts = [
                 concepts[x] for x in concept_set_concepts_map[concept_set_id]
             ]
+            props = [x.props or {} for x in interval_concepts]
+            lower_bounds = [x.get("lb") for x in props]
+            upper_bounds = [x.get("ub") for x in props]
+            lower_bound_is_inclusive = [x.get("lb_in") for x in props]
+            upper_bound_is_inclusive = [x.get("ub_in") for x in props]
+            if any(x is None for x in lower_bounds + upper_bounds):
+                raise ValueError(
+                    f"Interval concept set {concept_set_id} has concepts with missing lb or ub properties"
+                )
+            if any(
+                x is None for x in lower_bound_is_inclusive + upper_bound_is_inclusive
+            ):
+                raise ValueError(
+                    f"Interval concept set {concept_set_id} has concepts with missing lb_in or ub_in properties"
+                )
             self.interval_transformers[concept_set_id] = IntervalTransformer(
                 "value",  # src_field should match the field name used in ObjectAdapter
                 [str(x.id) for x in interval_concepts],
-                [x.props["lb"] for x in interval_concepts],
-                [x.props["ub"] for x in interval_concepts],
-                lower_bound_is_inclusive=[x.props["lb_in"] for x in interval_concepts],
-                upper_bound_is_inclusive=[x.props["ub_in"] for x in interval_concepts],
+                lower_bounds,
+                upper_bounds,
+                lower_bound_is_inclusive=cast(list[bool], lower_bound_is_inclusive),
+                upper_bound_is_inclusive=cast(list[bool], upper_bound_is_inclusive),
+                on_no_match=OnException.SET_NONE,
             )
 
     def _init_region_metadata(self) -> None:
+        """Initialize region lookups and directed containment relations."""
         self.region_value_maps = {}
         self.region_relation_maps = {}
         self.region_contained_in = {}
@@ -882,6 +1075,7 @@ class CaseValidator:
             )
 
     def _init_organization_metadata(self) -> None:
+        """Initialize organization lookups by ID, code, and name."""
         self.organization_value_map = {}
 
         # Retrieve organizations
@@ -901,6 +1095,12 @@ class CaseValidator:
         dict[UUID, model.Concept],
         dict[tuple[UUID, UUID], dict[str, str]],
     ]:
+        """Retrieve concepts and build set membership and containment mappings.
+
+        Returns:
+            Concept IDs by set, concepts by ID, and directed containment mappings
+            keyed by source and target concept sets.
+        """
         app = self.case_service.app
         # Retrieve relevant concepts
         concepts: dict[UUID, model.Concept] = {
@@ -964,6 +1164,12 @@ class CaseValidator:
         dict[UUID, set[UUID]],
         dict[tuple[UUID, UUID], dict[str, str]],
     ]:
+        """Retrieve regions and build set membership and containment mappings.
+
+        Returns:
+            Regions by ID, region IDs by set, and directed containment mappings keyed
+            by source and target region sets.
+        """
         app = self.case_service.app
         # Retrieve relevant regions
         regions: dict[UUID, model.Region] = {
@@ -1017,6 +1223,11 @@ class CaseValidator:
     def _retrieve_organization_data(
         self,
     ) -> list[model.Organization]:
+        """Retrieve all organizations available through the application.
+
+        Returns:
+            Organizations returned by the application command lifecycle.
+        """
         app = self.case_service.app
         # Retrieve relevant organizations
         organizations: list[model.Organization] = app.handle(
@@ -1028,7 +1239,5 @@ class CaseValidator:
 
     @staticmethod
     def _get_col_pairs(col_ids: list[UUID]) -> list[tuple[UUID, UUID]]:
-        """
-        Generate all pairs of Col IDs in both directions.
-        """
+        """Generate all pairs of column IDs in both directions."""
         return list(combinations(col_ids, 2)) + list(combinations(col_ids[::-1], 2))

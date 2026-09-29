@@ -37,8 +37,6 @@ erDiagram
     ConceptRelation }o--|| Concept : "to_concept_id"
     Dim }o--|| CaseType : "case_type_id"
     Dim }o--|| RefDim : "ref_dim_id"
-    Case }o--|| CaseType : "case_type_id"
-    Case }o--|| DataCollection : "created_in_data_collection_id"
     CaseSet }o--|| CaseType : "case_type_id"
     CaseSet }o--|| DataCollection : "created_in_data_collection_id"
     CaseSet }o--|| CaseSetCategory : "case_set_category_id"
@@ -68,16 +66,18 @@ erDiagram
     Col }o--|| CaseType : "case_type_id"
     Col }o--|| Dim : "dim_id"
     Col }o--|| RefCol : "ref_col_id"
-    CaseIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
-    CaseIdentifier }o--|| Case : "internal_id"
-    CaseDataCollectionLink }o--|| Case : "case_id"
-    CaseDataCollectionLink }o--|| DataCollection : "data_collection_id"
-    CaseSetMember }o--|| CaseSet : "case_set_id"
-    CaseSetMember }o--|| Case : "case_id"
     CaseSetDataCollectionLink }o--|| CaseSet : "case_set_id"
     CaseSetDataCollectionLink }o--|| DataCollection : "data_collection_id"
     ColSetMember }o--|| ColSet : "col_set_id"
     ColSetMember }o--|| Col : "col_id"
+    Case }o--|| CaseType : "case_type_id"
+    Case }o--|| DataCollection : "created_in_data_collection_id"
+    CaseIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
+    CaseIdentifier }o--|| Case : "internal_id"
+    CaseSetMember }o--|| CaseSet : "case_set_id"
+    CaseSetMember }o--|| Case : "case_id"
+    CaseDataCollectionLink }o--|| Case : "case_id"
+    CaseDataCollectionLink }o--|| DataCollection : "data_collection_id"
 
     %% Entity definitions
     Outage {
@@ -149,6 +149,7 @@ erDiagram
         string code
         string name
         enum type
+        enum unit
         string description
     }
 
@@ -394,6 +395,7 @@ erDiagram
         int rank
         string label
         enum col_type
+        enum unit
         UUID concept_set_id FK
         UUID region_set_id FK
         UUID genetic_distance_protocol_id FK
@@ -475,20 +477,6 @@ erDiagram
         string description
         int rank
         bool is_case_date_dim
-    }
-
-    Case {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        string code
-        UUID case_type_id FK
-        UUID created_in_data_collection_id FK
-        dict[UUID, UUID] cohort
-        int count
-        timestamp case_date
-        dict[UUID, string] content
     }
 
     CaseSet {
@@ -621,35 +609,6 @@ erDiagram
         dict[string, Any] props
     }
 
-    CaseIdentifier {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id FK
-    }
-
-    CaseDataCollectionLink {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID case_id FK
-        UUID data_collection_id FK
-    }
-
-    CaseSetMember {
-        timestamp created_at
-        timestamp modified_at
-        UUID modified_by
-        UUID id PK
-        UUID case_set_id FK
-        UUID case_id FK
-        enum classification
-    }
-
     CaseSetDataCollectionLink {
         timestamp created_at
         timestamp modified_at
@@ -666,6 +625,49 @@ erDiagram
         UUID id PK
         UUID col_set_id FK
         UUID col_id FK
+    }
+
+    Case {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        string code
+        UUID case_type_id FK
+        UUID created_in_data_collection_id FK
+        dict[UUID, UUID] cohort
+        int count
+        timestamp case_date
+        dict[UUID, string] content
+    }
+
+    CaseIdentifier {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id FK
+    }
+
+    CaseSetMember {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID case_set_id FK
+        UUID case_id FK
+        enum classification
+    }
+
+    CaseDataCollectionLink {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID case_id FK
+        UUID data_collection_id FK
     }
 
 ```

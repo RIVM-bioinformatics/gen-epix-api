@@ -1,3 +1,5 @@
+"""Re-export SQLAlchemy persistence models for seqdb sequence entities."""
+
 from gen_epix.seqdb.repositories.sa_model.seq.operational_data import (
     AstMeasurement as AstMeasurement,
 )

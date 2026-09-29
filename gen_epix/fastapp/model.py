@@ -1,3 +1,5 @@
+"""Base Pydantic models for commands, users, permissions, and policies."""
+
 from __future__ import annotations
 
 import abc
@@ -30,8 +32,8 @@ from gen_epix.filter.base import Filter
 
 class Model(PydanticBaseModel):
     """
-    Base class for all models in an application. Models are used to represent the
-    state of the application and are typically persisted in a database. Models can also
+    Represents a domain model in an application. Models are used to represent the
+    state of the application and are often persisted in a database. Models can also
     be used to represent the state of the application in memory, e.g. for caching or
     for passing data between services. Models can be immutable or mutable, depending on
     the use case.
@@ -97,7 +99,7 @@ class Model(PydanticBaseModel):
 
 class User(PydanticBaseModel):
     """
-    A user of the application. This can represent an actual user, or a service
+    Represents a user of the application. This can represent an actual user, or a service
     account, or any other type of principal that can be authenticated and authorized to
     perform actions in the application. The key of the user is used to identify the
     user across systems, e.g. as a claim a in security token.
@@ -124,7 +126,7 @@ class User(PydanticBaseModel):
 
 class Permission(PydanticBaseModel, frozen=True):
     """
-    Implements a permission as a combination of (command_name, permission_type).
+    Represents a permission as a combination of (command_name, permission_type).
     The command_name is a string rather than the class of the command, to avoid
     issues with serialization such as for persistence and for API requests/responses.
     """
@@ -139,7 +141,7 @@ class Permission(PydanticBaseModel, frozen=True):
     )
     @cached_property
     def name(self) -> str:
-        """"""
+        """Return the canonical permission name."""
         return f"{self.command_name}{Permission._NAME_DELIMITER}{self.permission_type.value}"
 
     @computed_field(  # type: ignore[prop-decorator]
@@ -147,7 +149,7 @@ class Permission(PydanticBaseModel, frozen=True):
     )
     @cached_property
     def sort_key(self) -> tuple[str, int]:
-        """"""
+        """Return the stable sort key for this permission."""
         permission_type_map = {
             PermissionType.EXECUTE: 0,
             PermissionType.CREATE: 1,
@@ -158,7 +160,7 @@ class Permission(PydanticBaseModel, frozen=True):
         return self.command_name, permission_type_map[self.permission_type]
 
     def __eq__(self, permission: object) -> bool:
-        """"""
+        """Compare permissions by command name and permission type."""
         # TODO: Investigate why two objs of this class with the same values are
         # not equal without overriding __eq__
         if not isinstance(permission, Permission):
@@ -169,45 +171,50 @@ class Permission(PydanticBaseModel, frozen=True):
         )
 
     def __repr__(self) -> str:
-        """"""
+        """Return a compact representation of this permission."""
         return f"({self.command_name},{self.permission_type.value})"
 
     @field_serializer("permission_type", mode="plain")
     def _serialize_permission_type(self, value: PermissionType) -> str:
-        """"""
+        """Serialize the permission type to its wire representation."""
         return value.value
 
 
 class Policy(abc.ABC):
     """
-    A policy defines logic for a command to be executed before, during or after the
+    Encapsulates a policy defines logic for a command to be executed before, during or after the
     execution of the command. It can be used to implement e.g. authorization and other
     cross-cutting concerns.
     """
 
     def get_is_denied_exception(self) -> type[Exception]:
+        """Return the exception raised when this policy denies a command."""
         return exc.UnauthorizedAuthError
 
     # Not an abstract method since it is not always needed
     def is_allowed(self, cmd: Command) -> bool:
+        """Return whether the command is allowed by this policy."""
         raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def get_content(self, cmd: Command) -> Any:
+        """Return policy content associated with a command."""
         raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def get_content_return_type(self, cmd: Command) -> type:
+        """Return the type of content produced by this policy."""
         raise NotImplementedError("Method is not implemented for this policy")
 
     # Not an abstract method since it is not always needed
     def filter(self, cmd: Command, retval: Any) -> Any:
+        """Filter a command result according to this policy."""
         raise NotImplementedError("Method is not implemented for this policy")
 
 
 class Command(PydanticBaseModel):
     """
-    A command represents an action to be performed in the application. The logic for
+    Represents a command that an action to be performed in the application. The logic for
     executing commands is typically implemented by services in the application, which
     register the relevant handler function or method with the app.
     """
@@ -230,12 +237,16 @@ class Command(PydanticBaseModel):
 
 class CrudCommand(Command):
     """
-    A command base class for performing a CRUD operation on a model. The command
+    Represents a command for performing a CRUD operation on a model. The command
     includes the CRUD operation to perform, the identifier(s) of the object(s) to
     operate on and/or the object(s) to operate on, and optional filters for read or
-    delete all operations and for access control. The command also includes
-    validation logic to ensure that the combination of operation, identifiers,
-    objects and filters is valid.
+    delete all operations and for access control.
+
+    This is a base class intended to be subclassed for specific CRUD commands.
+
+    Model validation:
+    The operation, identifiers, objects, filters, and pagination options must
+    form a valid CRUD request.
     """
 
     PERMISSION_TYPE_SET: ClassVar[PermissionTypeSet] = PermissionTypeSet.CRUD
@@ -289,6 +300,7 @@ class CrudCommand(Command):
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
+        """Validate the command's operation-specific state."""
         operation = self.operation
         obj_ids = self.obj_ids
         objs = self.objs
@@ -377,9 +389,7 @@ class CrudCommand(Command):
         return [objs.get_id()]
 
     def get_objs(self) -> list[Model] | None:
-        """
-        Get the objects as a list, or None if no objects.
-        """
+        """Get the objects as a list, or None if no objects."""
         if self.objs is not None:
             return self.objs if isinstance(self.objs, list) else [self.objs]
         return None
@@ -446,12 +456,14 @@ class CrudCommand(Command):
 
 class UpdateAssociationCommand(Command):
     """
-    A command base class for updating a many-to-many association between two entities.
+    Represents a command base class for updating a many-to-many association between two entities.
     The command includes the identifiers of the two objects to associate, or the
-    association objects themselves, and validation logic to ensure that the combination
-    of identifiers and association objects is valid. The command also includes an
-    optional props field for additional properties to pass to the command and which can
-    be used by custom implementations.
+    association objects themselves. The command also includes an optional props
+    field for additional properties to pass to custom implementations.
+
+    Model validation:
+    At most one endpoint identifier may be supplied. When association objects
+    are present, supplied endpoint identifiers must match their link fields.
     """
 
     ASSOCIATION_CLASS: ClassVar[type[Model]] = Model
@@ -482,6 +494,7 @@ class UpdateAssociationCommand(Command):
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
+        """Validate endpoint identifiers and association-object links."""
         obj_id1 = self.obj_id1
         obj_id2 = self.obj_id2
         association_objs = self.association_objs
@@ -515,7 +528,7 @@ class UpdateAssociationCommand(Command):
 
 class Role(PydanticBaseModel):
     """
-    A role represents a set of permissions that can be assigned to users e.g. for
+    Represents a role that defines a set of permissions that can be assigned to users e.g. for
     implementing role-based access control (RBAC).
     """
 
@@ -525,11 +538,11 @@ class Role(PydanticBaseModel):
 
 class ModelFieldProps(BaseModel):
     """
-    Additional properties of a model field. The application of these properties needs
+    Represents additional properties of a model field. The application of these properties needs
     to be implemented in the services using the model. Subclass as needed for specific
     additional properties.
 
-    Additional validation:
+    Model validation:
     - is_mutable_always cannot be True if is_mutable_if_empty is False.
     """
 
@@ -548,6 +561,7 @@ class ModelFieldProps(BaseModel):
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
+        """Validate compatible mutability settings."""
         if not self.is_mutable_if_empty and self.is_mutable_always:
             raise ValueError(
                 "is_mutable_always cannot be True if is_mutable_if_empty is False."
@@ -555,9 +569,7 @@ class ModelFieldProps(BaseModel):
         return self
 
     def is_mutable_value(self, stored_value: Any | None) -> bool:
-        """
-        Determine if a stored value for this field is mutable.
-        """
+        """Determine if a stored value for this field is mutable."""
         if self.is_mutable_always:
             return True
         if self.is_mutable_if_empty:

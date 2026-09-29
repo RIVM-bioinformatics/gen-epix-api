@@ -1,3 +1,9 @@
+"""Create case sets together with their collection and case associations.
+
+The module provides the case-service handler that authorizes and persists a case
+set and its requested links within one case repository unit of work.
+"""
+
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
@@ -11,6 +17,23 @@ from gen_epix.fastapp import CrudOperation
 def case_service_create_case_set(
     self: BaseCaseService, cmd: command.CreateCaseSetCommand
 ) -> model.CaseSet | None:
+    """Authorize and create a case set and its requested associations.
+
+    The case set, data-collection links, and optional members are created within one
+    case repository unit of work. The command's policy instances are propagated to
+    the nested link and member commands.
+
+    Args:
+        self: Case service handling the command.
+        cmd: Command containing the case set and requested associations.
+
+    Returns:
+        The created case set.
+
+    Raises:
+        UnauthorizedAuthError: If the user may not add the case set to all requested
+            data collections.
+    """
     # Get CaseType and created_in data collection IDs
     case_type_id = cmd.case_set.case_type_id
     created_in_data_collection_id = cmd.case_set.created_in_data_collection_id

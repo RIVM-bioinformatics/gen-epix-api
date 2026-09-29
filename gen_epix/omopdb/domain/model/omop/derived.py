@@ -64,6 +64,7 @@ class ConditionEra(Model, DataLineageMixin):
     @field_validator("condition_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize the condition concept identifier to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -114,6 +115,7 @@ class DrugEra(Model, DataLineageMixin):
     @field_validator("drug_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize the drug concept identifier to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -156,6 +158,7 @@ class DoseEra(Model, DataLineageMixin):
     @field_validator("drug_concept_id", "unit_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize dose-era concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -198,6 +201,7 @@ class CohortDefinition(Model):
     @field_validator("definition_type_concept_id", "subject_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize cohort-definition concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -209,6 +213,11 @@ class Cohort(Model):
         table_name="cohort",
         persistable=True,
         id_field_name="cohort_id",
+        links=create_links(
+            {
+                1: ("cohort_definition_id", CohortDefinition, None),
+            }
+        ),
     )
     cohort_definition_id: UUID = Field(
         description="User guidance:\nNone\nETL conventions:\nNone"
@@ -302,6 +311,7 @@ class Episode(Model, DataLineageMixin):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize episode concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -337,4 +347,5 @@ class EpisodeEvent(Model, DataLineageMixin):
     @field_validator("episode_event_field_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize the episode-event field concept identifier to UUID form."""
         return validate_int_for_uuid_field(value)

@@ -1,5 +1,5 @@
-"""
-CRUD operations for TreeAlgorithmClass entities.
+"""Handle CRUD operations for tree-algorithm-class entities.
+
 This is a simple metadata entity with no ABAC restrictions.
 """
 

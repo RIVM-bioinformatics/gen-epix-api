@@ -1,3 +1,5 @@
+"""Implement seqdb sequence service behavior for services.seq.retrieve_best."""
+
 from uuid import UUID
 
 import gen_epix.seqdb.domain.command as command
@@ -15,9 +17,7 @@ def seq_service_retrieve_best_seq_profile_per_sample(
     self: BaseSeqService,
     cmd: command.RetrieveBestSeqProfilePerSampleCommand,
 ) -> dict[UUID, UUID]:
-    """
-    Retrieve the best SeqProfile ID per sample for the given protocol and sample IDs.
-    """
+    """Retrieve the best SeqProfile ID for each requested sample."""
     return _get_best_id_per_sample(self, cmd)
 
 
@@ -25,9 +25,15 @@ def seq_service_retrieve_best_seq_per_sample(
     self: BaseSeqService,
     cmd: command.RetrieveBestSeqPerSampleCommand,
 ) -> dict[UUID, UUID]:
-    """
-    Retrieve the best Seq ID per sample for the given protocol and sample IDs.
-    """
+    """Retrieve the best Seq ID for each requested sample."""
+    return _get_best_id_per_sample(self, cmd)
+
+
+def seq_service_retrieve_best_seq_classification_per_sample(
+    self: BaseSeqService,
+    cmd: command.RetrieveBestSeqClassificationPerSampleCommand,
+) -> dict[UUID, UUID]:
+    """Retrieve the best SeqClassification ID for each requested sample."""
     return _get_best_id_per_sample(self, cmd)
 
 
@@ -36,21 +42,44 @@ def _get_best_id_per_sample(
     cmd: (
         command.RetrieveBestSeqPerSampleCommand
         | command.RetrieveBestSeqProfilePerSampleCommand
+        | command.RetrieveBestSeqClassificationPerSampleCommand
     ),
 ) -> dict[UUID, UUID]:
+    """Retrieve the best result identifier for each requested sample.
+
+    Retrieves the best Seq, SeqProfile, or SeqClassification ID for the given
+    protocol and sample IDs, based on the specified ranking strategy.
+
+    For SeqClassification, if `cmd.return_primary_category_id` is True, the primary
+    category ID will be returned instead of the SeqClassification ID.
+
+    Args:
+        self: Sequence service providing repository access.
+        cmd: Typed best-result retrieval command.
+
+    Returns:
+        Mapping from sample IDs to the selected result identifiers.
+
+    Raises:
+        NotImplementedError: The command type is unsupported.
+        ServiceException: The requested ranking strategy is unsupported.
     """
-    Retrieve the best Seq or SeqProfile ID per sample for the given protocol and sample
-    IDs, based on the specified ranking strategy.
-    """
-    model_class = (
-        model.SeqProfile
-        if isinstance(cmd, command.RetrieveBestSeqProfilePerSampleCommand)
-        else model.Seq
-    )
+    model_class: type[model.Model]
+    return_primary_category_id = False
+    if isinstance(cmd, command.RetrieveBestSeqProfilePerSampleCommand):
+        model_class = model.SeqProfile
+    elif isinstance(cmd, command.RetrieveBestSeqPerSampleCommand):
+        model_class = model.Seq
+    elif isinstance(cmd, command.RetrieveBestSeqClassificationPerSampleCommand):
+        model_class = model.SeqClassification
+        return_primary_category_id = cmd.return_primary_category_id
+    else:
+        raise NotImplementedError(f"Unsupported command type: {type(cmd).__name__}")
     user_id = cmd.user.id if cmd.user else None
     if cmd.ranking_strategy not in {
         enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
         enum.SeqRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
+        enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
     }:
         raise exc.ServiceException(
             "a3f7c2b1", f"Unsupported ranking strategy: {cmd.ranking_strategy}"
@@ -74,31 +103,67 @@ def _get_best_id_per_sample(
     else:
         filter = sample_filter
     with repository.uow() as uow:
+        # qc_result is a denormalized, cached copy of the effective quality result
+        # that is only refreshed on create, not on update (see QualityMixin). Read
+        # qc_result_machine/qc_result_human directly and resolve the effective
+        # result below, so a quality result updated after creation (e.g. a manual
+        # review added later) is still honored.
+        field_names = [
+            "id",
+            "sample_id",
+            "qc_result_machine",
+            "qc_result_human",
+            "qc_score",
+            "created_at",
+        ]
+        if return_primary_category_id:
+            field_names.append("primary_category_id")
         iter_fields = repository.read_fields(
             uow,
             user_id,
             model_class,
-            field_names=["id", "sample_id", "qc_result", "qc_score", "created_at"],
+            field_names=field_names,
             filter=filter,
         )
         best_id_per_sample: dict[UUID, UUID] = {}
         if cmd.ranking_strategy in {
             enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
             enum.SeqRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
+            enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
         }:
-            # Sort by (sample_id, qc_result, qc_score, created_at)
+            # Sort descending by (sample_id, qc_result, qc_score, created_at), where
+            # qc_result is the effective result: the manual (human) result when
+            # provided (i.e. not PENDING), otherwise the automated (machine) result.
             map_qc_result_to_sort_key = {
                 x: enum.QualityControlResult.get_sort_key(x)
                 for x in enum.QualityControlResult
             }
-            sort_fn = lambda x: (x[1], map_qc_result_to_sort_key[x[2]], x[3], x[4])
-            sorted_iter = sorted(iter_fields, key=sort_fn)
+
+            def _effective_qc_result(
+                qc_result_machine: enum.QualityControlResult,
+                qc_result_human: enum.QualityControlResult,
+            ) -> enum.QualityControlResult:
+                if qc_result_human != enum.QualityControlResult.PENDING:
+                    return qc_result_human
+                return qc_result_machine
+
+            sort_fn = lambda x: (
+                x[1],
+                map_qc_result_to_sort_key[_effective_qc_result(x[2], x[3])],
+                x[4],
+                x[5],
+            )
+            sorted_iter = sorted(iter_fields, key=sort_fn, reverse=True)
             prev_sample_id = None
-            for entry_id, sample_id, qc_result, qc_score, created_at in sorted_iter:
+            for row in sorted_iter:
+                sample_id = row[1]
                 if sample_id != prev_sample_id:
-                    best_id_per_sample[sample_id] = entry_id
+                    # First row for new sample is the best according to the ranking strategy
+                    best_id_per_sample[sample_id] = (
+                        row[6] if return_primary_category_id else row[0]
+                    )
                     prev_sample_id = sample_id
-        else:
+        else:  # pragma: no cover
             raise AssertionError(
                 "Should not reach here due to earlier check on ranking strategy"
             )

@@ -1,10 +1,14 @@
+"""Non-persistable OMOP models for retrieval requests and assembled results."""
+
 from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from gen_epix.commondb.domain.model.base import ModelNoId
+from gen_epix.commondb.domain.model import (
+    ModelNoId,
+)
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.omopdb.domain.model.base import Model
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
@@ -40,6 +44,8 @@ from gen_epix.omopdb.domain.model.omop.clinical_data import (
 
 
 class SpecimenIdsByCohortResult(Model):
+    """Represents a mapping from each requested cohort identifier to its matching specimen identifiers."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="specimen_ids_by_cohort_results",
         persistable=False,
@@ -53,9 +59,12 @@ class SpecimenIdsByCohortResult(Model):
 
 class PersonQuery(Model):
     """
-    A query for retrieving persons based on their demographic information. All
+    Represents a query for retrieving persons based on their demographic information. All
     constraints are optional, but at least some must be provided, and the query will
     match any person that matches all of the provided criteria.
+
+    Model validation: At least one modification-time bound must be provided to
+    prevent an unbounded person retrieval.
     """
 
     ENTITY: ClassVar = Entity(
@@ -84,6 +93,8 @@ class PersonQuery(Model):
 
 
 class PersonQueryResult(Model):
+    """Represents the person identifiers matching an executed person query."""
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="person_query_results",
         persistable=False,
@@ -101,7 +112,7 @@ class PersonQueryResult(Model):
 
 class FullPerson(Model):
     """
-    This class represents a comprehensive view of a person in the OMOP CDM, including
+    Represents a comprehensive view of a person in the OMOP CDM, including
     their demographic information as well as associated clinical data. It is designed to
     facilitate access to all relevant data for a person in a single structure.
     """

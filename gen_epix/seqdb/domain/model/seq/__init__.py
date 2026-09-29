@@ -1,6 +1,6 @@
-from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForUpload
+"""Re-export seqdb sequence-domain model types."""
 
-# pylint: disable=useless-import-alias
+from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForUpload
 from gen_epix.seqdb.domain.model.seq.base import BaseSeq as BaseSeq
 from gen_epix.seqdb.domain.model.seq.base import ContentMixin as ContentMixin
 from gen_epix.seqdb.domain.model.seq.base import QualityMixin as QualityMixin
@@ -13,6 +13,11 @@ from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification as SeqClassification,
 )
 from gen_epix.seqdb.domain.model.seq.classification import SeqTaxonomy as SeqTaxonomy
+
+# pylint: disable=useless-import-alias
+from gen_epix.seqdb.domain.model.seq.distance import (
+    CalculateSeqDistancesEtlResult as CalculateSeqDistancesEtlResult,
+)
 from gen_epix.seqdb.domain.model.seq.distance import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq.locus import Allele as Allele
 from gen_epix.seqdb.domain.model.seq.locus import Locus as Locus
@@ -55,9 +60,6 @@ from gen_epix.seqdb.domain.model.seq.tree import (
     TreeAlgorithmClass as TreeAlgorithmClass,
 )
 from gen_epix.seqdb.domain.model.seq.upload import AlleleForUpload as AlleleForUpload
-from gen_epix.seqdb.domain.model.seq.upload import (
-    CalculateSeqDistancesResult as CalculateSeqDistancesResult,
-)
 from gen_epix.seqdb.domain.model.seq.upload import ReadSetForUpload as ReadSetForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
     SampleBatchForUpload as SampleBatchForUpload,

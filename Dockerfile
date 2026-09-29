@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 
 ARG PYTHON_VERSION=3.14.1
 FROM python:${PYTHON_VERSION}-slim AS base
@@ -20,6 +20,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     openssl \
     libssl3t64 \
+    build-essential \
+    libstdc++6 \
     && apt-get install -y \
     curl \
     gnupg \
@@ -55,7 +57,7 @@ RUN adduser \
 # so it is not included in the requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    python -m pip install -r requirements.txt pyodbc==5.2.* --no-cache-dir
+    CC=g++ CXX=g++ python -m pip install -r requirements.txt pyodbc==5.2.* --no-cache-dir
 
 # Copy the source code into the container.
 COPY . /app

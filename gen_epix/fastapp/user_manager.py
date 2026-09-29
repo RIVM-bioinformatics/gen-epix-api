@@ -1,3 +1,5 @@
+"""User manager interface used by authentication and authorization services."""
+
 import abc
 from collections.abc import Hashable
 from typing import Any
@@ -8,7 +10,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 class BaseUserManager(abc.ABC):
     """
-    Class that defines the interface for a user manager. This class should be
+    Encapsulates a class that defines the interface for a user manager. This class should be
     subclassed and the methods implemented to provide the necessary functionality for
     the user manager to work with the system. The user manager is responsible for
     creating, retrieving, and managing users in the system.
@@ -25,6 +27,7 @@ class BaseUserManager(abc.ABC):
         claims. The email claim is used here as the default user key, with the value
         set to lowercase to allow case-insensitive matching. Empty string as email is
         set to None. Override this method if another key should be used.
+
         """
         email_claim: str | None = claims.get(self.STANDARD_EMAIL_CLAIM)
         if email_claim:

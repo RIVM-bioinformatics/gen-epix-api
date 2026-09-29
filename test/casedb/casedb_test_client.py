@@ -12,7 +12,7 @@ from uuid import UUID
 
 from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.model.case.case_data import CaseDataCollectionLink
+from gen_epix.casedb.domain.model.case.ops_data import CaseDataCollectionLink
 from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
@@ -20,7 +20,7 @@ from gen_epix.commondb.config import AppCfg, BaseAppCfg
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.fastapp import CrudOperation
-from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
+from gen_epix.filter import EqualsUuidFilter, FilterType, UuidSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.util import map_paired_elements
 
@@ -149,8 +149,8 @@ class CasedbTestClient(TestClient):
                 app_cfg.copy_repository_files(test_dir)
                 props = app_cfg.cfg["service"]["seqdb"]["props"]
                 # Copy any seqdb local repository files as well in case of a local setup
-                if props["seqdb_app_type"].upper() == "LOCAL":
-                    props["seqdb_local_app"]["app_cfg"].copy_repository_files(test_dir)
+                if props["seqdb_client_type"].upper() == "LOCAL":
+                    props["local_client"]["app_cfg"].copy_repository_files(test_dir)
             cls.TEST_CLIENTS[app_cfg.name] = cls(
                 test_name,
                 test_dir,
@@ -261,12 +261,15 @@ class CasedbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         concept_set_type: enum.ConceptSetType,
+        unit: enum.Unit | None = None,
         concepts: set[str | model.Concept] | None = None,
         set_dummy_concepts: bool = False,
     ) -> model.ConceptSet:
         user: model.User = self.get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
+        if unit is None and concept_set_type in enum.ConceptSetTypeSet.HAS_UNIT.value:
+            unit = enum.Unit.OTHER
         concept_set = self.handle(
             command.ConceptSetCrudCommand(
                 user=user,
@@ -275,6 +278,7 @@ class CasedbTestClient(TestClient):
                     code=code,
                     name=code,
                     type=concept_set_type,
+                    unit=unit,
                 ),
             )
         )
@@ -428,6 +432,7 @@ class CasedbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         col_type: enum.ColType = enum.ColType.TEXT,
+        unit: enum.Unit | None = None,
         concept_set: str | model.ConceptSet | None = None,
         region_set: str | model.RegionSet | None = None,
         genetic_distance_protocol: str | model.GeneticDistanceProtocol | None = None,
@@ -448,6 +453,8 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"Invalid code {code}")
         ref_dim = "ref_dim" + m.group(2)
         rank = int(m.group(3))
+        if unit is None and col_type in enum.ColTypeSet.HAS_UNIT.value:
+            unit = enum.Unit.OTHER
         if set_dummy_ref_dim:
             ref_dim_id = self.generate_id()
         else:
@@ -497,6 +504,7 @@ class CasedbTestClient(TestClient):
                     ref_dim_id=ref_dim_id,
                     col_type=col_type,
                     rank=rank,
+                    unit=unit,
                     concept_set_id=concept_set_id,
                     region_set_id=region_set_id,
                     genetic_distance_protocol_id=genetic_distance_protocol_id,
@@ -790,6 +798,7 @@ class CasedbTestClient(TestClient):
         code: str,
         genetic_sequence_col_id: UUID | None = None,
         tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = None,
+        ref_col: str | None = None,
         set_dummy_case_type: bool = False,
         set_dummy_dim: bool = False,
         set_dummy_ref_col: bool = False,
@@ -802,7 +811,7 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"Invalid code {code}")
         case_type_str = "case_type" + m.group(2)
         dim_str = "dim" + m.group(2) + "_" + m.group(3) + "_" + m.group(4)
-        ref_col_str = "ref_col" + m.group(3) + "_" + m.group(5)
+        ref_col_str = ref_col or ("ref_col" + m.group(3) + "_" + m.group(5))
         if set_dummy_case_type:
             case_type_id = self.generate_id()
         else:
@@ -1203,7 +1212,7 @@ class CasedbTestClient(TestClient):
                 value = regions[0].id
             content[col.id] = str(value)
 
-        # Create the case, encoding the case_type_index and case_index in the case_date as resp. month and days since 1900-01-01
+        # Create the case, encoding the case_type_index and case_index in the timed_at as resp. month and days since 1900-01-01
         case_batch_upload_result: model.CaseBatchUploadResult = self.handle(
             command.UploadCasesCommand(
                 user=user,
@@ -1249,7 +1258,7 @@ class CasedbTestClient(TestClient):
             command.CaseDataCollectionLinkCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
-                query_filter=TypedEqualsUuidFilter(
+                query_filter=EqualsUuidFilter(
                     type=FilterType.EQUALS_UUID.value,
                     key="case_id",
                     value=case.id,
@@ -1390,7 +1399,7 @@ class CasedbTestClient(TestClient):
             command.CaseSetDataCollectionLinkCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
-                query_filter=TypedEqualsUuidFilter(
+                query_filter=EqualsUuidFilter(
                     type=FilterType.EQUALS_UUID.value,
                     key="case_set_id",
                     value=case_set.id,
@@ -1405,7 +1414,7 @@ class CasedbTestClient(TestClient):
             command.CaseSetMemberCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
-                query_filter=TypedEqualsUuidFilter(
+                query_filter=EqualsUuidFilter(
                     type=FilterType.EQUALS_UUID.value,
                     key="case_set_id",
                     value=case_set.id,
@@ -1696,7 +1705,7 @@ class CasedbTestClient(TestClient):
             command.CaseDataCollectionLinkCrudCommand(
                 user=user,
                 operation=CrudOperation.READ_ALL,
-                query_filter=TypedUuidSetFilter(
+                query_filter=UuidSetFilter(
                     type=FilterType.UUID_SET.value,
                     key="case_id",
                     members=case_ids,
@@ -1739,7 +1748,7 @@ class CasedbTestClient(TestClient):
                 command.CaseDataCollectionLinkCrudCommand(
                     user=user,
                     operation=CrudOperation.READ_ALL,
-                    query_filter=TypedUuidSetFilter(
+                    query_filter=UuidSetFilter(
                         type=FilterType.UUID_SET.value,
                         key="case_id",
                         members=case_ids,
@@ -1941,7 +1950,7 @@ class CasedbTestClient(TestClient):
             as_set=True,
         )
         for x in sorted(
-            cases, key=lambda x: self._convert_case_date_to_code(x.case_date)
+            cases, key=lambda x: self._convert_case_timed_at_to_code(x.timed_at)
         ):
             if x.id in case_data_collection_link_sets:
                 data_collection_str = ", ".join(
@@ -1953,7 +1962,7 @@ class CasedbTestClient(TestClient):
                         )
                     ]
                 )
-                case_name = self._convert_case_date_to_code(x.case_date)
+                case_name = self._convert_case_timed_at_to_code(x.timed_at)
 
                 print(f"{case_name}: {data_collection_str} ({x.id})")
 
@@ -2217,7 +2226,7 @@ class CasedbTestClient(TestClient):
             cases = [
                 x.code
                 for x in cases
-                # if self._convert_case_date_to_code(x.case_date) in case_codes
+                # if self._convert_case_date_to_code(x.timed_at) in case_codes
             ]
         case_data_collection_links: list[model.CaseDataCollectionLink] = self.read_all(  # type: ignore[assignment]
             root_user, model.CaseDataCollectionLink
@@ -2233,7 +2242,7 @@ class CasedbTestClient(TestClient):
             as_set=True,
         )
         print("\nCases:")
-        for x in sorted(cases, key=lambda x: x.case_date):
+        for x in sorted(cases, key=lambda x: x.timed_at):
             curr_data_collections = sorted(
                 [
                     data_collection_map[x].name
@@ -2244,7 +2253,7 @@ class CasedbTestClient(TestClient):
             curr_content = sorted([(col_map[x].code, y) for x, y in x.content.items()])
             curr_content = ", ".join([f"{x[0]}={x[1]}" for x in curr_content])
             print(
-                f"{self._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
+                f"{self._convert_case_timed_at_to_code(x.timed_at)}: {curr_content}; {curr_data_collections} ({x.id})"
             )
 
     def get_obj(
@@ -2313,9 +2322,7 @@ class CasedbTestClient(TestClient):
         )
 
     @staticmethod
-    def _convert_case_date_to_code(case_date: datetime) -> str:
-        case_type_index = int(case_date.month)  # Get case_type_index from month
-        case_index = int(case_date.year - 1900)  # Get case_index from year offset
-        return f"case{case_type_index}_{case_index}"
-        return f"case{case_type_index}_{case_index}"
-        return f"case{case_type_index}_{case_index}"
+    def _convert_case_timed_at_to_code(timed_at: datetime) -> str:
+        case_type_index = int(timed_at.month)  # Get case_type_index from month
+        case_index = int(timed_at.year - 1900)  # Get case_index from year offset
+        return f"timed_at{case_type_index}_{case_index}"

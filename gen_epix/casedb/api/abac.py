@@ -1,3 +1,5 @@
+"""Register casedb ABAC endpoints through the shared commondb API adapter."""
+
 from collections.abc import Callable
 from typing import Any, NoReturn
 
@@ -16,6 +18,7 @@ def create_abac_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **_kwargs: Any,
 ) -> None:
+    """Register the shared ABAC endpoints for the casedb ABAC service."""
     create_common_abac_endpoints(
         router=router,
         app=app,

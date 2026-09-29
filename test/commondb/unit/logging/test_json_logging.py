@@ -381,19 +381,20 @@ def test_sensitive_keys_are_redacted_in_nested_extras() -> None:
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
-def test_redaction_can_be_configured_with_custom_sensitive_keys() -> None:
+def test_custom_sensitive_keys_are_additive_to_mandatory_keys() -> None:
     formatter = JsonFormatter(
         sensitive_keys=["token_subject"],
         redacted_value="[MASKED]",
     )
     record = _make_record(
-        msg='{"token_subject":"abc","password":"hunter2"}',
+        msg='{"token_subject":"abc","nested":{"password":"hunter2","claims":{"sub":"user-1"}}}',
     )
 
     payload = json.loads(formatter.format(record))
 
     assert payload["token_subject"] == "[MASKED]"
-    assert payload["password"] == "hunter2"
+    assert payload["nested"]["password"] == "[MASKED]"
+    assert payload["nested"]["claims"] == "[MASKED]"
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")

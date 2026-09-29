@@ -1,3 +1,5 @@
+"""Implement seqdb application service behavior for services.abac."""
+
 from __future__ import annotations
 
 from gen_epix.fastapp.model import Command
@@ -5,4 +7,6 @@ from gen_epix.seqdb.domain.service import BaseAbacService
 
 
 class AbacService(BaseAbacService):
+    """Encapsulates seqdb ABAC service behavior."""
+
     CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = tuple()

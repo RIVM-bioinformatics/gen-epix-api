@@ -1,3 +1,5 @@
+"""Repository implementations and unit-of-work exports."""
+
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.repositories.dict import DictRepository as DictRepository
 from gen_epix.fastapp.repositories.dict import DictUnitOfWork as DictUnitOfWork

@@ -1,3 +1,5 @@
+"""Define casedb commands for concepts, diseases, and etiologies."""
+
 from typing import ClassVar
 from uuid import UUID
 
@@ -8,9 +10,10 @@ from gen_epix.commondb.domain.command import CrudCommand, UpdateAssociationComma
 
 
 class DiseaseEtiologicalAgentUpdateAssociationCommand(UpdateAssociationCommand):
-    """
-    Set the etiological agents for a disease by replacing existing disease–agent
-    links with the provided etiologies, then return the updated list.
+    """Represent replacement of the etiological agents for a disease.
+
+    Existing disease-agent links are replaced with the provided etiologies, and
+    the updated list is returned.
     """
 
     ASSOCIATION_CLASS: ClassVar = model.Etiology
@@ -26,36 +29,36 @@ class DiseaseEtiologicalAgentUpdateAssociationCommand(UpdateAssociationCommand):
 
 
 class ConceptCrudCommand(CrudCommand):
-    """Manage concepts within a concept set, including codes, labels, and ordering."""
+    """Represent CRUD operations for concepts within a concept set."""
 
     MODEL_CLASS: ClassVar = model.Concept
 
 
 class ConceptSetCrudCommand(CrudCommand):
-    """Manage controlled vocabularies and value sets (coded lists, regex/grammar-based) used by case variables."""
+    """Represent CRUD operations for controlled vocabularies and value sets."""
 
     MODEL_CLASS: ClassVar = model.ConceptSet
 
 
 class ConceptRelationCrudCommand(CrudCommand):
-    """Manage hierarchical or semantic relationships between concepts (e.g., parent/child, broader/narrower)."""
+    """Represent CRUD operations for semantic relationships between concepts."""
 
     MODEL_CLASS: ClassVar = model.ConceptRelation
 
 
 class DiseaseCrudCommand(CrudCommand):
-    """Manage diseases (ICD-coded when available) to anchor CaseTypes and etiologies to specific conditions."""
+    """Represent CRUD operations for diseases that anchor case types."""
 
     MODEL_CLASS: ClassVar = model.Disease
 
 
 class EtiologicalAgentCrudCommand(CrudCommand):
-    """Manage etiological agents (pathogens/causative organisms) used in disease etiologies and sequencing metadata."""
+    """Represent CRUD operations for disease etiological agents."""
 
     MODEL_CLASS: ClassVar = model.EtiologicalAgent
 
 
 class EtiologyCrudCommand(CrudCommand):
-    """Manage disease–etiological agent links defining valid disease–pathogen combinations."""
+    """Represent CRUD operations for disease-agent etiology links."""
 
     MODEL_CLASS: ClassVar = model.Etiology

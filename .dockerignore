@@ -12,6 +12,7 @@
 **/.env
 **/.git
 **/.gitignore
+**/.idea
 **/.project
 **/.settings
 **/.toolstarget
@@ -30,6 +31,7 @@
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
+/test/output/
 LICENSE
 README.md
 azure-deploy-acc.yml

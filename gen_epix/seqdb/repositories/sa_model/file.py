@@ -1,3 +1,5 @@
+"""Define SQLAlchemy persistence mappings for seqdb repositories.sa_model.file."""
+
 # pylint: disable=too-few-public-methods
 
 import sqlalchemy.orm as orm
@@ -14,9 +16,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.FILE.value)
 
 
 class File(Base, RowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates the SQLAlchemy model for the persistable domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.File)
 

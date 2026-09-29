@@ -26,6 +26,7 @@ SEQDB_APP_CFGS = get_app_cfgs(
     seqdb_enum.ServiceType,
     seqdb_enum.RepositoryType,
     EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
+    log_any=False,
 )
 
 CASEDB_APP_CFGS = get_app_cfgs(
@@ -34,6 +35,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
     enum.RepositoryType,
     EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
     seqdb_app_cfgs=SEQDB_APP_CFGS,
+    log_any=False,
 )
 
 

@@ -1,15 +1,27 @@
+"""Re-export commondb domain models and model metadata.
+
+Base exports provide audit fields and enum normalization helpers. ETL exports
+include logging and status-tracking accumulators for extract, transform, and load
+operations. Organization exports represent organizations, users, contacts,
+collections, invitations, and external identifiers. System and ABAC exports
+provide outage metadata and organization-administrator policies. Upload exports
+define nested upload payloads and outcomes. Model maps group persisted models
+by service type for application-domain registration.
+"""
+
 # pylint: disable=useless-import-alias
 import gen_epix.fastapp as fastapp
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
-from gen_epix.commondb.domain.model.base import BaseEtlResult as BaseEtlResult
-from gen_epix.commondb.domain.model.base import EtlLogItem as EtlLogItem
 from gen_epix.commondb.domain.model.base import Model as Model
 from gen_epix.commondb.domain.model.base import ModelNoId as ModelNoId
 from gen_epix.commondb.domain.model.base import (
     validate_int_enum_value as validate_int_enum_value,
+)
+from gen_epix.commondb.domain.model.base import (
+    validate_int_enum_value_or_none as validate_int_enum_value_or_none,
 )
 from gen_epix.commondb.domain.model.organization import BaseIdentifier as BaseIdentifier
 from gen_epix.commondb.domain.model.organization import Contact as Contact
@@ -46,6 +58,9 @@ from gen_epix.commondb.domain.model.organization import (
     UserInvitationConstraints as UserInvitationConstraints,
 )
 from gen_epix.commondb.domain.model.organization import UserNameEmail as UserNameEmail
+from gen_epix.commondb.domain.model.system import (
+    DeleteAllOperationalDataResult as DeleteAllOperationalDataResult,
+)
 from gen_epix.commondb.domain.model.system import Outage as Outage
 from gen_epix.commondb.domain.model.system import PackageMetadata as PackageMetadata
 from gen_epix.commondb.domain.model.upload import (
@@ -71,15 +86,13 @@ from gen_epix.fastapp.model import ModelFieldProps as ModelFieldProps
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 
-SORTED_MODELS_BY_SERVICE_TYPE: dict[
-    enum.ServiceType, tuple[type[fastapp.Model], ...]
-] = {
-    enum.ServiceType.AUTH: (
+SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]] = {
+    enum.ServiceType.AUTH: [
         IdentityProvider,
         IDPUser,
-    ),
-    enum.ServiceType.SYSTEM: (Outage, PackageMetadata),
-    enum.ServiceType.ORGANIZATION: (
+    ],
+    enum.ServiceType.SYSTEM: [Outage, PackageMetadata, DeleteAllOperationalDataResult],
+    enum.ServiceType.ORGANIZATION: [
         Organization,
         OrganizationSet,
         OrganizationSetMember,
@@ -94,9 +107,9 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
         User,
         UserInvitation,
         UserInvitationConstraints,
-    ),
-    enum.ServiceType.RBAC: tuple(),
-    enum.ServiceType.ABAC: (OrganizationAdminPolicy,),
+    ],
+    enum.ServiceType.RBAC: [],
+    enum.ServiceType.ABAC: [OrganizationAdminPolicy],
 }
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())

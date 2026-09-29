@@ -34,7 +34,9 @@ class _DummyLogger:
 def _build_test_fixture(
     *, shared_handler: bool, log_setup: bool
 ) -> tuple[AppCfg, dict[str, _DummyLogger], _DummyHandler]:
+    """Create an AppCfg test instance with controllable dummy loggers and handlers."""
     app_cfg = AppCfg.__new__(AppCfg)
+    app_cfg._log_any = True
     app_cfg._envvar_prefix = "CASEDB_"
     app_cfg._logger_prefix = "casedb"
     app_cfg._log_level_envvar = "LOG_LEVEL"
@@ -68,7 +70,10 @@ def _build_test_fixture(
     return app_cfg, logger_map, handler
 
 
-def _patch_logging_get_logger(monkeypatch, logger_map: dict[str, _DummyLogger]) -> None:
+def _patch_logging_get_logger(
+    monkeypatch: pytest.MonkeyPatch, logger_map: dict[str, _DummyLogger]
+) -> None:
+    """Patch logging.getLogger so tests can inspect logger state deterministically."""
     original_get_logger = logging.getLogger
 
     def _get_logger(name: str | None = None):  # type: ignore[no-untyped-def]
@@ -79,7 +84,10 @@ def _patch_logging_get_logger(monkeypatch, logger_map: dict[str, _DummyLogger]) 
     monkeypatch.setattr(logging, "getLogger", _get_logger)
 
 
-def _patch_runtime_logger_dict(monkeypatch, names: list[str] | None = None) -> None:
+def _patch_runtime_logger_dict(
+    monkeypatch: pytest.MonkeyPatch, names: list[str] | None = None
+) -> None:
+    """Patch runtime logger registry with synthetic logger names for descendant tests."""
     logger_names = names or []
     monkeypatch.setattr(
         logging.root.manager,
@@ -89,6 +97,7 @@ def _patch_runtime_logger_dict(monkeypatch, names: list[str] | None = None) -> N
 
 
 def _extract_diagnostic_payload(logger: _DummyLogger) -> dict:
+    """Return the latest APPLIED_LOG_LEVEL diagnostic payload from a dummy logger."""
     for level, msg in reversed(logger.messages):
         if level != "INFO":
             continue
@@ -100,7 +109,7 @@ def _extract_diagnostic_payload(logger: _DummyLogger) -> dict:
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_set_log_level_preserves_pinned_third_party_loggers_without_handler_overwrite(
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     app_cfg, logger_map, shared_handler = _build_test_fixture(
         shared_handler=True, log_setup=False
@@ -139,7 +148,7 @@ def test_set_log_level_preserves_pinned_third_party_loggers_without_handler_over
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_set_log_level_diagnostic_precedence_arg_over_env_and_settings(
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     app_cfg, logger_map, _ = _build_test_fixture(shared_handler=False, log_setup=True)
     _patch_logging_get_logger(monkeypatch, logger_map)
@@ -159,7 +168,7 @@ def test_set_log_level_diagnostic_precedence_arg_over_env_and_settings(
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_set_log_level_diagnostic_precedence_env_over_settings(
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     app_cfg, logger_map, _ = _build_test_fixture(shared_handler=False, log_setup=True)
     _patch_logging_get_logger(monkeypatch, logger_map)
@@ -179,7 +188,7 @@ def test_set_log_level_diagnostic_precedence_env_over_settings(
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_set_log_level_diagnostic_precedence_settings_when_env_absent(
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     app_cfg, logger_map, _ = _build_test_fixture(shared_handler=False, log_setup=True)
     _patch_logging_get_logger(monkeypatch, logger_map)

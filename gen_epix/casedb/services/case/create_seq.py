@@ -1,3 +1,9 @@
+"""Create seqdb files linked through genetic case-content columns.
+
+The module validates case and column access in the case repository, creates files
+through seqdb commands, and updates the linked read set or sequence.
+"""
+
 import gzip
 import hashlib
 from uuid import UUID
@@ -16,6 +22,28 @@ def case_service_create_file_for_read_set_or_seq(
     self: BaseCaseService,
     cmd: command.CreateFileForReadSetCommand | command.CreateFileForSeqCommand,
 ) -> UUID:
+    """Create or reuse a file for a case-linked read set or sequence.
+
+    The handler verifies WRITE_CASE access to the selected genetic column. Uploading
+    identical uncompressed content is idempotent and returns the existing file ID.
+    Case reads occur in one case-repository unit of work, while file creation and
+    read-set or sequence updates are separate seqdb commands; the overall operation
+    is not one cross-domain transaction.
+
+    Args:
+        self: Case service handling the command.
+        cmd: Read-set or sequence file creation command.
+
+    Returns:
+        Identifier of the existing or newly created file.
+
+    Raises:
+        InvalidArgumentsError: If the command type, linked content, column type,
+            case type, or an existing file's content is invalid.
+        UnauthorizedAuthError: If the user lacks column-level write access through
+            every collection associated with the case.
+        ValueError: If command dispatch reaches an unsupported command type.
+    """
     user, repository = self._get_user_and_repository(cmd)
     user_id: UUID = user.id  # type: ignore[assignment]
 
@@ -137,6 +165,26 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
     case_ids: list[UUID],
     col_ids: list[UUID],
 ) -> list[model.Case]:
+    """Load cases and validate genetic column compatibility and write access.
+
+    Args:
+        self: Case service used for repository and association access.
+        cmd: Read-set or sequence file creation command.
+        case_abac: Case access policy data used for column authorization.
+        uow: Active case repository unit of work.
+        user_id: Identifier used for repository reads.
+        case_ids: Case identifiers to retrieve.
+        col_ids: Corresponding genetic column identifiers.
+
+    Returns:
+        Retrieved cases in repository result order.
+
+    Raises:
+        InvalidArgumentsError: If the command type is unsupported, a column has the
+            wrong genetic type, or a column and case have different case types.
+        UnauthorizedAuthError: If a case has no associated collection granting write
+            access to its corresponding column.
+    """
     # Get Col and RefCol data
     cols: list[model.Col] = self.repository.crud(
         uow,
@@ -236,6 +284,15 @@ def _create_file(
     self: BaseCaseService,
     cmd: command.CreateFileForReadSetCommand | command.CreateFileForSeqCommand,
 ) -> UUID:
+    """Dispatch a seqdb command to create a file.
+
+    Args:
+        self: Case service whose application dispatches the command.
+        cmd: Command supplying file bytes, format, compression, and user.
+
+    Returns:
+        Identifier returned by the seqdb file creation command.
+    """
     created_file_id: UUID = self.app.handle(
         seqdb_command.CreateFileCommand(
             user=cmd.user,
@@ -248,6 +305,18 @@ def _create_file(
 
 
 def _get_hash_uuid(content: bytes, compression: seqdb_enum.FileCompression) -> UUID:
+    """Derive a stable UUID from the uncompressed file content.
+
+    Args:
+        content: Raw file bytes in the declared compression format.
+        compression: Compression applied to ``content``.
+
+    Returns:
+        UUID formed from the first 16 bytes of the SHA-256 digest.
+
+    Raises:
+        ValueError: If the compression mode is unsupported.
+    """
     if compression == seqdb_enum.FileCompression.NONE:
         uncompressed_content = content
     elif compression == seqdb_enum.FileCompression.GZIP:

@@ -1,3 +1,11 @@
+"""Expose OmopDB service contracts for shared and OMOP command handling.
+
+`BaseOmopService` handles OMOP CRUD, upload, and retrieval commands, and
+`BaseAbacService` configures their access-control command groups. Shared auth,
+organization, RBAC, and system service contracts are re-exported for
+application composition.
+"""
+
 # pylint: disable=useless-import-alias
 
 from gen_epix.commondb.domain.service import (

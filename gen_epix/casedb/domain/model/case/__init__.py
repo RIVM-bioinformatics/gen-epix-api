@@ -1,13 +1,12 @@
-from gen_epix.casedb.domain.model.case.case_data import Case as Case
-from gen_epix.casedb.domain.model.case.case_data import (
-    CaseDataCollectionLink as CaseDataCollectionLink,
-)
-from gen_epix.casedb.domain.model.case.case_data import CaseIdentifier as CaseIdentifier
-from gen_epix.casedb.domain.model.case.case_data import CaseSet as CaseSet
-from gen_epix.casedb.domain.model.case.case_data import (
-    CaseSetDataCollectionLink as CaseSetDataCollectionLink,
-)
-from gen_epix.casedb.domain.model.case.case_data import CaseSetMember as CaseSetMember
+"""Expose case-domain models for metadata, operations, queries, and uploads.
+
+``CompleteCaseType`` provides the user-specific case-type view. Non-persistable
+exports cover case rights, links, queries, statistics, and similar-case results;
+operational exports represent cases, identifiers, sets, memberships, and data
+collection links. Reference-data exports define case types, dimensions, columns,
+sets, statuses, and sequence-analysis configuration, while upload exports describe
+case batches and their linked sequence or read-set inputs and results.
+"""
 
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.domain.model.case.complete_case_type import (
@@ -35,6 +34,16 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
     RefDataAccess as RefDataAccess,
 )
 from gen_epix.casedb.domain.model.case.non_persistable import SimilarCase as SimilarCase
+from gen_epix.casedb.domain.model.case.ops_data import Case as Case
+from gen_epix.casedb.domain.model.case.ops_data import (
+    CaseDataCollectionLink as CaseDataCollectionLink,
+)
+from gen_epix.casedb.domain.model.case.ops_data import CaseIdentifier as CaseIdentifier
+from gen_epix.casedb.domain.model.case.ops_data import CaseSet as CaseSet
+from gen_epix.casedb.domain.model.case.ops_data import (
+    CaseSetDataCollectionLink as CaseSetDataCollectionLink,
+)
+from gen_epix.casedb.domain.model.case.ops_data import CaseSetMember as CaseSetMember
 from gen_epix.casedb.domain.model.case.ref_data import (
     CaseSetCategory as CaseSetCategory,
 )

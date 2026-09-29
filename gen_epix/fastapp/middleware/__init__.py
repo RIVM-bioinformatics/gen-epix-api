@@ -1,3 +1,5 @@
+"""Middleware for authentication failures, response headers, and rate limiting."""
+
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.middleware.handle_auth_exception import (
     HandleAuthExceptionMiddleware as HandleAuthExceptionMiddleware,

@@ -1,3 +1,13 @@
+"""Expose casedb policy adapters and shared policy substitutions.
+
+Casedb exports enforce case ABAC, organization administration, and organization-
+or self-scoped result filtering. Shared commondb exports provide outage and user
+policies plus the policy types replaced by casedb adapters.
+
+``COMMON_POLICY_MAP`` records the casedb implementations used in place of shared
+result-filtering and organization-administration policies during composition.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.casedb.policies.case_abac_policy import CaseAbacPolicy as CaseAbacPolicy

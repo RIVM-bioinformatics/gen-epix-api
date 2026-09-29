@@ -1,3 +1,5 @@
+"""Implement seqdb CRUD service operations for services.seq.crud_ref_allele."""
+
 from uuid import UUID
 
 from gen_epix.seqdb.domain import command, model
@@ -15,7 +17,18 @@ def seq_service_crud_ref_allele(
     | bool
     | None
 ):
-    """Handle CRUD operations for RefAllele entities."""
+    """Handle CRUD operations for reference-allele entities.
+
+    Args:
+        self: Sequence service executing the command.
+        cmd: Typed reference-allele CRUD command.
+
+    Returns:
+        The action-specific reference-allele result.
+
+    Raises:
+        AssertionError: The command operation is unsupported.
+    """
     user_id = cmd.user.id if cmd.user else None
     ref_alleles: list[model.RefAllele] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():

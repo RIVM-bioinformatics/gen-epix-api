@@ -1,3 +1,5 @@
+"""Assemble complete case-type metadata filtered by the caller's ABAC access."""
+
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
@@ -12,6 +14,20 @@ def case_service_retrieve_complete_case_type(
     self: BaseCaseService,
     cmd: command.RetrieveCompleteCaseTypeCommand,
 ) -> model.CompleteCaseType:
+    """Assemble case-type metadata and its effective collection access.
+
+    Columns and their dimensions and reference metadata are restricted to columns for
+    which the user has read or write access. Full-access policies expose all columns
+    and synthesize full rights for every data collection. Supplying no user follows
+    that full-access metadata path for internal callers.
+
+    Args:
+        self: Case service used for repository and application retrieval.
+        cmd: Command identifying the case type and optional user context.
+
+    Returns:
+        Complete accessible case-type metadata and effective ABAC mappings.
+    """
     # TODO: many calls are inefficient,
     # retrieving first all objs and then filtering.
     # To be improved with e.g. CQS.
@@ -112,11 +128,18 @@ def case_service_retrieve_complete_case_type(
                 command.EtiologyCrudCommand(
                     user=user,
                     operation=CrudOperation.READ_ALL,
+                    # TODO: performance improvement, commented out for now to preserve baseline
+                    # query_filter=UuidSetFilter(
+                    #     key="disease_id",
+                    #     members=frozenset({case_type.disease_id}),
+                    # ),
                 )
             )
             etiologies = {
                 x.id: x for x in etiologies if x.disease_id == case_type.disease_id
             }
+            # TODO: performance improvement, commented out for now to preserve baseline
+            # etiologies = {x.id: x for x in etiologies}
         else:
             etiologies = {}
 
@@ -205,11 +228,18 @@ def case_service_retrieve_complete_case_type(
             command.TreeAlgorithmCrudCommand(
                 user=user,
                 operation=CrudOperation.READ_ALL,
+                # TODO: performance improvement, commented out for now to preserve baseline
+                # query_filter=StringSetFilter(
+                #    key="code",
+                #    members=frozenset(tree_algorithm_codes),
+                # ),
             )
         )
         tree_algorithms = {
             x.code: x for x in tree_algorithms if x.code in tree_algorithm_codes
         }
+        # TODO: performance improvement, commented out for now to preserve baseline
+        # tree_algorithms = {x.code: x for x in tree_algorithms}
 
         # Derive stats_time_dim_id from Dim.is_time
         case_date_dim_id: UUID | None = None

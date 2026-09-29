@@ -1,3 +1,16 @@
+"""Expose and organize casedb and shared domain models for registration.
+
+ABAC exports describe case-policy records and effective rights. Case exports cover
+reference metadata, operational records, queries, rights, statistics, and uploads;
+geographic and ontology exports provide reference models, and the seqdb export
+provides phylogenetic trees. Shared commondb and FastApp exports provide common
+identity, organization, system, upload, authentication, and model metadata types.
+
+The package builds service-ordered model groups, shared model substitutions, and
+stored-model field properties. Importing it completes stored-field metadata and
+adds inherited documentation to casedb-specific model classes.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum
@@ -197,6 +210,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
         ],
     }
 )
+
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
@@ -207,7 +221,7 @@ STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] 
         "cohort": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=True),
         "content": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=True),
         "created_in_data_collection_id": ModelFieldProps(),
-        "case_date": ModelFieldProps(is_mutable_always=True),
+        "timed_at": ModelFieldProps(is_mutable_always=True),
     },
 }
 complete_stored_model_field_props(

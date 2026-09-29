@@ -82,6 +82,7 @@ class CdmSource(Model):
     @field_validator("cdm_version_concept_id", mode="before")
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize an integer CDM version concept identifier to UUID form."""
         return validate_int_for_uuid_field(value)
 
 
@@ -141,4 +142,5 @@ class Metadata(Model):
     )
     @classmethod
     def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        """Normalize metadata concept identifiers to UUID form."""
         return validate_int_for_uuid_field(value)

@@ -1,3 +1,5 @@
+"""Define SQLAlchemy rows and mixins for commondb system persistence."""
+
 import datetime
 
 import sqlalchemy.orm as orm
@@ -15,8 +17,9 @@ Base: type = orm.declarative_base(name=enum.ServiceType.SYSTEM.value)
 
 @declarative_mixin
 class OutageMixin(RowMetadataMixin):
-    """
-    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    """Encapsulates SQLAlchemy columns for Outage-derived row models.
+
+    The mixin supports derived domain models whose SQLAlchemy models are
     created under a different declarative base.
     """
 
@@ -44,8 +47,6 @@ class OutageMixin(RowMetadataMixin):
 
 
 class Outage(Base, OutageMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
+    """Encapsulates persistence of the commondb Outage domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Outage)

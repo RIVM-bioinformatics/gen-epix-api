@@ -22,6 +22,3 @@ dummy = (
     setup_case_data_reference,
     setup_case_data_operational,
 )  # noqa: F841
-
-
-print("\n--- Importing conftest.py ---")

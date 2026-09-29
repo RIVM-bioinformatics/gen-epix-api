@@ -1,3 +1,9 @@
+"""Define the complete, user-specific view of a case type.
+
+The module combines case-type reference data and effective ABAC records into a
+single non-persistable model for efficient case-domain access.
+"""
+
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -22,10 +28,16 @@ from gen_epix.fastapp.domain import Entity
 
 
 class CompleteCaseType(CaseType):
-    """
-    A complete CaseType with all its related entities, to avoid multiple queries
-    and allow efficient access. The complete CaseType is unique for each
-    (id, user_id) whereby ID is the inherited CaseType ID.
+    """Represents a case type with its related entities and effective ABAC data.
+
+    The model avoids repeated queries and is unique for each inherited case-type
+    identifier and ``user_id`` pair.
+
+    Model validation: The case-date dimension, when set, must exist in ``dims``.
+    Validation replaces the derived ordering fields with dimension and column IDs
+    sorted by their configured occurrence, rank, and code. It also replaces the
+    case-date column map with at most one time-related column per column type;
+    invalid references or duplicate time column types raise ``ValueError``.
     """
 
     NAME: ClassVar = "CompleteCaseType"
@@ -84,6 +96,7 @@ class CompleteCaseType(CaseType):
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:
+        """Validate references and replace all derived ordering fields in place."""
         if self.case_date_dim_id is not None and self.case_date_dim_id not in self.dims:
             raise ValueError("stats_time_dim_id must refer to a valid Dim")
         # Calculate ordered_dim_ids

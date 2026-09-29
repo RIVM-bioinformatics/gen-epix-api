@@ -1,3 +1,10 @@
+"""Expose shared and OmopDB service implementations for application composition.
+
+Shared auth, system, organization, RBAC, and user services are re-exported;
+OmopDB adds ABAC, OMOP command handling, and specialized organization and RBAC
+implementations.
+"""
+
 # pylint: disable=useless-import-alias
 from gen_epix.commondb.services import AuthService as AuthService
 from gen_epix.commondb.services import OrganizationService as OrganizationService

@@ -6,7 +6,7 @@ from test.fastapp.enum import TestType as EnumTestType  # to avoid PyTest warnin
 from test.fastapp.model import DOMAIN, Model2_2
 from test.fastapp.service_test_client import ServiceTestClient as Env
 from test.fastapp.util import parse_stats
-from test.test_client.util import get_test_root_output_dir
+from test.test_client.util import get_test_name, get_test_root_output_dir
 
 import pandas as pd
 import pyinstrument
@@ -16,34 +16,26 @@ from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.fastapp.repositories.sa.repository import SARepository
 
+REPOSITORY_CLASSES = [DictRepository, SARepository]
+PERFORMANCE_TEST_NAME = get_test_name(
+    EnumTestType.SERVICE_SERVICE_PERFORMANCE_REPOSITORY
+)
 
-def get_test_clients() -> list[Env]:
-    envs = [
-        Env.get_test_client(
-            DictRepository,
-            domain=DOMAIN,
-            test_type=EnumTestType.SERVICE_SERVICE_UNIT_REPOSITORY,
-        )
-    ]
-    envs.append(
-        Env.get_test_client(
-            SARepository,
-            domain=DOMAIN,
-            test_type=EnumTestType.SERVICE_SERVICE_UNIT_REPOSITORY,
-            test_name=envs[0].test_name,
-        )
+
+@pytest.fixture(params=REPOSITORY_CLASSES)
+def env(request: pytest.FixtureRequest) -> Env:
+    return Env.get_test_client(
+        request.param,
+        domain=DOMAIN,
+        test_type=EnumTestType.SERVICE_SERVICE_PERFORMANCE_REPOSITORY,
+        test_name=PERFORMANCE_TEST_NAME,
     )
-    return envs
 
 
 PERFORMANCE_DF: list = []
 PERFORMANCE_HTML: dict = {}
 
 
-@pytest.mark.parametrize(
-    "env",
-    get_test_clients(),
-)
 class TestRepository:
 
     def test_create_some(self, env: Env) -> None:
@@ -108,7 +100,7 @@ class TestRepository:
 
     @classmethod
     def finalize_outputs(cls, env):
-        if env.repository_type != get_test_clients()[-1].repository_type:
+        if env.repository_type != SARepository.__name__:
             # Only execute for the last repository class
             return
         test_dir = get_test_root_output_dir()

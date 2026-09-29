@@ -1,3 +1,5 @@
+"""Handle dimension CRUD, validation, occurrence assignment, and access filtering."""
+
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, exc, model
@@ -17,7 +19,6 @@ def case_service_crud_dim(
     self: BaseCaseService, cmd: command.DimCrudCommand
 ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for Dim entities."""
-
     with self.repository.uow() as uow:
         assert cmd.user is not None and cmd.user.id is not None
         _crud_cascade_delete(self, uow, cmd)
@@ -66,8 +67,8 @@ def _crud_create_dim(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
 ) -> None:
-    """
-    Apply validation logic for Dim creation:
+    """Validate dimensions and assign deterministic occurrences for creation.
+
     - Check if other Dims for the same CaseType and RefDim exist
     - Check if is_time_stats_dim or is_geo_stats_dim is True
         and that the linked RefDim is of correct type
@@ -106,8 +107,8 @@ def _verify_one_case_date_dim(
     uow: BaseUnitOfWork,
     dim: model.Dim,
 ) -> None:
-    """
-    Method to ensure only one case_date_dim per CaseType.
+    """Ensure that each case type has at most one case-date dimension.
+
     If another is found, set its is_case_date_dim to False.
     """
     other_time_dims: list[model.Dim] = self.repository.crud(
@@ -138,6 +139,18 @@ def _validate_case_date_dim(
     uow: BaseUnitOfWork,
     dim: model.Dim,
 ) -> None:
+    """Require a valid time reference dimension for a case-date dimension.
+
+    Args:
+        self: Case service used for repository access.
+        cmd: Dimension command providing the acting user.
+        uow: Active unit of work for reference-dimension retrieval.
+        dim: Dimension to validate.
+
+    Raises:
+        InvalidIdsError: If the linked reference dimension does not exist.
+        InvalidArgumentsError: If a case-date dimension is not a time dimension.
+    """
     ref_dim: model.RefDim | None = None
     ref_dim_list: list[model.RefDim] = self.repository.crud(
         uow,
@@ -165,8 +178,7 @@ def _validate_case_date_dim(
 def _set_dim_occurrence(
     dim: model.Dim, existing_dims: list[model.Dim], batch_dims: list[model.Dim]
 ) -> None:
-    """
-    Assign a deterministic occurrence value to a Dim.
+    """Assign a deterministic occurrence value to a dimension.
 
     The occurrence must be deterministic and independent of processing
     order. We achieve this by:
@@ -209,6 +221,17 @@ def _load_existing_dims(
     uow: BaseUnitOfWork,
     dim: model.Dim,
 ) -> list[model.Dim]:
+    """Load dimensions with the same case type and reference dimension.
+
+    Args:
+        self: Case service used for repository access.
+        cmd: Dimension command providing the acting user.
+        uow: Active unit of work for retrieval.
+        dim: Dimension defining the composite lookup key.
+
+    Returns:
+        Existing dimensions sharing the composite key.
+    """
     existing_dims: list[model.Dim] = self.repository.crud(
         uow,
         cmd.user.id,
@@ -229,8 +252,22 @@ def _crud_update_dim(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
 ) -> None:
-    """
-    Apply validation logic for Dim updates:
+    """Validate immutable fields and case-date exclusivity for updates.
+
+    Existing case-date dimensions may be updated in the repository before all later
+    dimensions have been checked; the surrounding unit of work controls atomicity.
+
+    Args:
+        dims: Updated dimensions to validate in order.
+        cmd: Dimension update command.
+        self: Case service used for repository access.
+        uow: Active unit of work for reads and exclusivity updates.
+
+    Raises:
+        InvalidIdsError: If an updated dimension does not exist.
+        InvalidArgumentsError: If an update changes its reference dimension.
+
+    Validation rules:
     - Check if the linked RefDim may not be updated (write-once)
     - Check if another Dim for the same CaseType has
         is_time_stats_dim or is_geo_stats_dim set to True
@@ -286,6 +323,20 @@ def _get_existing_dim(
     uow: BaseUnitOfWork,
     updated: model.Dim,
 ) -> model.Dim:
+    """Retrieve the stored version of an updated dimension.
+
+    Args:
+        self: Case service used for repository access.
+        cmd: Dimension command providing the acting user.
+        uow: Active unit of work for retrieval.
+        updated: Updated dimension whose stored value is required.
+
+    Returns:
+        The persisted dimension.
+
+    Raises:
+        InvalidIdsError: If no stored dimension has the requested identifier.
+    """
     existing_list: list[model.Dim] = self.repository.crud(
         uow,
         cmd.user.id,
