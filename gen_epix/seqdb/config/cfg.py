@@ -6,6 +6,7 @@ from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 _MODULE = "gen_epix.seqdb.services"
+_REPO_MODULE = "gen_epix.seqdb.repositories"
 
 
 class SeqdbAppCfg(AppCfg):
@@ -37,23 +38,23 @@ class SeqdbAppCfg(AppCfg):
             "repository": {
                 "defaults": {"props": {"database": "seqdb"}},
                 "abac": {
-                    "module": "gen_epix.seqdb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "AbacSARepository",
                 },
                 "organization": {
-                    "module": "gen_epix.seqdb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "OrganizationSARepository",
                 },
                 "system": {
-                    "module": "gen_epix.seqdb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "SystemSARepository",
                 },
                 "seq": {
-                    "module": "gen_epix.seqdb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "SeqSARepository",
                 },
                 "file": {
-                    "module": "gen_epix.seqdb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "FileSARepository",
                 },
             },

@@ -37,6 +37,16 @@ _OWN_LOGGER_SUFFIXES = {
 }
 _LOG_LEVEL_DIAGNOSTIC_CODE = "8d4f29a1"
 
+# Repeated response-header values shared across the api.http_header.* blocks below.
+_HTTP_HEADER_NO_CACHE = "no-cache, no-store"
+_HTTP_HEADER_HSTS = "max-age=63072000; includeSubDomains"
+_HTTP_HEADER_XSS_PROTECTION = "1; mode=block"
+
+# Module paths for commondb's own services/repositories, shared across the
+# service.* / repository.* entries below.
+_SERVICES_MODULE = "gen_epix.commondb.services"
+_REPOSITORIES_MODULE = "gen_epix.commondb.repositories"
+
 
 def convert_to_bool(value: Any) -> tuple[bool, bool]:
     """Convert a value to boolean when possible.
@@ -218,36 +228,36 @@ class AppCfg(BaseAppCfg):
             "gzip_response_minimum_size": 1024,
             "http_header": {
                 "general": {
-                    "CacheControl": "no-cache, no-store",
+                    "CacheControl": _HTTP_HEADER_NO_CACHE,
                     "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'; sandbox",
                     "Content-Security-Policy-Report-Only": "default-src 'none'; frame-ancestors 'none'; sandbox",
                     "Cross-Origin-Opener-Policy": "same-origin",
                     "Expires": "0",
                     "Pragma": "no-cache",
                     "Referrer-Policy": "strict-origin-when-cross-origin",
-                    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+                    "Strict-Transport-Security": _HTTP_HEADER_HSTS,
                     "X-Content-Type-Options": "nosniff",
                     "X-Frame-Options": "DENY",
-                    "X-XSS-Protection": "1; mode=block",
+                    "X-XSS-Protection": _HTTP_HEADER_XSS_PROTECTION,
                 },
                 "openapi": {
-                    "CacheControl": "no-cache, no-store",
+                    "CacheControl": _HTTP_HEADER_NO_CACHE,
                     "Expires": "0",
                     "Pragma": "no-cache",
                     "Referrer-Policy": "strict-origin-when-cross-origin",
-                    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+                    "Strict-Transport-Security": _HTTP_HEADER_HSTS,
                     "X-Content-Type-Options": "nosniff",
                     "X-Frame-Options": "DENY",
-                    "X-XSS-Protection": "1; mode=block",
+                    "X-XSS-Protection": _HTTP_HEADER_XSS_PROTECTION,
                 },
                 "auth": {
-                    "CacheControl": "no-cache, no-store",
+                    "CacheControl": _HTTP_HEADER_NO_CACHE,
                     "Expires": "0",
                     "Pragma": "no-cache",
-                    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+                    "Strict-Transport-Security": _HTTP_HEADER_HSTS,
                     "X-Content-Type-Options": "nosniff",
                     "X-Frame-Options": "DENY",
-                    "X-XSS-Protection": "1; mode=block",
+                    "X-XSS-Protection": _HTTP_HEADER_XSS_PROTECTION,
                 },
             },
             "route": {"v1": "/v1"},
@@ -266,11 +276,11 @@ class AppCfg(BaseAppCfg):
                 "props": {"timestamp_factory": "DATETIME_NOW", "id_factory": "UUID4"},
             },
             "abac": {
-                "module": "gen_epix.commondb.services",
+                "module": _SERVICES_MODULE,
                 "class_name": "AbacService",
             },
             "auth": {
-                "module": "gen_epix.commondb.services",
+                "module": _SERVICES_MODULE,
                 "class_name": "AuthService",
                 "props": {
                     "auto_create_new_users": False,
@@ -290,18 +300,18 @@ class AppCfg(BaseAppCfg):
                 },
             },
             "organization": {
-                "module": "gen_epix.commondb.services",
+                "module": _SERVICES_MODULE,
                 "class_name": "OrganizationService",
             },
             "rbac": {
-                "module": "gen_epix.commondb.services",
+                "module": _SERVICES_MODULE,
                 "class_name": "RbacService",
                 "props": {
                     "user_invitation_time_to_live": 604800
                 },  # one week, in seconds
             },
             "system": {
-                "module": "gen_epix.commondb.services",
+                "module": _SERVICES_MODULE,
                 "class_name": "SystemService",
             },
         },
@@ -345,15 +355,15 @@ class AppCfg(BaseAppCfg):
             # for the DICT/SA_SQLITE backends) replaces it entirely, rather
             # than the stale connection_string coexisting alongside `file`.
             "abac": {
-                "module": "gen_epix.commondb.repositories",
+                "module": _REPOSITORIES_MODULE,
                 "class_name": "AbacSARepository",
             },
             "organization": {
-                "module": "gen_epix.commondb.repositories",
+                "module": _REPOSITORIES_MODULE,
                 "class_name": "OrganizationSARepository",
             },
             "system": {
-                "module": "gen_epix.commondb.repositories",
+                "module": _REPOSITORIES_MODULE,
                 "class_name": "SystemSARepository",
             },
         },

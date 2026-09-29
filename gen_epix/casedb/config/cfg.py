@@ -9,6 +9,7 @@ from gen_epix.casedb.domain import enum as casedb_enum
 from gen_epix.commondb.config.cfg import AppCfg
 
 _MODULE = "gen_epix.casedb.services"
+_REPO_MODULE = "gen_epix.casedb.repositories"
 
 
 class CasedbAppCfg(AppCfg):
@@ -74,27 +75,27 @@ class CasedbAppCfg(AppCfg):
             "repository": {
                 "defaults": {"props": {"database": "casedb"}},
                 "abac": {
-                    "module": "gen_epix.casedb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "AbacSARepository",
                 },
                 "organization": {
-                    "module": "gen_epix.casedb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "OrganizationSARepository",
                 },
                 "system": {
-                    "module": "gen_epix.casedb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "SystemSARepository",
                 },
                 "case": {
-                    "module": "gen_epix.casedb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "CaseSARepository",
                 },
                 "geo": {
-                    "module": "gen_epix.casedb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "GeoSARepository",
                 },
                 "ontology": {
-                    "module": "gen_epix.casedb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "OntologySARepository",
                 },
             },

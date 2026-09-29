@@ -6,6 +6,7 @@ from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.omopdb.domain import enum as omopdb_enum
 
 _MODULE = "gen_epix.omopdb.services"
+_REPO_MODULE = "gen_epix.omopdb.repositories"
 
 
 class OmopdbAppCfg(AppCfg):
@@ -36,19 +37,19 @@ class OmopdbAppCfg(AppCfg):
             "repository": {
                 "defaults": {"props": {"database": "omopdb"}},
                 "abac": {
-                    "module": "gen_epix.omopdb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "AbacSARepository",
                 },
                 "organization": {
-                    "module": "gen_epix.omopdb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "OrganizationSARepository",
                 },
                 "system": {
-                    "module": "gen_epix.omopdb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "SystemSARepository",
                 },
                 "omop": {
-                    "module": "gen_epix.omopdb.repositories",
+                    "module": _REPO_MODULE,
                     "class_name": "OmopSARepository",
                 },
             },
