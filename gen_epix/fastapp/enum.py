@@ -3,6 +3,19 @@
 from enum import Enum
 
 
+class AuthFeatureFlag(Enum):
+    """Identify the feature-flag key the base auth service sets directly.
+
+    Describes service.auth.props.auto_create_new_users. This module has no
+    dependency on any downstream application, so the flag this module
+    writes with App.set_feature_flag needs its own member here — this is
+    the sole/canonical key for this flag; gen_epix.commondb.domain.enum's
+    FeatureFlag deliberately has no same-named member (see its docstring).
+    """
+
+    AUTO_CREATE_NEW_USERS = "auto_create_new_users"
+
+
 class SortOrder(Enum):
     """Encapsulates specifying ascending or descending ordering."""
 

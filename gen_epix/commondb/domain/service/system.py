@@ -1,7 +1,7 @@
 """Define the commondb system service contract and command handlers."""
 
 import abc
-from collections.abc import Hashable
+from enum import Enum
 
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.enum import ServiceType
@@ -69,7 +69,7 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
     @abc.abstractmethod
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand
-    ) -> dict[Hashable, bool]:
+    ) -> dict[Enum, bool]:
         """Retrieve the application's feature-flag configuration.
 
         Args:

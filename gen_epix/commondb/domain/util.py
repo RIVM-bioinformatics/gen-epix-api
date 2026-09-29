@@ -19,7 +19,6 @@ from gen_epix.commondb.domain.enum import (
     AppTypeSet,
     DevIdpConfig,
     DevRepositoryConfig,
-    DevRepositoryConfigSet,
 )
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp import Command, Domain, Model, ModelFieldProps, exc
@@ -90,12 +89,6 @@ def set_env_variables(
     settings_files: list[Path] = []
     # General settings
     settings_files.append(cfg_path / "settings.toml")
-    # TODO: determine whether a separate file is necessary for feature flags or whether they can just be included in settings.toml, and if the latter, remove this and the corresponding env variable
-    # Feature flags (optional, as they can also be included in settings.toml, but can be useful to have them in a separate file for easier access and modification during development and testing)
-    file = cfg_path / "feature_flags.toml"
-    settings_files.append(file) if file.is_file() else None
-    # Service secrets
-    settings_files.append(cfg_path / ".example.secrets.service.toml")
     # Identity provider settings
     if dev_idp_config_enum == DevIdpConfig.IDPS:
         settings_files.append(general_cfg_path / "identity_providers.toml")
@@ -105,28 +98,45 @@ def set_env_variables(
         settings_files.append(general_cfg_path / "no_identity_providers.toml")
     else:
         raise ValueError(f"Unknown dev_idp_config: {dev_idp_config_enum}")
-    # Repository settings
-    if dev_repository_config_enum in DevRepositoryConfigSet.DICT.value:
+    # Repository settings. SA_SQL's connection details are already fully
+    # described by AppCfg._DEFAULT_SETTINGS, as the baseline repository
+    # backend; secrets.repository.sa_sql.toml is loaded only if present, so a
+    # deployment can override those defaults (most commonly just uid/pwd/
+    # server) by copying config/.example.secrets.repository.sa_sql.toml to
+    # that name, without needing the file at all otherwise. DICT and
+    # SA_SQLITE each load a shared file for their backend family (type,
+    # module/class_name where applicable, and a per-repo file-path template
+    # referencing {this.repository.defaults.props.variant}), followed by a
+    # one-line file that sets that variant to "full" or "empty" — the
+    # template resolves against whichever variant file is loaded alongside
+    # it, regardless of load order, since Dynaconf's @format strings
+    # resolve against the fully-merged settings at read time.
+    if dev_repository_config_enum == DevRepositoryConfig.SA_SQL:
+        file = cfg_path / "secrets.repository.sa_sql.toml"
+        if file.is_file():
+            settings_files.append(file)
+    elif dev_repository_config_enum in (
+        DevRepositoryConfig.DICT_DEMO,
+        DevRepositoryConfig.DICT_EMPTY,
+    ):
         settings_files.append(cfg_path / "settings.repository.dict.toml")
-    elif dev_repository_config_enum in DevRepositoryConfigSet.SA.value:
-        settings_files.append(cfg_path / "settings.repository.sa.toml")
-    else:
-        raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
-    # Repository secrets
-    if dev_repository_config_enum == DevRepositoryConfig.DICT_DEMO:
-        settings_files.append(cfg_path / ".example.secrets.repository.dict.demo.toml")
-    elif dev_repository_config_enum == DevRepositoryConfig.DICT_EMPTY:
-        settings_files.append(cfg_path / ".example.secrets.repository.dict.empty.toml")
-    elif dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_DEMO:
-        settings_files.append(
-            cfg_path / ".example.secrets.repository.sa_sqlite.demo.toml"
-        )
-    elif dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_EMPTY:
-        settings_files.append(
-            cfg_path / ".example.secrets.repository.sa_sqlite.empty.toml"
-        )
-    elif dev_repository_config_enum == DevRepositoryConfig.SA_SQL:
-        settings_files.append(cfg_path / ".example.secrets.repository.sa_sql.toml")
+        if dev_repository_config_enum == DevRepositoryConfig.DICT_DEMO:
+            settings_files.append(cfg_path / "settings.repository.dict.demo.toml")
+        else:
+            settings_files.append(cfg_path / "settings.repository.dict.empty.toml")
+    elif dev_repository_config_enum in (
+        DevRepositoryConfig.SA_SQLITE_DEMO,
+        DevRepositoryConfig.SA_SQLITE_EMPTY,
+    ):
+        settings_files.append(cfg_path / "settings.repository.sa_sqlite.toml")
+        if dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_DEMO:
+            settings_files.append(
+                cfg_path / "settings.repository.sa_sqlite.demo.toml"
+            )
+        else:
+            settings_files.append(
+                cfg_path / "settings.repository.sa_sqlite.empty.toml"
+            )
     else:
         raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
     # Add any extra settings files at the end
@@ -139,6 +149,24 @@ def set_env_variables(
     os.environ[envvar_prefix + "LOG_CONFIG_FILE"] = str(
         (cfg_path / "logging.yaml").resolve()
     )
+
+
+def get_app_cfg_class(app_type: AppType | str) -> type[AppCfg]:
+    """Return the AppCfg subclass `gen_epix.<app>.config` exposes for `app_type`.
+
+    Every app besides commondb exposes its own AppCfg subclass, following the
+    naming convention `<App>AppCfg`; commondb has none of its own, since
+    AppCfg's own hardcoded defaults are already commondb-shaped. A generic
+    call site that constructs configuration for a caller-supplied app type
+    must resolve through this function rather than `AppCfg` directly, or it
+    would silently pick up commondb's own defaults regardless of which app
+    it is actually configuring.
+    """
+    app_name = (app_type.value if isinstance(app_type, AppType) else app_type).lower()
+    if app_name == AppType.COMMONDB.value.lower():
+        return AppCfg
+    config_module = importlib.import_module(f"gen_epix.{app_name}.config")
+    return cast(type[AppCfg], getattr(config_module, f"{app_name.capitalize()}AppCfg"))
 
 
 def create_demo_data_from_repository(
@@ -196,17 +224,18 @@ def load_demo_data(
     # Get classes and config for the app type
 
     enum = importlib.import_module(f"{module_root}.domain.enum")
+    app_cfg_class = get_app_cfg_class(app_type)
 
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_DEMO)
-    dict_app_cfg = AppCfg(
+    dict_app_cfg = app_cfg_class(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQLITE_DEMO)
-    sa_sqlite_app_cfg = AppCfg(
+    sa_sqlite_app_cfg = app_cfg_class(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
-    sa_sql_app_cfg = AppCfg(
+    sa_sql_app_cfg = app_cfg_class(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     # user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
@@ -419,7 +448,7 @@ def get_app_cfgs(
             cfg_path=cfg_path,
             extra_settings_files=resolved_extra_settings_files,
         )
-        app_cfgs[name] = AppCfg(
+        app_cfgs[name] = get_app_cfg_class(app_type)(
             app_type,
             service_type_enum,
             repository_type_enum,

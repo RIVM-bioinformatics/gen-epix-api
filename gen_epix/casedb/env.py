@@ -8,11 +8,14 @@ dependency setup; FastAPI and router composition remain in ``casedb.app``.
 
 from typing import Any
 
-from gen_epix.casedb.domain import DOMAIN, command, model
+from gen_epix.casedb.domain import DOMAIN, command
+from gen_epix.casedb.domain import enum as casedb_enum
+from gen_epix.casedb.domain import model
 from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.policies import COMMON_POLICY_MAP
 from gen_epix.casedb.services import RbacService
 from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.domain.enum import FeatureFlag
 from gen_epix.commondb.env import AppComposer as CommonAppComposer
 
 
@@ -69,5 +72,6 @@ class AppComposer(CommonAppComposer):
             policy_class_map=COMMON_POLICY_MAP,
             role_generator_class=RoleGenerator,
             rbac_service_class=RbacService,
+            feature_flag_enum_classes=(FeatureFlag, casedb_enum.CasedbFeatureFlag),
             **kwargs,
         )

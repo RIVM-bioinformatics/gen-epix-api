@@ -108,6 +108,43 @@ def _extract_diagnostic_payload(logger: _DummyLogger) -> dict:
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_set_log_level_mirrors_override_into_raw_cfg_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """to_dict(resolved=False)/to_toml() read _raw_cfg_snapshot, captured once in
+    _init_load_settings before set_log_level's <APP>_LOG_LEVEL override is
+    applied to the live _cfg — set_log_level must mirror that override into
+    the snapshot too, or the pre-validation export silently disagrees with
+    the live config's actual log level."""
+    app_cfg, logger_map, _ = _build_test_fixture(shared_handler=False, log_setup=False)
+    _patch_logging_get_logger(monkeypatch, logger_map)
+    _patch_runtime_logger_dict(monkeypatch)
+    app_cfg._raw_cfg_snapshot = {"log": {"level": "INFO"}}
+    monkeypatch.setenv("CASEDB_LOG_LEVEL", "WARNING")
+
+    app_cfg.set_log_level()
+
+    assert app_cfg._cfg["log"]["level"] == "WARNING"
+    assert app_cfg._raw_cfg_snapshot["log"]["level"] == "WARNING"
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+def test_set_log_level_without_raw_cfg_snapshot_does_not_raise(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The first set_log_level call in __init__ runs before _raw_cfg_snapshot
+    exists at all; set_log_level must tolerate that, not assume it's set."""
+    app_cfg, logger_map, _ = _build_test_fixture(shared_handler=False, log_setup=False)
+    _patch_logging_get_logger(monkeypatch, logger_map)
+    _patch_runtime_logger_dict(monkeypatch)
+    assert not hasattr(app_cfg, "_raw_cfg_snapshot")
+
+    app_cfg.set_log_level("DEBUG")  # must not raise
+
+    assert app_cfg._cfg["log"]["level"] == "DEBUG"
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_set_log_level_preserves_pinned_third_party_loggers_without_handler_overwrite(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

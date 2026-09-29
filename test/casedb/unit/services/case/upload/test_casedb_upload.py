@@ -249,7 +249,7 @@ class TestCaseServiceUploadCasesFeatureFlag(BaseUploadTestCase):
             case_service_upload_cases(self.service, cmd)
 
         self.service.app.get_feature_flag.assert_called_once_with(
-            enum.FeatureFlag.DISABLE_UPLOAD.value
+            enum.CasedbFeatureFlag.DISABLE_UPLOAD
         )
 
     def test_upload_cases_delegates_when_upload_feature_enabled(self) -> None:

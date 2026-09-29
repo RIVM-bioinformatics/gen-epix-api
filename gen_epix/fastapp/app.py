@@ -12,6 +12,7 @@ import logging
 import uuid
 from collections.abc import Callable, Hashable
 from datetime import datetime
+from enum import Enum
 from typing import Any, cast
 
 from gen_epix.fastapp import exc
@@ -76,7 +77,7 @@ class App:
         name: str | None = None,
         timestamp_factory: Callable[[], datetime] = datetime.now,
         log_cmd_object_on_error: bool = True,
-        feature_flags: dict[Hashable, bool] | None = None,
+        feature_flags: dict[Enum, bool] | None = None,
         **kwargs: Any,
     ):
         """Initialize an application command mediator and its runtime dependencies.
@@ -112,7 +113,7 @@ class App:
         self._logger = logger
         self._log_item_class = log_item_class
         self._timestamp_factory = timestamp_factory
-        self._feature_flags = feature_flags or {}
+        self._feature_flags: dict[Enum, bool] = feature_flags or {}
 
         # Initialize other members
         self._created_at = self.generate_timestamp()
@@ -242,7 +243,7 @@ class App:
         return self._log_item_class
 
     @property
-    def feature_flags(self) -> dict[Hashable, bool]:
+    def feature_flags(self) -> dict[Enum, bool]:
         """Return a copy of the feature flags dict to prevent external mutation."""
         return dict(self._feature_flags)
 
@@ -254,11 +255,11 @@ class App:
         """Generate timestamp."""
         return self._timestamp_factory()
 
-    def set_feature_flag(self, key: Hashable, value: bool) -> None:
+    def set_feature_flag(self, key: Enum, value: bool) -> None:
         """Set the enabled state for a feature flag.
 
         Args:
-            key: Identifier used to retrieve the feature flag.
+            key: Enum member identifying the feature flag.
             value: Enabled state to store for ``key``.
 
         Raises:
@@ -268,7 +269,7 @@ class App:
             raise ValueError("Feature flag value must be a boolean")
         self._feature_flags[key] = value
 
-    def get_feature_flag(self, key: Hashable, default: bool = False) -> bool:
+    def get_feature_flag(self, key: Enum, default: bool = False) -> bool:
         """Return feature flag."""
         return self._feature_flags.get(key, default)
 

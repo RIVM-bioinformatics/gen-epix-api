@@ -274,7 +274,7 @@ class AbacService(BaseAbacService):
         Raises:
             FeatureDisabledServiceError: If self-service organization updates are off.
         """
-        if not self.app.get_feature_flag("update_own_organization"):
+        if not self.app.get_feature_flag(enum.FeatureFlag.UPDATE_OWN_ORGANIZATION):
             raise exc.FeatureDisabledServiceError(
                 "028b20d2", "Updating own organization is disabled"
             )
