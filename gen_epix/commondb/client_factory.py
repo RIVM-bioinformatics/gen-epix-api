@@ -1,9 +1,131 @@
-"""Create authenticated clients for running Gen-EpiX services from environment settings.
+"""Create authenticated clients for running Gen-EpiX services.
 
-The client authenticates with the OAuth2 client-credentials flow using a functional
-user's client id and secret, all read from ``<APP>_*`` environment variables (or a
-``.env`` file), where ``<APP>`` is one of ``CASEDB``, ``SEQDB``, ``OMOPDB`` or
-``COMMONDB``.
+``create_client`` returns a client for a deployed CASEDB, SEQDB, OMOPDB or COMMONDB
+service. It is configured from environment variables, authenticates for you, and
+optionally retries transient failures. This module documents how that works.
+
+Quick start
+-----------
+Set the connection settings for the service as ``<APP>_*`` environment variables
+(or in a ``.env`` file in the working directory), where ``<APP>`` is ``CASEDB``,
+``SEQDB``, ``OMOPDB`` or ``COMMONDB``::
+
+    SEQDB_HOST=api.seqdb.example.org
+    SEQDB_PORT=443
+    SEQDB_OAUTH_DISCOVERY_URL=https://idp.example.org/.well-known/openid-configuration
+    SEQDB_OAUTH_CLIENT_ID=<functional user client id>
+    SEQDB_OAUTH_CLIENT_SECRET=<functional user client secret>
+    SEQDB_OAUTH_SCOPE=<scope to request>
+
+Then create the client and send commands::
+
+    from gen_epix import AppType, create_client, seqdb_command
+    from gen_epix.fastapp import CrudOperation
+
+    client = create_client(AppType.SEQDB)  # or "seqdb"
+    loci = client.handle(
+        seqdb_command.LocusCrudCommand(operation=CrudOperation.READ_ALL)
+    )
+
+Creating the client makes no network call. The first command triggers the
+authentication described below.
+
+Settings
+--------
+Required: ``<APP>_PORT``, and for the default flow ``<APP>_OAUTH_CLIENT_ID``,
+``<APP>_OAUTH_CLIENT_SECRET``, ``<APP>_OAUTH_SCOPE`` plus one of the two token
+location settings. Missing required variables raise a ``ValueError`` that names
+them. Environment variables take precedence over the ``.env`` file. Optional
+settings, with defaults:
+
+- ``<APP>_HOST`` (``localhost``), ``<APP>_PROTOCOL`` (``HTTPS``)
+- ``<APP>_OAUTH_DISCOVERY_URL``: OpenID Connect discovery document, from which the
+  token endpoint is taken.
+- ``<APP>_OAUTH_TOKEN_ENDPOINT`` with ``<APP>_OAUTH_DISCOVER_FROM_REMOTE=false``:
+  use a token endpoint directly and skip discovery.
+- ``<APP>_SSL_CERT_FILE``: CA certificate file to trust.
+- ``<APP>_DISABLE_SSL_VERIFICATION`` (``false``)
+- ``<APP>_DEFAULT_REQUEST_TIMEOUT`` (``5`` seconds)
+
+The TLS settings apply to API calls and to token requests alike. For hosts
+``localhost``, ``127.0.0.1`` and ``0.0.0.0`` TLS verification is always off.
+
+How authentication works
+------------------------
+The default is the OAuth2 *client-credentials* flow, meant for machines. A
+*functional user* is an account at the identity provider with a client id and a
+client secret, which act as its username and password. It also has to exist as a
+user in the target service, with a role that allows the command (for example
+``ORG_USER`` or higher to read reference data).
+
+1. When a command first needs a token, the client finds the token endpoint (from
+   the discovery document, or ``<APP>_OAUTH_TOKEN_ENDPOINT``) and sends
+   ``POST grant_type=client_credentials&scope=...`` with the client id and secret
+   as HTTP Basic credentials.
+2. The identity provider returns an access token, a signed JWT whose ``exp`` claim
+   is its expiry time. The client reads ``exp`` (without verifying the signature,
+   which is the service's job) and caches the token.
+3. The command is sent with ``Authorization: Bearer <token>``. The service checks
+   the signature, issuer, audience and expiry, finds the user, and checks the
+   user's role against the command.
+4. Later commands reuse the cached token. When fewer than 60 seconds remain before
+   ``exp``, the next command first fetches a new token the same way. There is no
+   separate refresh token in this flow; the client simply authenticates again.
+
+Using another kind of token
+---------------------------
+To act as another user, for example a human user whose token you obtained
+elsewhere, skip client credentials::
+
+    client = create_client("seqdb", token="eyJ...")  # fixed token
+    client = create_client("seqdb", token_provider=my_function)  # called when needed
+
+``token_provider`` is a function returning a bearer token. The token is cached like
+above. If the service answers a command with ``401``, the cached token is dropped,
+the provider is called once more, and the command is retried once; a second 401 is
+raised. A fixed ``token`` therefore cannot renew itself. The ``<APP>_OAUTH_*``
+credentials are not used in these modes. This 401 retry does not apply to the
+client-credentials flow, which renews tokens by expiry time only.
+
+Retrying transient failures
+---------------------------
+By default a failing command is raised immediately. Pass a ``RemoteRetryPolicy`` to
+repeat it::
+
+    from gen_epix import RemoteRetryPolicy
+
+    policy = RemoteRetryPolicy(
+        retryable_status_codes=frozenset({502, 503, 504}),
+        wait_schedule=(10, 20, 30),  # seconds to wait before each retry
+    )
+    client = create_client("seqdb", retry_policy=policy)
+
+Network errors (timeouts, connection failures) are always retried. HTTP errors are
+retried only for the listed status codes; 401 and 403 can never be listed, because
+they are authentication problems that waiting does not fix. The command is
+attempted ``len(wait_schedule) + 1`` times, then the last error is raised. Every
+attempt gets fresh headers, so a token that expired while waiting is renewed.
+
+Troubleshooting
+---------------
+- ``ValueError: Missing required environment variable(s) ...``: set the named
+  variables, or run from the directory holding your ``.env``.
+- ``ServiceException: Error when handling remote command ...: Token retrieval
+  failed ...``: the identity provider refused or could not be reached (the client
+  tries three times). Check the client id and secret, the scope, and the discovery
+  URL or token endpoint.
+- ``HTTP status 401``: the service did not accept the token. Typical causes are an
+  audience or issuer that does not match the service's identity provider settings,
+  or a functional user that is not registered (or not active) in the service.
+- ``HTTP status 403``: the token is fine but the user's role does not allow the
+  command.
+- ``HTTP request error ... Name or service not known`` (or a connection error): the
+  service host cannot be reached from where you run, for example an internal-only
+  environment.
+- TLS errors: set ``<APP>_SSL_CERT_FILE`` to the CA that signed the service
+  certificate. Use ``<APP>_DISABLE_SSL_VERIFICATION`` only for testing.
+
+Never print or log tokens or the client secret.
 """
 
 from collections.abc import Callable
@@ -203,9 +325,14 @@ def create_client(
 ) -> CommondbClient:
     """Create a client for a running Gen-EpiX service.
 
-    By default the client authenticates with the OAuth2 client-credentials flow.
-    Pass ``token`` or ``token_provider`` to authenticate as another (e.g. human)
-    user instead, bypassing the client-credentials flow.
+    By default the client authenticates with the OAuth2 client-credentials flow,
+    using the ``<APP>_*`` environment variables. Pass ``token`` or ``token_provider``
+    to authenticate as another (e.g. human) user instead. See the module
+    documentation for setup, settings, token renewal, retries and troubleshooting.
+
+    Example:
+        >>> client = create_client("seqdb")  # doctest: +SKIP
+        >>> client.handle(command)  # doctest: +SKIP
 
     Args:
         app: Service to connect to, as an ``AppType`` or its name (any case).
