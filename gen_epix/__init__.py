@@ -11,6 +11,7 @@ from gen_epix.casedb.domain import policy as casedb_policy
 from gen_epix.casedb.domain import service as casedb_service
 from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.casedb.services.client import CasedbClient as CasedbClient
+from gen_epix.commondb.client_factory import create_client as create_client
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import DOMAIN as COMMONDB_DOMAIN
 from gen_epix.commondb.domain import command as commondb_command
@@ -18,10 +19,12 @@ from gen_epix.commondb.domain import enum as commondb_enum
 from gen_epix.commondb.domain import exc as exc
 from gen_epix.commondb.domain import literal as literal
 from gen_epix.commondb.domain import model as commondb_model
+from gen_epix.commondb.domain.enum import AppType as AppType
 from gen_epix.commondb.domain.literal import NULL_ID as NULL_ID
 from gen_epix.commondb.env import AppComposer as AppComposer
 from gen_epix.commondb.services.client import CommondbClient as CommondbClient
 from gen_epix.etl import model as etl_model
+from gen_epix.fastapp.client import RemoteRetryPolicy as RemoteRetryPolicy
 from gen_epix.omopdb.domain import DOMAIN as OMOPDB_DOMAIN
 from gen_epix.omopdb.domain import command as omopdb_command
 from gen_epix.omopdb.domain import enum as omopdb_enum
@@ -47,6 +50,9 @@ __all__ = [
     "literal",
     "NULL_ID",
     "AppCfg",
+    "AppType",
+    "RemoteRetryPolicy",
+    "create_client",
     "AppComposer",
     "COMMONDB_DOMAIN",
     "CommondbClient",

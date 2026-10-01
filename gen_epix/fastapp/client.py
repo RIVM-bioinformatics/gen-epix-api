@@ -1,8 +1,11 @@
 """Client for dispatching commands to a remote application instance."""
 
 import json
+import logging
+import re
 import ssl
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Sequence
+from dataclasses import dataclass
 from decimal import Decimal
 from functools import partial
 from pathlib import Path
@@ -10,6 +13,7 @@ from typing import Any, cast
 from uuid import UUID
 
 import httpx
+import tenacity
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.fastapp import exc, model
@@ -33,6 +37,125 @@ from gen_epix.filter import (
     UuidSetFilter,
 )
 
+logger = logging.getLogger(__name__)
+
+# Status codes that are handled by authentication logic and must never be retried by
+# the transient-error retry loop.
+AUTH_STATUS_CODES = frozenset({401, 403})
+
+# apply_handler wraps httpx.HTTPStatusError as ServiceException with a default status
+# of 500, embedding the real HTTP status in the message as "HTTP status NNN error ...".
+_HTTP_STATUS_RE = re.compile(r"HTTP status (\d{3})")
+
+
+def _message_status(exception: ServiceException) -> int | None:
+    """Extract the real HTTP status code embedded in a ServiceException message."""
+    match = _HTTP_STATUS_RE.search(exception.message or "")
+    return int(match.group(1)) if match else None
+
+
+def get_remote_http_status(exception: BaseException) -> int | None:
+    """Return the HTTP status code returned by a remote service, if any.
+
+    Args:
+        exception: Exception raised while handling a command on a remote client.
+
+    Returns:
+        The status code embedded in the message of a ``ServiceException``, the
+        status of its ``__cause__`` ``httpx.HTTPStatusError``, or the exception's
+        own status code, in that order. For a bare ``httpx.HTTPStatusError`` its
+        response status. ``None`` for any other exception.
+    """
+    if isinstance(exception, ServiceException):
+        message_status = _message_status(exception)
+        if message_status is not None:
+            return message_status
+        if isinstance(exception.__cause__, httpx.HTTPStatusError):
+            response = exception.__cause__.response
+            if response is not None:
+                return response.status_code
+        return exception.get_http_status_code()
+    if isinstance(exception, httpx.HTTPStatusError) and exception.response is not None:
+        return exception.response.status_code
+    return None
+
+
+def is_network_error(exception: BaseException) -> bool:
+    """Return whether an exception is a raw httpx network or timeout error.
+
+    Covers ReadTimeout, ConnectTimeout, ConnectError, RemoteProtocolError, etc.
+    These occur when e.g. a Kubernetes pod is killed mid-request or an ingress
+    times out before returning an HTTP response at all. Also true for a
+    ``ServiceException`` wrapping such an error.
+    """
+    if isinstance(exception, ServiceException) and exception.__cause__ is not None:
+        exception = exception.__cause__
+    return isinstance(exception, (httpx.TimeoutException, httpx.NetworkError))
+
+
+def is_auth_failure(exception: BaseException) -> bool:
+    """Return whether an exception, or any exception in its cause chain, is an ``AuthException``.
+
+    ``apply_handler`` re-wraps every handler error in a plain ``ServiceException``,
+    so the cause chain has to be inspected to recognise e.g. token provider failures.
+    """
+    seen: set[int] = set()
+    current: BaseException | None = exception
+    while current is not None and id(current) not in seen:
+        if isinstance(current, exc.AuthException):
+            return True
+        seen.add(id(current))
+        current = current.__cause__
+    return False
+
+
+def is_retryable_status(
+    exception: BaseException, status_codes: frozenset[int] | set[int]
+) -> bool:
+    """Return whether the remote HTTP status of an exception is in ``status_codes``.
+
+    Authentication failures (401, 403) are never retryable, regardless of
+    ``status_codes``.
+    """
+    if is_auth_failure(exception):
+        return False
+    status = get_remote_http_status(exception)
+    if status is None or status in AUTH_STATUS_CODES:
+        return False
+    return status in status_codes
+
+
+@dataclass(frozen=True)
+class RemoteRetryPolicy:
+    """Retry policy for transient failures when handling commands on a remote client.
+
+    Network-level errors (timeouts, connection errors) are always retried. HTTP
+    errors are retried only if their status code is in ``retryable_status_codes``.
+
+    Attributes:
+        retryable_status_codes: HTTP status codes considered transient. Must not
+            contain 401 or 403, which are handled by authentication logic.
+        wait_schedule: Seconds to wait before each successive retry. The command
+            is attempted ``len(wait_schedule) + 1`` times at most.
+    """
+
+    retryable_status_codes: frozenset[int]
+    wait_schedule: Sequence[float]
+
+    def __post_init__(self) -> None:
+        """Reject status codes that belong to authentication handling."""
+        auth_codes = self.retryable_status_codes & AUTH_STATUS_CODES
+        if auth_codes:
+            raise ValueError(
+                f"retryable_status_codes must not contain authentication status codes: {sorted(auth_codes)}"
+            )
+
+    def is_retryable(self, exception: BaseException) -> bool:
+        """Return whether the exception is transient according to this policy."""
+        return is_network_error(exception) or is_retryable_status(
+            exception, self.retryable_status_codes
+        )
+
 
 class Client(App):
     """Encapsulates a remote application client that forwards commands as HTTP requests."""
@@ -55,10 +178,17 @@ class Client(App):
         add_generated_crud_route_handlers: bool = True,
         ssl_cert_file: Path | str | None = None,
         disable_ssl_verification: bool = False,
+        retry_policy: RemoteRetryPolicy | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize connection parameters, SSL context, routes, and optional CRUD handlers."""
+        """Initialize connection parameters, SSL context, routes, and optional CRUD handlers.
+
+        Args:
+            retry_policy: Optional policy for retrying transient failures in
+                ``handle``. If None, commands are never retried.
+        """
         super().__init__(domain, **kwargs)
+        self._retry_policy = retry_policy
         self._host = host
         self._port = port
         self._protocol = protocol
@@ -124,6 +254,38 @@ class Client(App):
     def ssl_context(self) -> ssl.SSLContext | bool:
         """SSL context for HTTPS connections, or False to disable verification."""
         return self._ssl_context
+
+    @property
+    def retry_policy(self) -> RemoteRetryPolicy | None:
+        """Policy for retrying transient failures, or None if retrying is disabled."""
+        return self._retry_policy
+
+    def handle(self, cmd: Command) -> Any:
+        """Dispatch a command, retrying transient failures if a retry policy is set.
+
+        Without a retry policy this is identical to ``App.handle``. With one, the
+        whole command attempt is repeated according to the policy and the last
+        exception is re-raised once the attempts are exhausted.
+        """
+        policy = self._retry_policy
+        if policy is None:
+            return self._handle_once(cmd)
+        retrying = tenacity.Retrying(
+            retry=tenacity.retry_if_exception(policy.is_retryable),
+            wait=tenacity.wait_chain(
+                *[tenacity.wait_fixed(seconds) for seconds in policy.wait_schedule]
+            ),
+            stop=tenacity.stop_after_attempt(len(policy.wait_schedule) + 1),
+            before_sleep=tenacity.before_sleep_log(
+                logger, logging.WARNING, exc_info=False
+            ),
+            reraise=True,
+        )
+        return retrying(self._handle_once, cmd)
+
+    def _handle_once(self, cmd: Command) -> Any:
+        """Make a single attempt at handling a command. Override to wrap attempts."""
+        return super().handle(cmd)
 
     def register_policy(
         self,
