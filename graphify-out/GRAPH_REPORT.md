@@ -1,7 +1,7 @@
 # Graph Report - gen-epix-api  (2026-10-01)
 
 ## Corpus Check
-- 152 files · ~1,193,528 words
+- 153 files · ~1,193,560 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
