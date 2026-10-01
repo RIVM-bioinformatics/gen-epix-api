@@ -329,7 +329,12 @@ class CommondbClient(Client):
         # Put header in cache together with its expiry time
         exp: int | None
         try:
-            claims = jwt.decode(jwt_token, options={"verify_signature": False})
+            # Only the unverified ``exp`` claim is read, to schedule renewal of the
+            # cached token; the token is not trusted based on it. The service
+            # verifies the signature on every request.
+            claims = jwt.decode(  # NOSONAR
+                jwt_token, options={"verify_signature": False}
+            )
             exp = claims.get("exp")
         except jwt.DecodeError:
             # Opaque (non-JWT) token, expiry unknown
