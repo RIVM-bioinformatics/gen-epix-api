@@ -52,6 +52,8 @@ dependencies = [
     "oauthlib==3.3.1",
     "python-multipart==0.0.32",
     "pyinstrument==5.1.*",
+    "tenacity==9.1.*",
+    "pydantic-settings==2.*",
 ]
 
 [project.urls]
