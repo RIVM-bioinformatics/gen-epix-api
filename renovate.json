@@ -57,6 +57,13 @@
         },
         {
             "matchPackageNames": [
+                "sqlalchemy"
+            ],
+            "allowedVersions": "<2.1",
+            "description": "sqlalchemy 2.1 renamed private classes that sqlalchemy_utils (latest 0.42.1) imports, so importing it fails (kvesteri/sqlalchemy-utils#800, #829). Stay on 2.0.x until sqlalchemy_utils supports 2.1."
+        },
+        {
+            "matchPackageNames": [
                 "dynaconf"
             ],
             "enabled": false,
