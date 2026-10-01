@@ -6,6 +6,7 @@ from typing import Annotated, Any, NoReturn, cast
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI, Form
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_serializer
@@ -274,7 +275,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[model.CaseTypeSetMember],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="fbe272b9",
@@ -301,7 +302,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[model.ColSetMember],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="ab010768",
@@ -327,7 +328,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             model.CompleteCaseType,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="c6c17125",
@@ -378,7 +379,7 @@ def create_case_endpoints(
         cmd.user = user
         return cast(
             model.CaseBatchUploadResult,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="b413ab76",
@@ -400,7 +401,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             model.CaseSet,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="c39c42f9",
@@ -427,7 +428,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[model.CaseStats],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="80c99f53",
@@ -451,7 +452,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[model.CaseStats],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="be54843e",
@@ -475,7 +476,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             model.CaseQueryResult,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="a8f773fe",
@@ -500,7 +501,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[model.CaseCohortLink],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="b3c912d7",
@@ -525,7 +526,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[model.Case],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="f6d423fe",
@@ -551,7 +552,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[model.CaseRights],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="c6f4b3c2",
@@ -579,7 +580,7 @@ def create_case_endpoints(
 
         return cast(
             list[model.CaseSetRights],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="b9c49fe1",
@@ -603,7 +604,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             model.PhylogeneticTree,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="45219a88",
@@ -630,7 +631,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             RetrieveSimilarCasesResponseBody,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="e4c2e1b2",
@@ -666,13 +667,14 @@ def create_case_endpoints(
                 enum.ServiceType.AUTH
             ]  # type: ignore[assignment]
             user = await auth_service.get_existing_user_from_token(token=token)  # type: ignore[assignment]
-            fasta_iterable = app.handle(
+            fasta_iterable = await run_in_threadpool(
+                app.handle,
                 command.RetrieveGeneticSequenceFastaByCaseCommand(
                     user=user,
                     case_type_id=case_type_id,
                     genetic_sequence_col_id=(genetic_sequence_col_id),
                     case_ids=case_ids,
-                )
+                ),
             )
         except Exception as exception:
             handle_exception(  # type: ignore[call-arg]
@@ -702,7 +704,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             UUID,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="d3f4e2b1",
@@ -732,7 +734,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             UUID,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="b5c6d7e8",
@@ -758,7 +760,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[seqdb_model.Protocol],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="e7f8a9b0",
@@ -782,7 +784,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[seqdb_model.Protocol],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="c1d2e3f4",
@@ -807,7 +809,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             dict[UUID, bool],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="d4e5f6g7",
