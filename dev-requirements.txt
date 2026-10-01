@@ -6,7 +6,7 @@ xlsxwriter==3.2.9
 pytest
 pytest-gremlins==1.9.0
 pytest-xdist
-pytest-mock==3.15.*
+pytest-mock==3.16.*
 pytest-dependency==0.6.*
 isort==9.0.*
 black==26.5.*
