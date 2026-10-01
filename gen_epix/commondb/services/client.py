@@ -27,6 +27,9 @@ from gen_epix.fastapp.model import Command, Permission
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
+# Decode options for reading the ``exp`` claim of a token without verifying it
+_UNVERIFIED_OPTIONS = {"verify_signature": False}
+
 
 class CommondbClient(Client):
     """Encapsulates a remote app client for the commondb service with OAuth2/NONE authentication."""
@@ -120,19 +123,7 @@ class CommondbClient(Client):
                 required OAuth2 settings are missing, or ``token_provider`` conflicts
                 with the OAuth2 settings or an ``Authorization`` default header.
         """
-        if token_provider is not None:
-            if auth_protocol not in (AuthProtocol.NONE, AuthProtocol.NONE.value):
-                raise exc.InitializationServiceError(
-                    "b4a99708",
-                    "token_provider cannot be combined with the OAUTH2 auth protocol; use auth_protocol NONE",
-                )
-            if default_headers and any(
-                key.lower() == "authorization" for key in default_headers
-            ):
-                raise exc.InitializationServiceError(
-                    "82dd3da9",
-                    "token_provider cannot be combined with an Authorization default header",
-                )
+        self._check_token_provider(token_provider, auth_protocol, default_headers)
         if isinstance(auth_protocol, str):
             auth_protocol = AuthProtocol(auth_protocol)
         if isinstance(oauth_flow, str):
@@ -256,6 +247,33 @@ class CommondbClient(Client):
         self._token_provider = token_provider
         self._oauth_header_cache: tuple[float, dict[str, str]] | None = None
 
+    @staticmethod
+    def _check_token_provider(
+        token_provider: Callable[[], str] | None,
+        auth_protocol: AuthProtocol | str,
+        default_headers: dict[str, str] | None,
+    ) -> None:
+        """Reject token provider combinations that conflict with other auth settings.
+
+        Raises:
+            InitializationServiceError: If a token provider is combined with the
+                OAUTH2 auth protocol or with an ``Authorization`` default header.
+        """
+        if token_provider is None:
+            return
+        if auth_protocol not in (AuthProtocol.NONE, AuthProtocol.NONE.value):
+            raise exc.InitializationServiceError(
+                "b4a99708",
+                "token_provider cannot be combined with the OAUTH2 auth protocol; use auth_protocol NONE",
+            )
+        if default_headers and any(
+            key.lower() == "authorization" for key in default_headers
+        ):
+            raise exc.InitializationServiceError(
+                "82dd3da9",
+                "token_provider cannot be combined with an Authorization default header",
+            )
+
     def get_headers(self, cmd: Command) -> dict[str, str]:
         """Return request headers, refreshing an OAuth token when needed.
 
@@ -332,9 +350,7 @@ class CommondbClient(Client):
             # Only the unverified ``exp`` claim is read, to schedule renewal of the
             # cached token; the token is not trusted based on it. The service
             # verifies the signature on every request.
-            claims = jwt.decode(  # NOSONAR
-                jwt_token, options={"verify_signature": False}
-            )
+            claims = jwt.decode(jwt_token, options=_UNVERIFIED_OPTIONS)  # NOSONAR
             exp = claims.get("exp")
         except jwt.DecodeError:
             # Opaque (non-JWT) token, expiry unknown

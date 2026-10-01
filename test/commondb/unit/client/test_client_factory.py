@@ -209,7 +209,8 @@ class TestClientCredentialsEndToEnd:
         client = create_client("casedb")
         client.get_access_token()
         verify = [r["client_kwargs"]["verify"] for r in records if "client_kwargs" in r]
-        assert verify and all(v is client.ssl_context for v in verify)
+        assert verify
+        assert all(v is client.ssl_context for v in verify)
         assert client.ssl_context is not True
 
     def test_ssl_cert_file_reaches_token_request(
@@ -225,7 +226,8 @@ class TestClientCredentialsEndToEnd:
         client = create_client("casedb")
         client.get_access_token()
         verify = [r["client_kwargs"]["verify"] for r in records if "client_kwargs" in r]
-        assert verify and all(v is sentinel for v in verify)
+        assert verify
+        assert all(v is sentinel for v in verify)
 
 
 class TestTokenFiles:

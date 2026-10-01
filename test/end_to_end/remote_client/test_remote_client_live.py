@@ -96,7 +96,9 @@ def test_authenticated_read_all(app: str, command_class: Any) -> None:
 def test_client_credentials_token_is_cached(app: str) -> None:
     """A second token request is served from the cache."""
     client = _create_client(app)
-    assert client.get_access_token() == client.get_access_token()
+    first = client.get_access_token()
+    second = client.get_access_token()
+    assert second == first
 
 
 @pytest.mark.parametrize("app", ["seqdb"])
