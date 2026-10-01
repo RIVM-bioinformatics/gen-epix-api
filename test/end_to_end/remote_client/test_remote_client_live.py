@@ -105,8 +105,7 @@ def test_client_credentials_token_is_cached(app: str) -> None:
 def test_invalid_token_is_rejected(app: str) -> None:
     """A garbage bearer token is refused with an authentication error."""
     client = _create_client(app, token="not-a-valid-token")
+    cmd = seqdb_command.SeqCategoryCrudCommand(operation=CrudOperation.READ_ALL)
     with pytest.raises(exc.ServiceException) as info:
-        client.handle(
-            seqdb_command.SeqCategoryCrudCommand(operation=CrudOperation.READ_ALL)
-        )
+        client.handle(cmd)
     assert get_remote_http_status(info.value) in (401, 403)

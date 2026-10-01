@@ -79,8 +79,9 @@ def sleeps(monkeypatch: pytest.MonkeyPatch) -> list[float]:
 class TestRemoteRetryPolicy:
     def test_rejects_auth_status_codes(self) -> None:
         for code in (401, 403):
+            codes = frozenset({500, code})
             with pytest.raises(ValueError):
-                RemoteRetryPolicy(frozenset({500, code}), (1,))
+                RemoteRetryPolicy(codes, (1,))
 
     def test_is_retryable_for_network_and_listed_status(self) -> None:
         assert POLICY.is_retryable(httpx.ConnectError("x"))
@@ -119,8 +120,9 @@ class TestClientHandleRetry:
     def test_no_policy_means_no_retry(self, sleeps: list[float]) -> None:
         handler = Flaky(_status_error(503), _status_error(503))
         client = _make_client(handler, None)
+        cmd = RetryCommand()
         with pytest.raises(exc.ServiceException):
-            client.handle(RetryCommand())
+            client.handle(cmd)
         assert handler.calls == 1
         assert sleeps == []
 
@@ -134,16 +136,18 @@ class TestClientHandleRetry:
     def test_exhausted_attempts_reraise_last_error(self, sleeps: list[float]) -> None:
         handler = Flaky(*[_status_error(502) for _ in range(10)])
         client = _make_client(handler, POLICY)
+        cmd = RetryCommand()
         with pytest.raises(exc.ServiceException, match="HTTP status 502"):
-            client.handle(RetryCommand())
+            client.handle(cmd)
         assert handler.calls == len(POLICY.wait_schedule) + 1
         assert sleeps == [1, 2, 3]
 
     def test_unlisted_status_not_retried(self, sleeps: list[float]) -> None:
         handler = Flaky(_status_error(400))
         client = _make_client(handler, POLICY)
+        cmd = RetryCommand()
         with pytest.raises(exc.ServiceException):
-            client.handle(RetryCommand())
+            client.handle(cmd)
         assert handler.calls == 1
 
     def test_network_error_always_retried(self, sleeps: list[float]) -> None:
@@ -156,6 +160,7 @@ class TestClientHandleRetry:
     def test_auth_status_never_retried(self, status: int, sleeps: list[float]) -> None:
         handler = Flaky(_status_error(status))
         client = _make_client(handler, POLICY)
+        cmd = RetryCommand()
         with pytest.raises(exc.ServiceException):
-            client.handle(RetryCommand())
+            client.handle(cmd)
         assert handler.calls == 1

@@ -118,6 +118,7 @@ class TestTokenProviderHeaders:
 
 class TestTokenProviderValidation:
     def test_conflicts_with_oauth2(self) -> None:
+        provider = Provider("x")
         with pytest.raises(exc.InitializationServiceError, match="OAUTH2"):
             CommondbClient(
                 DOMAIN,
@@ -127,12 +128,14 @@ class TestTokenProviderValidation:
                 oauth_discovery_url="https://idp/.well-known",
                 oauth_client_id="id",
                 oauth_scope="s",
-                token_provider=Provider("x"),
+                token_provider=provider,
             )
 
     def test_conflicts_with_authorization_default_header(self) -> None:
+        provider = Provider("x")
+        headers = {"authorization": "Bearer abc"}
         with pytest.raises(exc.InitializationServiceError, match="Authorization"):
-            _make_client(Provider("x"), default_headers={"authorization": "Bearer abc"})
+            _make_client(provider, default_headers=headers)
 
 
 class TestTokenProviderHandle:
@@ -170,8 +173,9 @@ class TestTokenProviderHandle:
             raise _status_error(401)
 
         self._register(client, handler)
+        cmd = ProviderCommand()
         with pytest.raises(exc.ServiceException, match="HTTP status 401"):
-            client.handle(ProviderCommand())
+            client.handle(cmd)
         assert calls == 2
 
     def test_other_errors_do_not_refresh(self) -> None:
@@ -183,8 +187,9 @@ class TestTokenProviderHandle:
             raise _status_error(403)
 
         self._register(client, handler)
+        cmd = ProviderCommand()
         with pytest.raises(exc.ServiceException):
-            client.handle(ProviderCommand())
+            client.handle(cmd)
         assert provider.calls == 1
 
     def test_provider_failure_is_auth_error_and_not_transient_retried(
@@ -202,8 +207,9 @@ class TestTokenProviderHandle:
             return "ok"
 
         self._register(client, handler)
+        cmd = ProviderCommand()
         with pytest.raises(exc.ServiceException) as info:
-            client.handle(ProviderCommand())
+            client.handle(cmd)
         assert isinstance(info.value.__cause__, exc.AuthException)
         assert provider.calls == 1
         assert sleeps == []
