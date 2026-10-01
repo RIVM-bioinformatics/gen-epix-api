@@ -7,7 +7,7 @@ import re
 import string
 import tomllib
 from collections.abc import Hashable
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from cachetools import TTLCache, cached
 
@@ -19,6 +19,7 @@ from gen_epix.commondb.domain.service import BaseSystemService
 from gen_epix.commondb.policies.model_metadata_policy import ModelMetadataPolicy
 from gen_epix.fastapp import CrudOperation, EventTiming
 from gen_epix.fastapp.app import App
+from gen_epix.fastapp.domain import Domain, Link
 from gen_epix.util import get_package_root
 
 
@@ -148,6 +149,120 @@ class SystemService(BaseSystemService):
                 retval.success = False
                 retval.details[model_class.ENTITY.name] = f"{type(e).__name__}: {e}"
         return retval
+
+    def delete_all_ref_data(
+        self, cmd: command.DeleteAllRefDataCommand
+    ) -> model.DeleteAllRefDataResult:
+        """Delete application reference data after operational data is reset.
+
+        The operation first asks the composed domain for every persistable model that
+        links to a model in the application's reference-data list. Any remaining
+        records prevent the reset. This derives the precondition from domain links
+        rather than duplicating the operational command's model list.
+
+        Args:
+            cmd: Command requesting deletion of reference data.
+
+        Returns:
+            DeleteAllRefDataResult. The ``success`` attribute is false when
+            operational records remain or a deletion fails. ``details`` contains
+            deleted IDs per reference model or the relevant error message.
+        """
+        domain = self.app.domain
+        retval = model.DeleteAllRefDataResult(success=True)
+
+        ref_model_classes = set(cmd.SORTED_REF_DATA_MODEL_CLASSES)
+        operational_model_classes = self._get_models_linked_to_ref_data(
+            domain, ref_model_classes
+        )
+
+        # Do not remove reference data while operational records still reference it.
+        for model_class in operational_model_classes:
+            try:
+                crud_command_class = domain.get_crud_command_for_model(model_class)
+                records = self.app.handle(
+                    crud_command_class(
+                        user=cmd.user,
+                        operation=CrudOperation.READ_ALL,
+                        limit=1,
+                        return_id=True,
+                    )
+                )
+            except Exception as e:
+                retval.success = False
+                retval.details[model_class.ENTITY.name] = f"{type(e).__name__}: {e}"
+                continue
+            if records:
+                retval.success = False
+                retval.details[model_class.ENTITY.name] = (
+                    "Operational data remains (at least one record); "
+                    "delete all operational data before deleting reference data."
+                )
+
+        if not retval.success:
+            return retval
+
+        # Children before parents so foreign-key constraints are not violated.
+        for model_class in cmd.SORTED_REF_DATA_MODEL_CLASSES:
+            try:
+                crud_command_class = domain.get_crud_command_for_model(model_class)
+            except Exception as e:
+                retval.success = False
+                retval.details[model_class.ENTITY.name] = f"{type(e).__name__}: {e}"
+                continue
+            try:
+                deleted_ids = self.app.handle(
+                    crud_command_class(
+                        user=cmd.user,
+                        operation=CrudOperation.DELETE_ALL,
+                        return_id=True,
+                    )
+                )
+                retval.details[model_class.ENTITY.name] = json.dumps(
+                    [str(x) for x in deleted_ids]
+                )
+            except Exception as e:
+                retval.success = False
+                retval.details[model_class.ENTITY.name] = f"{type(e).__name__}: {e}"
+        return retval
+
+    @staticmethod
+    def _get_models_linked_to_ref_data(
+        domain: Domain, ref_model_classes: set[type[Any]]
+    ) -> list[type[Any]]:
+        """Return persisted models that link to the reference-data model set.
+
+        The domain stores links on the model that owns a foreign-key field. Walking
+        the reverse link graph identifies operational rows that would prevent the
+        reference rows from being deleted, including models in another service type.
+        The walk continues transitively so a dependent model is checked even when it
+        links through another operational model.
+        """
+        persistable_models = domain.get_dag_sorted_models(persistable=True)
+        linked_models = set(ref_model_classes)
+        while True:
+            newly_linked_models = {
+                model_class
+                for model_class in persistable_models
+                if model_class not in linked_models
+                and any(
+                    link.link_model_class in linked_models
+                    for link in cast(
+                        dict[int, Link], domain.get_model_links(model_class)
+                    ).values()
+                )
+            }
+            if not newly_linked_models:
+                break
+            linked_models.update(newly_linked_models)
+
+        return [
+            model_class
+            for model_class in domain.get_dag_sorted_models(
+                persistable=True, reverse=True
+            )
+            if model_class in linked_models and model_class not in ref_model_classes
+        ]
 
     @staticmethod
     @cached(cache=_PARSE_AND_GET_PACKAGE_METADATA_CACHE)

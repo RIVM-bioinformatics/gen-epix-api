@@ -752,3 +752,27 @@ class TestContent:
             )
             == []
         )
+
+        ref_result = env.handle(
+            command.DeleteAllRefDataCommand(user=root_user),
+            use_endpoint=False,
+        )
+        assert ref_result.success, {
+            key: value[:300]
+            for key, value in ref_result.details.items()
+            if isinstance(value, str)
+        }
+        assert set(ref_result.details) == {
+            model_class.ENTITY.name
+            for model_class in command.DeleteAllRefDataCommand.SORTED_REF_DATA_MODEL_CLASSES
+        }
+        assert (
+            env.handle(
+                command.CaseTypeCrudCommand(
+                    user=root_user,
+                    operation=CrudOperation.READ_ALL,
+                ),
+                use_endpoint=False,
+            )
+            == []
+        )

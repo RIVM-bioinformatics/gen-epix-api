@@ -36,6 +36,7 @@ class CommondbClient(Client):
 
     ROUTE_MAP: dict[type[Command], str] = {
         command.DeleteAllOperationalDataCommand: "/operational_data",
+        command.DeleteAllRefDataCommand: "/ref_data",
         command.GetIdentityProvidersCommand: "/identity_providers",
         command.InviteUserCommand: "/invite_user",
         command.RetrieveInviteUserConstraintsCommand: "/invite_user/constraints",
@@ -140,6 +141,7 @@ class CommondbClient(Client):
         self.register_handler(
             command.DeleteAllOperationalDataCommand, self.delete_all_operational_data
         )
+        self.register_handler(command.DeleteAllRefDataCommand, self.delete_all_ref_data)
         self.register_handler(
             command.GetIdentityProvidersCommand, self.get_identity_providers
         )
@@ -435,6 +437,13 @@ class CommondbClient(Client):
 
         response_body: dict[str, Any] = self.request(cmd, HttpMethod.DELETE)  # type: ignore[assignment]
         return model.DeleteAllOperationalDataResult(**response_body)
+
+    def delete_all_ref_data(
+        self, cmd: command.DeleteAllRefDataCommand
+    ) -> model.DeleteAllRefDataResult:
+        """Delete all reference data after operational data has been deleted."""
+        response_body: dict[str, Any] = self.request(cmd, HttpMethod.DELETE)  # type: ignore[assignment]
+        return model.DeleteAllRefDataResult(**response_body)
 
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand
