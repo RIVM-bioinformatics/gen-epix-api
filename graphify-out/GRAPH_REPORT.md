@@ -1,7 +1,7 @@
 # Graph Report - gen-epix-api  (2026-10-01)
 
 ## Corpus Check
-- 152 files · ~1,193,581 words
+- 152 files · ~1,193,580 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -598,8 +598,8 @@
 ## Import Cycles
 - 3-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/upload.py -> gen_epix/commondb/domain/__init__.py`
 - 4-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/model/__init__.py -> gen_epix/seqdb/domain/model/seq/__init__.py -> gen_epix/seqdb/domain/model/seq/upload.py -> gen_epix/seqdb/domain/__init__.py`
-- 5-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/commondb/domain/command/abac.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/upload.py -> gen_epix/commondb/domain/__init__.py`
 - 5-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/commondb/domain/command/system.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/upload.py -> gen_epix/commondb/domain/__init__.py`
+- 5-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/commondb/domain/command/abac.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/upload.py -> gen_epix/commondb/domain/__init__.py`
 - 5-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/commondb/domain/command/base.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/upload.py -> gen_epix/commondb/domain/__init__.py`
 
 ## Hyperedges (group relationships)
