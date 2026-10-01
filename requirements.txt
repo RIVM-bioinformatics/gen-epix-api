@@ -39,7 +39,7 @@ types-setuptools==84.0.*
 
 # mock OIDC server (test/test_client/oauth) — needed in Docker for the IDP compose stack
 cryptography==50.0.1
-oauthlib==3.3.1
+oauthlib==4.0.0
 
 # profiling
 pyinstrument==5.1.*
