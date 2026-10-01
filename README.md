@@ -220,6 +220,39 @@ The domain models are explained in depth here:
 
 ---
 
+### Authenticated client
+
+`pip install gen-epix-api` is enough to talk to a running CASEDB, SEQDB, OMOPDB or COMMONDB service.
+`create_client` reads the connection settings from `<APP>_*` environment variables (or a `.env` file),
+with `<APP>` one of `CASEDB`, `SEQDB`, `OMOPDB`, `COMMONDB`, and authenticates with the OAuth2
+client-credentials flow of a functional user:
+
+```python
+from gen_epix import AppType, RemoteRetryPolicy, create_client, seqdb_command
+
+client = create_client(
+    AppType.SEQDB,  # or "seqdb"
+    retry_policy=RemoteRetryPolicy(  # optional, no retries by default
+        retryable_status_codes=frozenset({502, 503, 504}),
+        wait_schedule=(10, 20, 30),  # seconds before each retry
+    ),
+)
+result = client.handle(seqdb_command.SomeCommand(...))
+```
+
+| Variable | Meaning |
+| --- | --- |
+| `<APP>_HOST`, `<APP>_PORT`, `<APP>_PROTOCOL` | Service location (`HTTPS` by default; `PORT` is required). |
+| `<APP>_OAUTH_DISCOVERY_URL` or `<APP>_OAUTH_TOKEN_ENDPOINT` | Where to get tokens. Set `<APP>_OAUTH_DISCOVER_FROM_REMOTE=false` to use the token endpoint without discovery. |
+| `<APP>_OAUTH_CLIENT_ID`, `<APP>_OAUTH_CLIENT_SECRET`, `<APP>_OAUTH_SCOPE` | Functional user credentials and scope. |
+| `<APP>_SSL_CERT_FILE`, `<APP>_DISABLE_SSL_VERIFICATION` | Custom CA / disabled TLS verification, applied to API and token requests alike. |
+| `<APP>_DEFAULT_REQUEST_TIMEOUT` | Request timeout in seconds (default 5). |
+
+To authenticate as another user (for example a human user with a token obtained elsewhere), pass
+`token="..."` or `token_provider=callable` to `create_client`. The provider is called when a token is
+needed and again, once, after a `401` response. Network errors are always retried when a
+`retry_policy` is set; HTTP errors only for the listed status codes (never 401/403).
+
 ## Dependencies
 
 Gen-EpiX relies on several Python packages to provide its functionality:
