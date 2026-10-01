@@ -72,6 +72,7 @@ markers = [
     "integration: Marker for integration tests.",
     "performance: Marker for performance/scale tests (skipped by default; use -m performance).",
     "e2e: Marker for end-to-end tests requiring live servers.",
+    "live: Marker for tests calling real deployed services with real credentials (skipped by default; use -m live).",
 ]
 addopts = "-v -s"
 filterwarnings = ["ignore:.*shadows an attribute in parent.*"]
