@@ -137,6 +137,21 @@ class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
     )
 
 
+class RetrieveSeqDistancesBySeqProfilesRequestBody(PydanticBaseModel):
+    """Docstring assigned automatically."""
+
+    __doc__ = command.RetrieveSeqDistancesBySeqProfilesCommand.__doc__
+
+    seq_profile_ids: list[UUID] = copy_model_field(
+        command.RetrieveSeqDistancesBySeqProfilesCommand,
+        "seq_profile_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    protocol_id: UUID = copy_model_field(
+        command.RetrieveSeqDistancesBySeqProfilesCommand, "protocol_id"
+    )
+
+
 class RetrieveSeqFastaRequestBody(PydanticBaseModel):
     """Docstring assigned automatically."""
 
@@ -355,6 +370,29 @@ def create_seq_endpoints(
             )
         except Exception as exception:
             handle_exception("b3f91a2e", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
+        return retval
+
+    @router.post(
+        "/retrieve/seq_distances_by_seq_profiles",
+        operation_id="retrieve__seq_distances_by_seq_profiles",
+        name="RetrieveSeqDistancesBySeqProfiles",
+        description=command.RetrieveSeqDistancesBySeqProfilesCommand.__doc__,
+    )
+    async def retrieve__seq_distances_by_seq_profiles(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: RetrieveSeqDistancesBySeqProfilesRequestBody,
+    ) -> list[model.SeqDistance]:
+        """See router description."""
+        try:
+            retval: list[model.SeqDistance] = app.handle(
+                command.RetrieveSeqDistancesBySeqProfilesCommand(
+                    user=user,
+                    seq_profile_ids=request_body.seq_profile_ids,
+                    protocol_id=request_body.protocol_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("f1c2d3e4", user, exception, request_ids=request_body.seq_profile_ids)  # type: ignore[call-arg]
         return retval
 
     @router.post(
