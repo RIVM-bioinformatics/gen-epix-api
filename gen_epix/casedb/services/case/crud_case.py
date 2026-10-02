@@ -23,9 +23,10 @@ def case_service_crud_case(
     # Start unit of work
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
-        pdb: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
-        if pdb.is_exempted(cmd):
+        pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
             return _crud_case_without_abac(self, uow, cmd)
+        raise AssertionError("CRUD Case with ABAC not expected to be allowed")
         return _crud_case_with_abac(self, uow, cmd)
 
 
@@ -62,6 +63,7 @@ def _crud_case_with_abac(
             missing for any requested case.
         AssertionError: If a non-delete operation reaches this handler.
     """
+    # TODO: apply ABAC through PDP
     assert cmd.user is not None and cmd.user.id is not None
     # @ABAC: get case abac
     case_abac = get_case_abac_from_command(cmd)

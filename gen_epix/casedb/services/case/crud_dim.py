@@ -4,12 +4,12 @@ from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
+from gen_epix.casedb.policies.pdp import PolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     _verify_is_read_operation,
     crud_with_access_filter,
-    get_ref_data_access_from_command,
 )
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -20,10 +20,9 @@ def case_service_crud_dim(
 ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for Dim entities."""
     with self.repository.uow() as uow:
-        assert cmd.user is not None and cmd.user.id is not None
         _crud_cascade_delete(self, uow, cmd)
-        pdb: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
-        if pdb.is_exempted(cmd):
+        pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
             return _crud_dim_without_abac(self, uow, cmd)
         return _crud_dim_with_abac(self, uow, cmd)
 
@@ -359,11 +358,7 @@ def _crud_dim_with_abac(
     cmd: command.DimCrudCommand,
 ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
     """Dim user command handling, ABAC applied."""
-    ref_data_access = get_ref_data_access_from_command(cmd)
-    if ref_data_access is None or ref_data_access.is_full_access:
-        # Special case: no policy (implies full access) or explicit full access
-        return self.crud(cmd)  # type: ignore[return-value]
     _verify_is_read_operation(cmd)
-    # Perform CRUD with access filter applied
-    access_filter = ref_data_access.get_dim_filter("id")
+    pdp: PolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+    access_filter = pdp.get_dim_id_filter(cmd, dim_id_field_name="id")
     return crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]

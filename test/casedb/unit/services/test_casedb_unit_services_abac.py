@@ -16,12 +16,12 @@ from __future__ import annotations
 
 from test.util.mock_compat import MagicMock, Mock, patch
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.casedb.domain import exc
+from gen_epix.casedb.domain import command, exc
 from gen_epix.casedb.domain.service.abac import BaseAbacService
 from gen_epix.casedb.policies.case_abac_policy import CaseAbacPolicy
 from gen_epix.casedb.services.abac import AbacService
@@ -408,6 +408,45 @@ class TestGetCaseAbac(BaseAbacTestCase):
         share = share_for_ct[self.data_collection_id]
         assert share.add_case_from_data_collection_ids == {self.from_data_collection_id}
         assert share.remove_case_from_data_collection_ids == set()  # AND -> empty
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-05-02")
+class TestGetRefDataAccess(BaseAbacTestCase):
+    """Test reference-data access resolution."""
+
+    def test_resolves_allowed_dims_with_internal_dim_command(self) -> None:
+        """Dimension metadata uses a userless command while the cache is built."""
+        user = self.create_user_stub(self.user_id, self.org_id, {"ORG_USER"})
+        self.service.role_set_map.update(
+            {
+                CommonRoleSet.GE_REFDATA_ADMIN: set(),  # type: ignore[dict-item]
+                CommonRoleSet.GE_ORG_ADMIN: set(),  # type: ignore[dict-item]
+            }
+        )
+        self.repository.crud.side_effect = [
+            [],  # OrganizationAccessCasePolicy READ_ALL
+            [],  # OrganizationShareCasePolicy READ_ALL
+        ]
+        self.service.app.handle.side_effect = [  # type: ignore[attr-defined]
+            [],  # CaseTypeSetMemberCrudCommand
+            [],  # ColSetMemberCrudCommand
+            [],  # ColCrudCommand
+            [],  # DimCrudCommand
+        ]
+
+        access = self.service.get_ref_data_access(
+            cast(command.Command, SimpleNamespace(user=user))
+        )
+
+        assert access.dim_ids == set()
+        assert access.ref_dim_ids == set()
+        assert self.service.app.handle.call_count == 4  # type: ignore[attr-defined]
+        col_command = self.service.app.handle.call_args_list[2][0][0]  # type: ignore[attr-defined]
+        assert isinstance(col_command, command.ColCrudCommand)
+        assert col_command.user is None
+        dim_command = self.service.app.handle.call_args_list[3][0][0]  # type: ignore[attr-defined]
+        assert isinstance(dim_command, command.DimCrudCommand)
+        assert dim_command.user is None
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-05-02")

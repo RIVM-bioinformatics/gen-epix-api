@@ -75,11 +75,12 @@ without an empty-path double underscore. For source outside `gen_epix`, ask for
 the source root and test mapping rather than inventing a layout.
 
 Existing tests may use legacy paths or names. Update the existing coverage and
-move/rename the target test to the required path after the logic-review gate;
-update references affected by that move. Do not leave duplicate coverage behind
-or rename unrelated tests. If existing coverage spans multiple modules or moving
-it would require unrelated restructuring, ask how to isolate the target first.
-Update launch configurations to reflect any changes in the test paths and filenames.
+move/rename the target test to the required path after the logic-review gate using
+`git mv <source> <destination>`; update references affected by that move. Do not
+leave duplicate coverage behind or rename unrelated tests. If existing coverage
+spans multiple modules or moving it would require unrelated restructuring, ask how
+to isolate the target first. Update launch configurations to reflect any changes
+in the test paths and filenames.
 
 Record which destination directories did not exist before creating them; this
 determines the launch configurations required in step 4.
@@ -186,14 +187,14 @@ python .agents/skills/create-unit-test/scripts/run_unit_test.py test/fastapp/uni
 ```
 
 Replace the example test path with the actual existing test file. The script
-accepts exactly one unit-test file, imports `Run.DEFAULT_PYTEST_ARGS` directly
-from `run.py`, runs from the repository root so normal pytest configuration and
-fixtures apply, and propagates pytest's exit code. It does not copy the defaults
-or use the curated full-suite coverage/report flags. Optional `-k EXPRESSION`
-narrows cases within the file; `--collect-only` checks discovery without running
-tests. Neither option changes the default parameters unless explicitly supplied.
-Relative input paths resolve from the caller's current directory; absolute paths
-also work. Additional positional files and directories are rejected.
+accepts exactly one unit-test file, runs from the repository root so normal 
+pytest configuration and fixtures apply, and propagates pytest's exit code. It 
+does not copy the defaults or use the curated full-suite coverage/report flags.
+Optional `-k EXPRESSION` narrows cases within the file; `--collect-only` checks
+discovery without running tests. Neither option changes the default parameters
+unless explicitly supplied. Relative input paths resolve from the caller's 
+current directory; absolute paths also work. Additional positional files and
+directories are rejected.
 
 ### Other Test Selections
 

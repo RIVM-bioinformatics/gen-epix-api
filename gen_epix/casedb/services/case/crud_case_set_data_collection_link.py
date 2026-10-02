@@ -30,8 +30,8 @@ def case_service_crud_case_set_data_collection_link(
     """Handle CRUD operations for CaseSetDataCollectionLink entities."""
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
-        pdb: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
-        if pdb.is_exempted(cmd):
+        pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
             return _crud_case_set_data_collection_link_without_abac(self, uow, cmd)
         return _crud_case_set_data_collection_link_with_abac(self, uow, cmd)
 

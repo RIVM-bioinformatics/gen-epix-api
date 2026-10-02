@@ -27,8 +27,8 @@ def case_service_crud_case_identifier(
     """Handle CRUD operations for CaseIdentifier entities."""
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
-        pdb: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
-        if pdb.is_exempted(cmd):
+        pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
             return _crud_case_identifier_without_abac(self, uow, cmd)
         return _crud_case_identifier_with_abac(self, uow, cmd)
 
@@ -101,5 +101,4 @@ def _crud_case_identifier_with_abac(
     # return _crud_data_by_non_admin(self, uow, cmd)  # type: ignore[return-value]
 
     # !FIXME: Temporary workaround until the complex ABAC logic is implemented
-    return self.crud(cmd)  # type: ignore[return-value]
     return self.crud(cmd)  # type: ignore[return-value]

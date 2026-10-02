@@ -6,6 +6,7 @@ from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.service.abac import BaseAbacService
 from gen_epix.commondb.policies import PolicyDecisionPoint as CommonPolicyDecisionPoint
 from gen_epix.fastapp import OnException
+from gen_epix.filter.base import Filter
 
 
 class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
@@ -63,9 +64,85 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
         """
         raise NotImplementedError()
 
+    def get_case_type_id_filter(
+        self, cmd: command.Command, case_type_id_field_name: str = "case_type_id"
+    ) -> Filter | None:
+        """Retrieve a Filter on CaseType that will keep only CaseTypes that the user
+        has access to. If None is returned, the user can access all CaseTypes.
+        """
+        if self.is_exempted(cmd):
+            return None
+        ref_data_access = self.get_ref_data_access(cmd)
+        retval = ref_data_access.get_case_type_filter(case_type_id_field_name)
+        return retval
+
+    def get_col_id_filter(
+        self, cmd: command.Command, col_id_field_name: str = "col_id"
+    ) -> Filter | None:
+        """Retrieve a Filter on Col that will keep only Cols that the user
+        has access to. If None is returned, the user can access all Cols.
+        """
+        if self.is_exempted(cmd):
+            return None
+        ref_data_access = self.get_ref_data_access(cmd)
+        retval = ref_data_access.get_col_filter(col_id_field_name)
+        return retval
+
+    def get_col_set_id_filter(
+        self, cmd: command.Command, col_set_id_field_name: str = "col_set_id"
+    ) -> Filter | None:
+        """Retrieve a Filter on ColSet that will keep only ColSets that the user
+        has access to. If None is returned, the user can access all ColSets.
+        """
+        if self.is_exempted(cmd):
+            return None
+        ref_data_access = self.get_ref_data_access(cmd)
+        retval = ref_data_access.get_col_set_filter(col_set_id_field_name)
+        return retval
+
+    def get_dim_id_filter(
+        self, cmd: command.Command, dim_id_field_name: str = "dim_id"
+    ) -> Filter | None:
+        """Retrieve a Filter on Dim that will keep only Dims that the user
+        has access to. If None is returned, the user can access all Dims.
+        """
+        if self.is_exempted(cmd):
+            return None
+        ref_data_access = self.get_ref_data_access(cmd)
+        retval = ref_data_access.get_dim_filter(dim_id_field_name)
+        return retval
+
+    def get_ref_col_id_filter(
+        self, cmd: command.Command, ref_col_id_field_name: str = "ref_col_id"
+    ) -> Filter | None:
+        """Retrieve a Filter on RefCol that will keep only RefCols that the user
+        has access to. If None is returned, the user can access all RefCols.
+        """
+        if self.is_exempted(cmd):
+            return None
+        ref_data_access = self.get_ref_data_access(cmd)
+        retval = ref_data_access.get_ref_col_filter(ref_col_id_field_name)
+        return retval
+
+    def get_ref_dim_id_filter(
+        self, cmd: command.Command, ref_dim_id_field_name: str = "ref_dim_id"
+    ) -> Filter | None:
+        """Retrieve a Filter on RefDim that will keep only RefDims that the user
+        has access to. If None is returned, the user can access all RefDims.
+        """
+        if self.is_exempted(cmd):
+            return None
+        ref_data_access = self.get_ref_data_access(cmd)
+        retval = ref_data_access.get_ref_dim_filter(ref_dim_id_field_name)
+        return retval
+
     def get_case_abac(self, cmd: command.Command) -> model.CaseAbac:
-        """Retrieve the ABAC object associated with the given command."""
+        """Retrieve the CaseAbac object associated with the given command."""
         return self.abac_service.get_case_abac(cmd)
+
+    def get_ref_data_access(self, cmd: command.Command) -> model.RefDataAccess:
+        """Retrieve the RefDataAccess object associated with the given command."""
+        return self.abac_service.get_ref_data_access(cmd)
 
     # @abstractmethod
     # def get_readable_cols_by_data_collection(

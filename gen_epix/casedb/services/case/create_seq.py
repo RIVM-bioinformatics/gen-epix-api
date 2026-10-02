@@ -72,7 +72,7 @@ def case_service_create_file_for_read_set_or_seq(
         )
         data_collection_ids = frozenset(x[0] for x in data_collection_id_tuples)
 
-        # ABAC PEP: Check if column is readable
+        # @ABAC: Check if Col is readable
         complete_case_type = self.retrieve_complete_case_type(
             command.RetrieveCompleteCaseTypeCommand(
                 user=cmd.user, case_type_id=case.case_type_id

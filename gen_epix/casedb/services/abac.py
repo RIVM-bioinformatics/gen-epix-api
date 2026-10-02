@@ -598,7 +598,7 @@ class AbacService(BaseAbacService):
         col_ids_from_sets_fs = frozenset(col_ids_from_sets)
         cols: list[model.Col] = self.app.handle(
             command.ColCrudCommand(
-                user=user,
+                user=None,  # User None to avoid ABAC checks, which otherwise would lead to a recursive call
                 operation=CrudOperation.READ_ALL,
                 query_filter=CompositeFilter(
                     filters=[
@@ -613,10 +613,11 @@ class AbacService(BaseAbacService):
         dim_ids = {x.dim_id for x in cols}
         ref_col_ids = {x.ref_col_id for x in cols}
 
-        # Retrieve all dims for the allowed CaseType dims
+        # Cols have already constrained these IDs to the user's allowed scope.
+        # A userless internal command avoids re-entering the PDP while building its cache.
         dims: list[model.Dim] = self.app.handle(
             command.DimCrudCommand(
-                user=user,
+                user=None,
                 objs=None,
                 obj_ids=list(dim_ids),
                 operation=CrudOperation.READ_SOME,

@@ -7,6 +7,7 @@ metadata and apply the highest-resolution populated value to each case.
 
 import datetime
 from collections.abc import Callable
+from typing import cast
 from uuid import UUID
 
 import gen_epix.casedb.domain.model as model
@@ -203,7 +204,9 @@ def case_service_get_case_date_col_mappers_from_cols(
     if cols is None:
         return {}
     retval: dict[UUID, Callable[[str], datetime.datetime]] = {  # type: ignore[assignment]
-        x.id: CONVERT_ISO_DATE_TO_FIRST_DAY_MAP[cols_map[x.ref_col_id].col_type]
+        cast(UUID, x.id): CONVERT_ISO_DATE_TO_FIRST_DAY_MAP[
+            cols_map[x.ref_col_id].col_type
+        ]
         for x in cols
     }
     return retval
