@@ -28,7 +28,9 @@ HEX_LITERAL_RE = re.compile(r'"([0-9a-f]{8})"')
 def find_existing_codes(root: Path) -> set[str]:
     existing: set[str] = set()
     for path in root.rglob("*.py"):
-        if any(part in {".venv", "venv", "node_modules", ".git"} for part in path.parts):
+        if any(
+            part in {".venv", "venv", "node_modules", ".git"} for part in path.parts
+        ):
             continue
         try:
             text = path.read_text(encoding="utf-8")
@@ -50,7 +52,9 @@ def generate_codes(count: int, existing: set[str]) -> list[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--count", type=int, default=5, help="Number of codes to generate (default: 5)")
+    parser.add_argument(
+        "--count", type=int, default=5, help="Number of codes to generate (default: 5)"
+    )
     parser.add_argument(
         "--root",
         type=Path,

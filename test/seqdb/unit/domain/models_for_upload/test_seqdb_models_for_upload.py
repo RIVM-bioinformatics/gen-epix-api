@@ -1684,9 +1684,7 @@ class TestSampleBatchForUploadAlleleHandling:
         sample1 = self._make_sample(
             TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_id1])
         )
-        sample2 = self._make_sample(
-            self._make_allele_ids_profile([allele_id2])
-        )
+        sample2 = self._make_sample(self._make_allele_ids_profile([allele_id2]))
         sample3 = self._make_sample(
             self._make_locus_allele_id_map_profile({"locus1": allele_id3})
         )
@@ -1700,18 +1698,14 @@ class TestSampleBatchForUploadAlleleHandling:
 
     def test_get_missing_allele_ids_reports_uncovered_references(self) -> None:
         allele_id = uuid4()
-        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
-            [allele_id]
-        )
+        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele_id])
         batch = model.SampleBatchForUpload(samples=[self._make_sample(profile)])
 
         assert batch.get_missing_allele_ids() == {allele_id}
 
     def test_get_missing_allele_ids_empty_when_covered(self) -> None:
         allele = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
-        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
-            [allele.id]
-        )
+        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele.id])
         batch = model.SampleBatchForUpload(
             samples=[self._make_sample(profile)], alleles=[allele]
         )
@@ -1721,9 +1715,7 @@ class TestSampleBatchForUploadAlleleHandling:
     def test_trim_alleles_drops_unreferenced(self) -> None:
         allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
         allele2 = model.AlleleForUpload(locus_id=uuid4(), seq="CCCC")
-        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
-            [allele1.id]
-        )
+        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele1.id])
         batch = model.SampleBatchForUpload(
             samples=[self._make_sample(profile)], alleles=[allele1, allele2]
         )
@@ -1758,9 +1750,7 @@ class TestSampleBatchForUploadAlleleHandling:
 
     def test_trim_alleles_excludes_all_yields_none(self) -> None:
         allele = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
-        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids(
-            [allele.id]
-        )
+        profile = TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele.id])
         batch = model.SampleBatchForUpload(
             samples=[self._make_sample(profile)], alleles=[allele]
         )
@@ -1826,9 +1816,7 @@ class TestSampleBatchForUploadAlleleHandling:
         allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="AAAA")
         other_allele_id = uuid4()
         sample1 = self._make_sample(
-            TestModelSeqProfileForUpload._get_allele_profile_for_ids(
-                [other_allele_id]
-            )
+            TestModelSeqProfileForUpload._get_allele_profile_for_ids([other_allele_id])
         )
         sample2 = self._make_sample(
             TestModelSeqProfileForUpload._get_allele_profile_for_ids([allele1.id])
