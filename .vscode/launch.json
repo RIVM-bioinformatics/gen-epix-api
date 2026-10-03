@@ -885,6 +885,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.casedb.unit.services.seqdb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services/seqdb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.commondb",
         "type": "debugpy",
         "request": "launch",
@@ -1024,18 +1036,6 @@
         "args": [
                 "run_test",
                 "test/commondb/unit/policies"
-        ],
-        "console": "integratedTerminal",
-        "justMyCode": true
-},
-{
-        "name": "test.commondb.unit.client",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "run.py",
-        "args": [
-                "run_test",
-                "test/commondb/unit/client"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
