@@ -7,13 +7,14 @@ from uuid import UUID
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.service import BaseSeqdbService
 from gen_epix.commondb.domain.enum import AppType
-from gen_epix.fastapp import App
+from gen_epix.fastapp import App, exc
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.model import User as SeqdbUser
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
+from gen_epix.seqdb.env import NoAppComposer as SeqdbNoAppComposer
 from gen_epix.seqdb.services.client import SeqdbClient
 
 
@@ -42,7 +43,10 @@ class SeqdbService(BaseSeqdbService):
     }
 
     def __init__(
-        self, app: App, seqdb_client_type: Literal["LOCAL", "REMOTE"], **kwargs: Any
+        self,
+        app: App,
+        seqdb_client_type: Literal["LOCAL", "REMOTE", "NONE"],
+        **kwargs: Any,
     ) -> None:
         """Initialize command handlers and the configured seqdb collaborator.
 
@@ -50,17 +54,30 @@ class SeqdbService(BaseSeqdbService):
             app: Casedb application that owns this service.
             seqdb_client_type: Configuration value selecting local or remote seqdb.
             **kwargs: Service configuration, including local or remote app settings.
+
+        Raises:
+            InitializationServiceError: If the client type is not an uppercase
+                supported setup value.
         """
+        if seqdb_client_type not in ("LOCAL", "REMOTE", "NONE"):
+            raise exc.InitializationServiceError(
+                "075c7de2",
+                "seqdb_client_type must be 'LOCAL', 'REMOTE', or 'NONE' in uppercase.",
+            )
         local_client_props = kwargs.pop("local_client", {})
         remote_client_props = kwargs.pop("remote_client", {})
+        no_client_props = kwargs.pop("no_client", {})
         super().__init__(app, **kwargs)
         seqdb_app, seqdb_user = SeqdbClient.create_local_or_remote(
             AppType.SEQDB,
             app_setup_type=seqdb_client_type,
             local_client_props=local_client_props,
             remote_client_props=remote_client_props,
+            no_client_props=no_client_props,
             user_class=SeqdbUser,
-            app_composer_class=SeqdbAppComposer,
+            app_composer_class=(
+                SeqdbNoAppComposer if seqdb_client_type == "NONE" else SeqdbAppComposer
+            ),
             service_type_enum=seqdb_enum.ServiceType,
             repository_type_enum=seqdb_enum.RepositoryType,
             logger=kwargs.get("logger"),
@@ -92,7 +109,6 @@ class SeqdbService(BaseSeqdbService):
         Returns:
             The calculated tree represented as a casedb model.
         """
-        user = cmd.user
         # Prepare seqdb command and calculate tree via seqdb
         leaf_id_mapper = cmd.props.get("leaf_id_mapper")
         if leaf_id_mapper:

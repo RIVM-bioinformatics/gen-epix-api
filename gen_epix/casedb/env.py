@@ -14,60 +14,63 @@ from gen_epix.casedb.policies import COMMON_POLICY_MAP
 from gen_epix.casedb.services import RbacService
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.env import AppComposer as CommonAppComposer
+from gen_epix.commondb.env import NoAppComposer as CommonNoAppComposer
+
+_KWARGS = {
+    "domain": DOMAIN,
+    "sorted_service_types": model.SORTED_SERVICE_TYPES,
+    "model_class_map": model.COMMON_MODEL_MAP,
+    "command_class_map": command.COMMON_COMMAND_MAP,
+    "policy_class_map": COMMON_POLICY_MAP,
+    "role_generator_class": RoleGenerator,
+    "rbac_service_class": RbacService,
+}
 
 
 class AppComposer(CommonAppComposer):
-    """Encapsulates casedb registrations for shared application composition.
-
-    The composer binds the casedb domain, ordered service types, model and command
-    substitutions, policy implementations, role generator, and RBAC service to
-    the common composer. The common lifecycle creates configured repositories and
-    services, registers roles and policies, and exposes dependencies consumed by
-    the API layer; this class does not create FastAPI routers.
-
-    Attributes:
-        app: Composed command-handling application.
-        services: Services indexed by their configured service type.
-        repositories: Repositories indexed by their configured service type.
-        registered_user_dependency: Dependency that resolves registered users.
-        new_user_dependency: Dependency that resolves or creates new users.
-        idp_user_dependency: Dependency that resolves identity-provider users.
-    """
+    """Encapsulates shared infrastructure composition with casedb dependencies."""
 
     def __init__(
         self,
         app_cfg: AppCfg,
-        log_any: bool = True,
         log_setup: bool = True,
         **kwargs: Any,
     ):
-        """Initialize and run casedb application composition.
-
-        Construction delegates immediately to the shared composition lifecycle.
-        Depending on configuration, that lifecycle configures setup logging,
-        initializes repositories and services, derives and registers roles and
-        policies, and creates authentication dependencies.
+        """Initialize composer with models, commands, policies, and roles.
 
         Args:
-            app_cfg: Resolved casedb configuration used to compose dependencies.
-            log_any: Whether any application logging is enabled.
-            log_setup: Whether composition lifecycle events are logged.
-            **kwargs: Additional options forwarded to shared composition.
-
-        Raises:
-            ValueError: If setup logging is enabled while all logging is disabled.
-            InitializationServiceError: If configured values cannot be converted.
+            app_cfg: Application configuration used to compose dependencies.
+            log_setup: Whether to configure application logging.
+            **kwargs: Additional commondb composer configuration.
         """
         super().__init__(
             app_cfg,
-            log_any=log_any,
             log_setup=log_setup,
-            domain=DOMAIN,
-            sorted_service_types=model.SORTED_SERVICE_TYPES,
-            model_class_map=model.COMMON_MODEL_MAP,
-            command_class_map=command.COMMON_COMMAND_MAP,
-            policy_class_map=COMMON_POLICY_MAP,
-            role_generator_class=RoleGenerator,
-            rbac_service_class=RbacService,
+            **_KWARGS,  # type: ignore[arg-type]
+            **kwargs,
+        )
+
+
+class NoAppComposer(CommonNoAppComposer):
+    """Encapsulates shared infrastructure composition for creating a casedb app that
+    raises an exception on all commands."""
+
+    def __init__(
+        self,
+        app_cfg: AppCfg,
+        log_setup: bool = True,
+        **kwargs: Any,
+    ):
+        """Initialize composition.
+
+        Args:
+            app_cfg: Application configuration used to compose dependencies.
+            log_setup: Whether to configure application logging.
+            **kwargs: Additional commondb composer configuration.
+        """
+        super().__init__(
+            app_cfg,
+            log_setup=log_setup,
+            **_KWARGS,  # type: ignore[arg-type]
             **kwargs,
         )
