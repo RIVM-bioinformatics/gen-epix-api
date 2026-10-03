@@ -600,7 +600,7 @@ class NoAppComposer(AppComposer):
                     "6b6daeec", "No App available for handling commands"
                 )
 
-            for command_class in self._domain.get_commands():
+            for command_class in self._domain.get_commands(include_crud=True):
                 app.register_handler(
                     command_class,
                     exception_raising_handler,

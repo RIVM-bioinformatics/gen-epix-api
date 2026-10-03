@@ -32,6 +32,7 @@ def test_no_app_composer_registers_exception_handlers() -> None:
     with patch.object(env, "App", return_value=app):
         result = composer.compose_application()
 
+    domain.get_commands.assert_called_once_with(include_crud=True)
     app.register_handler.assert_called_once()
     handler = app.register_handler.call_args.args[1]
     with pytest.raises(exc.ServiceUnavailableError, match="No App available"):

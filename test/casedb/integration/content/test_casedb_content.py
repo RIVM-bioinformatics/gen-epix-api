@@ -1,4 +1,5 @@
 import logging
+from copy import deepcopy
 from datetime import datetime
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import (
@@ -60,6 +61,24 @@ def get_test_client() -> Env:
     )
 
 
+@pytest.fixture(name="none_seqdb_env")
+def get_no_seqdb_test_client() -> Env:
+    """Create a demo casedb client whose seqdb dependency is unavailable."""
+    app_cfg = deepcopy(
+        CASEDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"]
+    )
+    app_cfg._name = f"{app_cfg.name}__NO_SEQDB"
+    app_cfg.cfg["service"]["seqdb"]["props"]["seqdb_client_type"] = "NONE"
+
+    return Env.get_test_client(  # type: ignore[return-value]
+        test_type=TEST_TYPE.value,
+        app_cfg=app_cfg,
+        verbose=VERBOSE,
+        log_level=logging.ERROR,
+        use_endpoints=not SKIP_ENDPOINTS,
+    )
+
+
 @pytest.mark.scenario_ids(
     "TC-RBAC-04-07",
     "TC-RBAC-04-20",
@@ -71,6 +90,30 @@ def get_test_client() -> Env:
     "TC-RBAC-04-09",
 )
 class TestContent:
+    def test_retrieve_protocols_without_seqdb(self, none_seqdb_env: Env) -> None:
+        """Raise ServiceUnavailableError when casedb has no seqdb application."""
+        root_user = none_seqdb_env.get_root_user()
+        cases = none_seqdb_env.handle(
+            command.CaseCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            ),
+            use_endpoint=False,
+        )
+        assert cases
+
+        with pytest.raises(
+            exc.ServiceUnavailableError,
+            match="No App available for handling commands",
+        ):
+            none_seqdb_env.handle(
+                command.RetrieveProtocolsCommand(
+                    user=root_user,
+                    protocol_type=seqdb_enum.ProtocolType.SEQUENCING,
+                ),
+                use_endpoint=False,
+            )
+
     def test_update_case_created_in_data_collection_endpoint(self, env: Env) -> None:
         app = env.app
         app_impl: AppImplDetails = app.impl
