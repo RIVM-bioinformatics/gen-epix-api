@@ -61,7 +61,7 @@ def get_test_client() -> Env:
     )
 
 
-@pytest.fixture(name="none_seqdb_env")
+@pytest.fixture(name="no_seqdb_env")
 def get_no_seqdb_test_client() -> Env:
     """Create a demo casedb client whose seqdb dependency is unavailable."""
     app_cfg = deepcopy(
@@ -90,10 +90,10 @@ def get_no_seqdb_test_client() -> Env:
     "TC-RBAC-04-09",
 )
 class TestContent:
-    def test_retrieve_protocols_without_seqdb(self, none_seqdb_env: Env) -> None:
+    def test_retrieve_protocols_without_seqdb(self, no_seqdb_env: Env) -> None:
         """Raise ServiceUnavailableError when casedb has no seqdb application."""
-        root_user = none_seqdb_env.get_root_user()
-        cases = none_seqdb_env.handle(
+        root_user = no_seqdb_env.get_root_user()
+        cases = no_seqdb_env.handle(
             command.CaseCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
@@ -106,12 +106,24 @@ class TestContent:
             exc.ServiceUnavailableError,
             match="No App available for handling commands",
         ):
-            none_seqdb_env.handle(
+            no_seqdb_env.handle(
                 command.RetrieveProtocolsCommand(
                     user=root_user,
                     protocol_type=seqdb_enum.ProtocolType.SEQUENCING,
                 ),
                 use_endpoint=False,
+            )
+
+        with pytest.raises(
+            exc.ServiceUnavailableError,
+            match="No App available for handling commands",
+        ):
+            no_seqdb_env.handle(
+                command.RetrieveProtocolsCommand(
+                    user=root_user,
+                    protocol_type=seqdb_enum.ProtocolType.SEQUENCING,
+                ),
+                use_endpoint=True,
             )
 
     def test_update_case_created_in_data_collection_endpoint(self, env: Env) -> None:
