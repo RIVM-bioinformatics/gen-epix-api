@@ -68,7 +68,11 @@ def get_no_seqdb_test_client() -> Env:
         CASEDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"]
     )
     app_cfg._name = f"{app_cfg.name}__NO_SEQDB"
-    app_cfg.cfg["service"]["seqdb"]["props"]["seqdb_client_type"] = "NONE"
+    seqdb_props = app_cfg.cfg["service"]["seqdb"]["props"]
+    seqdb_props["no_client"] = {
+        "app_cfg": seqdb_props["local_client"]["app_cfg"],
+    }
+    seqdb_props["seqdb_client_type"] = "NONE"
 
     return Env.get_test_client(  # type: ignore[return-value]
         test_type=TEST_TYPE.value,
