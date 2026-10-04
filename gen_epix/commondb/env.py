@@ -549,9 +549,10 @@ class AppComposer(BaseAppComposer):
 
 
 class NoAppComposer(AppComposer):
-    """Encapsulates shared infrastructure composition for creating an app that
-    raises an exception when handling any command. This can be useful for testing
-    or scenarios where command execution should be explicitly blocked.
+    """Encapsulates composition for an app that rejects all commands.
+
+    This can be useful for testing or scenarios where command execution should be
+    explicitly blocked.
     """
 
     def compose_application(self, **kwargs: Any) -> dict[str, Any]:

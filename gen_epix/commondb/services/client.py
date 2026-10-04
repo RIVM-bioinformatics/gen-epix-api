@@ -432,7 +432,6 @@ class CommondbClient(Client):
         Returns a specific subclass of `model.DeleteAllOperationalDataResult`
         containing the result of the deletion operation.
         """
-
         response_body: dict[str, Any] = self.request(cmd, HttpMethod.DELETE)  # type: ignore[assignment]
         return model.DeleteAllOperationalDataResult(**response_body)
 

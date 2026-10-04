@@ -40,10 +40,14 @@ class TreeAlgorithmClass(Model):
 
 
 class TreeAlgorithm(Model):
-    """Represents a phylogenetic tree algorithm; see https://en.wikipedia.org/wiki/Hierarchical_clustering,
+    """Represents an algorithm for constructing a phylogenetic tree.
+
+    Related topics include hierarchical clustering, neighbor joining,
+    computational phylogenetics, and spanning trees:
+    https://en.wikipedia.org/wiki/Hierarchical_clustering,
     https://en.wikipedia.org/wiki/Neighbor_joining,
-     https://en.wikipedia.org/wiki/Computational_phylogenetics,
-     https://en.wikipedia.org/wiki/Spanning_tree.
+    https://en.wikipedia.org/wiki/Computational_phylogenetics,
+    https://en.wikipedia.org/wiki/Spanning_tree.
     """
 
     ENTITY: ClassVar = Entity(

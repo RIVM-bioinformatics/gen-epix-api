@@ -46,8 +46,11 @@ class AppComposer(CommonAppComposer):
 
 
 class NoAppComposer(CommonNoAppComposer):
-    """Encapsulates shared infrastructure composition for creating an omopdb app that
-    raises an exception on all commands."""
+    """Encapsulates composition for an OMOP app that rejects all commands.
+
+    Shared infrastructure is composed normally, but command handling raises an
+    exception.
+    """
 
     def __init__(
         self,

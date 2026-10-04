@@ -15,6 +15,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Add the cohort definition foreign key to OMOP cohorts."""
     op.create_foreign_key(
         "fk_cohort_cohort_definition_id",
         "cohort",
@@ -27,6 +28,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove the cohort definition foreign key from OMOP cohorts."""
     op.drop_constraint(
         "fk_cohort_cohort_definition_id",
         "cohort",

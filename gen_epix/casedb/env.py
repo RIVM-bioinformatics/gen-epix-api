@@ -52,8 +52,11 @@ class AppComposer(CommonAppComposer):
 
 
 class NoAppComposer(CommonNoAppComposer):
-    """Encapsulates shared infrastructure composition for creating a casedb app that
-    raises an exception on all commands."""
+    """Encapsulates composition for a casedb app that rejects all commands.
+
+    The shared infrastructure is composed normally, but command handling raises
+    an exception.
+    """
 
     def __init__(
         self,

@@ -33,12 +33,23 @@ for rules not covered here.
    those function criteria. Test-module docstrings are optional and should be
    added only when they explain unusual setup, execution, or environment
    requirements; do not add placeholders such as `"""Tests for foo.bar."""`.
+   Every production package initializer, including an otherwise empty
+   `__init__.py`, needs a package docstring.
+   Include concise docstrings for public subclasses and public special methods
+   (such as `__new__` and `__init_subclass__`) when Ruff requires them, even if
+   their implementation is short. Do not assume inheritance satisfies a class
+   docstring requirement.
 5. Describe what the code does and how callers should use it, not its internal
    implementation. Mention implementation details only when callers need to
    know them, such as whether an argument is mutated in place.
-6. Write the docstring using triple double quotes. Keep every line at or under
-   88 characters. Make the summary one physical sentence ending in `.`, `?`, or
-   `!`. If the docstring has more content, put one blank line after the summary.
+6. Write the docstring as one triple-double-quoted string literal. Do not build
+   it from adjacent literals or implicit string concatenation. Keep every line
+   at or under 88 characters. Put a concise summary sentence on the first
+   content line, ending in `.`, `?`, or `!`; do not begin with an empty line or
+   put the closing quotes on the summary line when the docstring spans multiple
+   lines. If there is more content, put exactly one blank line after the summary
+   paragraph. For a short one-line docstring, keep the opening quotes, summary,
+   and closing quotes on one physical line.
 7. A complex or central method needs a complete docstring: a summary, caller-
    relevant lifecycle or side effects, and applicable `Args:`, `Returns:`,
    `Yields:`, and `Raises:` sections. Treat command dispatch, authorization,
@@ -49,7 +60,10 @@ for rules not covered here.
    contract, including propagated exceptions when applicable. Do not document
    exceptions raised only because a caller violated the documented API. Include
    `Args:`, `Returns:`, and `Yields:` only when they add meaning beyond names and
-   annotations. Use a consistent hanging indent of two or four spaces.
+   annotations. Use a consistent hanging indent of two or four spaces. Put a
+   blank line between Google-style sections (for example, between `Args:` and
+   `Returns:`), but not between a section heading and its entries. Do not leave a
+   blank line between a function or method docstring and its first statement.
 9. For public classes with multiple responsibilities or lifecycle behavior, use
    a summary followed by paragraphs explaining their role, collaboration
    boundaries, lifecycle, side effects, and security or trust implications where
@@ -103,12 +117,18 @@ for rules not covered here.
    after them.
 13. An `@override` method does not need a redundant docstring when it preserves
    the base contract. Document material contract differences and added side
-   effects. Without `@override`, provide the docstring required by the standard.
+   effects. This exemption does not apply when Ruff explicitly requires a
+   special-method docstring (D105); add a concise description in that case.
 14. Do not adjust inline comments. Do not update docstrings that are not within the
    requested scope.
 15. Before finishing, review public, nontrivial, and non-obvious definitions in
    scope for accurate docstrings. Comments, decorators other than `@override`,
    and type-checker directives do not count as documentation.
+16. Check the final text against Ruff's Google docstring rules. In particular,
+    summaries must be separated from descriptions by a blank line, each summary
+    must end in punctuation, and multi-line docstrings must close on a separate
+    line. Follow these rules except where `pyproject.toml` explicitly configures
+    a path-specific exception (currently D205 under `gen_epix/fastapp`).
 
 ## Audit Script
 
@@ -151,7 +171,13 @@ caller-facing contracts in the source before declaring the work complete.
 
 After the audit, run the focused Ruff documentation check and the relevant
 formatter and test commands for the changed scope. The audit complements these
-checks; it does not replace them.
+checks; it does not replace them. A passing structural audit does not guarantee
+docstring formatting: run Ruff with the repository's documentation rules on
+the touched Python files and resolve applicable findings, including public
+package/class/function coverage and section spacing. Do not add docstrings to
+generated or framework-owned functions solely to silence Ruff if the repository
+has an explicit local exclusion; otherwise document the public contract
+concisely.
 
 ## Preferred Structure
 
