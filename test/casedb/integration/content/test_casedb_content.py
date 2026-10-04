@@ -5,7 +5,7 @@ from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import (
     EnumTestType as EnumTestType,  # to avoid PyTest warning
 )
-from typing import Iterable
+from typing import Any, Iterable, cast
 from uuid import UUID
 
 import pytest
@@ -15,11 +15,13 @@ from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
 from gen_epix.commondb.domain.enum import Role as CommonRole
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.test.util import set_log_level
 from gen_epix.fastapp import CrudOperation, PermissionType, exc
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import CompositeFilter, LogicalOperator, StringSetFilter
+from gen_epix.filter import CompositeFilter, StringSetFilter
+from gen_epix.filter.enum import LogicalOperator
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
@@ -68,7 +70,7 @@ def get_no_seqdb_test_client() -> Env:
         CASEDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"]
     )
     app_cfg._name = f"{app_cfg.name}__NO_SEQDB"
-    seqdb_props = app_cfg.cfg["service"]["seqdb"]["props"]
+    seqdb_props = cast(dict[str, Any], app_cfg.cfg)["service"]["seqdb"]["props"]
     seqdb_props["no_client"] = {
         "app_cfg": seqdb_props["local_client"]["app_cfg"],
     }
@@ -378,6 +380,36 @@ class TestContent:
             for concept_set in concept_sets
         }
 
+        # Try testing for existing of some objects
+        case_types_exist: list[bool] = app.handle(
+            command.CaseTypeCrudCommand(
+                user=org_user,
+                operation=CrudOperation.EXISTS_SOME,
+                obj_ids=[cast(UUID, x.id) for x in case_types] + [NULL_ID],
+            )
+        )
+        # All existing case types should return True, and the NULL_ID should return False
+        assert case_types_exist[:-1] == [True] * (len(case_types_exist) - 1)
+        assert case_types_exist[-1] is False
+
+        # Try testing for existence of a single object
+        case_type_exists: bool = app.handle(
+            command.CaseTypeCrudCommand(
+                user=org_user,
+                operation=CrudOperation.EXISTS_ONE,
+                obj_ids=cast(UUID, case_types[0].id),
+            )
+        )
+        assert case_type_exists is True
+        case_type_exists = app.handle(
+            command.CaseTypeCrudCommand(
+                user=org_user,
+                operation=CrudOperation.EXISTS_ONE,
+                obj_ids=NULL_ID,
+            )
+        )
+        assert case_type_exists is False
+
         # Get CaseType and and case set stats
         case_stats = app.handle(command.RetrieveCaseTypeStatsCommand(user=org_user))
         case_set_stats = app.handle(command.RetrieveCaseSetStatsCommand(user=org_user))
@@ -600,10 +632,12 @@ class TestContent:
 
         # Read all for all models with read permission
         for model_class, command_class in app._model_crud_command_map.items():
-            permissions: frozenset[fastapp.Permission] = (  # type: ignore[assignment]
+            model_permissions: frozenset[fastapp.Permission] = (  # type: ignore[assignment]
                 app.domain.get_permissions_for_command(command_class)
             )
-            if PermissionType.READ not in {x.permission_type for x in permissions}:
+            if PermissionType.READ not in {
+                x.permission_type for x in model_permissions
+            }:
                 continue
             app.handle(
                 command_class(
@@ -679,6 +713,7 @@ class TestContent:
             # Check if any case type has cases in private data collections
             found_own_cases = False
             for case_type in candidate_case_types:
+                assert case_type.id is not None
                 if case_type.id not in has_cases_ct_ids:
                     continue
                 q_result: model.CaseQueryResult = app.handle(
@@ -716,24 +751,24 @@ class TestContent:
             command.CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
         )
         case_stats = app.handle(command.RetrieveCaseTypeStatsCommand(user=org_user))
-        has_cases_ct_ids: set[UUID] = {
+        own_has_cases_ct_ids: set[UUID] = {
             x.case_type_id for x in case_stats if x.n_cases > 0
         }
 
         for own_case_type in case_types:
             assert own_case_type.id is not None
-            if own_case_type.id not in has_cases_ct_ids:
+            if own_case_type.id not in own_has_cases_ct_ids:
                 continue
-            q_result: model.CaseQueryResult = app.handle(
+            own_q_result: model.CaseQueryResult = app.handle(
                 command.RetrieveCasesByQueryCommand(
                     user=org_user,
                     case_query=model.CaseQuery(case_type_id=own_case_type.id),
                 )
             )
-            candidate_ids: list[UUID] = q_result.case_ids[:20]
+            candidate_ids: list[UUID] = own_q_result.case_ids[:20]
             if not candidate_ids:
                 continue
-            candidate_cases: list[model.Case] = app.handle(
+            own_candidate_cases: list[model.Case] = app.handle(
                 command.RetrieveCasesByIdCommand(
                     user=org_user,
                     case_type_id=own_case_type.id,
@@ -742,7 +777,7 @@ class TestContent:
             )
             own_case_ids: list[UUID] = [
                 c.id
-                for c in candidate_cases
+                for c in own_candidate_cases
                 if c.created_in_data_collection_id in private_dc_ids
                 and c.id is not None
             ]
@@ -764,7 +799,7 @@ class TestContent:
             # Test scenario: shared (non-own) cases should return False
             shared_case_ids: list[UUID] = [
                 x.id
-                for x in candidate_cases
+                for x in own_candidate_cases
                 if x.created_in_data_collection_id not in private_dc_ids
                 and x.id is not None
             ]

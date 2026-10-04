@@ -371,12 +371,15 @@ class Client(App):
         )
         model_class = command_class.MODEL_CLASS
         entity = model_class.ENTITY
-        id_class: type | None
-        if entity.id_field_name:
-            id_class = get_type_from_annotation(
-                model_class.model_fields[entity.id_field_name].annotation
-            )
         assert entity is not None
+        id_class: type | None
+        id_field_name = getattr(entity, "id_field_name", None)
+        if id_field_name:
+            id_class = get_type_from_annotation(
+                model_class.model_fields[id_field_name].annotation
+            )
+        else:
+            id_class = None
 
         return cast(
             Callable[[Command], Any],
@@ -419,6 +422,7 @@ class Client(App):
                                 else ("/" + ids_route_suffix)
                             )
                             url = base_route + query_suffix + ids_suffix
+                            assert id_class is not None
                             return_model_class = id_class
                         else:
                             url = base_route + query_route_suffix
@@ -510,6 +514,7 @@ class Client(App):
                     raise AssertionError(f"Unsupported operation: {cmd.operation}")
             response.raise_for_status()
         if cmd.return_id:
+            assert id_class is not None
             return_model_class = id_class
         retval = self._content_to_obj(response, return_model_class, is_list=is_list)
         return retval
@@ -522,7 +527,9 @@ class Client(App):
         if response.status_code not in (200, 201):
             return None
         decoded_obj = json.loads(response.content.decode(response.encoding or "utf-8"))
-        if issubclass(retval_class, PydanticBaseModel):
+        if retval_class is bool:
+            return decoded_obj
+        elif issubclass(retval_class, PydanticBaseModel):
             if is_list:
                 return [retval_class(**x) for x in decoded_obj]
             else:
