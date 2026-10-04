@@ -288,6 +288,7 @@ class Result(BaseModel):
         return self
 
     def __new__(cls, **data: Any) -> Any:
+        """Instantiate the registered result subclass named by the input type."""
         if cls is Result and "type" in data:
             class_id = data["type"]
             subclass = cls._SUBCLASS_REGISTRY.get(class_id)
@@ -298,6 +299,7 @@ class Result(BaseModel):
 
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+        """Register the subclass under its unique result type identifier."""
         super().__pydantic_init_subclass__(**kwargs)
         if cls.ID in Result._SUBCLASS_REGISTRY:
             raise ValueError(
@@ -347,6 +349,7 @@ class TransformResult(Result):
     )
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Require each transform-result subclass to define completion metadata."""
         super().__init_subclass__(**kwargs)
         _require_own_completed_code(cls)
 
@@ -359,6 +362,7 @@ class ExtractResult(Result):
     COMPLETED_MESSAGE: ClassVar[str] = "Extract completed."
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Require each extract-result subclass to define completion metadata."""
         super().__init_subclass__(**kwargs)
         _require_own_completed_code(cls)
 
@@ -379,8 +383,9 @@ AnyLoadResult = Annotated[
 
 
 class BatchResult(Result):
-    """Represents a single ETL batch result, consisting of extract, transform, and load
-    results.
+    """Represents the combined ETL result for a single batch.
+
+    The result consists of extract, transform, and load results.
     """
 
     ID: ClassVar[str] = "b9c3e7d1"

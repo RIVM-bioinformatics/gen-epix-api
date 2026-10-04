@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from decimal import Decimal
 from test.util.mock_compat import Mock, patch
 from typing import Any, Callable, ClassVar, cast
 from uuid import UUID, uuid4
@@ -503,16 +502,16 @@ class TestGeneratedCrudRoutes(BaseClientTestCase):
             assert FakeClient.last_request["url"].endswith("/query")  # type: ignore[index]
             assert FakeClient.last_request["headers"] == self.app.get_headers(cmd)
 
-            # READ_ALL with query filter and ids suffix (still returns models for test purposes)
-            payload = [{"id": str(uuid4()), "name": "b"}]
-            set_fake_response(payload=payload, status_code=200)
+            # READ_ALL with query filter and ids suffix
+            expected_ids = [uuid4()]
+            set_fake_response(payload=[str(expected_ids[0])], status_code=200)
             cmd = DummyCrud(
                 operation=CrudOperation.READ_ALL,
                 query_filter=qf,
                 return_id=True,
             )
             retval = handler(cmd)
-            assert [DummyModel(**payload[0])] == retval  # type: ignore[arg-type]
+            assert retval == expected_ids
             assert FakeClient.last_request["url"].endswith("/query/ids")  # type: ignore[index]
 
             # READ_SOME
@@ -633,32 +632,33 @@ class TestGeneratedCrudRoutes(BaseClientTestCase):
         # Set up mocks
         with patch("gen_epix.fastapp.client.httpx.Client", FakeClient):
             # EXISTS_SOME
-            set_fake_response(
-                payload=[str(obj_ids[0]), str(obj_ids[2])], status_code=200
-            )
+            set_fake_response(payload=[True, False, True], status_code=200)
             cmd = DummyCrud(operation=CrudOperation.EXISTS_SOME, obj_ids=obj_ids)
             retval = handler(cmd)
 
             # Verify
             assert retval == [True, False, True]
-            assert FakeClient.last_request["method"] == "POST"  # type: ignore[index]
-            assert FakeClient.last_request["url"].endswith("/query/ids")  # type: ignore[index]
-            assert FakeClient.last_request["json"]["type"] == "UUID_SET"  # type: ignore[index]
-            assert FakeClient.last_request["json"]["key"] == "id"  # type: ignore[index]
+            assert FakeClient.last_request["method"] == "GET"  # type: ignore[index]
+            assert FakeClient.last_request["url"].endswith("/exists")  # type: ignore[index]
+            assert json.loads(FakeClient.last_request["params"]["ids"]) == [  # type: ignore[index]
+                str(obj_id) for obj_id in obj_ids
+            ]
 
             # EXISTS_ONE
-            set_fake_response(payload=[str(obj_ids[1])], status_code=200)
+            set_fake_response(payload=True, status_code=200)
             cmd = DummyCrud(operation=CrudOperation.EXISTS_ONE, obj_ids=obj_ids[1])
             retval = handler(cmd)
             assert retval
 
-    def test_exists_some_falls_back_to_get_for_mixed_id_types(self) -> None:
+    def test_exists_some_sends_mixed_id_types_to_exists_route(self) -> None:
         # Create input
         base_route = "http://example.org:8000/dummy_models"
         handler = self.app.create_generated_crud_route_handler(DummyCrud, base_route)
+        uuid_id = uuid4()
+        legacy_id = "legacy-id"
         cmd = DummyCrud.model_construct(
             operation=CrudOperation.EXISTS_SOME,
-            obj_ids=[uuid4(), "legacy-id"],
+            obj_ids=[uuid_id, legacy_id],
             objs=None,
             query_filter=None,
             props={},
@@ -666,21 +666,17 @@ class TestGeneratedCrudRoutes(BaseClientTestCase):
 
         # Set up mocks
         with patch("gen_epix.fastapp.client.httpx.Client", FakeClient):
-            set_fake_response(payload={"id": "anything"}, status_code=200)
+            set_fake_response(payload=[True, False], status_code=200)
             retval = handler(cmd)
 
         # Verify
-        assert retval == [True, True]
+        assert retval == [True, False]
         assert FakeClient.last_request["method"] == "GET"  # type: ignore[index]
-        assert FakeClient.last_request["url"].endswith("/legacy-id")  # type: ignore[index]
-
-    def test_classify_exists_id_type(self) -> None:
-        assert Client._classify_exists_id_type([uuid4()]) == "uuid"
-        assert Client._classify_exists_id_type(["x"]) == "string"
-        assert Client._classify_exists_id_type([1]) == "int"
-        assert Client._classify_exists_id_type([1.1]) == "float"
-        assert Client._classify_exists_id_type([Decimal("1.1")]) == "decimal"
-        assert Client._classify_exists_id_type([1, 2.0]) == "mixed"
+        assert FakeClient.last_request["url"].endswith("/exists")  # type: ignore[index]
+        assert json.loads(FakeClient.last_request["params"]["ids"]) == [  # type: ignore[index]
+            str(uuid_id),
+            legacy_id,
+        ]
 
     def test_generated_handler_unsupported_return_type_raises(self) -> None:
         # Create input

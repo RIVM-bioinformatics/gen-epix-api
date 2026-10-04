@@ -7,6 +7,8 @@ from gen_epix.seqdb.domain import model
 
 
 class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
+    """Represents a request to delete all SeqDB operational data."""
+
     SORTED_OPERATIONAL_DATA_MODEL_CLASSES = [
         model.SeqDistance,
         model.SeqProfileIdentifier,
