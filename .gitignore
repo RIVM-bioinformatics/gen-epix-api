@@ -167,7 +167,8 @@ cython_debug/
 # Ignore dynaconf secret files
 gen_epix/casedb/config/.ignore/*
 
-# Test output
+# Temporary output
+tmp
 test/output/*
 .gremlins_cache
 
