@@ -27,7 +27,7 @@ from gen_epix.omopdb.domain.model.omop.ontology import Concept
 
 class ConditionEra(Model, DataLineageMixin):
     """A Condition Era is defined as a span of time when the Person is assumed to
-    
+
     have a given condition.
 
     Similar to Drug Eras, Condition Eras are chronological periods of Condition
@@ -45,7 +45,7 @@ class ConditionEra(Model, DataLineageMixin):
     specialist, who confirms the PCP's original diagnosis and provides the
     appropriate treatment to resolve the condition. These two independent doctor
     visits should be aggregated into one Condition Era.
-    """
+    """  # noqa: D415
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ConditionEras",
@@ -83,7 +83,7 @@ class ConditionEra(Model, DataLineageMixin):
 
 class DrugEra(Model, DataLineageMixin):
     """A Drug Era is defined as a span of time when the Person is assumed to be
-    
+
     exposed to a particular active ingredient.
 
     A Drug Era is not the same as a Drug Exposure: Exposures are individual records
@@ -91,7 +91,7 @@ class DrugEra(Model, DataLineageMixin):
     successive periods of Drug Exposures are combined under certain rules to produce
     continuous Drug Eras. Every record in the DRUG_EXPOSURE table should be part of a
     drug era based on the dates of exposure.
-    """
+    """  # noqa: D415
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="DrugEras",
@@ -143,9 +143,9 @@ class DrugEra(Model, DataLineageMixin):
 
 class DoseEra(Model, DataLineageMixin):
     """A Dose Era is defined as a span of time when the Person is assumed to be
-    
+
     exposed to a constant dose of a specific active ingredient.
-    """
+    """  # noqa: D415
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="DoseEras",
@@ -189,7 +189,7 @@ class DoseEra(Model, DataLineageMixin):
 
 class CohortDefinition(Model):
     """The COHORT_DEFINITION table contains records defining a Cohort derived from
-    
+
     the data through the associated description and syntax and upon instantiation
     (execution of the algorithm) placed into the COHORT table.
 
@@ -198,7 +198,7 @@ class CohortDefinition(Model):
     standardized structure for maintaining the rules governing the inclusion of a
     subject into a cohort, and can store operational programming code to instantiate
     the cohort within the OMOP Common Data Model.
-    """
+    """  # noqa: D415
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="CohortDefinitions",
@@ -242,7 +242,7 @@ class CohortDefinition(Model):
 
 class Cohort(Model):
     """The subject of a cohort can have multiple, discrete records in the cohort
-    
+
     table per cohort_definition_id, subject_id, and non-overlapping time periods.
 
     The definition of the cohort is contained within the COHORT_DEFINITION table.
@@ -251,7 +251,7 @@ class Cohort(Model):
     CDM and Vocabulary tables are all read-only so it is suggested that the COHORT
     and COHORT_DEFINTION tables are kept in a separate schema to alleviate
     confusion.
-    """
+    """  # noqa: D415
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="Cohorts",
@@ -282,7 +282,7 @@ class Cohort(Model):
 
 class Episode(Model, DataLineageMixin):
     """The EPISODE table aggregates lower-level clinical events (VISIT_OCCURRENCE,
-    
+
     DRUG_EXPOSURE, PROCEDURE_OCCURRENCE, DEVICE_EXPOSURE) into a higher-level
     abstraction representing clinically and analytically relevant disease
     phases,outcomes and treatments.
@@ -291,7 +291,7 @@ class Episode(Model, DataLineageMixin):
     DRUG_EXPOSURE, PROCEDURE_OCCURRENCE, DEVICE_EXPOSURE) to the appropriate EPISODE
     entry. For example cancers including their development over time, their treatment,
     and final resolution.
-    """
+    """  # noqa: D415
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="Episodes",
@@ -372,13 +372,13 @@ class Episode(Model, DataLineageMixin):
 
 class EpisodeEvent(Model, DataLineageMixin):
     """The EPISODE_EVENT table connects qualifying clinical events (such as
-    
+
     CONDITION_OCCURRENCE, DRUG_EXPOSURE, PROCEDURE_OCCURRENCE, MEASUREMENT) to the
     appropriate EPISODE entry.
 
     For example, linking the precise location of the metastasis (cancer modifier in
     MEASUREMENT) to the disease episode.
-    """
+    """  # noqa: D415
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="EpisodeEvents",

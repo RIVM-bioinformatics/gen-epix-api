@@ -82,7 +82,6 @@ class Vocabulary(Model):
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
         """Synchronize the vocabulary UUID with its string natural key."""
-
         validate_str_key_args(data, "vocabulary_id", "vocabulary_str_id")
         return data
 
