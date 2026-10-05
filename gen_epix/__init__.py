@@ -1,3 +1,21 @@
+"""Expose shared APIs and the Gen-EpiX domain applications.
+
+Shared exports include FastApp, filtering, utility, ETL, configuration,
+exception, literal, and common-domain APIs: ``etl``, ``etl_model``, ``fastapp``,
+``filter``, ``util``, ``AppCfg``, ``AppComposer``, ``COMMONDB_DOMAIN``,
+``CommondbClient``, ``commondb_command``, ``commondb_enum``, ``commondb_model``,
+``exc``, ``literal``, and ``NULL_ID``.
+
+CASEDB exports include ``CASEDB_DOMAIN``, ``CasedbAppComposer``, ``CasedbClient``,
+``casedb_command``, ``casedb_enum``, ``casedb_model``, ``casedb_policy``,
+``casedb_service``, and ``casedb_services``. OMOPDB exports include
+``OMOPDB_DOMAIN``, ``OmopdbAppComposer``, ``OmopdbClient``, ``omopdb_command``,
+``omopdb_enum``, ``omopdb_model``, ``omopdb_policy``, and ``omopdb_service``.
+SEQDB exports include ``SEQDB_DOMAIN``, ``SeqdbAppComposer``, ``SeqdbClient``,
+``seqdb_command``, ``seqdb_enum``, ``seqdb_model``, ``seqdb_policy``, and
+``seqdb_service``.
+"""
+
 from gen_epix import etl as etl
 from gen_epix import fastapp as fastapp
 from gen_epix import filter as filter

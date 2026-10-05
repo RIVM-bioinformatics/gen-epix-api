@@ -146,9 +146,7 @@ class TestMerge:
             children1=[Child1ForUpload(child1_id=shared_child1_id, ref1_code="r1")]
         )
         parent2 = make_parent(
-            children2=[
-                Child2ForUpload(child1_id=shared_child1_id, ref2_id=NULL_ID)
-            ]
+            children2=[Child2ForUpload(child1_id=shared_child1_id, ref2_id=NULL_ID)]
         )
         batch_a = make_batch([parent1])
         batch_b = make_batch([parent2])

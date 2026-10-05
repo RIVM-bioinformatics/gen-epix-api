@@ -6,7 +6,7 @@ import abc
 import datetime
 import logging
 from collections.abc import Callable, Hashable, Iterable
-from typing import Any
+from typing import Any, cast
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
@@ -299,7 +299,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         # Get filters depending on the operation
         """Crud repository."""
         if cmd.operation in CrudOperationSet.ANY_ALL.value:
-            # Query filter is applied, access filter is added to query filter
+            # READ_ALL or DELETE_ALL: if query filter is applied, access filter is added to query filter (first one filters on access, second on content)
             query_filter = cmd.query_filter
             access_filter = cmd.access_filter
             if query_filter and access_filter:
@@ -311,35 +311,28 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                 query_filter = access_filter
             access_filter = None
         else:
-            # Query filter is not applied, access filter is applied separately
+            # Not READ_ALL or DELETE_ALL: query filter is not applied, access filter is applied separately
             query_filter = None
             access_filter = cmd.access_filter
-
-        # Verify access through access_filter for create, exists, update and delete
-        # operations (read operations are verified later to avoid unnecessary reads)
-        if access_filter:
-            objs = None
-            if cmd.is_write():
-                # Operations with one or more objs as input -> check if they match the
-                # access filter
-                objs = cmd.get_objs()
-            elif cmd.is_delete() or cmd.is_exists():
-                # Delete/exists one or some (delete all is not possible since there is
-                # an access filter) -> check if the ids match the access filter
-                assert cmd.user is not None
-                objs: list[Model] = self.repository.crud(
-                    uow,
-                    cmd.user.id,
-                    cmd.MODEL_CLASS,
-                    CrudOperation.READ_SOME,
-                    obj_ids=cmd.get_obj_ids(),
-                )
-            if objs is not None and not all(
-                cmd.access_filter.match_rows(objs, is_model=True)
-            ):
-                raise exc.UnauthorizedAuthError(
-                    "914fc9af", f"Unauthorized access to objects"
-                )
+            if access_filter and (cmd.is_write() or cmd.is_delete()):
+                # CREATE/UPDATE/DELETE ONE/SOME: verify access through access_filter
+                obj_ids = cmd.get_obj_ids()
+                assert obj_ids is not None
+                if cmd.is_create():
+                    # For CREATE operations, filter out None object IDs i.e. where ID is assigned during creation
+                    obj_ids = [x for x in obj_ids if x is not None]
+                if obj_ids:
+                    objs: list[Model] = self.repository.crud(
+                        uow,
+                        None if cmd.user is None else cmd.user.id,
+                        cmd.MODEL_CLASS,
+                        CrudOperation.READ_SOME,
+                        obj_ids=cmd.get_obj_ids(),
+                    )
+                    if not all(access_filter.match_rows(objs, is_model=True)):
+                        raise exc.UnauthorizedAuthError(
+                            "914fc9af", f"Unauthorized access to objects"
+                        )
 
         # Split query_filter into repository and service filters
         repository_query_filter, service_query_filter = self.repository.split_filter(
@@ -347,7 +340,6 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         )
 
         # Call repository CRUD operation
-        reserved_arg_names = {"filter", "obj_filter", "links"}
         retval = self.repository.crud(
             uow,
             cmd.user.id if cmd.user else None,
@@ -362,6 +354,44 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             obj_filter=service_query_filter,
             links=links,
         )
+
+        # Apply access filter to the result of EXISTS operations
+        if access_filter and cmd.is_exists():
+            obj_ids = cmd.get_obj_ids()
+            assert isinstance(obj_ids, list)
+            if cmd.operation == CrudOperation.EXISTS_ONE:
+                existing = [cast(bool, retval)]
+            else:
+                existing = cast(list[bool], retval)
+            existing_obj_ids = [
+                obj_id
+                for obj_id, is_existing in zip(obj_ids, existing)
+                if is_existing and obj_id is not None
+            ]
+            accessible_obj_ids: set[Hashable] = set()
+            if existing_obj_ids:
+                existing_objs: list[Model] = self.repository.crud(
+                    uow,
+                    cmd.user.id if cmd.user else None,
+                    cmd.MODEL_CLASS,
+                    CrudOperation.READ_SOME,
+                    obj_ids=existing_obj_ids,
+                )
+                accessible_obj_ids = {
+                    obj_id
+                    for obj in cast(
+                        Iterable[Model],
+                        access_filter.filter_rows(existing_objs, is_model=True),
+                    )
+                    if (obj_id := obj.get_id()) is not None
+                }
+            if cmd.operation == CrudOperation.EXISTS_ONE:
+                retval = bool(existing[0] and obj_ids[0] in accessible_obj_ids)
+            else:
+                retval = [
+                    is_existing and obj_id in accessible_obj_ids
+                    for obj_id, is_existing in zip(obj_ids, existing)
+                ]
 
         return retval
 

@@ -22,8 +22,9 @@ from gen_epix.seqdb.domain.model.seq.seq import Seq, SeqIdentifier
 
 
 class SampleQuery(Model):
-    """Represents a query for retrieving samples. All constraints are optional, but at least one
-    criterion must be provided.
+    """Represents a query for retrieving samples.
+
+    Constraints are optional, but at least one criterion must be provided.
 
     Model validation: At least one datetime boundary must be provided. Labels do
     not independently satisfy the criterion requirement.

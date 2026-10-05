@@ -1,3 +1,10 @@
+"""Expose shared ETL status and result models.
+
+The package re-exports the ``EtlStatus`` and ``EtlStatusSet`` enums, along with
+``BatchResult``, ``ExtractResult``, ``JobResult``, ``LoadResult``, ``LogItem``,
+``Result``, and ``TransformResult``.
+"""
+
 from gen_epix.etl.enum import EtlStatus as EtlStatus
 from gen_epix.etl.enum import EtlStatusSet as EtlStatusSet
 from gen_epix.etl.model import BatchResult as BatchResult

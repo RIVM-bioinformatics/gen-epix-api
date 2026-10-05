@@ -164,7 +164,11 @@ cython_debug/
 .idea/
 .idea/
 
-# Test output
+# Ignore dynaconf secret files
+gen_epix/casedb/config/.ignore/*
+
+# Temporary output
+tmp
 test/output/*
 .gremlins_cache
 

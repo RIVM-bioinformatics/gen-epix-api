@@ -15,7 +15,6 @@ from gen_epix import fastapp
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.config.cfg import convert_to_bool
 from gen_epix.commondb.domain import DOMAIN, enum, exc, model
 from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
@@ -563,4 +562,99 @@ class AppComposer(BaseAppComposer):
 
         Returns a tuple of ``(success, converted_value)``.
         """
-        return convert_to_bool(value)
+        if isinstance(value, bool):
+            return True, value
+        if isinstance(value, str):
+            if value.lower() in {"true", "1"}:
+                return True, True
+            elif value.lower() in {"false", "0"}:
+                return True, False
+        return False, False
+
+
+class NoAppComposer(AppComposer):
+    """Encapsulates composition for an app that rejects all commands.
+
+    This can be useful for testing or scenarios where command execution should be
+    explicitly blocked.
+    """
+
+    def compose_application(self, **kwargs: Any) -> dict[str, Any]:
+        """Create the application, and set all handlers to raise exceptions.
+
+        Composition returns the dependencies required by the API layer.
+
+        Args:
+            **kwargs: Additional options accepted by composed service constructors.
+
+        Returns:
+            Application, service, repository, and API dependency instances (empty
+            or returning None to maintain interface consistency).
+
+        Raises:
+            Exception: Re-raises an error encountered while composing the application.
+        """
+        # Get loggers
+        setup_logger = self._app_cfg.setup_logger
+        app_logger = self._app_cfg.app_logger
+
+        # Compose application
+        try:
+            if self._log_setup and setup_logger:
+                self._setup_application_logging(setup_logger)
+
+            # Initialize app
+            app = App(
+                name=self._app_cfg.app_name,
+                domain=self._domain,
+                cfg=self._app_cfg.cfg,
+                logger=app_logger if self._log_setup else None,
+            )
+
+            # Register all commands with app with a handler that raises an exception
+            if self._log_setup and setup_logger:
+                setup_logger.debug(
+                    app.create_log_message(
+                        "508a5be8",
+                        "Registering commands with exception-raising handlers",
+                    )
+                )
+
+            def exception_raising_handler(cmd: fastapp.Command) -> None:
+                raise exc.ServiceUnavailableError(
+                    "6b6daeec", "No App available for handling commands"
+                )
+
+            for command_class in self._domain.get_commands(include_crud=True):
+                app.register_handler(
+                    command_class,
+                    exception_raising_handler,
+                )
+
+            # Finalise process
+            if self._log_setup and setup_logger:
+                setup_logger.debug(
+                    app.create_log_message("cdcdbbd1", "Finished composing application")
+                )
+
+        except Exception as e:
+
+            # Print error for deployment log, in regular log is not shown there
+            traceback.print_exc()
+            if self._log_setup and setup_logger:
+                setup_logger.error(
+                    App.create_static_log_message(
+                        "41afabe5",
+                        f"Error setting up application: {e}",
+                    )
+                )
+            raise e
+
+        return {
+            "app": app,
+            "services": {},
+            "repositories": {},
+            "registered_user_dependency": lambda x: None,
+            "new_user_dependency": lambda x: None,
+            "idp_user_dependency": lambda x: None,
+        }

@@ -5,10 +5,10 @@
 fastapi[standard]>=0.129.0,<0.137.0 
 # fastapi[standard]==0.141.1
 gunicorn==26.2.*
-starlette==1.6.*
+starlette==1.7.*
 httpx==0.28.1
 urllib3==2.8.0
-pyjwt==2.14.0
+pyjwt==2.15.1
 
 #database handling
 sqlalchemy==2.0.54
@@ -39,8 +39,8 @@ types-python-dateutil==2.9.*
 types-setuptools==84.0.*
 
 # mock OIDC server (test/test_client/oauth) — needed in Docker for the IDP compose stack
-cryptography==50.0.1
-oauthlib==3.3.1
+cryptography==50.0.2
+oauthlib==4.0.0
 
 # profiling
 pyinstrument==5.1.*

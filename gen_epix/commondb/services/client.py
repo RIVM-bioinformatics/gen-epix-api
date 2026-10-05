@@ -431,7 +431,6 @@ class CommondbClient(Client):
         Returns a specific subclass of `model.DeleteAllOperationalDataResult`
         containing the result of the deletion operation.
         """
-
         response_body: dict[str, Any] = self.request(cmd, HttpMethod.DELETE)  # type: ignore[assignment]
         return model.DeleteAllOperationalDataResult(**response_body)
 
@@ -460,9 +459,10 @@ class CommondbClient(Client):
     def create_local_or_remote(
         cls,
         app_type: enum.AppType,
-        app_setup_type: Literal["LOCAL", "REMOTE"],
+        app_setup_type: Literal["LOCAL", "REMOTE", "NONE"],
         local_client_props: dict[str, Any] | None = None,
         remote_client_props: dict[str, Any] | None = None,
+        no_client_props: dict[str, Any] | None = None,
         app_composer_class: type | None = None,
         user_class: type[model.User] | None = None,
         service_type_enum: type[Enum] | None = None,
@@ -473,9 +473,10 @@ class CommondbClient(Client):
 
         Args:
             app_type: Application type to create locally.
-            app_setup_type: Setup mode, either ``LOCAL`` or ``REMOTE``.
+            app_setup_type: Setup mode, either ``LOCAL``, ``REMOTE``, or ``NONE``.
             local_client_props: Properties for local client (app) construction.
             remote_client_props: Properties for remote client construction.
+            no_client_props: Properties for no-client construction.
             app_composer_class: Composer class for local setup.
             user_class: User model class for local setup.
             service_type_enum: Service-type enum for local setup.
@@ -490,10 +491,10 @@ class CommondbClient(Client):
         """
         # Parse input
         app_setup_type = app_setup_type.upper()  # type: ignore[assignment]
-        if app_setup_type not in ("LOCAL", "REMOTE"):
+        if app_setup_type not in ("LOCAL", "REMOTE", "NONE"):
             raise exc.InitializationServiceError(
                 "2ceb9c7c",
-                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'.",
+                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL', 'REMOTE', or 'NONE'.",
             )
         # Create local or remote app
         app: App
@@ -512,10 +513,22 @@ class CommondbClient(Client):
         elif app_setup_type == "REMOTE":
             # Parse remote app props
             app, user = CommondbClient._create_client(remote_client_props)
+        elif app_setup_type == "NONE":
+            # Parse no-client props
+            app = cls._create_no_client(
+                app_type,
+                no_client_props,
+                app_composer_class,
+                user_class,
+                service_type_enum,
+                repository_type_enum,
+                logger,
+            )
+            user = None
         else:
             raise exc.InitializationServiceError(
                 "84a87605",
-                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'.",
+                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL', 'REMOTE', or 'NONE'.",
             )
         return app, user
 
@@ -577,6 +590,57 @@ class CommondbClient(Client):
         user = user_class(**local_client_props["user"])
 
         return app, user
+
+    @classmethod
+    def _create_no_client(
+        cls,
+        app_type: enum.AppType,
+        no_client_props: dict[str, Any] | None,
+        app_composer_class: type | None,
+        user_class: type[model.User] | None,
+        service_type_enum: type[Enum] | None,
+        repository_type_enum: type[Enum] | None,
+        logger: Logger | None = None,
+    ) -> App:
+        """Instantiate a no-client application from configuration and a user definition.
+
+        Args:
+            app_type: Application type to configure.
+            no_client_props: No-client configuration containing user properties.
+            app_composer_class: Composer used to construct the local application.
+            user_class: User model used to construct the local user.
+            service_type_enum: Application service-type enum.
+            repository_type_enum: Application repository-type enum.
+            logger: Optional logger used to determine setup logging.
+
+        Returns:
+            Local application that raises an exception on use.
+
+        Raises:
+            InitializationServiceError: If required local setup properties are missing.
+        """
+        if (
+            no_client_props is None
+            or app_composer_class is None
+            or user_class is None
+            or service_type_enum is None
+            or repository_type_enum is None
+        ):
+            raise exc.InitializationServiceError(
+                "2f572747",
+                "no_client_props, app_composer_class, user_class, service_type_enum, and repository_type_enum must be provided for NO_CLIENT app setup.",
+            )
+        # Get app config
+        if "app_cfg" in no_client_props:
+            app_cfg = no_client_props.pop("app_cfg")
+        else:
+            app_cfg = AppCfg(app_type, service_type_enum, repository_type_enum)
+        log_setup = no_client_props.get("log_setup", logger is not None)
+        # Create local app and user
+        app_composer = app_composer_class(app_cfg, log_setup=log_setup)
+        app = app_composer.app
+
+        return app
 
     @classmethod
     def _create_client(cls, client_props: dict[str, Any] | None) -> tuple[App, None]:

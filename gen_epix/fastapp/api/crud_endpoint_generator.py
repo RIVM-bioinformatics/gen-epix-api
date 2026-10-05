@@ -64,6 +64,7 @@ class CrudEndpointGenerator:
     DEFAULT_BATCH_ROUTE_SUFFIX = "/batch"
     DEFAULT_QUERY_ROUTE_SUFFIX = "/query"
     DEFAULT_IDS_ROUTE_SUFFIX = "/ids"
+    DEFAULT_EXISTS_ROUTE_SUFFIX = "/exists"
 
     CRUD_OPERATION_TO_ENDPOINT_TYPE: dict[CrudOperation, CrudEndpointType] = {
         CrudOperation.READ_ALL: CrudEndpointType.GET_ALL,
@@ -76,6 +77,8 @@ class CrudEndpointGenerator:
         CrudOperation.DELETE_ONE: CrudEndpointType.DELETE_ONE,
         CrudOperation.DELETE_SOME: CrudEndpointType.DELETE_SOME,
         CrudOperation.DELETE_ALL: CrudEndpointType.DELETE_ALL,
+        CrudOperation.EXISTS_ONE: CrudEndpointType.GET_EXISTS_ONE,
+        CrudOperation.EXISTS_SOME: CrudEndpointType.GET_EXISTS_SOME,
     }
     CRUD_ENDPOINT_TYPE_ORDER: list[CrudEndpointType] = [
         CrudEndpointType.GET_ALL,
@@ -86,8 +89,10 @@ class CrudEndpointGenerator:
         CrudEndpointType.GET_SOME,
         CrudEndpointType.PUT_SOME,
         CrudEndpointType.DELETE_SOME,
+        CrudEndpointType.GET_EXISTS_SOME,
         CrudEndpointType.POST_ONE,
         CrudEndpointType.GET_ONE,
+        CrudEndpointType.GET_EXISTS_ONE,
         CrudEndpointType.PUT_ONE,
         CrudEndpointType.DELETE_ONE,
     ]
@@ -257,6 +262,74 @@ class CrudEndpointGenerator:
         )
 
     @staticmethod
+    def generate_get_exists_some(
+        fast_api: FastAPI | APIRouter,
+        route: CrudEndpointSet,
+        handle_exception_fn: Callable,
+        exists_route_suffix: str | None = None,
+    ) -> None:
+        """Generate get exists some."""
+        if not exists_route_suffix:
+            exists_route_suffix = CrudEndpointGenerator.DEFAULT_EXISTS_ROUTE_SUFFIX
+        user_dependency = route.user_dependency
+        if user_dependency is None:
+            raise ValueError("User dependency must be provided")
+        id_class = route.id_class
+
+        async def endpoint_function(user: user_dependency, ids: str) -> Any:  # type: ignore[valid-type]
+            """Endpoint function."""
+            obj_ids, invalid_obj_ids = CrudEndpointGenerator.convert_ids_string_to_list(
+                id_class, ids
+            )
+            if invalid_obj_ids:
+                # f-string parsing fails if this is not first passed to a variable
+                error_code = "d1a5f9c7"
+                error_msg = ", ".join([f'"{x}"' for x in invalid_obj_ids])
+                handle_exception_fn(
+                    error_code,
+                    user,
+                    exc.InvalidIdsError(
+                        error_code,
+                        f"Invalid ids in ids query parameter: {error_msg}",
+                        invalid_obj_ids,
+                    ),
+                    request_ids=invalid_obj_ids,
+                )
+                raise NotImplementedError(
+                    "Exception handler expected to raise exception"
+                )
+            cmd = route.crud_command_class(
+                user=user,
+                obj_ids=obj_ids,
+                operation=CrudOperation.EXISTS_SOME,
+            )
+            try:
+                return route.app.handle(cmd)
+
+            # TODO: Add a specific exception for NotImplementedError
+            except Exception as exception:
+                handle_exception_fn(
+                    "7b6e2a4d" + route.endpoint_basename,
+                    user,
+                    exception,
+                    request_ids=obj_ids,
+                )
+                raise NotImplementedError(
+                    "Exception handler expected to raise exception"
+                )
+
+        CrudEndpointGenerator._add_route(
+            fast_api,
+            route.endpoint_basename + exists_route_suffix,
+            endpoint_function,
+            HttpMethod.GET,
+            list[bool],
+            route,
+            operation_id=(route.operation_id_basename or route.endpoint_basename)
+            + "__get_exists_some",
+        )
+
+    @staticmethod
     def generate_post_query(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
@@ -399,6 +472,57 @@ class CrudEndpointGenerator:
             route,
             operation_id=(route.operation_id_basename or route.endpoint_basename)
             + "__get_one",
+        )
+
+    @staticmethod
+    def generate_get_exists_one(
+        fast_api: FastAPI | APIRouter,
+        route: CrudEndpointSet,
+        handle_exception_fn: Callable,
+        exists_route_suffix: str | None = None,
+    ) -> None:
+        """Generate get exists one."""
+        if not exists_route_suffix:
+            exists_route_suffix = CrudEndpointGenerator.DEFAULT_EXISTS_ROUTE_SUFFIX
+        user_dependency = route.user_dependency
+        if user_dependency is None:
+            raise ValueError("User dependency must be provided")
+        id_class = route.id_class
+
+        async def endpoint_function(
+            user: user_dependency,  # type: ignore[valid-type]
+            object_id: id_class,  # type: ignore[valid-type]
+        ) -> Any:
+            """Endpoint function."""
+            try:
+                cmd = route.crud_command_class(
+                    user=user,
+                    operation=CrudOperation.EXISTS_ONE,
+                    obj_ids=object_id,
+                )
+                return route.app.handle(cmd)
+
+            # TODO: Add a specific exception for NotImplementedError
+            except Exception as exception:
+                handle_exception_fn(
+                    "f2c9e1b6" + route.endpoint_basename + f"/{object_id}",
+                    user,
+                    exception,
+                    request_ids=[object_id],
+                )
+                raise NotImplementedError(
+                    "Exception handler expected to raise exception"
+                )
+
+        CrudEndpointGenerator._add_route(
+            fast_api,
+            route.endpoint_basename + "/{object_id}" + exists_route_suffix,
+            endpoint_function,
+            HttpMethod.GET,
+            bool,
+            route,
+            operation_id=(route.operation_id_basename or route.endpoint_basename)
+            + "__get_exists_one",
         )
 
     @staticmethod
@@ -897,6 +1021,7 @@ class CrudEndpointGenerator:
         batch_route_suffix: str | None = None,
         query_route_suffix: str | None = None,
         ids_route_suffix: str | None = None,
+        exists_route_suffix: str | None = None,
         validate_query_filter: (
             Callable[[Filter], bool] | None
         ) = _default_validate_query_filter,
@@ -909,6 +1034,8 @@ class CrudEndpointGenerator:
             CrudEndpointType.POST_QUERY: CrudEndpointGenerator.generate_post_query,
             CrudEndpointType.POST_QUERY_IDS: CrudEndpointGenerator.generate_post_query,
             CrudEndpointType.GET_ONE: CrudEndpointGenerator.generate_get_one,
+            CrudEndpointType.GET_EXISTS_ONE: CrudEndpointGenerator.generate_get_exists_one,
+            CrudEndpointType.GET_EXISTS_SOME: CrudEndpointGenerator.generate_get_exists_some,
             CrudEndpointType.POST_ONE: CrudEndpointGenerator.generate_post_one,
             CrudEndpointType.POST_SOME: CrudEndpointGenerator.generate_post_some,
             CrudEndpointType.PUT_ONE: CrudEndpointGenerator.generate_put_one,
@@ -943,6 +1070,10 @@ class CrudEndpointGenerator:
                     extra_args["batch_route_suffix"] = batch_route_suffix
                 elif endpoint_type == CrudEndpointType.DELETE_SOME:
                     extra_args["batch_route_suffix"] = batch_route_suffix
+                elif endpoint_type == CrudEndpointType.GET_EXISTS_ONE:
+                    extra_args["exists_route_suffix"] = exists_route_suffix
+                elif endpoint_type == CrudEndpointType.GET_EXISTS_SOME:
+                    extra_args["exists_route_suffix"] = exists_route_suffix
                 function_map[endpoint_type](
                     fast_api, route, handle_exception_fn, **extra_args
                 )
@@ -1174,6 +1305,8 @@ class CrudEndpointGenerator:
                         CrudOperation.READ_ALL,
                         CrudOperation.READ_SOME,
                         CrudOperation.READ_ONE,
+                        CrudOperation.EXISTS_ONE,
+                        CrudOperation.EXISTS_SOME,
                     }
                 )
             elif permission_type == PermissionType.UPDATE:
