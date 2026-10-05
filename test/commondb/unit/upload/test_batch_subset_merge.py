@@ -7,12 +7,6 @@ allele-specific handling (covered separately for ``SampleBatchForUpload``).
 """
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
-
-import pytest
-
-from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from test.commondb.unit.upload.model import (
     Child1ForUpload,
     Child2ForUpload,
@@ -20,6 +14,12 @@ from test.commondb.unit.upload.model import (
     ParentBatchForUpload,
 )
 from test.commondb.unit.upload.model import ParentForUpload as FixtureParentForUpload
+from uuid import UUID, uuid4
+
+import pytest
+
+from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 
 
 def make_parent(
