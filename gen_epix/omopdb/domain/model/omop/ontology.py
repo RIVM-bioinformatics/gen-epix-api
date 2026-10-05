@@ -36,16 +36,15 @@ from gen_epix.omopdb.domain.model.omop.base import (
 
 class Vocabulary(Model):
     """The VOCABULARY table includes a list of the Vocabularies integrated from
-    various sources or created de novo in OMOP CDM. This reference table contains
-    a single record for each Vocabulary and includes a descriptive name and other
-    associated attributes for the Vocabulary.
+    various sources or created de novo in OMOP CDM.
 
-
+    This reference table contains a single record for each Vocabulary and includes a
+    descriptive name and other associated attributes for the Vocabulary.
 
     Model validation: The UUID primary key is synchronized with
     `vocabulary_str_id`, and integer vocabulary concept identifiers are
     normalized to UUID values.
-    """
+    """  # noqa: D205
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="Vocabularies",
@@ -83,6 +82,7 @@ class Vocabulary(Model):
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
         """Synchronize the vocabulary UUID with its string natural key."""
+
         validate_str_key_args(data, "vocabulary_id", "vocabulary_str_id")
         return data
 
@@ -95,19 +95,20 @@ class Vocabulary(Model):
 
 class Domain(Model):
     """The DOMAIN table includes a list of OMOP-defined Domains to which the Concepts
-    of the Standardized Vocabularies can belong. A Domain represents a clinical
-    definition whereby we assign matching Concepts for the standardized fields in
-    the CDM tables. For example, the Condition Domain contains Concepts that
-    describe a patient condition, and these Concepts can only be used in the
-    condition_concept_id field of the CONDITION_OCCURRENCE and CONDITION_ERA
-    tables. This reference table is populated with a single record for each
-    Domain, including a Domain ID and a descriptive name for every Domain.
+    of the Standardized Vocabularies can belong.
+
+    A Domain represents a clinical definition whereby we assign matching Concepts for
+    the standardized fields in the CDM tables. For example, the Condition Domain
+    contains Concepts that describe a patient condition, and these Concepts can only be
+    used in the condition_concept_id field of the CONDITION_OCCURRENCE and
+    CONDITION_ERA tables. This reference table is populated with a single record for
+    each Domain, including a Domain ID and a descriptive name for every Domain.
 
     Model validation: The UUID primary key is synchronized with
             `domain_str_id`, and integer domain concept identifiers are normalized
             to UUID values.
 
-    """
+    """  # noqa: D205
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="Domains",
@@ -146,18 +147,19 @@ class Domain(Model):
 
 class ConceptClass(Model):
     """The CONCEPT_CLASS table includes semantic categories that reference the source
-    structure of each Vocabulary. Concept Classes represent so-called horizontal
-    (e.g. MedDRA, RxNorm) or vertical levels (e.g. SNOMED) of the vocabulary
-    structure. Vocabularies without any Concept Classes, such as HCPCS, use the
-    vocabulary_id as the Concept Class. This reference table is populated with a
-    single record for each Concept Class, which includes a Concept Class ID and a
-    fully specified Concept Class name.
+    structure of each Vocabulary.
+
+    Concept Classes represent so-called horizontal (e.g. MedDRA, RxNorm) or vertical
+    levels (e.g. SNOMED) of the vocabulary structure. Vocabularies without any Concept
+    Classes, such as HCPCS, use the vocabulary_id as the Concept Class. This reference
+    table is populated with a single record for each Concept Class, which includes a
+    Concept Class ID and a fully specified Concept Class name.
 
     Model validation: The UUID primary key is synchronized with
             `concept_class_str_id`, and integer concept identifiers are normalized
             to UUID values.
 
-    """
+    """  # noqa: D205
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ConceptClasss",
@@ -197,14 +199,15 @@ class ConceptClass(Model):
 class Concept(Model):
     """The Standardized Vocabularies contains records, or Concepts, that uniquely
     identify each fundamental unit of meaning used to express clinical information
-    in all domain tables of the CDM. Concepts are derived from vocabularies, which
-    represent clinical information across a domain (e.g. conditions, drugs,
-    procedures) through the use of codes and associated descriptions. Some
-    Concepts are designated Standard Concepts, meaning these Concepts can be used
-    as normative expressions of a clinical entity within the OMOP Common Data
-    Model and standardized analytics. Each Standard Concept belongs to one Domain,
-    which defines the location where the Concept would be expected to occur within
-    the data tables of the CDM. Concepts can represent broad categories
+    in all domain tables of the CDM.
+
+    Concepts are derived from vocabularies, which represent clinical information across
+    a domain (e.g. conditions, drugs, procedures) through the use of codes and
+    associated descriptions. Some Concepts are designated Standard Concepts, meaning
+    these Concepts can be used as normative expressions of a clinical entity within the
+    OMOP Common Data Model and standardized analytics. Each Standard Concept belongs to
+    one Domain, which defines the location where the Concept would be expected to occur
+    within the data tables of the CDM. Concepts can represent broad categories
     ('Cardiovascular disease'), detailed clinical elements ('Myocardial infarction
     of the anterolateral wall'), or modifying characteristics and attributes that
     define Concepts at various levels of detail (severity of a disease, associated
@@ -217,7 +220,7 @@ class Concept(Model):
             `concept_int_id`, and vocabulary-derived identifiers are normalized to
             UUID values.
 
-    """
+    """  # noqa: D205
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="Concepts",
@@ -292,15 +295,17 @@ class Relationship(Model):
     """The RELATIONSHIP table provides a reference list of all types of relationships
     that can be used to associate any two Concepts in the CONCEPT_RELATIONSHIP
     table, the respective reverse relationships, and their hierarchical
-    characteristics. Note, that Concepts representing relationships between the
-    clinical facts, used for filling in the FACT_RELATIONSHIP table are stored in
-    the CONCEPT table and belong to the Relationship Domain.
+    characteristics.
+
+    Note, that Concepts representing relationships between the clinical facts, used for
+    filling in the FACT_RELATIONSHIP table are stored in the CONCEPT table and belong
+    to the Relationship Domain.
 
     Model validation: Relationship and reverse-relationship UUIDs
             are synchronized with their string natural keys, and the relationship
             concept identifier is normalized to UUID form.
 
-    """
+    """  # noqa: D205
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="Relationships",
@@ -356,8 +361,9 @@ class Relationship(Model):
 
 class ConceptRelationship(Model):
     """The CONCEPT_RELATIONSHIP table contains records that define relationships
-    between any two Concepts and the nature or type of the relationship. This
-    table captures various types of relationships, including hierarchical,
+    between any two Concepts and the nature or type of the relationship.
+
+    This table captures various types of relationships, including hierarchical,
     associative, and other semantic connections, enabling comprehensive analysis
     and interpretation of clinical concepts. Every kind of relationship is defined
     in the RELATIONSHIP table.
@@ -365,7 +371,7 @@ class ConceptRelationship(Model):
     Model validation: The primary key is derived from the normalized
             source concept, target concept, and relationship identifier composite.
 
-    """
+    """  # noqa: D205
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ConceptRelationships",
@@ -445,8 +451,9 @@ class ConceptRelationship(Model):
 
 class ConceptAncestor(Model):
     """The CONCEPT_ANCESTOR table is designed to simplify observational analysis by
-    providing the complete hierarchical relationships between Concepts. Only
-    direct parent-child relationships between Concepts are stored in the
+    providing the complete hierarchical relationships between Concepts.
+
+    Only direct parent-child relationships between Concepts are stored in the
     CONCEPT_RELATIONSHIP table. To determine higher-level ancestry connections,
     all individual direct relationships would have to be navigated at analysis
     time. The CONCEPT_ANCESTOR table includes records for all parent-child
@@ -461,7 +468,7 @@ class ConceptAncestor(Model):
     Model validation: The primary key is derived from the normalized
             ancestor and descendant concept identifier composite.
 
-    """
+    """  # noqa: D205
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ConceptAncestors",
@@ -527,7 +534,7 @@ class ConceptSynonym(Model):
     Model validation: The primary key is derived from the normalized
             concept identifier, synonym name, and language concept identifier.
 
-    """
+    """  # noqa: D205
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ConceptSynonyms",
@@ -556,8 +563,8 @@ class ConceptSynonym(Model):
     @model_validator(mode="before")
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
-        """
-        Compute the concept_synonym_id as the SHA256 hash of the composite natural key (concept_id, concept_synonym_name, language_concept_id).
+        """Compute the concept_synonym_id as the SHA256 hash of the composite natural key (concept_id, concept_synonym_name, language_concept_id).
+
         This ensures that each unique combination of these three fields will have a consistent and unique UUID, which serves as the primary key for this table.
         The composite key is formet by concatenation of (1) the concept_id as bytes, (2) the concept synonym name as UTF-8 encoded bytes,
         and (3) the language_concept_id as bytes.
@@ -596,9 +603,11 @@ class ConceptSynonym(Model):
 class DrugStrength(Model):
     """The DRUG_STRENGTH table contains structured content about the amount or
     concentration and associated units of a specific ingredient contained within a
-    particular drug product. This table is supplemental information to support
-    standardized analysis of drug utilization.
-    """
+    particular drug product.
+
+    This table is supplemental information to support standardized analysis of drug
+    utilization.
+    """  # noqa: D205
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="DrugStrengths",
@@ -684,14 +693,15 @@ class SourceToConceptMap(Model):
     maintain local source codes which are not available as Concepts in the
     Standardized Vocabularies, and to establish mappings for each source code into
     a Standard Concept as target_concept_ids that can be used to populate the
-    Common Data Model tables. The SOURCE_TO_CONCEPT_MAP table is no longer
-    populated with content within the Standardized Vocabularies published to the
-    OMOP community. **There are OHDSI tools to help you populate this table;
-    [Usagi](https://github.com/OHDSI/Usagi) and
+    Common Data Model tables.
+
+    The SOURCE_TO_CONCEPT_MAP table is no longer populated with content within the
+    Standardized Vocabularies published to the OMOP community. **There are OHDSI tools
+    to help you populate this table; [Usagi](https://github.com/OHDSI/Usagi) and
     [Perseus](https://github.com/ohdsi/Perseus). You can read more about OMOP
     vocabulary mapping in [The Book of OHDSI Chapter 6.3](https://ohdsi.github.io/
     TheBookOfOhdsi/ExtractTransformLoad.html#step-2-create-the-code-mappings).**
-    """  # noqa: D415
+    """  # noqa: D205
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="SourceToConceptMaps",

@@ -84,6 +84,7 @@ def get_test_client(request) -> Env:
 def setup_users_and_data(env: Env) -> None:
     """
     Minimal setup: root + org1 (from bootstrap), invite org_admin and org_user,
+    
     create one CaseType with an org access policy so non-root users can read it.
     """
     root_user = env.get_root_user()

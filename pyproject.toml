@@ -91,6 +91,7 @@ line-length = 88
 target-version = "py314"
 
 [tool.ruff.lint]
+extend-select = ["D205"]
 ignore = [
     # The repository uses the PEP 257-compatible form where multi-line docstring
     # summaries start on the second line after the opening quotes.

@@ -1,5 +1,6 @@
 """
 End-to-end regression test for LSP-3645 and LSP-3647: a case content key set
+
 to None must actually be deleted via UploadCasesCommand.
 
 LSP-3645 (Case.content field_serializer silently stripping None on

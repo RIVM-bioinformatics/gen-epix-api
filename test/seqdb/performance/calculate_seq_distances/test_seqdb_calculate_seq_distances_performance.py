@@ -105,6 +105,7 @@ def _build_upload_command(
 ) -> command.UploadSamplesCommand:
     """
     Given a created dict dataset, build a UploadSamplesCommand.
+    
     db_index selects which locus-set / protocol set to use from the db.
     n_seqs overrides N_SEQS_PER_BATCH; existing_chunk_size is forwarded
     to UploadSamplesCommand for chunked distance calculation.
@@ -153,6 +154,7 @@ def _build_snp_upload_command(
     seed: int | None = None,
 ) -> command.UploadSamplesCommand:
     """Build an UploadSamplesCommand for SNP
+    
     profiles using the SNP protocol from the
     generated database.
     """
@@ -192,6 +194,7 @@ class TestSampleBatchUploader:
     def setup(self, env: Env) -> None:
         """
         Configure root user for the test environment,
+        
         if CREATE_DEMO_DATA is True, create datasets of varying sizes
         else load from existing pickle file, and create repositories based on the datasets
         """

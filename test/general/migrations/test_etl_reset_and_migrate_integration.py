@@ -1,4 +1,5 @@
 """Integration test for etl.py's reset_database/load_demodata modes against a real
+
 SQL Server, verifying the Alembic cutover end to end.
 
 Requires a live SQL Server reachable at the SEQDB SA_SQL dev config (see
@@ -63,6 +64,7 @@ def test_reset_database_wipes_legacy_schema_and_migrates_to_head(
     connection_string: str,
 ) -> None:
     """A pre-existing schema (incl. stray tables and a bogus Alembic stamp) is
+    
     fully wiped by reset_database, then correctly migrated to head, then
     load_demodata successfully loads demo data on top of it."""
     seqdb_enum: ModuleType = importlib.import_module(f"{MODULE_ROOT}.domain.enum")

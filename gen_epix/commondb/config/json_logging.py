@@ -187,13 +187,17 @@ def _redact_nested_impl(
 
     if isinstance(value, list):
         return [
-            _redact_nested_impl(x, sensitive_key_set, sensitive_re, redacted_value, None)
+            _redact_nested_impl(
+                x, sensitive_key_set, sensitive_re, redacted_value, None
+            )
             for x in value
         ]
 
     if isinstance(value, tuple):
         return tuple(
-            _redact_nested_impl(x, sensitive_key_set, sensitive_re, redacted_value, None)
+            _redact_nested_impl(
+                x, sensitive_key_set, sensitive_re, redacted_value, None
+            )
             for x in value
         )
 

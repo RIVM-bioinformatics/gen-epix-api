@@ -168,6 +168,7 @@ class TestAutoCreateNewUserRegressions:
         claims_basic: dict[str, Any],
     ) -> None:
         """Raises InitializationServiceError when org doesn't exist and
+        
         org_id != root_org_id."""
         auto_cfg = {
             "organization_id": str(other_org_id),
@@ -459,6 +460,7 @@ class TestAutoCreateNewUserRootOrgFeature:
         claims_basic: dict[str, Any],
     ) -> None:
         """When root org doesn't exist and org_id == root_org_id, creates
+        
         the root organization and proceeds with user creation."""
         auto_cfg = {
             "organization_id": str(root_org_id),
@@ -524,6 +526,7 @@ class TestAutoCreateNewUserRootOrgFeature:
         claims_basic: dict[str, Any],
     ) -> None:
         """When organization already exists, organization creation is
+        
         skipped."""
         auto_cfg = {
             "organization_id": str(root_org_id),
@@ -585,6 +588,7 @@ class TestAutoCreateNewUserRootOrgFeature:
         claims_basic: dict[str, Any],
     ) -> None:
         """Organization validation/creation happens before user existence
+        
         check."""
         auto_cfg = {
             "organization_id": str(root_org_id),
@@ -643,6 +647,7 @@ class TestAutoCreateNewUserRootOrgFeature:
         other_org_id: UUID,
     ) -> None:
         """When organization creation fails, user creation is not
+        
         attempted."""
         auto_cfg = {
             "organization_id": str(other_org_id),
@@ -689,6 +694,7 @@ class TestAutoCreateNewUserRootOrgFeature:
         claims_basic: dict[str, Any],
     ) -> None:
         """Even with auto-create feature, if org_id != root_org_id and
+        
         org doesn't exist, still raises InitializationServiceError."""
         auto_cfg = {
             "organization_id": str(other_org_id),

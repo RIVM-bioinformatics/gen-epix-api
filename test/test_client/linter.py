@@ -1,5 +1,6 @@
 """
 This module contains the `Linter` class which is used to enforce code quality in the
+
 `gen-epix` package. It uses tools like pylint, ruff, and mypy as specified in
 the project's documentation.
 
@@ -22,6 +23,7 @@ import xlsxwriter
 class Linter:
     """
     This class provides an interface to run linting tools like mypy,
+    
     pylint, ruff, isort, and black with predefined settings. The settings are stored
     in the `presets` class attribute as a dictionary.
 

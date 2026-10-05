@@ -15,15 +15,14 @@ from gen_epix.commondb.domain.enum import (
     AppType,
     DevIdpConfig,
     DevRepositoryConfig,
-    FeatureFlag,
-    RepositoryType,
-    ServiceType,
 )
+from gen_epix.commondb.domain.enum import FeatureFlag as CommonFeatureFlag
+from gen_epix.commondb.domain.enum import RepositoryType, ServiceType
 from gen_epix.commondb.domain.service import BaseAuthService
 from gen_epix.commondb.domain.util import get_app_cfg_class, set_env_variables
 from gen_epix.commondb.env import AppComposer
 from gen_epix.fastapp import exc
-from gen_epix.fastapp.enum import FeatureFlag
+from gen_epix.fastapp.enum import FeatureFlag as FastappFeatureFlag
 
 _REPO_ROOT = Path(__file__).parents[4]
 _APP_IMPORT_SPECS = {
@@ -93,10 +92,10 @@ def _read_config(
         "cfg_auto_create_new_users": auth_props["auto_create_new_users"],
         "cfg_root_token_time_to_live": auth_props["root_token_time_to_live"],
         "feature_flag_auto_create_new_users": app.get_feature_flag(
-            FeatureFlag.AUTO_CREATE_NEW_USERS
+            FastappFeatureFlag.AUTO_CREATE_NEW_USERS
         ),
         "feature_flag_update_own_organization": app.get_feature_flag(
-            FeatureFlag.UPDATE_OWN_ORGANIZATION
+            CommonFeatureFlag.UPDATE_OWN_ORGANIZATION
         ),
         "service_root_token_time_to_live": auth_service_any._root_token_time_to_live,
         "service_idp_client_count": len(auth_service_any.idp_clients),
@@ -277,21 +276,22 @@ def test_read_config_rejects_unknown_repository_type(override_tmp_dir: Path) -> 
 
 
 def test_feature_flag_has_no_auto_create_new_users_member() -> None:
-    """Regression guard: FeatureFlag must not redefine AuthFeatureFlag.AUTO_CREATE_NEW_USERS.
+    """Regression guard: common flags must not redefine auth's auto-create flag.
 
     A same-named-but-distinct Enum member here would collide in value but
     not identity with AuthFeatureFlag.AUTO_CREATE_NEW_USERS, the actual key
     App._feature_flags is set under — a caller querying the FeatureFlag
     version would silently see the default (False) regardless of the real
-    configured value. See FeatureFlag's docstring.
+    configured value. See the respective FeatureFlag docstrings.
     """
-    assert "AUTO_CREATE_NEW_USERS" not in FeatureFlag.__members__
+    assert "AUTO_CREATE_NEW_USERS" not in CommonFeatureFlag.__members__
 
 
 def test_sa_sql_without_credentials_fails_closed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """SA_SQL's repository defaults carry a blank pwd; construction must fail
+    
     immediately (not silently connect with a known password) when neither a
     settings file nor an environment variable supplies a real credential."""
     monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__UID", raising=False)
@@ -306,6 +306,7 @@ def test_sa_sql_with_credential_env_vars_constructs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Supplying the credential via the standard env var override (as
+    
     docker-compose.sql*.yml and test/conftest.py both do) is enough."""
     monkeypatch.setenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__UID", "sa")
     monkeypatch.setenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__PWD", "Your_password123")
@@ -320,6 +321,7 @@ def test_sa_sql_with_complete_connection_string_constructs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A deployment supplying its own complete connection_string (e.g. from
+    
     Key Vault) needs no separate pwd."""
     monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__UID", raising=False)
     monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__PWD", raising=False)

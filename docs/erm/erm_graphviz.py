@@ -30,6 +30,7 @@ os.environ.setdefault("GRAPHVIZ_DOT", "-Gfontname=Arial")
 class GraphvizErmGenerator(ErmGenerator):
     """
     Generates Entity-Relationship Model diagrams as PNG files via
+    
     ``erdantic`` / Graphviz.
     """
 
@@ -44,6 +45,7 @@ class GraphvizErmGenerator(ErmGenerator):
     def generate_erm_diagrams(self, dir: Path) -> None:
         """
         Generate ERM diagrams (PNG) for every domain and its services.
+        
         Also writes an ``erm.json`` hash file.
         """
         dir = Path(dir)

@@ -2547,6 +2547,7 @@ class TestDuplicateIds(BaseUploadTestCase):
 class TestVerificationAttributionAndDryRun(BaseUploadTestCase):
     """
     LSP-3655: a child-level failure must be visible on its own parent's
+    
     status (not just buried in a nested result), and a dry run (verify_only)
     must report the same outcome as a real run.
     """

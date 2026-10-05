@@ -231,6 +231,7 @@ def _setup_distance_mocks(
 ) -> None:
     """
     Set up mocks for iter_seq_distances,
+    
     iter_seq_distance_profile_ids and
     get_max_seq_distance_modified_at consistently.
 
@@ -854,6 +855,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         list[model.CalculateSeqDistancesEtlResult],
     ]:
         """Helper: compute SNP distance between two
+        
         profiles via the service."""
         existing_profile = _make_snp_profile_for_upload(
             profile_id=self.existing_profile_id,
@@ -1233,6 +1235,7 @@ class TestConcurrentModificationCheck(
         self,
     ) -> None:
         """Fail when SeqDistances were modified after the
+        
         provided timestamp."""
         new_profile = _make_allele_profile(
             profile_id=self.new_profile_id,
@@ -1283,6 +1286,7 @@ class TestConcurrentModificationCheck(
         self,
     ) -> None:
         """Succeed when no modifications occurred after
+        
         the provided timestamp."""
         new_profile = _make_allele_profile(
             profile_id=self.new_profile_id,
@@ -1331,6 +1335,7 @@ class TestConcurrentModificationCheck(
 
     def test_none_timestamp_skips_check(self) -> None:
         """When no timestamp is provided, proceed without
+        
         checking."""
         new_profile = _make_allele_profile(
             profile_id=self.new_profile_id,
@@ -1372,6 +1377,7 @@ class TestUpdateSeqDistances(
         self,
     ) -> None:
         """When all profiles already have distances,
+        
         returns empty."""
         protocol = _make_seq_distance_protocol_for_locus_set(
             protocol_id=self.protocol_id,
@@ -1444,6 +1450,7 @@ class TestUpdateSeqDistances(
         self,
     ) -> None:
         """When a profile is missing a distance, create
+        
         it and maintain symmetry."""
         a1 = uuid4()
         a2 = uuid4()
@@ -1552,6 +1559,7 @@ class TestUpdateSeqDistances(
         self,
     ) -> None:
         """With existing_chunk_size=1 and 2 existing profiles,
+        
         iter_seq_distances is called once per chunk, both
         existing records are updated, and the new profile's
         distance map contains both existing profile IDs.
@@ -1826,6 +1834,7 @@ class TestNumpyAlleleIntegration:
         use_int32_vocab: bool = False,
     ) -> tuple[_CrudRecorder, list[UUID], list[UUID]]:
         """Run _calculate_and_store_distances directly for ALLELE profiles.
+        
         Returns (recorder, existing_ids, new_ids)."""
         e_ids = [uuid4() for _ in existing_allele_ids_list]
         n_ids = [uuid4() for _ in new_allele_ids_list]
@@ -1903,6 +1912,7 @@ class TestNumpyAlleleIntegration:
 
     def test_decode_profile_numpy_returns_s16_array(self) -> None:
         """_decode_profile with use_numpy_allele=True returns (n_loci,) S16 array;
+        
         null loci are encoded as _NULL_ALLELE."""
         a1, a2 = uuid4(), uuid4()
         profile = _make_allele_profile(
@@ -1926,6 +1936,7 @@ class TestNumpyAlleleIntegration:
 
     def test_calculate_distance_pair_numpy_branch(self) -> None:
         """The isinstance(np.ndarray) branch in _calculate_distance_for_decoded_profile_pair
+        
         delegates to _hamming_allele_numpy and returns the correct float distance."""
         a = np.array([b"\x01" * 16, b"\x02" * 16, b"\x03" * 16], dtype="S16")
         b = np.array([b"\x01" * 16, b"\x99" * 16, b"\x03" * 16], dtype="S16")
@@ -2019,6 +2030,7 @@ class TestNumpyAlleleIntegration:
 
     def test_pairwise_reuses_decoded_profiles_no_redecode(self) -> None:
         """When decoded_profiles is supplied, _calculate_pairwise_profile_distances
+        
         uses them directly and does not call _decode_profile."""
         a1 = UUID("aaaaaaaa-0000-0000-0000-000000000001")
         a2 = UUID("aaaaaaaa-0000-0000-0000-000000000002")
@@ -2070,6 +2082,7 @@ class TestNumpyAlleleIntegration:
         self, n_new: int, exp_batch: bool, exp_int32: bool
     ) -> None:
         """Gate chooses use_batch_new_profiles below _INT32_VOCAB_GATE and
+        
         use_int32_vocab at or above it."""
         protocol = self._allele_protocol()
         self.service.repository.crud.side_effect = _make_crud_side_effect(
@@ -2110,6 +2123,7 @@ class TestNumpyAlleleIntegration:
 
     def test_all_three_paths_produce_identical_distance_maps(self) -> None:
         """Python loop, numpy_batch, and int32_vocab must produce identical
+        
         distance maps for the same input profiles.
 
         n3=[a2,a1,a3] is a locus-swap of e1=[a1,a2,a3], giving distance 2

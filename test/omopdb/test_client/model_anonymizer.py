@@ -19,6 +19,7 @@ from gen_epix.omopdb.domain.model.base import Model
 class BaseAnonymizer(ABC):
     """
     Functionality that is identical for all Anonymizers, regardless of the type of object they anonymize
+    
     Primarily has datatype / anonymization-method specific functionalities
     Handles anonymization methods & methods: random, categorical, shift
         random: str, int, uuid
@@ -59,6 +60,7 @@ class BaseAnonymizer(ABC):
     def anonymize_dates(self, datelike_values: Collection[date]) -> dict[date, date]:
         """
         Takes a collection of dates and datetimes (may be mixed) and returns a dict that maps these values
+        
         to new date / datetime values. The new dates are such that the new dates preserve the order of dates
         and the time differences in the original such that the new dates preserve the order of dates and the
         time differences in the original collection but has an arbitrary offset from the first date. Offsets
@@ -97,6 +99,7 @@ class BaseAnonymizer(ABC):
     def anonymize_ints(self, int_values: Collection[int]) -> dict[int, int]:
         """
         Take a collection of integers and returns a dict mapping each integer to a new integer
+        
         with the same number of digits and same sign, minimum abs = 1
         """
         int_values = list(set(int_values))
@@ -113,6 +116,7 @@ class BaseAnonymizer(ABC):
     ) -> dict[uuid.UUID, uuid.UUID]:
         """
         Take a collection of uuid.UUID objects and returns a dict mapping each uuid.UUID to a new uuid.UUID
+        
         N.B. iLES has no uuids that need to be anonymized, so this has not been tested
         """
         uuid_values = list(set(uuid_values))
@@ -124,6 +128,7 @@ class BaseAnonymizer(ABC):
     ) -> dict[Any, Any]:
         """
         Take a collection of categorical values and returns a dict mapping each value to a new value
+        
         among the choices provided. Excludes None and "" from the choices, as that may cause conflicts even
         if it's allowable in the data or just be confusing to the user.
 
@@ -151,6 +156,7 @@ class BaseAnonymizer(ABC):
 class ModelAnonymizer(BaseAnonymizer):
     """
     ModelAnonymizer handles a instances of "subject" models that are are built from models in the Domain specified.
+    
     For instance, IlesSubject is built from the models in the Iles domain.
     A "subject" model has fields that are data values, or lists of other models. Such submodels can only contain data values
     in their fields.
@@ -178,6 +184,7 @@ class ModelAnonymizer(BaseAnonymizer):
     def identify_and_load_categoricals(self):
         """
         Inspect the models that are present in the domain and figure out which model/fields are specified
+        
         as anonymization_method=AnonMethod.CATEGORICAL. For these, load all the data
         available (or NYI: possibly reduced scope) as possible substitutable values
         """
@@ -217,6 +224,7 @@ class ModelAnonymizer(BaseAnonymizer):
     ) -> dict[tuple[type, AnonMethod], list[tuple[tuple[Any], Any]]]:
         """
         Builds a map to the data to be anonymized by reading the models in the domain, which
+        
         themselves contain an indication of whether and how each field needs to be treated.
 
         Output is a dict of lists:
@@ -288,6 +296,7 @@ class ModelAnonymizer(BaseAnonymizer):
     def anonymize(self) -> Model:
         """
         Anonymizes the model according to the specification and returns the anonymized model
+        
         At present anonymization_spec is not handled as we haven't yet designed it.
         """
 
@@ -315,6 +324,7 @@ class ModelAnonymizer(BaseAnonymizer):
         def get_nested_attribute(model: Model, path: tuple[str | int, ...]) -> Any:
             """
             Get the value of a nested attribute in a model using a tuple path
+            
             that indicates where in the model the attribute is located.
             :param path: Either a 1-tuple, 2-tuple, or 3-tuple like:
                 ("field_name",): specifies a scalar field at top-level
@@ -336,6 +346,7 @@ class ModelAnonymizer(BaseAnonymizer):
         ) -> tuple[Model, str]:
             """
             Get the model and field name corresponding to the end of a path in the nested structure
+            
             See explanation of 'path' in sister method get_nested_attribute
             """
             validate_location_path(path)
@@ -473,6 +484,7 @@ class ModelAnonymizer(BaseAnonymizer):
     def compare_models(self, fp_to_output: Path | None = None) -> None:
         """
         Prints or writes to file formatted comparison of original and anonymized models,
+        
         for development and testing purposes.
         """
         _KEY_PAD = 60

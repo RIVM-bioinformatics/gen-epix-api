@@ -25,6 +25,8 @@ if TYPE_CHECKING:
 
 
 class AppSectionDict(TypedDict):
+    """Type of the application's host, debug, and port settings."""
+
     host: str
     debug: bool
     port: int
@@ -84,16 +86,22 @@ AuthHttpHeaderDict = TypedDict(
 
 
 class HttpHeaderSectionDict(TypedDict):
+    """HTTP header settings grouped by API route type."""
+
     general: GeneralHttpHeaderDict
     openapi: OpenapiHttpHeaderDict
     auth: AuthHttpHeaderDict
 
 
 class ApiRouteDict(TypedDict):
+    """Configured API route prefixes."""
+
     v1: str
 
 
 class ApiSectionDict(TypedDict):
+    """API endpoint and response settings."""
+
     default_route: str
     gzip_response_minimum_size: int
     http_header: HttpHeaderSectionDict
@@ -101,6 +109,8 @@ class ApiSectionDict(TypedDict):
 
 
 class CommandObjectSummarizationDict(TypedDict):
+    """Settings controlling command-object log summaries."""
+
     enabled: bool
     max_list_items: int
     max_string_length: int
@@ -108,6 +118,8 @@ class CommandObjectSummarizationDict(TypedDict):
 
 
 class LogSectionDict(TypedDict):
+    """Application logging configuration."""
+
     level: str
     command_object_summarization: CommandObjectSummarizationDict
 
@@ -157,24 +169,34 @@ ResolvedRepositoryEntryDict = TypedDict(
 
 
 class ServiceDefaultsPropsDict(TypedDict):
+    """Service factory names before enum conversion."""
+
     timestamp_factory: str
     id_factory: str
 
 
 class ResolvedServiceDefaultsPropsDict(TypedDict):
+    """Resolved timestamp and identifier factories for services."""
+
     timestamp_factory: TimestampFactory
     id_factory: IdFactory
 
 
 class ServiceDefaultsDict(TypedDict):
+    """Default service properties before validation."""
+
     props: ServiceDefaultsPropsDict
 
 
 class ResolvedServiceDefaultsDict(TypedDict):
+    """Validated defaults used to construct services."""
+
     props: ResolvedServiceDefaultsPropsDict
 
 
 class ServiceSectionDict(TypedDict):
+    """Service entries before their classes are resolved."""
+
     defaults: ServiceDefaultsDict
     abac: ServiceEntryDict
     auth: ServiceEntryDict
@@ -184,6 +206,8 @@ class ServiceSectionDict(TypedDict):
 
 
 class ResolvedServiceSectionDict(TypedDict):
+    """Service entries with runtime classes resolved."""
+
     defaults: ResolvedServiceDefaultsDict
     abac: ResolvedServiceEntryDict
     auth: ResolvedServiceEntryDict
@@ -193,10 +217,14 @@ class ResolvedServiceSectionDict(TypedDict):
 
 
 class RepositoryDefaultsDict(TypedDict):
+    """Default repository type before enum conversion."""
+
     type: str
 
 
 class ResolvedRepositoryDefaultsDict(TypedDict):
+    """Resolved default repository settings."""
+
     # The concrete member type is whichever repository_type_enum was passed
     # to AppCfg.__init__ for this instance — an app-specific choice a
     # structural TypedDict cannot parametrize. Enum is the common type;
@@ -206,6 +234,8 @@ class ResolvedRepositoryDefaultsDict(TypedDict):
 
 
 class RepositorySectionDict(TypedDict):
+    """Repository entries before their classes are resolved."""
+
     defaults: RepositoryDefaultsDict
     # Per-service-type entries are looked up dynamically by
     # service_type.value.lower() and only exist for service types that
@@ -215,6 +245,8 @@ class RepositorySectionDict(TypedDict):
 
 
 class ResolvedRepositorySectionDict(TypedDict):
+    """Resolved default settings for an application's repositories."""
+
     defaults: ResolvedRepositoryDefaultsDict
 
 

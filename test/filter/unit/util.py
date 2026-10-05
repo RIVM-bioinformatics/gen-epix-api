@@ -14,6 +14,7 @@ def validate_filter_behavior(
 ) -> None:
     """
     Given a filter, list of rows, and expected results, this method validates that the provided filter
+    
     behaves as expected for match_row, match_rows, match_value, and match_column, both with and without inversion.
     """
     orig_invert = filter.invert

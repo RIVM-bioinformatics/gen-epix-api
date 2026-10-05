@@ -52,18 +52,23 @@ def test_delete_all_operational_data_route_registration(flag_enabled: bool) -> N
         delete_all_operational_data_result_class=model.DeleteAllOperationalDataResult,
     )
 
-    app.get_feature_flag.assert_any_call(enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA)
+    app.get_feature_flag.assert_any_call(
+        enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA
+    )
     operation_ids = {
         route.operation_id for route in router.routes if isinstance(route, APIRoute)
     }
     assert ("operational_data__delete" in operation_ids) is flag_enabled
 
 
-@pytest.mark.parametrize("router_file", _ROUTER_FILES, ids=lambda p: p.parent.parent.name)
+@pytest.mark.parametrize(
+    "router_file", _ROUTER_FILES, ids=lambda p: p.parent.parent.name
+)
 def test_router_wiring_supplies_result_class_alongside_command_class(
     router_file: Path,
 ) -> None:
     """Every router.py that wires a delete-all-operational-data command also
+    
     wires its result class.
 
     create_system_endpoints asserts both are present whenever the feature
@@ -91,11 +96,7 @@ def test_router_wiring_supplies_result_class_alongside_command_class(
         "update this test if that endpoint was intentionally removed"
     )
     for node in dicts_with_command_class:
-        key_names = {
-            key.value
-            for key in node.keys
-            if isinstance(key, ast.Constant)
-        }
+        key_names = {key.value for key in node.keys if isinstance(key, ast.Constant)}
         assert "delete_all_operational_data_result_class" in key_names, (
             f"{router_file} passes delete_all_operational_data_command_class "
             "without delete_all_operational_data_result_class; "

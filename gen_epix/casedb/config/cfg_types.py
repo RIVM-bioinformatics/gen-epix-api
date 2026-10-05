@@ -19,6 +19,8 @@ from gen_epix.commondb.config.cfg_types import (
 
 
 class SeqdbClientLocalUserDict(TypedDict):
+    """Credentials and roles for the local seqdb client user."""
+
     id: str
     key: str
     organization_id: str
@@ -26,10 +28,14 @@ class SeqdbClientLocalUserDict(TypedDict):
 
 
 class SeqdbClientLocalDict(TypedDict):
+    """Configuration for a local seqdb client."""
+
     user: SeqdbClientLocalUserDict
 
 
 class SeqdbClientRemoteDict(TypedDict):
+    """Connection and OAuth settings for a remote seqdb client."""
+
     module: str
     class_name: str
     protocol: str
@@ -44,6 +50,8 @@ class SeqdbClientRemoteDict(TypedDict):
 
 
 class SeqdbClientPropsDict(TypedDict):
+    """Configuration options for casedb's seqdb client."""
+
     seqdb_client_type: str
     local_client: SeqdbClientLocalDict
     remote_client: SeqdbClientRemoteDict
@@ -55,6 +63,8 @@ class SeqdbClientPropsDict(TypedDict):
 # standalone TypedDict with the same module/class_name fields, repeated
 # rather than inherited, plus the narrowed props type.
 class SeqdbClientEntryDict(TypedDict):
+    """Service entry with the typed seqdb client configuration."""
+
     module: str
     class_name: str
     props: SeqdbClientPropsDict
@@ -77,6 +87,8 @@ class CasedbServiceSectionDict(ServiceSectionDict):
 
 
 class ResolvedCasedbServiceSectionDict(ResolvedServiceSectionDict):
+    """Resolved service entries for casedb-specific services."""
+
     case: ResolvedServiceEntryDict
     geo: ResolvedServiceEntryDict
     ontology: ResolvedServiceEntryDict
@@ -89,6 +101,8 @@ class ResolvedCasedbServiceSectionDict(ResolvedServiceSectionDict):
 # reuses every other unchanged nested type by reference and only widens
 # `service`.
 class CasedbAppCfgSettingsDict(TypedDict):
+    """Shape of casedb settings before configuration validation."""
+
     app: AppSectionDict
     api: ApiSectionDict
     log: LogSectionDict
@@ -98,6 +112,8 @@ class CasedbAppCfgSettingsDict(TypedDict):
 
 
 class ResolvedCasedbAppCfgSettingsDict(TypedDict):
+    """Shape of casedb settings after configuration validation."""
+
     app: AppSectionDict
     api: ApiSectionDict
     log: LogSectionDict

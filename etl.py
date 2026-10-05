@@ -270,7 +270,9 @@ def run_load_demodata(
             service_type_enum.RepositoryType,
             log_setup=False,
         )
-        dict_repository_cfg = _repository_cfg(app_type, dict_app_cfg, service_type.value)
+        dict_repository_cfg = _repository_cfg(
+            app_type, dict_app_cfg, service_type.value
+        )
         if not dict_repository_cfg:
             continue
         entities = domain.get_dag_sorted_entities(

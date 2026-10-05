@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate cryptographically random 8-hex-char codes for this codebase's
+
 short-code conventions: log/diagnostic message codes (the first argument to
 ``App.create_log_message``, ``App.create_static_log_message``, and exception
 constructors like ``exc.NoResultsError``/``exc.ServiceException``), and the

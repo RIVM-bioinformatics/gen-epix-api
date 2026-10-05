@@ -445,6 +445,7 @@ class TestCaseDateMutability:
 class TestUpsertBatchCaseDate(BaseUploadTestCase):
     def test_calculated_timed_at_preserved_for_existing_case(self) -> None:
         """After re-validation, timed_at set by calculate_timed_at must not
+        
         be reset to None."""
         uploader, service = self.create_uploader()
 
@@ -560,6 +561,7 @@ class TestCaseCohortUploadUpdates(BaseUploadTestCase):
 @pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestExistingContentKeyNormalization(BaseUploadTestCase):
     """read_fields row[1] keys may be UUID objects (DICT) or strings (SQL);
+    
     both must be normalised to UUID before content merging."""
 
     def _run_upsert_with_existing_key(self, existing_key: UUID | str) -> dict:
@@ -760,6 +762,7 @@ class TestCaseContentUpsertPersistence(BaseUploadTestCase):
 class TestUpsertBatchContentDeletionDelta(BaseUploadTestCase):
     """
     LSP-3647 regression: CaseBatchUploader.upsert_batch merges incoming
+    
     content into the existing DB content to re-validate the full resulting
     state, which resolves a deletion into mere key-absence. If that merged
     state were passed on as-is, the generic BatchUploader.upsert_batch could
@@ -805,6 +808,7 @@ class TestUpsertBatchContentDeletionDelta(BaseUploadTestCase):
 class TestCaseForUploadContentSerialization(BaseUploadTestCase):
     """
     LSP-3645: a None content value signals "delete this key" and must
+    
     survive serialization for both upload wrappers and plain Case payloads.
     Persistence logic must still interpret None as delete-intent and not
     store None in the final persisted case content.

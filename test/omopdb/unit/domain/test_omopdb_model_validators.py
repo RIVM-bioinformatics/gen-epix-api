@@ -83,6 +83,7 @@ class TestValidateIntForUuidField:
     @pytest.mark.parametrize("value", ["0", "1", "42", "999999"])
     def test_str_numeric_converted_via_int_to_uuid(self, value: str) -> None:
         """A numeric string (not length 32/36) should be parsed as int then
+        
         converted via int_to_uuid."""
         result = validate_int_for_uuid_field(value)
         assert result == int_to_uuid(int(value))
@@ -107,6 +108,7 @@ class TestValidateIntForUuidField:
 
     def test_negative_int_raises(self) -> None:
         """A negative integer should raise because int_to_uuid uses unsigned
+        
         bytes."""
         with pytest.raises(OverflowError):
             validate_int_for_uuid_field(-1)
@@ -148,6 +150,7 @@ class TestValidateStrForUuidField:
 
     def test_str_length_36_invalid_uuid_falls_back_to_str_to_uuid(self) -> None:
         """A 36-char string that is NOT a valid UUID should fall back to
+        
         str_to_uuid."""
         value = "a" * 36  # valid length but not a valid UUID
         result = validate_str_for_uuid_field(value)
@@ -156,6 +159,7 @@ class TestValidateStrForUuidField:
 
     def test_str_length_32_invalid_uuid_falls_back_to_str_to_uuid(self) -> None:
         """A 32-char string that is NOT a valid UUID hex should fall back to
+        
         str_to_uuid."""
         value = "z" * 32  # 'z' is not a valid hex digit
         result = validate_str_for_uuid_field(value)
@@ -165,6 +169,7 @@ class TestValidateStrForUuidField:
     @pytest.mark.parametrize("value", ["hello", "domain_x", "short", "a" * 100])
     def test_str_other_lengths_converted_via_str_to_uuid(self, value: str) -> None:
         """Strings of lengths other than 32/36 should be converted via
+        
         str_to_uuid."""
         result = validate_str_for_uuid_field(value)
         assert result == str_to_uuid(value)
@@ -221,6 +226,7 @@ class TestValidateStrPrimaryKeyArgs:
 
     def test_str_id_provided_uuid_id_absent_derives_uuid(self) -> None:
         """When str_id is provided and uuid_id is absent, uuid_id should be
+        
         derived from str_id."""
         data: dict[str, object] = {_str_field_name(): SAMPLE_STR}
         validate_str_key_args(data, _uuid_field_name(), _str_field_name())
@@ -230,6 +236,7 @@ class TestValidateStrPrimaryKeyArgs:
 
     def test_str_id_provided_uuid_id_none_derives_uuid(self) -> None:
         """When str_id is provided and uuid_id is explicitly None, uuid_id
+        
         should be derived from str_id."""
         data: dict[str, object] = {
             _uuid_field_name(): None,
@@ -241,6 +248,7 @@ class TestValidateStrPrimaryKeyArgs:
 
     def test_str_id_as_uuid_field_switches_and_derives(self) -> None:
         """When a string value is provided in the uuid_id field and str_id is
+        
         None, the value should be moved to str_id and uuid_id derived."""
         data: dict[str, object] = {
             _uuid_field_name(): SAMPLE_STR,
@@ -253,6 +261,7 @@ class TestValidateStrPrimaryKeyArgs:
 
     def test_str_id_as_uuid_field_str_id_absent_switches(self) -> None:
         """When a string value is provided in the uuid_id field and str_id key
+        
         doesn't exist at all, the value should be moved to str_id and uuid_id
         derived."""
         data: dict[str, object] = {_uuid_field_name(): SAMPLE_STR}
@@ -263,6 +272,7 @@ class TestValidateStrPrimaryKeyArgs:
 
     def test_str_id_missing_raises_value_error(self) -> None:
         """When str_id is not provided and uuid_id is not a string, should
+        
         raise ValueError."""
         data: dict[str, object] = {_uuid_field_name(): uuid4()}
         with pytest.raises(
@@ -280,6 +290,7 @@ class TestValidateStrPrimaryKeyArgs:
 
     def test_matching_uuid_and_str_id_passes(self) -> None:
         """When uuid_id (as UUID) matches the one derived from str_id, no
+        
         error should be raised."""
         expected_uuid = str_to_uuid(SAMPLE_STR)
         data: dict[str, object] = {
@@ -293,6 +304,7 @@ class TestValidateStrPrimaryKeyArgs:
 
     def test_mismatching_uuid_and_str_id_raises_value_error(self) -> None:
         """When uuid_id (as UUID) does not match the one derived from str_id,
+        
         ValueError should be raised."""
         wrong_uuid = uuid4()
         data: dict[str, object] = {
@@ -306,6 +318,7 @@ class TestValidateStrPrimaryKeyArgs:
 
     def test_uuid_id_as_matching_string_passes(self) -> None:
         """When uuid_id is provided as a string representation that matches
+        
         the UUID derived from str_id, no error should be raised. The string
         uuid_id is converted to UUID before comparison."""
         expected_uuid = str_to_uuid(SAMPLE_STR)
@@ -320,6 +333,7 @@ class TestValidateStrPrimaryKeyArgs:
 
     def test_data_mutated_in_place(self) -> None:
         """The function should mutate the input dict in place (not return a
+        
         copy)."""
         data: dict[str, object] = {_str_field_name(): SAMPLE_STR}
         validate_str_key_args(data, _uuid_field_name(), _str_field_name())
@@ -349,6 +363,7 @@ class TestValidateIntPrimaryKeyArgs:
     @pytest.mark.parametrize("int_id", [0, 1, 42, 999_999])
     def test_int_id_provided_uuid_id_absent_derives_uuid(self, int_id: int) -> None:
         """When int_id is provided and uuid_id is absent, uuid_id should be
+        
         derived from int_id."""
         data: dict[str, object] = {_int_field_name(): int_id}
         validate_int_key_args(data, _uuid_field_name(), _int_field_name())
@@ -358,6 +373,7 @@ class TestValidateIntPrimaryKeyArgs:
 
     def test_int_id_provided_uuid_id_none_derives_uuid(self) -> None:
         """When int_id is provided and uuid_id is explicitly None, uuid_id
+        
         should be derived from int_id."""
         data: dict[str, object] = {
             _uuid_field_name(): None,
@@ -369,6 +385,7 @@ class TestValidateIntPrimaryKeyArgs:
 
     def test_int_id_as_uuid_field_switches_and_derives(self) -> None:
         """When an integer value is provided in the uuid_id field and int_id
+        
         is None, the value should be moved to int_id and uuid_id derived."""
         data: dict[str, object] = {
             _uuid_field_name(): SAMPLE_INT,
@@ -381,6 +398,7 @@ class TestValidateIntPrimaryKeyArgs:
 
     def test_int_id_as_uuid_field_int_id_absent_switches(self) -> None:
         """When an integer value is provided in the uuid_id field and int_id
+        
         key doesn't exist, the value should be moved to int_id and uuid_id
         derived."""
         data: dict[str, object] = {_uuid_field_name(): SAMPLE_INT}
@@ -402,6 +420,7 @@ class TestValidateIntPrimaryKeyArgs:
 
     def test_matching_uuid_and_int_id_passes(self) -> None:
         """When uuid_id (as UUID) matches the one derived from int_id, no
+        
         error should be raised."""
         expected_uuid = int_to_uuid(SAMPLE_INT)
         data: dict[str, object] = {
@@ -415,6 +434,7 @@ class TestValidateIntPrimaryKeyArgs:
 
     def test_mismatching_uuid_and_int_id_raises_value_error(self) -> None:
         """When uuid_id (as UUID) does not match the one derived from int_id,
+        
         ValueError should be raised."""
         wrong_uuid = uuid4()
         data: dict[str, object] = {
@@ -428,6 +448,7 @@ class TestValidateIntPrimaryKeyArgs:
 
     def test_uuid_id_as_matching_string_passes(self) -> None:
         """When uuid_id is provided as a string representation that matches
+        
         the UUID derived from int_id, no error should be raised. The string
         uuid_id is converted to UUID before comparison."""
         expected_uuid = int_to_uuid(SAMPLE_INT)
@@ -442,6 +463,7 @@ class TestValidateIntPrimaryKeyArgs:
 
     def test_mismatching_uuid_string_and_int_id_raises_value_error(self) -> None:
         """When uuid_id is a string that does NOT match the derived UUID,
+        
         ValueError should be raised at the first string comparison."""
         wrong_uuid = uuid4()
         data: dict[str, object] = {
@@ -468,6 +490,7 @@ class TestValidateIntPrimaryKeyArgs:
 
     def test_bool_int_id_treated_as_int(self) -> None:
         """In Python bool is a subclass of int, so True/False are accepted as
+        
         valid int_id values by isinstance(int_id, int)."""
         data: dict[str, object] = {_int_field_name(): True}
         validate_int_key_args(data, _uuid_field_name(), _int_field_name())

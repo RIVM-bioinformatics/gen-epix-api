@@ -14,6 +14,7 @@ VERBOSE = False
 def setup_test_users_and_organizations_operational(env: Env) -> None:
     """
     Set up test users and organizations for operational data edge case tests.
+    
     Driven by EDGE_CASES_OP — analogous to setup_test_users_and_organizations
     for the reference data tests.
     """

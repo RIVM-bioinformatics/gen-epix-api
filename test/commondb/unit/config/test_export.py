@@ -17,11 +17,20 @@ from gen_epix.commondb.domain.enum import (
 )
 from gen_epix.commondb.domain.util import set_env_variables
 
-_EXPORTABLE_TOP_LEVEL_KEYS = ("app", "api", "log", "service", "repository", "feature_flags")
+_EXPORTABLE_TOP_LEVEL_KEYS = (
+    "app",
+    "api",
+    "log",
+    "service",
+    "repository",
+    "feature_flags",
+)
 
 
 def _build_app_cfg() -> AppCfg:
-    set_env_variables(AppType.COMMONDB, DevIdpConfig.NONE, DevRepositoryConfig.DICT_EMPTY)
+    set_env_variables(
+        AppType.COMMONDB, DevIdpConfig.NONE, DevRepositoryConfig.DICT_EMPTY
+    )
     os.environ["COMMONDB_LOG_LEVEL"] = "WARNING"
     return AppCfg("COMMONDB", ServiceType, RepositoryType, log_any=False)
 
@@ -124,6 +133,7 @@ def test_to_toml_redact_true_scrubs_credentials() -> None:
 
 def test_to_dict_top_level_keys_match_source_file_casing() -> None:
     """Exported keys are lowercase, matching every settings.toml on disk and
+    
     the AppCfgSettingsDict/ResolvedAppCfgSettingsDict TypedDict field names —
     not Dynaconf's internal uppercase Settings-object representation, which
     dict(source) would otherwise surface unchanged.

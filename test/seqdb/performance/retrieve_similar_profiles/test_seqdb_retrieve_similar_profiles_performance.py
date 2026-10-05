@@ -144,6 +144,7 @@ class TestSeqDistancePerformance(BaseSeqDistancePerformance):
     def setup_repositories(self) -> None:
         """
         Method that initializes the repositories for the tests.
+        
         The method reads in the datasets from the DATASETS list,
         creates two separate LISTS with TestRepositoryPerformance for each dataset
         and sets them as CLASS VARIABLES to be used in the parameterized tests.
