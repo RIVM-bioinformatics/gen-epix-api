@@ -41,8 +41,8 @@ Only after assessment:
 
 ## 3. Create baseline and implement and test
 
-1. Unless the user declines a baseline, use the `run-pytest` skill to capture
-   `python run.py test_all --include_e2e=False`. Record its exit status, summary,
+1. Unless the user declines a baseline, use the `pytest-feedback` skill to run
+   `uv run python util/pytest_feedback.py full --include_e2e=False`. Record its exit status, summary,
    and existing failures. Run E2E or specialized external-service tests only
    when the issue requires them.
 2. Stop for related baseline failures. Continue past unrelated failures only
@@ -51,7 +51,7 @@ Only after assessment:
    Add focused tests for changed behavior and important error paths, following 
    `AGENTS.md`.
 4. After each work item, run the narrowest relevant named suite or precise
-   pytest selection using the `run-pytest` skill. Repair failures in that slice
+   pytest selection using the `pytest-feedback` skill. Repair failures in that slice
    before continuing. Commit each work item separately with a clear message once
    relevant tests pass.
 

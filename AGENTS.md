@@ -127,22 +127,9 @@ and request policy failures.
       SQL implementations.
 - Avoid broad formatting or generated-report changes in focused patches.
 
-After making implementation changes:
+### Test feedback loop
 
-1. Run the most targeted relevant pytest test.
-2. Inspect the complete failure output.
-3. Fix the implementation rather than weakening the test.
-4. Re-run the failing test.
-5. Once it passes, run the relevant test module.
-6. If the module passes, run the broader relevant test suite.
-7. Do not run the full test suite unless necessary.
-8. Never change tests solely to make an implementation pass.
-9. Do not ignore failing tests.
-10. Report remaining failures clearly.
-
-Use:
-
-`uv run python util/pytest_feedback.py`
+For every agent test run, use the **pytest-feedback** skill instead of raw `pytest`, `make test`, or `run.py`. It runs pytest once with output redirected and writes a compact, ranked feedback report to `.pytest-feedback/` that you inspect repeatedly instead of re-running. Refer to [.agents/skills/pytest-feedback/SKILL.md](.agents/skills/pytest-feedback/SKILL.md) for the complete workflow, commands, artifact details, and phase-by-phase instructions for diagnosing and fixing test failures.
 
 ## Documentation Map
 
