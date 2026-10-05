@@ -1005,6 +1005,30 @@
         "justMyCode": true
 },
 {
+        "name": "test.commondb.unit.domain",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/domain"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.domain.model",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/domain/model"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.commondb.unit.logging",
         "type": "debugpy",
         "request": "launch",
@@ -1132,6 +1156,18 @@
         "args": [
                 "run_test",
                 "test/etl"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.etl.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/etl/unit"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1521,6 +1557,30 @@
         "justMyCode": true
 },
 {
+        "name": "test.omopdb.unit.domain.model",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/domain/model"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.unit.domain.model.omop",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/domain/model/omop"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.omopdb.unit.repositories",
         "type": "debugpy",
         "request": "launch",
@@ -1720,6 +1780,30 @@
         "args": [
                 "run_test",
                 "test/seqdb/unit/domain"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.domain.model",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/domain/model"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.domain.model.seq",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/domain/model/seq"
         ],
         "console": "integratedTerminal",
         "justMyCode": true

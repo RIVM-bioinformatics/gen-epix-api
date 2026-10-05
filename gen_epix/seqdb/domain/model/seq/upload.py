@@ -543,7 +543,7 @@ class SampleUploadResult(ParentUploadResult):
     Result field names match ``SampleForUpload`` fields to support caller processing.
     """
 
-    ID: ClassVar[str] = "d8f4cd68"
+    RESULT_ID: ClassVar[str] = "d8f4cd68"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "SampleUploadResult"
 
@@ -685,6 +685,10 @@ class SampleBatchForUpload(BaseBatchForUpload):
         (locus_allele_id_map, allele_ids, content) rather than trusting a
         single one, since a profile can be normalized to carry more than one
         of them at once (e.g. allele_ids input also derives content).
+
+        Raises:
+            NotImplementedError: If an allele profile has no supported
+                representation from which to determine allele IDs.
         """
         referenced: set[UUID] = set()
         for sample in self.samples:
@@ -786,7 +790,7 @@ class SampleBatchForUpload(BaseBatchForUpload):
 class SampleBatchUploadResult(BaseBatchUploadResult):
     """Represents the result of uploading a batch of samples."""
 
-    ID: ClassVar = "0205001b"
+    RESULT_ID: ClassVar[str] = "0205001b"
     ENTITY: ClassVar = SampleBatchForUpload.model_entity().clone()
     NAME: ClassVar = "SampleBatchUploadResult"
 

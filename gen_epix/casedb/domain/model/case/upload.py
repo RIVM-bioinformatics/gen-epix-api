@@ -262,7 +262,7 @@ class CaseDataIssue(DataIssue):
 class CaseUploadResult(ParentUploadResult):
     """Represents one case upload result and its content validation issues."""
 
-    ID: ClassVar[str] = "c4fdab13"
+    RESULT_ID: ClassVar[str] = "c4fdab13"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "CaseUploadResult"
 
@@ -343,7 +343,7 @@ class CaseBatchForUpload(BaseBatchForUpload):
 class CaseBatchUploadResult(BaseBatchUploadResult):
     """Represents the results of uploading a batch of cases."""
 
-    ID: ClassVar[str] = "3bb22119"
+    RESULT_ID: ClassVar[str] = "3bb22119"
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone(
         update={"persistable": False}
     )

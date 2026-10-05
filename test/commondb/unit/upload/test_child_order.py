@@ -5,6 +5,9 @@ These cover the foreign-key dependency ordering of children that
 created before that sibling (which would raise a DB foreign-key error).
 """
 
+from test.commondb.unit.services.test_commondb_unit_services_upload import (
+    BaseUploadTestCase,
+)
 from test.commondb.unit.upload.model import (
     Child1,
     Child1ForUpload,
@@ -12,7 +15,6 @@ from test.commondb.unit.upload.model import (
     Child2ForUpload,
 )
 from test.commondb.unit.upload.model import ParentForUpload as FixtureParentForUpload
-from test.commondb.unit.upload.test_commondb_upload import BaseUploadTestCase
 from typing import ClassVar
 from uuid import UUID
 

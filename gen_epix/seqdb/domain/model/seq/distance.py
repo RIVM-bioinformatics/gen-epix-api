@@ -104,7 +104,7 @@ class CalculateSeqDistancesEtlResult(LoadResult):
 
     """
 
-    ID: ClassVar[str] = "6e359c57"
+    RESULT_ID: ClassVar[str] = "6e359c57"
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "CalculateSeqDistancesResult"
 

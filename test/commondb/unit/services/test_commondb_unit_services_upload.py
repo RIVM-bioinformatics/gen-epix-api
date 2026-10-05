@@ -1199,6 +1199,7 @@ class Test5FieldMutability(BaseUploadTestCase):
         # must still reflect that this parent failed.
         self.expectBatchFailed(batch_result)
         self.expectStatusCount(batch_result, n_failed=1)
+        self.uow.rollback.assert_called_once()
 
     def test_5_2_4_immutable_uuid_null_id_treated_as_not_specified(self) -> None:
         """Test 5.2.4: Immutable UUID field - NULL_ID is treated as "not specified", no error."""

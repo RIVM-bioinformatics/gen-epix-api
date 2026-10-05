@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 from typing import Any, ClassVar, cast
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -20,7 +20,7 @@ from gen_epix.fastapp.enum import LogLevel
 
 
 class _FooTransformResult(TransformResult):
-    ID: ClassVar[str] = "test-transform"
+    RESULT_ID: ClassVar[str] = "test-transform"
     COMPLETED_CODE: ClassVar[str] = "foo00001"
     COMPLETED_MESSAGE: ClassVar[str] = "foo done"
 
@@ -28,7 +28,7 @@ class _FooTransformResult(TransformResult):
 
 
 class _FooExtractResult(ExtractResult):
-    ID: ClassVar[str] = "test-extract"
+    RESULT_ID: ClassVar[str] = "test-extract"
     COMPLETED_CODE: ClassVar[str] = "foo00002"
     COMPLETED_MESSAGE: ClassVar[str] = "foo extracted"
 
@@ -147,12 +147,12 @@ class TestEtlResult:
         with pytest.raises(TypeError, match="COMPLETED_CODE and COMPLETED_MESSAGE"):
 
             class _MissingCompletedCode(TransformResult):
-                ID: ClassVar[str] = "missing-completed-code"
+                RESULT_ID: ClassVar[str] = "missing-completed-code"
 
         with pytest.raises(TypeError, match="COMPLETED_CODE and COMPLETED_MESSAGE"):
 
             class _MissingCompletedCode2(ExtractResult):
-                ID: ClassVar[str] = "missing-completed-code-2"
+                RESULT_ID: ClassVar[str] = "missing-completed-code-2"
 
     def test_upload_result_hierarchy_still_instantiates_cleanly(self) -> None:
         from gen_epix.commondb.domain.model.upload import UploadResult
@@ -172,7 +172,9 @@ class TestEtlResult:
             JobResult(etl_name="flow"),
         ]
 
-        assert [result.type for result in results] == [result.ID for result in results]
+        assert [result.type for result in results] == [
+            result.RESULT_ID for result in results
+        ]
 
     def test_deserialize_handles_instances_non_dicts_and_registered_dicts(self) -> None:
         result = _FooExtractResult(source_id="source")
@@ -193,7 +195,7 @@ class TestEtlResult:
         with pytest.raises(ValueError, match="Duplicate Result subclass ID"):
 
             class DuplicateTransformResult(TransformResult):
-                ID: ClassVar[str] = _FooTransformResult.ID
+                RESULT_ID: ClassVar[str] = _FooTransformResult.RESULT_ID
                 COMPLETED_CODE: ClassVar[str] = "dup00001"
                 COMPLETED_MESSAGE: ClassVar[str] = "dup done"
 

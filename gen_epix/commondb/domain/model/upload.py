@@ -124,7 +124,7 @@ class UploadResult(LoadResult, Model):
     - If the status is failed, there must be at least one error log item.
     """
 
-    ID: ClassVar[str] = "c4f1a9e2"
+    RESULT_ID: ClassVar[str] = "c4f1a9e2"
     ENTITY: ClassVar = Entity(persistable=False)
 
     id: UUID | None = Field(
@@ -164,7 +164,7 @@ class UploadResultWithIdentifiers(UploadResult):
     It mirrors a for-upload class that has identifiers.
     """
 
-    ID: ClassVar[str] = "06e14d51"
+    RESULT_ID: ClassVar[str] = "06e14d51"
     ENTITY: ClassVar = UploadResult.model_entity().clone()
     NAME: ClassVar = "UploadResultWithIdentifiers"
 
@@ -286,6 +286,9 @@ class ParentForUpload(Model, IdentifiersMixin):
         processing children in this order never touches a foreign key pointing at
         a not-yet-created row. Derived from the children's ``Entity.links`` and
         ``CHILD_INTRA_PARENT_LINKS_MAP``, cached on ``CHILD_ORDER``.
+
+        Raises:
+            ValueError: If ``CHILD_ORDER`` is not a permutation of the child models.
         """
         if not cls.CHILDREN_FIELD_NAME_MAP:
             return []
@@ -524,7 +527,7 @@ class ParentUploadResult(UploadResultWithIdentifiers):
     Subclasses correspond to their ParentForUpload payload type.
     """
 
-    ID: ClassVar[str] = "f354e913"
+    RESULT_ID: ClassVar[str] = "f354e913"
     ENTITY: ClassVar = UploadResultWithIdentifiers.model_entity().clone()
     NAME: ClassVar = "ParentUploadResult"
 
@@ -998,9 +1001,12 @@ class BaseBatchUploadResult(UploadResult):
     """Represents the result for an atomic batch upload.
 
     Subclasses use field names that match their BaseBatchForUpload payload.
+
+    Model validation: ``result_type`` is populated from the concrete class name
+    when it is empty.
     """
 
-    ID: ClassVar[str] = "6d64fbc3"
+    RESULT_ID: ClassVar[str] = "6d64fbc3"
     ENTITY: ClassVar = UploadResult.model_entity().clone()
     NAME: ClassVar = "BaseBatchUploadResult"
 

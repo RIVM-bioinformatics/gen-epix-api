@@ -1731,10 +1731,13 @@ class BatchUploader:
         model_class: type[Model],
         to_update_obj_result_pairs: list[tuple[Model, UploadResult]],
     ) -> bool:
-        """Update existing objects and their corresponding UploadResults.
+        """Update existing objects and record their outcomes.
 
-        Per-object errors (missing ID, immutable field) are logged to the individual
-        UploadResult and that object is skipped; they do not abort the remaining batch.
+        Per-object errors (missing ID or immutable field) are logged and skipped
+        without stopping other updates. Any such error returns False.
+
+        Returns:
+            Whether every requested object update passed validation.
         """
         success = True
         if not to_update_obj_result_pairs:
@@ -1753,6 +1756,7 @@ class BatchUploader:
                     "8b7824f4",
                     f"Cannot update object without valid ID: {obj}",
                 )
+                success = False
             else:
                 valid_pairs.append((obj, obj_result))
                 obj_ids.append(obj_id)
@@ -1791,6 +1795,7 @@ class BatchUploader:
                             "f5e09001",
                             f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}.",
                         )
+                        success = False
                         break
                     continue
                 # Mutable field: apply update if value differs
