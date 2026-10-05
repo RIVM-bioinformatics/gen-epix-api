@@ -3,6 +3,12 @@
 from enum import Enum
 
 
+class FeatureFlag(Enum):
+    """General feature flags for the application framework."""
+
+    AUTO_CREATE_NEW_USERS = "auto_create_new_users"
+
+
 class SortOrder(Enum):
     """Encapsulates specifying ascending or descending ordering."""
 

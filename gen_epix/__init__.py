@@ -21,6 +21,7 @@ from gen_epix import fastapp as fastapp
 from gen_epix import filter as filter
 from gen_epix import util as util
 from gen_epix.casedb import services as casedb_services
+from gen_epix.casedb.config import CasedbAppCfg as CasedbAppCfg
 from gen_epix.casedb.domain import DOMAIN as CASEDB_DOMAIN
 from gen_epix.casedb.domain import command as casedb_command
 from gen_epix.casedb.domain import enum as casedb_enum
@@ -36,10 +37,15 @@ from gen_epix.commondb.domain import enum as commondb_enum
 from gen_epix.commondb.domain import exc as exc
 from gen_epix.commondb.domain import literal as literal
 from gen_epix.commondb.domain import model as commondb_model
+from gen_epix.commondb.domain.enum import DevIdpConfig as DevIdpConfig
+from gen_epix.commondb.domain.enum import DevRepositoryConfig as DevRepositoryConfig
 from gen_epix.commondb.domain.literal import NULL_ID as NULL_ID
+from gen_epix.commondb.domain.util import get_app_cfg_class as get_app_cfg_class
+from gen_epix.commondb.domain.util import set_env_variables as set_env_variables
 from gen_epix.commondb.env import AppComposer as AppComposer
 from gen_epix.commondb.services.client import CommondbClient as CommondbClient
 from gen_epix.etl import model as etl_model
+from gen_epix.omopdb.config import OmopdbAppCfg as OmopdbAppCfg
 from gen_epix.omopdb.domain import DOMAIN as OMOPDB_DOMAIN
 from gen_epix.omopdb.domain import command as omopdb_command
 from gen_epix.omopdb.domain import enum as omopdb_enum
@@ -48,6 +54,7 @@ from gen_epix.omopdb.domain import policy as omopdb_policy
 from gen_epix.omopdb.domain import service as omopdb_service
 from gen_epix.omopdb.env import AppComposer as OmopdbAppComposer
 from gen_epix.omopdb.services.client import OmopdbClient as OmopdbClient
+from gen_epix.seqdb.config import SeqdbAppCfg as SeqdbAppCfg
 from gen_epix.seqdb.domain import DOMAIN as SEQDB_DOMAIN
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
@@ -71,8 +78,13 @@ __all__ = [
     "commondb_command",
     "commondb_enum",
     "commondb_model",
+    "DevIdpConfig",
+    "DevRepositoryConfig",
     "etl_model",
+    "get_app_cfg_class",
+    "set_env_variables",
     "CASEDB_DOMAIN",
+    "CasedbAppCfg",
     "CasedbAppComposer",
     "CasedbClient",
     "casedb_command",
@@ -82,6 +94,7 @@ __all__ = [
     "casedb_service",
     "casedb_services",
     "OMOPDB_DOMAIN",
+    "OmopdbAppCfg",
     "OmopdbAppComposer",
     "OmopdbClient",
     "omopdb_command",
@@ -90,6 +103,7 @@ __all__ = [
     "omopdb_policy",
     "omopdb_service",
     "SEQDB_DOMAIN",
+    "SeqdbAppCfg",
     "SeqdbAppComposer",
     "SeqdbClient",
     "seqdb_command",

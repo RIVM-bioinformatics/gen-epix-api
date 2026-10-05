@@ -1,0 +1,23 @@
+[repository.defaults]
+type = "SA_SQLITE"
+
+[repository.defaults.props]
+dir = "./data/casedb/demo"
+
+[repository.abac.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.sa_sqlite.abac.{this.repository.defaults.props.variant}.sqlite"
+
+[repository.organization.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.sa_sqlite.organization.{this.repository.defaults.props.variant}.sqlite"
+
+[repository.system.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.sa_sqlite.system.{this.repository.defaults.props.variant}.sqlite"
+
+[repository.case.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.sa_sqlite.case.{this.repository.defaults.props.variant}.sqlite"
+
+[repository.geo.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.sa_sqlite.geo.{this.repository.defaults.props.variant}.sqlite"
+
+[repository.ontology.props]
+file = "@format {this.repository.defaults.props.dir}/casedb.sa_sqlite.ontology.{this.repository.defaults.props.variant}.sqlite"
