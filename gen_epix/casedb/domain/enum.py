@@ -435,7 +435,7 @@ class ColConceptSetType(Enum):
 
 # !FIXME: make sure the data reflects these definitions or these definitions are changed accordingly
 class DimColTypeSet(Enum):
-    """Map each dimension type to its compatible column types."""
+    """Group compatible column types by dimension."""
 
     TEXT = frozenset(
         ColTypeSet.LANGUAGE.value.union(
@@ -474,13 +474,8 @@ class ColTypeOrder(Enum):
     }
 
 
-class CasedbFeatureFlag(Enum):
-    """Identify feature-flag keys specific to casedb.
-
-    Stands alone rather than extending gen_epix.commondb.domain.enum.FeatureFlag:
-    Python does not allow subclassing an Enum that already has members to add
-    further members.
-    """
+class FeatureFlag(Enum):
+    """Encapsulates feature-flag keys specific to casedb."""
 
     DISABLE_UPLOAD = "disable_upload"
 

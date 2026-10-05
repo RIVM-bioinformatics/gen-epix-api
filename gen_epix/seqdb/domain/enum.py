@@ -81,6 +81,12 @@ class Role(Enum):
     ROLE1 = "SEQDB_ROLE1"
 
 
+class FeatureFlag(Enum):
+    """Encapsulates feature-flag keys specific to seqdb."""
+
+    pass
+
+
 class TreeAlgorithm(Enum):
     """Encapsulates supported phylogenetic-tree and clustering algorithms."""
 

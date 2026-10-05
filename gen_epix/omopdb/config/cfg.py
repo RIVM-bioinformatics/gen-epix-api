@@ -13,14 +13,14 @@ class OmopdbAppCfg(AppCfg):
     """AppCfg specialized for the omopdb app.
 
     Supplies omopdb's app name and enums as constructor defaults, so
-    `OmopdbAppCfg()` alone loads omopdb's configuration. `_DEFAULT_SETTINGS`
+    `OmopdbAppCfg()` alone loads omopdb's configuration. `DEFAULT_SETTINGS`
     layers omopdb's own port, service module paths and organization-user
     role, and its one additional domain service (omop), on top of AppCfg's
     own defaults.
     """
 
-    _DEFAULT_SETTINGS: dict[str, Any] = AppCfg._deep_merge(
-        AppCfg._DEFAULT_SETTINGS,
+    DEFAULT_SETTINGS: dict[str, Any] = AppCfg.deep_merge(
+        AppCfg.DEFAULT_SETTINGS,
         {
             "app": {"port": 8002},
             "service": {

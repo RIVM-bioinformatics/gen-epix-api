@@ -19,15 +19,15 @@ class CasedbAppCfg(AppCfg):
     `CasedbAppCfg()` alone loads casedb's configuration; any AppCfg
     constructor keyword argument (including `settings_files=[...]` for
     tests that need full isolation) still works as an override.
-    `_DEFAULT_SETTINGS` layers casedb's own port, its ULID id_factory
+    `DEFAULT_SETTINGS` layers casedb's own port, its ULID id_factory
     (every other app in this repository uses UUID4), its service module
     paths and organization-user role, its three additional domain services
     (case, geo, ontology), and its client configuration for calling the
     seqdb app's API, on top of AppCfg's own defaults.
     """
 
-    _DEFAULT_SETTINGS: dict[str, Any] = AppCfg._deep_merge(
-        AppCfg._DEFAULT_SETTINGS,
+    DEFAULT_SETTINGS: dict[str, Any] = AppCfg.deep_merge(
+        AppCfg.DEFAULT_SETTINGS,
         {
             "app": {"port": 8000},
             "service": {
@@ -118,7 +118,7 @@ class CasedbAppCfg(AppCfg):
         """Return a fresh, mutation-safe copy of casedb's business defaults."""
         settings = super()._get_default_settings()
         settings["feature_flags"].update(
-            {flag.value: False for flag in casedb_enum.CasedbFeatureFlag}
+            {flag.value: False for flag in casedb_enum.FeatureFlag}
         )
         return settings
 
@@ -128,7 +128,7 @@ class CasedbAppCfg(AppCfg):
             *super()._get_feature_flag_validators(),
             *(
                 Validator(f"feature_flags.{flag.value}", is_type_of=bool)
-                for flag in casedb_enum.CasedbFeatureFlag
+                for flag in casedb_enum.FeatureFlag
             ),
         ]
 

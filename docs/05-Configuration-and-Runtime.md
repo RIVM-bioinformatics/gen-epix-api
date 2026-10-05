@@ -11,13 +11,13 @@ This chapter covers the settings model, IDP and repository modes, startup lifecy
 Configuration loading is Dynaconf-based and environment-driven, layered on
 top of hardcoded Python defaults. The process is staged:
 
-1. **Hardcoded defaults** — `AppCfg._DEFAULT_SETTINGS` (a plain class
+1. **Hardcoded defaults** — `AppCfg.DEFAULT_SETTINGS` (a plain class
    attribute, not a file) supplies the values shared across every app:
    HTTP headers, log format, the `service.defaults`/`repository.defaults`
    factory and connection shape, and commondb's own module paths, port,
    and role, since commondb uses plain `AppCfg` directly. `CasedbAppCfg`,
    `SeqdbAppCfg`, and `OmopdbAppCfg` each declare their own
-   `_DEFAULT_SETTINGS`, built by recursively merging their deltas (port,
+   `DEFAULT_SETTINGS`, built by recursively merging their deltas (port,
    module paths, role, extra services) on top of the base dict. See
    §1a below.
 2. **Logging configuration** is loaded from `<APP>_LOG_CONFIG_FILE`. (Source: `gen_epix/commondb/config/cfg.py#L188-L215`)
@@ -31,13 +31,13 @@ Missing settings files fail fast (`FileNotFoundError`). This makes misconfigurat
 
 | Category | Description |
 |----------|-------------|
-| `settings.toml` | Overrides for the app-agnostic parts of `AppCfg._DEFAULT_SETTINGS` not otherwise covered below (rarely needed, since those defaults are already correct for each app) |
+| `settings.toml` | Overrides for the app-agnostic parts of `AppCfg.DEFAULT_SETTINGS` not otherwise covered below (rarely needed, since those defaults are already correct for each app) |
 | `settings.repository.dict.toml` / `settings.repository.sa_sqlite.toml` | Shared per-backend-family repository config (type, module/class_name where applicable, and a per-repo file-path template) for the `DICT_*`/`SA_SQLITE_*` repository modes. Not named `.secrets.` — none of these files contain a credential |
 | `settings.repository.{dict,sa_sqlite}.{demo,empty}.toml` | One line each, setting that backend family's file-path template to the demo or empty dataset. Not named `.secrets.` either, for the same reason |
 | `.example.secrets.repository.sa_sql.toml` | Copy-first template for `SA_SQL`'s credentials — the one file in this group that actually has credential-shaped fields (uid/pwd, mostly commented out). Copying this template to `secrets.repository.sa_sql.toml` (gitignored) is one way to supply them; the usual environment-variable overrides work equally well and are what local dev/CI actually uses (see §1b) |
 | Root `config/identity_providers.toml` / `mock_identity_provider.toml` / `no_identity_providers.toml` | Selected per `DevIdpConfig` — genuine per-mode choices, not filler defaults |
 
-`SA_SQL` is the baseline repository backend: `AppCfg._DEFAULT_SETTINGS["repository"]`
+`SA_SQL` is the baseline repository backend: `AppCfg.DEFAULT_SETTINGS["repository"]`
 describes everything about it, but the credential (`uid`/`pwd`) defaults
 to an empty string rather than a working value — a deployment that
 forgets to supply one fails closed at validation time (a clear, named
@@ -47,7 +47,7 @@ failure) instead of silently connecting. Selecting `DICT_*` or
 below for the full precedence, how local dev/CI supplies the credential,
 and a documented side effect of that layering.
 
-(Source: `gen_epix/commondb/config/cfg.py`, `AppCfg._DEFAULT_SETTINGS`; Source: `gen_epix/casedb/config/settings.repository.dict.toml`)
+(Source: `gen_epix/commondb/config/cfg.py`, `AppCfg.DEFAULT_SETTINGS`; Source: `gen_epix/casedb/config/settings.repository.dict.toml`)
 
 ### 1a. Hardcoded defaults and per-app configuration classes
 
@@ -58,8 +58,8 @@ and a documented side effect of that layering.
 | seqdb | `SeqdbAppCfg` | `gen_epix/seqdb/config/cfg.py` | port 8001, `SEQDB_ORG_USER` role, `seq`/`file` services |
 | omopdb | `OmopdbAppCfg` | `gen_epix/omopdb/config/cfg.py` | port 8002, `OMOPDB_ORG_USER` role, `omop` service |
 
-Each subclass's `_DEFAULT_SETTINGS` is built once, at class-definition
-time, via `AppCfg._deep_merge(AppCfg._DEFAULT_SETTINGS, {...own deltas...})`
+Each subclass's `DEFAULT_SETTINGS` is built once, at class-definition
+time, via `AppCfg.deep_merge(AppCfg.DEFAULT_SETTINGS, {...own deltas...})`
 — a recursive dict merge (dict-vs-dict keys recurse, anything else is
 replaced wholesale). Each app's `app.py` constructs its subclass with no
 arguments (e.g. `APP_CFG = CasedbAppCfg()`); the subclass's `__init__`
@@ -78,7 +78,7 @@ configured.
 ### 1b. Repository configuration: files and precedence
 
 `repository.defaults.type = "SA_SQL"` and its connection details are
-always present, supplied by `AppCfg._DEFAULT_SETTINGS`, active whenever
+always present, supplied by `AppCfg.DEFAULT_SETTINGS`, active whenever
 `DevRepositoryConfig.SA_SQL` is selected without any further file.
 Choosing `DICT_DEMO`, `DICT_EMPTY`, `SA_SQLITE_DEMO`, or `SA_SQLITE_EMPTY`
 layers two files on top of that default, assembled by `set_env_variables`:
@@ -86,7 +86,7 @@ layers two files on top of that default, assembled by `set_env_variables`:
 - **`SA_SQL`**: `secrets.repository.sa_sql.toml` is loaded only if
   present — a local, gitignored copy of `.example.secrets.repository.sa_sql.toml`
   with its uid/pwd/server uncommented and filled in. Its absence is the
-  common case: `AppCfg._DEFAULT_SETTINGS["repository"]` already describes
+  common case: `AppCfg.DEFAULT_SETTINGS["repository"]` already describes
   everything about `SA_SQL` except the credential, so most local/dev use
   needs no file here at all — just the usual `<APP>_REPOSITORY__DEFAULTS__PROPS__UID`/
   `__PWD` environment-variable overrides. `docker-compose.sql.yml`/
@@ -112,7 +112,7 @@ layers two files on top of that default, assembled by `set_env_variables`:
   module/class_name override, since SA_SQLITE reuses the SA_SQL default's
   repository classes) plus a one-line `variant` file.
 
-**A known, accepted side effect**: because `AppCfg._DEFAULT_SETTINGS` is
+**A known, accepted side effect**: because `AppCfg.DEFAULT_SETTINGS` is
 always the lowest layer, switching to `DICT_DEMO` does not *remove*
 `repository.defaults.props.driver`/`server`/`uid`/`pwd` — Dynaconf's
 merge is per-key, not a whole-block replacement, so those SA_SQL-only
@@ -351,7 +351,7 @@ Prepares environment context and transfers demo data from dict repositories into
 
 - `run.py`
 - `gen_epix/commondb/domain/util.py` (`set_env_variables`, `get_app_cfg_class`)
-- `gen_epix/commondb/config/cfg.py` (`AppCfg`, `_DEFAULT_SETTINGS`, `_get_validators`, `to_toml`/`to_dict`)
+- `gen_epix/commondb/config/cfg.py` (`AppCfg`, `DEFAULT_SETTINGS`, `_get_validators`, `to_toml`/`to_dict`)
 - `gen_epix/commondb/config/cfg_types.py`
 - `gen_epix/commondb/config/settings_manager.py`
 - `gen_epix/commondb/config/logging.yaml`

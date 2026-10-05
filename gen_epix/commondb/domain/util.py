@@ -99,7 +99,7 @@ def set_env_variables(
     else:
         raise ValueError(f"Unknown dev_idp_config: {dev_idp_config_enum}")
     # Repository settings. SA_SQL's connection details are already fully
-    # described by AppCfg._DEFAULT_SETTINGS, as the baseline repository
+    # described by AppCfg.DEFAULT_SETTINGS, as the baseline repository
     # backend; secrets.repository.sa_sql.toml is loaded only if present, so a
     # deployment can override those defaults (most commonly just uid/pwd/
     # server) by copying config/.example.secrets.repository.sa_sql.toml to
@@ -130,13 +130,9 @@ def set_env_variables(
     ):
         settings_files.append(cfg_path / "settings.repository.sa_sqlite.toml")
         if dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_DEMO:
-            settings_files.append(
-                cfg_path / "settings.repository.sa_sqlite.demo.toml"
-            )
+            settings_files.append(cfg_path / "settings.repository.sa_sqlite.demo.toml")
         else:
-            settings_files.append(
-                cfg_path / "settings.repository.sa_sqlite.empty.toml"
-            )
+            settings_files.append(cfg_path / "settings.repository.sa_sqlite.empty.toml")
     else:
         raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
     # Add any extra settings files at the end

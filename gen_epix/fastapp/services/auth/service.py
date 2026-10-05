@@ -105,7 +105,7 @@ class AuthService(BaseAuthService):
         # Parse and set auto_create_new_users, and expose as feature flag
         self._auto_create_new_users = auto_create_new_users
         self.app.set_feature_flag(
-            enum.AuthFeatureFlag.AUTO_CREATE_NEW_USERS, auto_create_new_users
+            enum.FeatureFlag.AUTO_CREATE_NEW_USERS, auto_create_new_users
         )
 
         # Parse and set root_token_time_to_live

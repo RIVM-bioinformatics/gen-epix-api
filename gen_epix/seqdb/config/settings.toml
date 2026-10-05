@@ -1,3 +1,3 @@
-# Overrides for AppCfg._DEFAULT_SETTINGS not covered by a more specific
+# Overrides for AppCfg.DEFAULT_SETTINGS not covered by a more specific
 # settings file. Intentionally empty: every current app/api/log/service
 # value already matches the hardcoded default.

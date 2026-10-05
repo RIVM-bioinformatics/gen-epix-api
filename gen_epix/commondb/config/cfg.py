@@ -83,7 +83,7 @@ _STANDARD_LOG_LEVELS: tuple[str, ...] = (
 
 # Every repository entry's connection_string under the SA_SQL default has this
 # same value, built by interpolating repository.defaults.props at read time;
-# defined once here and referenced by every repo entry in _DEFAULT_SETTINGS
+# defined once here and referenced by every repo entry in DEFAULT_SETTINGS
 # below, rather than repeated per repo.
 _SA_SQL_CONNECTION_STRING = (
     "@format mssql+pyodbc:///?odbc_connect="
@@ -221,7 +221,7 @@ class AppCfg(BaseAppCfg):
     #
     # "feature_flags" is intentionally absent from this literal — see
     # _get_default_settings below.
-    _DEFAULT_SETTINGS: dict[str, Any] = {
+    DEFAULT_SETTINGS: dict[str, Any] = {
         "app": {"host": "0.0.0.0", "debug": False, "port": 8010},
         "api": {
             "default_route": "/openapi.json",
@@ -385,25 +385,7 @@ class AppCfg(BaseAppCfg):
     )
 
     @staticmethod
-    def _prefix_envvar(
-        envvar_prefix: str | None, envvar: str, delimiter: str = "_"
-    ) -> str:
-        """Create prefixed environment variable name."""
-        if envvar_prefix:
-            return f"{envvar_prefix}{delimiter}{envvar}"
-        return envvar
-
-    @staticmethod
-    def _prefix_logger(
-        logger_prefix: str | None, logger_name: str, delimiter: str = "."
-    ) -> str:
-        """Create prefixed logger name."""
-        if logger_prefix:
-            return f"{logger_prefix}{delimiter}{logger_name}"
-        return logger_name
-
-    @staticmethod
-    def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
         """Recursively merge `override` on top of `base`, returning a new dict.
 
         Values in `override` win on key collision. Only dict-vs-dict pairs
@@ -421,18 +403,36 @@ class AppCfg(BaseAppCfg):
         for key, override_value in override.items():
             base_value = merged.get(key)
             if isinstance(base_value, dict) and isinstance(override_value, dict):
-                merged[key] = AppCfg._deep_merge(base_value, override_value)
+                merged[key] = AppCfg.deep_merge(base_value, override_value)
             else:
                 merged[key] = override_value
         return merged
 
+    @staticmethod
+    def _prefix_envvar(
+        envvar_prefix: str | None, envvar: str, delimiter: str = "_"
+    ) -> str:
+        """Create prefixed environment variable name."""
+        if envvar_prefix:
+            return f"{envvar_prefix}{delimiter}{envvar}"
+        return envvar
+
+    @staticmethod
+    def _prefix_logger(
+        logger_prefix: str | None, logger_name: str, delimiter: str = "."
+    ) -> str:
+        """Create prefixed logger name."""
+        if logger_prefix:
+            return f"{logger_prefix}{delimiter}{logger_name}"
+        return logger_name
+
     def _get_default_settings(self) -> dict[str, Any]:
         """Return a fresh, mutation-safe copy of this class's business defaults.
 
-        Subclasses only need to declare their own `_DEFAULT_SETTINGS` class
-        attribute — `self._DEFAULT_SETTINGS` already resolves to the
+        Subclasses only need to declare their own `DEFAULT_SETTINGS` class
+        attribute — `self.DEFAULT_SETTINGS` already resolves to the
         subclass's own attribute via normal MRO. The feature-flags section
-        is assembled here, not in the `_DEFAULT_SETTINGS` literal, because
+        is assembled here, not in the `DEFAULT_SETTINGS` literal, because
         gen_epix.commondb.domain.enum cannot be imported at module scope in
         this file: gen_epix.commondb.domain imports this configuration
         package back (through its own util module), so importing the enum
@@ -441,13 +441,13 @@ class AppCfg(BaseAppCfg):
         __init__, runs after both packages have finished loading.
 
         Returns:
-            Deep copy of `type(self)._DEFAULT_SETTINGS`, with `feature_flags` added.
+            Deep copy of `type(self).DEFAULT_SETTINGS`, with `feature_flags` added.
         """
         from gen_epix.commondb.domain.enum import (  # noqa: PLC0415
             FEATURE_FLAG_TOML_KEYS,
         )
 
-        settings = copy.deepcopy(self._DEFAULT_SETTINGS)
+        settings = copy.deepcopy(self.DEFAULT_SETTINGS)
         settings["feature_flags"] = {
             flag.value: False for flag in FEATURE_FLAG_TOML_KEYS
         }
@@ -525,7 +525,7 @@ class AppCfg(BaseAppCfg):
                 "repository.defaults.type",
                 is_in=[member.name for member in self._repository_type_enum],
             ),
-            # SA_SQL's uid/pwd default to "" (see _DEFAULT_SETTINGS's
+            # SA_SQL's uid/pwd default to "" (see DEFAULT_SETTINGS's
             # comment) so that an env var/settings-file override has an
             # existing key to override. Reject an unchanged blank pwd
             # whenever SA_SQL is the resolved repository type AND the
@@ -724,7 +724,7 @@ class AppCfg(BaseAppCfg):
         """Return dotted paths in `loaded` that `defaults` has no key for.
 
         Every key a settings file or environment variable may override
-        exists in the defaults as a placeholder (see _DEFAULT_SETTINGS), so
+        exists in the defaults as a placeholder (see DEFAULT_SETTINGS), so
         a loaded key without a default is a typo or a setting this version
         does not read. Keys compare case-insensitively (Dynaconf's
         as_dict() upper-cases the top level); reported paths are lowercase.

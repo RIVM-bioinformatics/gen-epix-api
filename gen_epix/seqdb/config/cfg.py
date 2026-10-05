@@ -13,14 +13,14 @@ class SeqdbAppCfg(AppCfg):
     """AppCfg specialized for the seqdb app.
 
     Supplies seqdb's app name and enums as constructor defaults, so
-    `SeqdbAppCfg()` alone loads seqdb's configuration. `_DEFAULT_SETTINGS`
+    `SeqdbAppCfg()` alone loads seqdb's configuration. `DEFAULT_SETTINGS`
     layers seqdb's own port, service module paths and organization-user
     role, and its two additional domain services (seq, file), on top of
     AppCfg's own defaults.
     """
 
-    _DEFAULT_SETTINGS: dict[str, Any] = AppCfg._deep_merge(
-        AppCfg._DEFAULT_SETTINGS,
+    DEFAULT_SETTINGS: dict[str, Any] = AppCfg.deep_merge(
+        AppCfg.DEFAULT_SETTINGS,
         {
             "app": {"port": 8001},
             "service": {

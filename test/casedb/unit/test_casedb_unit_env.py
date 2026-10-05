@@ -7,7 +7,9 @@ from test.util.mock_compat import Mock, patch
 from gen_epix.casedb import env
 
 
-def _assert_composer_forwards_configuration(composer_class, base_class) -> None:
+def _assert_composer_forwards_configuration(
+    composer_class: type, base_class: type
+) -> None:
     app_cfg = Mock()
 
     with patch.object(base_class, "__init__", return_value=None) as init:
@@ -23,6 +25,7 @@ def _assert_composer_forwards_configuration(composer_class, base_class) -> None:
         policy_class_map=env.COMMON_POLICY_MAP,
         role_generator_class=env.RoleGenerator,
         rbac_service_class=env.RbacService,
+        feature_flag_enum_classes=(env.CommonFeatureFlag, env.enum.FeatureFlag),
         custom_option="value",
     )
 
