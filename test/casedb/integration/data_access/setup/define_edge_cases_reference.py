@@ -174,7 +174,7 @@ def _compute_expected_case_types(
     org_access_policies: list[tuple[str, str]], org_share_sets: list[str]
 ) -> list[str]:
     """For reference data access, only org-level policies determine access (union of access + share).
-    
+
     CaseTypes are looked up from CASE_TYPE_SETS. User policies are intentionally ignored.
     """
     case_type_sets = {x for x, _ in org_access_policies} | set(org_share_sets)
@@ -188,7 +188,7 @@ def _compute_expected_case_type_sets(
     org_access_policies: list[tuple[str, str]], org_share_sets: list[str]
 ) -> list[str]:
     """Only the CaseTypeSets referenced in org-level policies (access ∪ share) are accessible.
-    
+
     User policies are intentionally ignored — tests verify this explicitly."""
     case_type_sets = {x for x, _ in org_access_policies} | set(org_share_sets)
     return sorted(case_type_sets)
@@ -198,7 +198,7 @@ def _compute_expected_col_sets(
     org_access_policies: list[tuple[str, str]],
 ) -> list[str]:
     """ColSet access comes exclusively from org access policies — not from share policies and not
-    
+
     from user-level policies. The ColSet is taken directly from each access policy tuple and is
     independent of the CaseTypeSet, supporting inconsistent pairings."""
     return sorted({col_set for _, col_set in org_access_policies})
@@ -256,7 +256,7 @@ _user_combos = list(
 
 def _get_case_type_from_col(col_code: str) -> str:
     """Extract the CaseType name from a Col code by naming convention:
-    
+
     col{ct}_{ref_dim}_{occ}_{col_rank} → case_type{ct}"""
     m = re.match(r"^col(\d+)_", col_code)
     assert m, f"Cannot extract CaseType index from col code: '{col_code}'"

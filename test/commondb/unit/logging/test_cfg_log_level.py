@@ -112,7 +112,7 @@ def test_set_log_level_mirrors_override_into_raw_cfg_snapshot(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """to_dict(resolved=False)/to_toml() read _raw_cfg_snapshot, captured once in
-    
+
     _init_load_settings before set_log_level's <APP>_LOG_LEVEL override is
     applied to the live _cfg — set_log_level must mirror that override into
     the snapshot too, or the pre-validation export silently disagrees with
@@ -134,7 +134,7 @@ def test_set_log_level_without_raw_cfg_snapshot_does_not_raise(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The first set_log_level call in __init__ runs before _raw_cfg_snapshot
-    
+
     exists at all; set_log_level must tolerate that, not assume it's set."""
     app_cfg, logger_map, _ = _build_test_fixture(shared_handler=False, log_setup=False)
     _patch_logging_get_logger(monkeypatch, logger_map)

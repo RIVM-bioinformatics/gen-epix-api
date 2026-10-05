@@ -99,7 +99,7 @@ def setup_reference_data(env: Env) -> None:
 class TestCasedbModelProcessMetadata:
     """
     Verifies that the CommondbSAMapper (SA backend) and CommondbDictModelModifier
-    
+
     (dict backend) correctly stamp metadata fields on CaseType create and update.
     """
 

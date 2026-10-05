@@ -626,7 +626,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
     def test_is_allowed_content_read_false(self) -> None:
         """
         This test expects is_allowed to return False because the access map does not grant any read rights
-        
+
         (no read_cols specified) for the given data collection. Therefore, CaseAbac.is_allowed should deny
         READ_CASE access for the provided current_data_collection_ids.
         """

@@ -72,7 +72,7 @@ def generate_excel_report(
 ) -> None:
     """
     Generate Excel file with two sheets:
-    
+
     1. Individual test results
     2. Aggregated by scenario ID
     """

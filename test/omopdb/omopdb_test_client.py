@@ -37,7 +37,7 @@ class OmopdbTestClient(TestClient):
     ) -> "TestClient":
         """
         Create a test environment for the given test type and repository type. A
-        
+
         single environment, with a common test directory, is kept for each test type.
         """
         if app_cfg.name not in cls.TEST_CLIENTS:

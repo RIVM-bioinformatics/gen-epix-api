@@ -205,7 +205,7 @@ class TestSnpNoProfiles(BaseSnpUploadTestCase):
         self,
     ) -> None:
         """Empty batch with no SNP profiles
-        
+
         returns success."""
         sample = model.SampleForUpload.model_construct(
             id=self.sample_id,
@@ -249,7 +249,7 @@ class TestSnpValidCases(BaseSnpUploadTestCase):
         self,
     ) -> None:
         """Valid SNP profile with Nextclade JSON
-        
+
         content passes and sets format."""
         profile = self.create_snp_profile(content='{"sample1": {"subs": "A1T"}}')
         cmd, retval = self.create_command_and_result(profile)
@@ -293,7 +293,7 @@ class TestSnpValidCases(BaseSnpUploadTestCase):
         self,
     ) -> None:
         """Two profiles for the same ref_seq with
-        
+
         valid JSON both pass."""
         p1 = self.create_snp_profile(content='{"s1": {"subs": "A1T"}}')
         p2 = self.create_snp_profile(content='{"s2": {"subs": "C3G"}}')
@@ -338,7 +338,7 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
 
     def test_missing_ref_seq_fails(self) -> None:
         """Non-existent ref_seq → b7c6d5e4 on
-        
+
         batch result."""
         profile = self.create_snp_profile(content='{"s1": {"subs": "A1T"}}')
         cmd, retval = self.create_command_and_result(profile)
@@ -362,7 +362,7 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
         self,
     ) -> None:
         """Protocol without ref_seq_id →
-        
+
         a6b5c4d3."""
         profile = self.create_snp_profile(content='{"s1": {"subs": "A1T"}}')
         cmd, retval = self.create_command_and_result(profile)
@@ -386,7 +386,7 @@ class TestSnpInvalidCases(BaseSnpUploadTestCase):
         self,
     ) -> None:
         """Any valid JSON passes; no biological
-        
+
         validation is performed."""
         profile = self.create_snp_profile(
             content='"just a string"',
@@ -433,7 +433,7 @@ class TestSnpBehavior(BaseSnpUploadTestCase):
 
     def test_non_snp_profile_ignored(self) -> None:
         """Allele profile is not picked up by
-        
+
         SNP validation."""
         profile = self.create_snp_profile(content="ACGT")
         # Override type to ALLELE
@@ -454,7 +454,7 @@ class TestSnpBehavior(BaseSnpUploadTestCase):
         self,
     ) -> None:
         """Calling validation twice on same
-        
+
         batch yields same result."""
         profile = self.create_snp_profile(content='{"s1": {"subs": "A1T"}}')
         cmd, retval = self.create_command_and_result(profile)

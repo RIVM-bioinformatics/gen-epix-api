@@ -814,7 +814,7 @@ def test_uvicorn_access_filter_reuses_existing_json_formatter_configuration() ->
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_long_exception_message_is_truncated() -> None:
     """Truncation cuts from the middle, keeping both a prefix and a suffix,
-    
+
     since DB driver errors often echo the SQL statement first and put the
     actual error message at the end."""
     formatter = JsonFormatter(max_exception_message_length=50)

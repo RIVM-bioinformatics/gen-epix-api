@@ -213,7 +213,7 @@ class TestFilterConstruction:
 class TestRankingLogic:
     """
     The sort key is (sample_id, qc_result_sort_key, qc_score, created_at).
-    
+
     Higher qc_result, higher qc_score, and newer created_at values are better.
     """
 

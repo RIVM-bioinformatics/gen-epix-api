@@ -47,7 +47,7 @@ _SIMPLE_TYPE_MAP: dict[type, str] = {
 def _annotation_to_mermaid_type(annotation: type | None) -> str:
     """
     Convert a Python / Pydantic type annotation to a short Mermaid-friendly
-    
+
     type string.  Handles Optional, Union, list, set, dict, Enum, etc.
     """
     if annotation is None:
@@ -119,7 +119,7 @@ def _field_marker(field_type: FieldType) -> str:
 def _render_entity_block(model_class: type[BaseModel], entity: Entity) -> list[str]:
     """
     Return the Mermaid lines for a single entity block **with** attributes.
-    
+
     Example output::
 
         Sample {
@@ -287,7 +287,7 @@ def _write_md(path: Path, title: str, description: str, diagram: str) -> None:
 class MermaidErmGenerator(ErmGenerator):
     """
     Generates Mermaid ``erDiagram`` markdown files from domain model
-    
+
     definitions.
 
     For each domain (and each service type within a domain) two files are

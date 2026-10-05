@@ -1613,7 +1613,7 @@ class TestModelSampleBatchForUpload:
 @pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestSampleBatchForUploadAlleleHandling:
     """Covers SampleBatchForUpload's allele-reference bookkeeping:
-    
+
     get_referenced_allele_ids, get_missing_allele_ids, trim_alleles, and the
     subset/merge overrides that keep self.alleles consistent with the parent
     list.

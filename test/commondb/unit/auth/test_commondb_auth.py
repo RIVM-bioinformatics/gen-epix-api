@@ -323,7 +323,7 @@ def make_commondb_user_manager(
 
 class AuthEnv:
     """Self-contained, per-test auth environment built around the real
-    
+
     commondb.services.user_manager.UserManager.
 
     Parameters
@@ -562,7 +562,7 @@ class TestAuth:
 @pytest.mark.scenario_ids("TC-SEC-30-02")
 class TestAutoCreateUser:
     """Verify that unknown users are auto-created when the flag is on,
-    
+
     and rejected when it is off.  Known users (already in the store)
     are allowed regardless of the flag.
 
@@ -735,7 +735,7 @@ class TestRootTokenTTL:
 @pytest.mark.scenario_ids("TC-SEC-30-04")
 class TestCreateUserFromToken:
     """Verify that the commondb UserManager correctly creates a user from an
-    
+
     invitation token and raises on invalid or duplicate registrations.
 
     The real create_new_user_from_token implementation requires:
@@ -871,7 +871,7 @@ class TestCreateUserFromToken:
 @pytest.mark.scenario_ids("TC-SEC-30-05")
 class TestRootUserLogin:
     """Verify that a root user can log in for the first time (triggering
-    
+
     create_root_user_from_claims), that subsequent logins succeed, and
     that the stored user key matches the configured root identity.
 

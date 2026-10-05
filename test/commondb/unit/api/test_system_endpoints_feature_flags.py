@@ -68,7 +68,7 @@ def test_router_wiring_supplies_result_class_alongside_command_class(
     router_file: Path,
 ) -> None:
     """Every router.py that wires a delete-all-operational-data command also
-    
+
     wires its result class.
 
     create_system_endpoints asserts both are present whenever the feature

@@ -64,7 +64,7 @@ def test_reset_database_wipes_legacy_schema_and_migrates_to_head(
     connection_string: str,
 ) -> None:
     """A pre-existing schema (incl. stray tables and a bogus Alembic stamp) is
-    
+
     fully wiped by reset_database, then correctly migrated to head, then
     load_demodata successfully loads demo data on top of it."""
     seqdb_enum: ModuleType = importlib.import_module(f"{MODULE_ROOT}.domain.enum")

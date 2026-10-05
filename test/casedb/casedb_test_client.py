@@ -130,7 +130,7 @@ class CasedbTestClient(TestClient):
     ) -> "TestClient":
         """
         Create a test environment for the given test type and repository type. A
-        
+
         single environment, with a common test directory, is kept for each test type.
         """
         if app_cfg.name not in cls.TEST_CLIENTS:
@@ -930,7 +930,7 @@ class CasedbTestClient(TestClient):
     ) -> model.OrganizationAccessCasePolicy:
         """
         Create an organization access case policy with the given parameters.
-        
+
         The name should be in the format "PREFIX_Y_Z" where PREFIX can be any string,
         Y is the organization number, and Z is the data collection number,
         e.g. "policy2_3" for org2 and data_collection3,

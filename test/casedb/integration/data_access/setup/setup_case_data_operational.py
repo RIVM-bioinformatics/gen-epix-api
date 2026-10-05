@@ -53,7 +53,7 @@ def setup_case_data_operational(
 ) -> None:
     """
     Create case types, col infrastructure, data collections, cases, and access
-    
+
     policies for operational data edge case tests.
     """
     root_user = env.get_root_user()

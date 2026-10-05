@@ -577,7 +577,7 @@ def test_clear_repository_content_drops_alembic_tracking_table(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """clear_repository_content(alembic_schema=...) also drops the Alembic
-    
+
     version-tracking table (and its schema), so a subsequent `alembic upgrade
     head` starts from a clean slate instead of thinking migrations already ran."""
     main_file = tmp_path / "clear_alembic.sqlite"

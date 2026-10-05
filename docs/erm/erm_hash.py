@@ -15,7 +15,7 @@ def generate_hash_for_domain_models(
 ) -> str:
     """
     Generates a SHA-256 hash for a list of sorted classes by pickling them to a
-    
+
     temporary file and then hashing the file.
     """
     sorted_model_classes = []

@@ -1511,7 +1511,7 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
 
     def test_null_id_content_hash_with_seq_id_skips_mismatch_error(self) -> None:
         """locus_allele_id_map profile (content_hash=NULL_ID) with seq_id set
-        
+
         does not trigger a mismatch error when the stored hash differs.
 
         The client cannot compute the hash without the locus code map, so
@@ -1561,7 +1561,7 @@ class TestVerifyChildrenSeqProfiles(BaseUploadTestCase):
         self,
     ) -> None:
         """locus_allele_id_map profile (content_hash=NULL_ID) without seq_id
-        
+
         does not trigger a mismatch error when the stored hash differs.
 
         Before the fix, comparing NULL_ID against the real stored hash
@@ -2450,7 +2450,7 @@ class TestConcurrentModificationError(BaseUploadTestCase):
 
     def test_calculate_distances_false_skips_distance_calculation(self) -> None:
         """When calculate_distances=False, _update_profile_distances returns early
-        
+
         without calling app.handle, so no SeqDistance records are created."""
         from gen_epix.seqdb.services.seq.upload_upsert_batch import (
             _update_profile_distances,

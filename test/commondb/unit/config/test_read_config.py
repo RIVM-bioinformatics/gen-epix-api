@@ -291,7 +291,7 @@ def test_sa_sql_without_credentials_fails_closed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """SA_SQL's repository defaults carry a blank pwd; construction must fail
-    
+
     immediately (not silently connect with a known password) when neither a
     settings file nor an environment variable supplies a real credential."""
     monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__UID", raising=False)
@@ -306,7 +306,7 @@ def test_sa_sql_with_credential_env_vars_constructs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Supplying the credential via the standard env var override (as
-    
+
     docker-compose.sql*.yml and test/conftest.py both do) is enough."""
     monkeypatch.setenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__UID", "sa")
     monkeypatch.setenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__PWD", "Your_password123")
@@ -321,7 +321,7 @@ def test_sa_sql_with_complete_connection_string_constructs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A deployment supplying its own complete connection_string (e.g. from
-    
+
     Key Vault) needs no separate pwd."""
     monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__UID", raising=False)
     monkeypatch.delenv("COMMONDB_REPOSITORY__DEFAULTS__PROPS__PWD", raising=False)

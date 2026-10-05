@@ -913,7 +913,7 @@ class TestCrudPermissionTypeMapCompleteness(BaseDomainTestCase):
     def test_delete_all_has_permission_type_map_entry(self) -> None:
         """
         LSP-3650 regression: DELETE_ALL is wired into the generated
-        
+
         DELETE /v1/{entity} endpoint, so a command with this operation is
         dispatched through the PDP permission check. Domain.CRUD_PERMISSION_
         TYPE_MAP lacked an entry for it, causing a KeyError instead of the
@@ -931,7 +931,7 @@ class TestCrudPermissionTypeMapCompleteness(BaseDomainTestCase):
     ) -> None:
         """
         Every CrudOperation that the generic CRUD endpoint generator actually
-        
+
         wires up to a REST endpoint must have a Domain.CRUD_PERMISSION_TYPE_MAP
         entry, since a real request for that endpoint dispatches a command
         with that operation through the PDP permission check. This is the

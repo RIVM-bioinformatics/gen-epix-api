@@ -133,7 +133,7 @@ def test_to_toml_redact_true_scrubs_credentials() -> None:
 
 def test_to_dict_top_level_keys_match_source_file_casing() -> None:
     """Exported keys are lowercase, matching every settings.toml on disk and
-    
+
     the AppCfgSettingsDict/ResolvedAppCfgSettingsDict TypedDict field names —
     not Dynaconf's internal uppercase Settings-object representation, which
     dict(source) would otherwise surface unchanged.

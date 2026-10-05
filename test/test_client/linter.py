@@ -23,7 +23,7 @@ import xlsxwriter
 class Linter:
     """
     This class provides an interface to run linting tools like mypy,
-    
+
     pylint, ruff, isort, and black with predefined settings. The settings are stored
     in the `presets` class attribute as a dictionary.
 

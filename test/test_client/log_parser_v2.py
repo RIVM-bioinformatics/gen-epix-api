@@ -250,7 +250,7 @@ class V2LogParser(LogParser):
     def _log_line_to_record(line: str) -> dict[Key | str, str]:
         """
         Convert a log line to a record, mapping SourceKey to Key where possible.
-        
+
         The nested structure of the log line, with metadata keys and a message key,
         is flattened to a single record. The timestamp is converted to a datetime
         object.

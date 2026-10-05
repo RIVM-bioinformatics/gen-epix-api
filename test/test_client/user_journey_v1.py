@@ -74,7 +74,7 @@ class V1UserJourney(UserJourney):
     ) -> command.Command:
         """
         Contains all the logic to convert a command dict to a command obj,
-        
+
         including logic to convert older formats to current.
         """
         command_class = DOMAIN.get_command_for_name(command_name)
