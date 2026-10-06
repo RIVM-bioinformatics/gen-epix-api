@@ -75,6 +75,30 @@ class CompositeFilter(Filter):
             return getattr(row, key, None)
         return row.get(key, None)
 
+    def _matches_row_with_map(
+        self,
+        row: dict[Hashable, Any | None] | BaseModel,
+        map_fn: list[Callable[[Any], Any]],
+        na_values: set[Any] | None,
+        is_model: bool,
+    ) -> bool:
+        """Match one row using normalized value maps and optional NA values."""
+        # Match, per row and filter, if both key exists, value not null and value matches
+        row_iterator = (
+            self._not_none_row_iterator(row, is_model)
+            if na_values is None
+            else self._not_na_row_iterator(row, na_values, is_model)
+        )
+        mapped_values = (
+            (
+                map_value(row)
+                if child_filter._is_composite
+                else map_value(self._get_row_value(row, child_filter.key, is_model))
+            )
+            for child_filter, map_value in zip(self.filters, map_fn)
+        )
+        return self._match_row(row_iterator, mapped_values) ^ self.invert
+
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         """Validate child-filter cardinality and build matching functions."""
@@ -87,81 +111,123 @@ class CompositeFilter(Filter):
             enum.LogicalOperator.OR,
         }:
             raise AssertionError("operator must be AND or OR for more than 2 filters.")
-        # Generate the function to check if a value matches the composite filter
-        # The function is generated instead of defined to be able to optimize the check
-        # Analogously, generate the function to check if a separate value for each
-        # filter
-        if self.operator == enum.LogicalOperator.NOT:
-            self._match = lambda x: not self.filters[0]._match(x)  # type: ignore
-            self._match_row = lambda x, y: x and not self.filters[0]._match(next(y))  # type: ignore
-        elif self.operator == enum.LogicalOperator.AND:
-            self._match = lambda x: all(filter._match(x) for filter in self.filters)  # type: ignore
-            # TODO: improve performance by not using filter.match_row for nested composite filter
-            self._match_row = lambda x, y: all(  # type: ignore
-                a
-                and (filter.match_row(b) if filter._is_composite else filter._match(b))
-                for a, b, filter in zip(x, y, self.filters)
-            )
-        elif self.operator == enum.LogicalOperator.OR:
-            self._match = lambda x: any(filter._match(x) for filter in self.filters)  # type: ignore
-            # TODO: improve performance by not using filter.match_row for nested composite filter
-            self._match_row = lambda x, y: any(  # type: ignore
-                a
-                and (filter.match_row(b) if filter._is_composite else filter._match(b))
-                for a, b, filter in zip(x, y, self.filters)
-            )
-        elif self.operator == enum.LogicalOperator.XOR:
-            self._match = lambda x: self.filters[0]._match(x) != self.filters[1]._match(  # type: ignore
-                x
-            )
-            self._match_row = lambda x, y: all(x) and self.filters[0]._match(  # type: ignore
-                next(y)  # type: ignore
-            ) != self.filters[
-                1
-            ]._match(
-                next(y)  # type: ignore
-            )
-        elif self.operator == enum.LogicalOperator.NAND:
-            self._match = lambda x: not (  # type: ignore
-                self.filters[0]._match(x) and self.filters[1]._match(x)
-            )
-            self._match_row = lambda x, y: all(x) and not (  # type: ignore
-                self.filters[0]._match(next(y)) and self.filters[1]._match(next(y))  # type: ignore
-            )
-        elif self.operator == enum.LogicalOperator.NOR:
-            self._match = lambda x: not (  # type: ignore
-                self.filters[0]._match(x) or self.filters[1]._match(x)
-            )
-            self._match_row = lambda x, y: all(x) and not (  # type: ignore
-                self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))  # type: ignore
-            )
-        elif self.operator == enum.LogicalOperator.XNOR:
-            self._match = lambda x: self.filters[0]._match(x) == self.filters[1]._match(  # type: ignore
-                x
-            )
-            self._match_row = lambda x, y: all(x) and self.filters[0]._match(  # type: ignore
-                next(y)  # type: ignore
-            ) == self.filters[
-                1
-            ]._match(
-                next(y)  # type: ignore
-            )
-        elif self.operator == enum.LogicalOperator.IMPLIES:
-            self._match = lambda x: (  # type: ignore
-                not self.filters[0]._match(x) or self.filters[1]._match(x)
-            )
-            self._match_row = lambda x, y: all(x) and (  # type: ignore
-                not self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))  # type: ignore
-            )
-        elif self.operator == enum.LogicalOperator.NIMPLIES:
-            self._match = lambda x: (  # type: ignore
-                self.filters[0]._match(x) and not self.filters[1]._match(x)
-            )
-            self._match_row = lambda x, y: all(x) and (  # type: ignore
-                self.filters[0]._match(next(y)) and not self.filters[1]._match(next(y))  # type: ignore
-            )
-
+        self._configure_match_functions()
         return self
+
+    def _configure_match_functions(self) -> None:
+        """Assign optimized value and row matchers for the configured operator."""
+        # Generate functions instead of defining them directly to optimize matching.
+        # Analogously, generate a function for a separate value for each filter.
+        matcher_builders = {
+            enum.LogicalOperator.NOT: self._build_not_matchers,
+            enum.LogicalOperator.AND: self._build_and_matchers,
+            enum.LogicalOperator.OR: self._build_or_matchers,
+            enum.LogicalOperator.XOR: self._build_xor_matchers,
+            enum.LogicalOperator.NAND: self._build_nand_matchers,
+            enum.LogicalOperator.NOR: self._build_nor_matchers,
+            enum.LogicalOperator.XNOR: self._build_xnor_matchers,
+            enum.LogicalOperator.IMPLIES: self._build_implies_matchers,
+            enum.LogicalOperator.NIMPLIES: self._build_nimplies_matchers,
+        }
+        self._match, self._match_row = matcher_builders[self.operator]()
+
+    def _build_not_matchers(self) -> tuple[Callable, Callable]:
+        """Build matchers for the NOT operator."""
+        return (
+            lambda x: not self.filters[0]._match(x),  # type: ignore
+            lambda x, y: x and not self.filters[0]._match(next(y)),  # type: ignore
+        )
+
+    def _build_and_matchers(self) -> tuple[Callable, Callable]:
+        """Build matchers for the AND operator."""
+        # TODO: improve performance by not using filter.match_row for nested composite filter
+        return (
+            lambda x: all(filter._match(x) for filter in self.filters),  # type: ignore
+            lambda x, y: all(  # type: ignore
+                a
+                and (filter.match_row(b) if filter._is_composite else filter._match(b))
+                for a, b, filter in zip(x, y, self.filters)
+            ),
+        )
+
+    def _build_or_matchers(self) -> tuple[Callable, Callable]:
+        """Build matchers for the OR operator."""
+        # TODO: improve performance by not using filter.match_row for nested composite filter
+        return (
+            lambda x: any(filter._match(x) for filter in self.filters),  # type: ignore
+            lambda x, y: any(  # type: ignore
+                a
+                and (filter.match_row(b) if filter._is_composite else filter._match(b))
+                for a, b, filter in zip(x, y, self.filters)
+            ),
+        )
+
+    def _build_xor_matchers(self) -> tuple[Callable, Callable]:
+        """Build matchers for the XOR operator."""
+        return (
+            lambda x: self.filters[0]._match(x)
+            != self.filters[1]._match(x),  # type: ignore
+            lambda x, y: all(x)
+            and self.filters[0]._match(  # type: ignore
+                next(y)  # type: ignore
+            )
+            != self.filters[1]._match(next(y)),  # type: ignore
+        )
+
+    def _build_nand_matchers(self) -> tuple[Callable, Callable]:
+        """Build matchers for the NAND operator."""
+        return (
+            lambda x: not (  # type: ignore
+                self.filters[0]._match(x) and self.filters[1]._match(x)
+            ),
+            lambda x, y: all(x)
+            and not (  # type: ignore
+                self.filters[0]._match(next(y)) and self.filters[1]._match(next(y))  # type: ignore
+            ),
+        )
+
+    def _build_nor_matchers(self) -> tuple[Callable, Callable]:
+        """Build matchers for the NOR operator."""
+        return (
+            lambda x: not (  # type: ignore
+                self.filters[0]._match(x) or self.filters[1]._match(x)
+            ),
+            lambda x, y: all(x)
+            and not (  # type: ignore
+                self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))  # type: ignore
+            ),
+        )
+
+    def _build_xnor_matchers(self) -> tuple[Callable, Callable]:
+        """Build matchers for the XNOR operator."""
+        return (
+            lambda x: self.filters[0]._match(x) == self.filters[1]._match(x),  # type: ignore
+            lambda x, y: all(x)
+            and self.filters[0]._match(  # type: ignore
+                next(y)  # type: ignore
+            )
+            == self.filters[1]._match(next(y)),  # type: ignore
+        )
+
+    def _build_implies_matchers(self) -> tuple[Callable, Callable]:
+        """Build matchers for the IMPLIES operator."""
+        return (
+            lambda x: not self.filters[0]._match(x) or self.filters[1]._match(x),  # type: ignore
+            lambda x, y: all(x)
+            and (  # type: ignore
+                not self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))  # type: ignore
+            ),
+        )
+
+    def _build_nimplies_matchers(self) -> tuple[Callable, Callable]:
+        """Build matchers for the NIMPLIES operator."""
+        return (
+            lambda x: self.filters[0]._match(x) and not self.filters[1]._match(x),  # type: ignore
+            lambda x, y: all(x)
+            and (  # type: ignore
+                self.filters[0]._match(next(y)) and not self.filters[1]._match(next(y))  # type: ignore
+            ),
+        )
 
     def _match(self, value: Any) -> bool:
         """Match a value using the function generated during validation.
@@ -433,44 +499,12 @@ class CompositeFilter(Filter):
         Raises:
             ValueError: If a child filter lacks a row key or mappings are invalid.
         """
-        # Match, per row and filter, if both key exists, value not null and value matches
         if not self._all_subfilters_have_key():
             raise ValueError(_ROW_FILTER_KEY_REQUIRED)
         map_fn = self._get_map_fun_list(map_fn)
-        if na_values is None:
-            for row in rows:
-                if (
-                    self._match_row(
-                        self._not_none_row_iterator(row, is_model),
-                        (
-                            (
-                                y(row)
-                                if x._is_composite
-                                else y(self._get_row_value(row, x.key, is_model))
-                            )
-                            for x, y in zip(self.filters, map_fn)
-                        ),
-                    )
-                    ^ self.invert
-                ):
-                    yield row
-        else:
-            for row in rows:
-                if (
-                    self._match_row(
-                        self._not_na_row_iterator(row, na_values, is_model),
-                        (
-                            (
-                                y(row)
-                                if x._is_composite
-                                else y(self._get_row_value(row, x.key, is_model))
-                            )
-                            for x, y in zip(self.filters, map_fn)
-                        ),
-                    )
-                    ^ self.invert
-                ):
-                    yield row
+        for row in rows:
+            if self._matches_row_with_map(row, map_fn, na_values, is_model):
+                yield row
 
     def get_keys(self) -> list[Hashable]:
         """Return leaf-filter keys in traversal order."""

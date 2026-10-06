@@ -596,31 +596,28 @@ class SampleUploadResult(ParentUploadResult):
     def get_errors(self) -> list[LogItem]:
         """Get all data issues that are errors."""
         log_items = super().get_errors()
-        if self.identifiers:
-            for identifier_result in self.identifiers:
-                log_items.extend(identifier_result.get_errors())
-        if self.read_sets:
-            for read_set_result in self.read_sets:
-                log_items.extend(read_set_result.get_errors())
-        if self.seqs:
-            for seq_result in self.seqs:
-                log_items.extend(seq_result.get_errors())
-        if self.seq_taxonomies:
-            for seq_taxonomy_result in self.seq_taxonomies:
-                log_items.extend(seq_taxonomy_result.get_errors())
-        if self.seq_classifications:
-            for seq_classification_result in self.seq_classifications:
-                log_items.extend(seq_classification_result.get_errors())
-        if self.seq_profiles:
-            for seq_profile_result in self.seq_profiles:
-                log_items.extend(seq_profile_result.get_errors())
-        if self.pcr_measurements:
-            for pcr_measurement_result in self.pcr_measurements:
-                log_items.extend(pcr_measurement_result.get_errors())
-        if self.ast_measurements:
-            for ast_measurement_result in self.ast_measurements:
-                log_items.extend(ast_measurement_result.get_errors())
+        result_groups = (
+            self.identifiers,
+            self.read_sets,
+            self.seqs,
+            self.seq_taxonomies,
+            self.seq_classifications,
+            self.seq_profiles,
+            self.pcr_measurements,
+            self.ast_measurements,
+        )
+        for results in result_groups:
+            _extend_upload_result_errors(log_items, results)
         return log_items
+
+
+def _extend_upload_result_errors(
+    log_items: list[LogItem], results: Iterable[UploadResult] | None
+) -> None:
+    """Append errors from a child-result group in its existing order."""
+    if results:
+        for result in results:
+            log_items.extend(result.get_errors())
 
 
 class SampleBatchForUpload(BaseBatchForUpload):

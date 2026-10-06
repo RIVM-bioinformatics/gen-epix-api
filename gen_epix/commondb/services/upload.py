@@ -594,21 +594,41 @@ class BatchUploader:
         parent_exists: bool,
     ) -> bool:
         if parent_exists:
-            parent_result.id = parent_for_upload.id
-            if cmd.on_exists == UploadAction.ERROR:
-                parent_result.add_error(
-                    "1e5e22b3",
-                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
-                )
-                return False
-            if cmd.on_exists == UploadAction.SKIP:
-                # Existing parent and on_exists=SKIP: do not update
-                parent_result.status = EtlStatus.SKIPPED
-                parent_result.add_info(
-                    "a7c3f42e",
-                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
-                )
-            return True
+            return self._apply_existing_parent_action(
+                cmd, parent_for_upload, parent_result
+            )
+        return self._apply_new_parent_action(cmd, parent_for_upload, parent_result)
+
+    def _apply_existing_parent_action(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        parent_for_upload: model.ParentForUpload,
+        parent_result: model.ParentUploadResult,
+    ) -> bool:
+        """Apply on-exists behavior to one existing parent."""
+        parent_result.id = parent_for_upload.id
+        if cmd.on_exists == UploadAction.ERROR:
+            parent_result.add_error(
+                "1e5e22b3",
+                f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+            )
+            return False
+        if cmd.on_exists == UploadAction.SKIP:
+            # Existing parent and on_exists=SKIP: do not update.
+            parent_result.status = EtlStatus.SKIPPED
+            parent_result.add_info(
+                "a7c3f42e",
+                f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+            )
+        return True
+
+    def _apply_new_parent_action(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        parent_for_upload: model.ParentForUpload,
+        parent_result: model.ParentUploadResult,
+    ) -> bool:
+        """Apply on-new behavior to one parent that does not exist."""
         parent_result.is_new = True
         if cmd.on_new == UploadAction.ERROR:
             parent_result.add_error(
@@ -945,24 +965,45 @@ class BatchUploader:
     ) -> bool:
         """Apply on-exists or on-new behavior to one child result."""
         if child_exists:
-            # Child already exists
-            if cmd.on_exists == UploadAction.ERROR:
-                child_result.add_error(
-                    "c351c931",
-                    f"{child_for_upload.__class__.NAME} already exists and "
-                    f"on_exists={cmd.on_exists.value}",
-                )
-                return False
-            if cmd.on_exists == UploadAction.SKIP:
-                # Existing child and on_exists=SKIP: do not update
-                child_result.status = EtlStatus.SKIPPED
-                child_result.add_info(
-                    "7a3f2c81",
-                    f"{child_for_upload.__class__.NAME} already exists and "
-                    f"on_exists={cmd.on_exists.value}",
-                )
-            return True
-        # Child does not exist yet
+            return self._apply_existing_child_action(
+                cmd, child_for_upload, child_result
+            )
+        return self._apply_new_child_action(
+            cmd, child_for_upload, child_id, child_result
+        )
+
+    def _apply_existing_child_action(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        child_for_upload: Model,
+        child_result: UploadResult,
+    ) -> bool:
+        """Apply on-exists behavior to one existing child."""
+        if cmd.on_exists == UploadAction.ERROR:
+            child_result.add_error(
+                "c351c931",
+                f"{child_for_upload.__class__.NAME} already exists and "
+                f"on_exists={cmd.on_exists.value}",
+            )
+            return False
+        if cmd.on_exists == UploadAction.SKIP:
+            # Existing child and on_exists=SKIP: do not update.
+            child_result.status = EtlStatus.SKIPPED
+            child_result.add_info(
+                "7a3f2c81",
+                f"{child_for_upload.__class__.NAME} already exists and "
+                f"on_exists={cmd.on_exists.value}",
+            )
+        return True
+
+    def _apply_new_child_action(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        child_for_upload: Model,
+        child_id: UUID | None,
+        child_result: UploadResult,
+    ) -> bool:
+        """Apply on-new behavior to one child that does not exist."""
         if cmd.on_new == UploadAction.ERROR:
             child_result.add_error(
                 "2824fa39",
@@ -1391,43 +1432,58 @@ class BatchUploader:
                 obj_for_upload.identifiers or [],
                 obj_result.identifiers or [],
             ):
-                obj_id = getattr(obj_for_upload, obj_id_field_name)
-                if identifier_result.status != EtlStatus.PENDING:
-                    # Not pending (likely skipped or failed), no need to check existence
-                    continue
-                assert identifier_for_upload.identifier_issuer_id is not None
-                key: tuple[UUID, str] = (
-                    identifier_for_upload.identifier_issuer_id,
-                    identifier_for_upload.external_id,
+                success &= self._verify_identifier_for_object(
+                    model_class,
+                    obj_id_field_name,
+                    obj_for_upload,
+                    obj_result,
+                    identifier_for_upload,
+                    identifier_result,
+                    existing_identifier_map,
                 )
-                if key not in existing_identifier_map:
-                    # Identifier does not exist
-                    identifier_result.is_new = True
-                    continue
-                # Identifier already exists
-                existing_identifier = existing_identifier_map[key]
-                identifier_result.id = existing_identifier.id
-                identifier_result.status = EtlStatus.SKIPPED
-                # Cross-validate with object ID if given
-                if self.is_null(obj_id):
-                    # Object does not exist yet, fill in object ID
-                    setattr(
-                        obj_for_upload,
-                        obj_id_field_name,
-                        existing_identifier.internal_id,
-                    )
-                    obj_result.id = existing_identifier.internal_id
-                else:
-                    # Object already exists
-                    obj_result.id = obj_id
-                    if existing_identifier.internal_id != obj_id:
-                        success = False
-                        identifier_result.add_error(
-                            "0561ecd7",
-                            f"{model_class.NAME} Identifier ({identifier_for_upload.identifier_issuer_id}, {identifier_for_upload.external_id}) refers to internal_id={existing_identifier.internal_id}, which does not match {obj_id_field_name}={obj_id}",
-                        )
 
         return success
+
+    def _verify_identifier_for_object(
+        self,
+        model_class: type[Model],
+        obj_id_field_name: str,
+        obj_for_upload: model.IdentifiersMixin,
+        obj_result: model.UploadResultWithIdentifiers,
+        identifier_for_upload: model.IdentifierForUpload,
+        identifier_result: UploadResult,
+        existing_identifier_map: dict[tuple[UUID, str], model.BaseIdentifier],
+    ) -> bool:
+        """Apply one identifier's existence and object-ID verification result."""
+        obj_id = getattr(obj_for_upload, obj_id_field_name)
+        if identifier_result.status != EtlStatus.PENDING:
+            # Not pending (likely skipped or failed), no need to check existence.
+            return True
+        assert identifier_for_upload.identifier_issuer_id is not None
+        key = (
+            identifier_for_upload.identifier_issuer_id,
+            identifier_for_upload.external_id,
+        )
+        existing_identifier = existing_identifier_map.get(key)
+        if existing_identifier is None:
+            identifier_result.is_new = True
+            return True
+
+        identifier_result.id = existing_identifier.id
+        identifier_result.status = EtlStatus.SKIPPED
+        if self.is_null(obj_id):
+            setattr(obj_for_upload, obj_id_field_name, existing_identifier.internal_id)
+            obj_result.id = existing_identifier.internal_id
+            return True
+
+        obj_result.id = obj_id
+        if existing_identifier.internal_id == obj_id:
+            return True
+        identifier_result.add_error(
+            "0561ecd7",
+            f"{model_class.NAME} Identifier ({identifier_for_upload.identifier_issuer_id}, {identifier_for_upload.external_id}) refers to internal_id={existing_identifier.internal_id}, which does not match {obj_id_field_name}={obj_id}",
+        )
+        return False
 
     def create_parent_identifiers(
         self,
@@ -1633,167 +1689,257 @@ class BatchUploader:
         if not parent_result_pairs:
             return success
 
-        # Initialize some data
-        id_code_tuples = list(
-            {
-                (getattr(y, link_id_field_name), getattr(y, link_code_field_name))
-                for x, _ in parent_result_pairs
-                for y in getattr(x, child_field_name) or []
-            }
+        ids, codes = self._get_link_lookup_values(
+            parent_result_pairs,
+            child_field_name,
+            link_id_field_name,
+            link_code_field_name,
         )
-        ids = {x[0] for x in id_code_tuples if not self.is_null(x[0])}
-        codes = {x[1] for x in id_code_tuples if x[1] is not None}
-        id_code_map: dict[UUID, str] = {}
-        code_id_map: dict[str, UUID] = {}
-
-        # Retrieve links from child model provided by ID and/or code
-        if not ids and not codes:
-            # No IDs or codes provided, nothing to look up (but NULL_ID still has to be verified)
-            pass
-        elif is_same_service:
-            # Same service: use repository directly
-            result_iter = self.service.repository.read_fields(
-                uow,
-                user.id if user else None,
-                linked_model_class,
-                [linked_model_id_field_name, linked_model_code_field_name],
-                filter=CompositeFilter(
-                    operator=LogicalOperator.OR,
-                    filters=[
-                        UuidSetFilter(
-                            key=linked_model_id_field_name, members=frozenset(ids)
-                        ),
-                        StringSetFilter(
-                            key=linked_model_code_field_name, members=frozenset(codes)
-                        ),
-                    ],
-                ),
-            )
-            id_code_map = {x[0]: x[1] for x in result_iter}
-            code_id_map = {y: x for x, y in id_code_map.items()}
-        else:
-            # Different service: issue a command
-            crud_command_class = self.service.app.domain.get_crud_command_for_model(
-                linked_model_class
-            )
-            link_objs: list[Model] = self.service.app.handle(
-                crud_command_class(
-                    user=user,
-                    operation=CrudOperation.READ_ALL,
-                    query_filter=CompositeFilter(
-                        operator=LogicalOperator.OR,
-                        filters=[
-                            UuidSetFilter(
-                                key=linked_model_id_field_name, members=frozenset(ids)
-                            ),
-                            StringSetFilter(
-                                key=linked_model_code_field_name,
-                                members=frozenset(codes),
-                            ),
-                        ],
-                    ),
-                )
-            )
-            id_code_map = {
-                getattr(x, linked_model_id_field_name): getattr(
-                    x, linked_model_code_field_name
-                )
-                for x in link_objs
-            }
-            code_id_map = {
-                getattr(x, linked_model_code_field_name): getattr(
-                    x, linked_model_id_field_name
-                )
-                for x in link_objs
-            }
-
-        # Verify links
-        link_msg_part = (
-            f"link to {linked_model_class.NAME}.{linked_model_id_field_name}"
+        id_code_map, code_id_map = self._get_link_id_code_maps(
+            uow,
+            user,
+            linked_model_class,
+            linked_model_id_field_name,
+            linked_model_code_field_name,
+            ids,
+            codes,
+            is_same_service,
         )
         for parent, parent_result in parent_result_pairs:
             children_for_upload: list[Model] = getattr(parent, child_field_name) or []
             child_results: list[UploadResult] = (
                 getattr(parent_result, child_field_name) or []
             )
-            for i, (child_for_upload, child_result) in enumerate(
+            for child_index, (child_for_upload, child_result) in enumerate(
                 zip(children_for_upload, child_results)
             ):
-                # Get link ID and code
-                link_id = getattr(child_for_upload, link_id_field_name)
-                is_null_id = link_id == NULL_ID
-                if is_null_id:
-                    link_id = None
-                link_code = getattr(child_for_upload, link_code_field_name)
-                # Check all combinations of link ID and code provided/not provided
-                if link_id is None:
-                    # Link ID not provided
-                    if link_code is None:
-                        # Neither link ID nor code provided
-                        if is_null_id:
-                            # NULL_ID provided: error since eventual ID may not be NULL_ID
-                            success = False
-                            child_result.add_error(
-                                "1e496cee",
-                                f"{child_for_upload.__class__.NAME}.{link_id_field_name}=NULL_ID {link_msg_part} could not be resolved",
-                            )
-                        else:
-                            # Nothing provided: optional link assumed, nothing to do
-                            pass
-                    else:
-                        # Link code provided but not link ID
-                        if link_code not in code_id_map:
-                            # Link code does not exist
-                            success = False
-                            child_result.add_error(
-                                "ff4ff6db",
-                                f"{child_for_upload.__class__.NAME}.{link_code_field_name}={link_code} link to {linked_model_class.NAME}.{linked_model_code_field_name} does not exist",
-                            )
-                        else:
-                            # Link code exists: fill in link ID
-                            if is_frozen:
-                                # Need to create a new instance since the class is frozen
-                                new_child = child_for_upload.model_copy(
-                                    update={link_id_field_name: code_id_map[link_code]}
-                                )
-                                children_for_upload[i] = new_child
-                            else:
-                                # Not a frozen class, can set attribute directly
-                                setattr(
-                                    child_for_upload,
-                                    link_id_field_name,
-                                    code_id_map[link_code],
-                                )
-                else:
-                    # Link ID provided
-                    if link_id not in id_code_map:
-                        # Link ID does not exist
-                        success = False
-                        child_result.add_error(
-                            "dec840ca",
-                            f"{child_for_upload.__class__.NAME}.{link_id_field_name}={link_id} link to {linked_model_class.NAME}.{linked_model_id_field_name} does not exist",
-                        )
-                    elif link_code is None:
-                        # Link ID exists and code not given: nothing to do since code is only meant to look up ID
-                        pass
-                    elif link_code not in code_id_map:
-                        # Link code does not exist
-                        success = False
-                        child_result.add_error(
-                            "95558de7",
-                            f"{child_for_upload.__class__.NAME}.{link_code_field_name}={link_code} link to {linked_model_class.NAME}.{linked_model_code_field_name} does not exist",
-                        )
-                    elif link_code != id_code_map[link_id]:
-                        # Link ID exists but code does not match provided code
-                        success = False
-                        child_result.add_error(
-                            "79de83f2",
-                            f"{child_for_upload.__class__.NAME}.{linked_model_code_field_name}={link_code} with {linked_model_class.NAME}.{linked_model_id_field_name}={code_id_map[link_code]} does not match provided {child_for_upload.__class__.NAME}.{link_id_field_name}={link_id}",
-                        )
-                    else:
-                        # Link ID and code both exist and match: nothing to do
-                        pass
+                success &= self._verify_one_link(
+                    children_for_upload,
+                    child_index,
+                    child_for_upload,
+                    child_result,
+                    link_id_field_name,
+                    link_code_field_name,
+                    linked_model_class,
+                    linked_model_id_field_name,
+                    linked_model_code_field_name,
+                    id_code_map,
+                    code_id_map,
+                    is_frozen,
+                )
         return success
+
+    @staticmethod
+    def _get_link_lookup_values(
+        parent_result_pairs: list[tuple[Model, model.UploadResult]],
+        child_field_name: str,
+        link_id_field_name: str,
+        link_code_field_name: str,
+    ) -> tuple[set[UUID], set[str]]:
+        """Collect non-null link IDs and provided codes for a bulk lookup."""
+        id_code_tuples = {
+            (getattr(child, link_id_field_name), getattr(child, link_code_field_name))
+            for parent, _ in parent_result_pairs
+            for child in getattr(parent, child_field_name) or []
+        }
+        ids = {
+            cast(UUID, link_id)
+            for link_id, _ in id_code_tuples
+            if not BatchUploader.is_null(cast(UUID | None, link_id))
+        }
+        codes = {code for _, code in id_code_tuples if code is not None}
+        return ids, codes
+
+    def _get_link_id_code_maps(
+        self,
+        uow: fastapp.BaseUnitOfWork,
+        user: model.User | None,
+        linked_model_class: type[Model],
+        linked_model_id_field_name: str,
+        linked_model_code_field_name: str,
+        ids: set[UUID],
+        codes: set[str],
+        is_same_service: bool,
+    ) -> tuple[dict[UUID, str], dict[str, UUID]]:
+        """Retrieve linked models and index them by ID and code."""
+        if not ids and not codes:
+            # NULL_ID still needs verification, but no lookup is needed.
+            return {}, {}
+        query_filter = CompositeFilter(
+            operator=LogicalOperator.OR,
+            filters=[
+                UuidSetFilter(key=linked_model_id_field_name, members=frozenset(ids)),
+                StringSetFilter(
+                    key=linked_model_code_field_name, members=frozenset(codes)
+                ),
+            ],
+        )
+        if is_same_service:
+            result_iter = self.service.repository.read_fields(
+                uow,
+                user.id if user else None,
+                linked_model_class,
+                [linked_model_id_field_name, linked_model_code_field_name],
+                filter=query_filter,
+            )
+            id_code_map = {row[0]: row[1] for row in result_iter}
+            return id_code_map, {code: link_id for link_id, code in id_code_map.items()}
+
+        crud_command_class = self.service.app.domain.get_crud_command_for_model(
+            linked_model_class
+        )
+        link_objs: list[Model] = self.service.app.handle(
+            crud_command_class(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+                query_filter=query_filter,
+            )
+        )
+        id_code_map = {
+            getattr(link_obj, linked_model_id_field_name): getattr(
+                link_obj, linked_model_code_field_name
+            )
+            for link_obj in link_objs
+        }
+        code_id_map = {
+            getattr(link_obj, linked_model_code_field_name): getattr(
+                link_obj, linked_model_id_field_name
+            )
+            for link_obj in link_objs
+        }
+        return id_code_map, code_id_map
+
+    def _verify_one_link(
+        self,
+        children_for_upload: list[Model],
+        child_index: int,
+        child_for_upload: Model,
+        child_result: UploadResult,
+        link_id_field_name: str,
+        link_code_field_name: str,
+        linked_model_class: type[Model],
+        linked_model_id_field_name: str,
+        linked_model_code_field_name: str,
+        id_code_map: dict[UUID, str],
+        code_id_map: dict[str, UUID],
+        is_frozen: bool,
+    ) -> bool:
+        """Verify one ID/code pair and resolve an ID when only its code is given."""
+        link_id = getattr(child_for_upload, link_id_field_name)
+        is_null_id = link_id == NULL_ID
+        if is_null_id:
+            link_id = None
+        link_code = getattr(child_for_upload, link_code_field_name)
+        if link_id is None:
+            return self._resolve_link_id_from_code(
+                children_for_upload,
+                child_index,
+                child_for_upload,
+                child_result,
+                link_id_field_name,
+                link_code_field_name,
+                linked_model_class,
+                linked_model_id_field_name,
+                linked_model_code_field_name,
+                link_code,
+                is_null_id,
+                code_id_map,
+                is_frozen,
+            )
+        return self._verify_provided_link_id(
+            child_for_upload,
+            child_result,
+            link_id,
+            link_code,
+            link_id_field_name,
+            link_code_field_name,
+            linked_model_class,
+            linked_model_id_field_name,
+            linked_model_code_field_name,
+            id_code_map,
+            code_id_map,
+        )
+
+    def _resolve_link_id_from_code(
+        self,
+        children_for_upload: list[Model],
+        child_index: int,
+        child_for_upload: Model,
+        child_result: UploadResult,
+        link_id_field_name: str,
+        link_code_field_name: str,
+        linked_model_class: type[Model],
+        linked_model_id_field_name: str,
+        linked_model_code_field_name: str,
+        link_code: str | None,
+        is_null_id: bool,
+        code_id_map: dict[str, UUID],
+        is_frozen: bool,
+    ) -> bool:
+        """Resolve an omitted link ID from its code, if one was supplied."""
+        link_msg_part = (
+            f"link to {linked_model_class.NAME}.{linked_model_id_field_name}"
+        )
+        if link_code is None:
+            if not is_null_id:
+                return True
+            child_result.add_error(
+                "1e496cee",
+                f"{child_for_upload.__class__.NAME}.{link_id_field_name}=NULL_ID {link_msg_part} could not be resolved",
+            )
+            return False
+        if link_code not in code_id_map:
+            child_result.add_error(
+                "ff4ff6db",
+                f"{child_for_upload.__class__.NAME}.{link_code_field_name}={link_code} link to {linked_model_class.NAME}.{linked_model_code_field_name} does not exist",
+            )
+            return False
+        resolved_link_id = code_id_map[link_code]
+        if is_frozen:
+            # Frozen models require replacing the child instance in its parent list.
+            children_for_upload[child_index] = child_for_upload.model_copy(
+                update={link_id_field_name: resolved_link_id}
+            )
+        else:
+            setattr(child_for_upload, link_id_field_name, resolved_link_id)
+        return True
+
+    @staticmethod
+    def _verify_provided_link_id(
+        child_for_upload: Model,
+        child_result: UploadResult,
+        link_id: UUID,
+        link_code: str | None,
+        link_id_field_name: str,
+        link_code_field_name: str,
+        linked_model_class: type[Model],
+        linked_model_id_field_name: str,
+        linked_model_code_field_name: str,
+        id_code_map: dict[UUID, str],
+        code_id_map: dict[str, UUID],
+    ) -> bool:
+        """Validate a supplied link ID and optional matching code."""
+        if link_id not in id_code_map:
+            child_result.add_error(
+                "dec840ca",
+                f"{child_for_upload.__class__.NAME}.{link_id_field_name}={link_id} link to {linked_model_class.NAME}.{linked_model_id_field_name} does not exist",
+            )
+            return False
+        if link_code is None:
+            return True
+        if link_code not in code_id_map:
+            child_result.add_error(
+                "95558de7",
+                f"{child_for_upload.__class__.NAME}.{link_code_field_name}={link_code} link to {linked_model_class.NAME}.{linked_model_code_field_name} does not exist",
+            )
+            return False
+        if link_code != id_code_map[link_id]:
+            child_result.add_error(
+                "79de83f2",
+                f"{child_for_upload.__class__.NAME}.{linked_model_code_field_name}={link_code} with {linked_model_class.NAME}.{linked_model_id_field_name}={code_id_map[link_code]} does not match provided {child_for_upload.__class__.NAME}.{link_id_field_name}={link_id}",
+            )
+            return False
+        return True
 
     def retrieve_parent_id_by_intra_parent_linked_child_id(
         self,
@@ -1911,39 +2057,18 @@ class BatchUploader:
                 obj_id = self.service.generate_id()
                 setattr(obj, obj_id_field_name, obj_id)  # type: ignore[assignment]
         try:
-            if is_same_service:
-                created_obj_ids: list[UUID] = self.service.repository.crud(
-                    uow,
-                    user_id,
-                    model_class,
-                    CrudOperation.CREATE_SOME,
-                    objs=to_create_objs,
-                    return_id=True,  # Avoid returning the whole object list again
-                )
-            else:
-                crud_command_class = self.service.app.domain.get_crud_command_for_model(
-                    model_class
-                )
-                created_obj_ids = self.service.app.handle(
-                    crud_command_class(
-                        user=user,
-                        operation=CrudOperation.CREATE_SOME,
-                        objs=to_create_objs,
-                        return_id=True,  # Avoid returning the whole object list again
-                    )
-                )
+            created_obj_ids = self._create_objects_in_service(
+                uow,
+                user_id,
+                model_class,
+                to_create_objs,
+                is_same_service,
+                user,
+            )
         except DuplicateIdsError as exc_:
-            # TODO [LSP-3357] check how it is possible that these errors occur here
-            duplicate_ids = set(exc_.ids) if exc_.ids else set()
-            obj_id_field_name_local = model_class.ENTITY.get_id_field_name()
-            for obj, obj_result in to_create_obj_result_pairs:
-                if getattr(obj, obj_id_field_name_local) in duplicate_ids:
-                    obj_result.add_error(
-                        "c9d0e1f2",
-                        f"{model_class.NAME} id={getattr(obj, obj_id_field_name_local)} "
-                        "is a duplicate and could not be created.",
-                    )
-            return False
+            return self._mark_duplicate_created_objects(
+                model_class, to_create_obj_result_pairs, exc_
+            )
 
         # Assign object ID and status to results
         for created_obj_id, (_, obj_result) in zip(
@@ -1953,6 +2078,57 @@ class BatchUploader:
             obj_result.status = EtlStatus.CREATED
 
         return success
+
+    def _create_objects_in_service(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        model_class: type[Model],
+        to_create_objs: list[Model],
+        is_same_service: bool,
+        user: model.User | None,
+    ) -> list[UUID]:
+        """Create objects locally or dispatch creation to their owning service."""
+        if is_same_service:
+            return self.service.repository.crud(
+                uow,
+                user_id,
+                model_class,
+                CrudOperation.CREATE_SOME,
+                objs=to_create_objs,
+                return_id=True,  # Avoid returning the whole object list again
+            )
+        crud_command_class = self.service.app.domain.get_crud_command_for_model(
+            model_class
+        )
+        return self.service.app.handle(
+            crud_command_class(
+                user=user,
+                operation=CrudOperation.CREATE_SOME,
+                objs=to_create_objs,
+                return_id=True,  # Avoid returning the whole object list again
+            )
+        )
+
+    @staticmethod
+    def _mark_duplicate_created_objects(
+        model_class: type[Model],
+        to_create_obj_result_pairs: list[tuple[Model, UploadResult]],
+        error: DuplicateIdsError,
+    ) -> bool:
+        """Mark results for objects rejected by a duplicate-ID create error."""
+        # TODO [LSP-3357] check how it is possible that these errors occur here
+        duplicate_ids = set(error.ids) if error.ids else set()
+        obj_id_field_name = model_class.ENTITY.get_id_field_name()
+        for obj, obj_result in to_create_obj_result_pairs:
+            obj_id = getattr(obj, obj_id_field_name)
+            if obj_id in duplicate_ids:
+                obj_result.add_error(
+                    "c9d0e1f2",
+                    f"{model_class.NAME} id={obj_id} "
+                    "is a duplicate and could not be created.",
+                )
+        return False
 
     def update_objects(
         self,

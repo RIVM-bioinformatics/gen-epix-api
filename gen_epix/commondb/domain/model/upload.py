@@ -791,8 +791,16 @@ class BaseBatchForUpload(Model):
     @model_validator(mode="after")
     def _validate_parent_ids(self) -> Self:
         """Validate unique parent IDs and external identifiers."""
-        # Verify duplicate parent IDs
         parents_for_upload = self.get_parents_for_upload()
+        self._validate_unique_parent_ids(parents_for_upload)
+        self._validate_unique_parent_identifiers(parents_for_upload)
+        return self
+
+    @staticmethod
+    def _validate_unique_parent_ids(
+        parents_for_upload: list[ParentForUpload],
+    ) -> None:
+        """Reject duplicate non-null parent IDs in one upload batch."""
         parent_ids = [
             x.id for x in parents_for_upload if x.id is not None and x.id != NULL_ID
         ]
@@ -804,6 +812,12 @@ class BaseBatchForUpload(Model):
             raise ValueError(
                 f"Duplicate parent IDs found in batch: {duplicate_ids_str}"
             )
+
+    @staticmethod
+    def _validate_unique_parent_identifiers(
+        parents_for_upload: list[ParentForUpload],
+    ) -> None:
+        """Reject parent identifiers repeated across upload items."""
         # Verify duplicate parent identifiers
         seen_parent_identifiers: set[IdentifierForUpload] = set()
         for parent_for_upload in parents_for_upload:
@@ -814,7 +828,6 @@ class BaseBatchForUpload(Model):
                 seen_parent_identifiers.update(parent_identifiers)
             else:
                 raise ValueError("Duplicate parent identifiers found in batch.")
-        return self
 
     @model_validator(mode="after")
     def _validate_child_ids(self) -> Self:
@@ -845,19 +858,42 @@ class BaseBatchForUpload(Model):
             for parent in self.get_parents_for_upload()
             for child in (getattr(parent, children_field_name) or [])
         ]
-        seen_child_identifiers: set[IdentifierForUpload] = set()
-        has_identifiers = issubclass(child_model_class, IdentifiersMixin)
-        # Add all IDs and identifiers
+        self._validate_unique_child_ids(
+            children_for_upload,
+            child_id_field_name,
+            children_field_name,
+            seen_child_ids,
+        )
+        if issubclass(child_model_class, IdentifiersMixin):
+            self._validate_unique_child_identifiers(
+                children_for_upload, children_field_name
+            )
+
+    @staticmethod
+    def _validate_unique_child_ids(
+        children_for_upload: list[Model],
+        child_id_field_name: str,
+        children_field_name: str,
+        seen_child_ids: set[UUID],
+    ) -> None:
+        """Reject duplicate non-null child IDs across all child model types."""
         for child_for_upload in children_for_upload:
             child_id = getattr(child_for_upload, child_id_field_name)
-            if child_id is not None and child_id != NULL_ID:
-                if child_id in seen_child_ids:
-                    raise ValueError(
-                        f"Duplicate child ID {child_id} found in batch in field {children_field_name}."
-                    )
-                seen_child_ids.add(child_id)
-            if not has_identifiers:
+            if child_id is None or child_id == NULL_ID:
                 continue
+            if child_id in seen_child_ids:
+                raise ValueError(
+                    f"Duplicate child ID {child_id} found in batch in field {children_field_name}."
+                )
+            seen_child_ids.add(child_id)
+
+    @staticmethod
+    def _validate_unique_child_identifiers(
+        children_for_upload: list[Model], children_field_name: str
+    ) -> None:
+        """Reject duplicate external identifiers among children of one type."""
+        seen_child_identifiers: set[IdentifierForUpload] = set()
+        for child_for_upload in children_for_upload:
             assert isinstance(child_for_upload, IdentifiersMixin)
             if not child_for_upload.identifiers:
                 continue

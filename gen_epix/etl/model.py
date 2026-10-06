@@ -18,6 +18,7 @@ round-trip as the base class.
 """
 
 import uuid
+from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from typing import Annotated, Any, ClassVar, Self, TypeVar
 from uuid import UUID
@@ -665,21 +666,21 @@ class JobResult(Result):
         n_transformed_ok = n_transformed_failed = 0
         n_loaded_ok = n_loaded_failed = 0
         for batch in batches:
-            for extract in batch.extract_results:
-                if extract.is_success():
-                    n_extracted_ok += 1
-                else:
-                    n_extracted_failed += 1
-            for transform in batch.transform_results:
-                if transform.is_success():
-                    n_transformed_ok += 1
-                else:
-                    n_transformed_failed += 1
-            for load in batch.load_results:
-                if load.status in not_failed_load:
-                    n_loaded_ok += 1
-                else:
-                    n_loaded_failed += 1
+            extracted = self._count_result_outcomes(
+                batch.extract_results, lambda result: result.is_success()
+            )
+            transformed = self._count_result_outcomes(
+                batch.transform_results, lambda result: result.is_success()
+            )
+            loaded = self._count_result_outcomes(
+                batch.load_results, lambda result: result.status in not_failed_load
+            )
+            n_extracted_ok += extracted[0]
+            n_extracted_failed += extracted[1]
+            n_transformed_ok += transformed[0]
+            n_transformed_failed += transformed[1]
+            n_loaded_ok += loaded[0]
+            n_loaded_failed += loaded[1]
         return {
             "etl_name": self.etl_name,
             "job_id": self.job_id,
@@ -694,3 +695,16 @@ class JobResult(Result):
             "n_loaded_ok": n_loaded_ok,
             "n_loaded_failed": n_loaded_failed,
         }
+
+    @staticmethod
+    def _count_result_outcomes(
+        results: Iterable[Any], is_success: Callable[[Any], bool]
+    ) -> tuple[int, int]:
+        """Return the successful and failed counts for a result collection."""
+        successes = failures = 0
+        for result in results:
+            if is_success(result):
+                successes += 1
+            else:
+                failures += 1
+        return successes, failures

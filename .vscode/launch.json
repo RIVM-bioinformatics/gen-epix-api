@@ -801,6 +801,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.casedb.unit.repositories",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/repositories"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.casedb.unit.services",
         "type": "debugpy",
         "request": "launch",
@@ -2044,6 +2056,18 @@
         "args": [
                 "run_test",
                 "test/transform/unit/transformers"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/unit"
         ],
         "console": "integratedTerminal",
         "justMyCode": true

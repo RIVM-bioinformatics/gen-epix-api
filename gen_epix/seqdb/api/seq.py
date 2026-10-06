@@ -229,6 +229,26 @@ class RetrieveBestSeqClassificationPerSampleRequestBody(PydanticBaseModel):
     )
 
 
+def _handle_seq_command(
+    app: App,
+    handle_exception: Callable[[str, Any, Exception], NoReturn],
+    error_code: str,
+    user: Any,
+    cmd: Any,
+    request_ids: Any | None = None,
+) -> Any:
+    """Dispatch one SeqDB command and forward failures to the API adapter."""
+    try:
+        return app.handle(cmd)
+    except Exception as exception:
+        if request_ids is None:
+            handle_exception(error_code, user, exception)
+        else:
+            handle_exception(
+                error_code, user, exception, request_ids=request_ids  # type: ignore[call-arg]
+            )
+
+
 def create_seq_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -251,20 +271,20 @@ def create_seq_endpoints(
         request_body: CalculatePhylogeneticTreeRequestBody,
     ) -> model.PhylogeneticTree:
         """See router description."""
-        try:
-            retval: model.PhylogeneticTree = app.handle(
-                command.CalculatePhylogeneticTreeCommand(
-                    user=user,
-                    protocol_id=request_body.protocol_id,
-                    tree_algorithm=request_body.tree_algorithm,
-                    seq_profile_ids=request_body.seq_profile_ids,
-                    leaf_names=request_body.leaf_names,
-                )
-            )
-        except Exception as exception:
-            handle_exception(
-                "dc71bce0", user, exception, request_ids=request_body.seq_profile_ids  # type: ignore[call-arg]
-            )
+        retval: model.PhylogeneticTree = _handle_seq_command(
+            app,
+            handle_exception,
+            "dc71bce0",
+            user,
+            command.CalculatePhylogeneticTreeCommand(
+                user=user,
+                protocol_id=request_body.protocol_id,
+                tree_algorithm=request_body.tree_algorithm,
+                seq_profile_ids=request_body.seq_profile_ids,
+                leaf_names=request_body.leaf_names,
+            ),
+            request_ids=request_body.seq_profile_ids,
+        )
         return retval
 
     @router.post(
@@ -278,17 +298,19 @@ def create_seq_endpoints(
         request_body: RetrieveSimilarProfilesRequestBody,
     ) -> list[UUID]:
         """See router description."""
-        try:
-            retval: list[UUID] = app.handle(
-                command.RetrieveSimilarProfilesCommand(
-                    user=user,
-                    protocol_id=request_body.protocol_id,
-                    profile_ids=request_body.profile_ids,
-                    max_distance=request_body.max_distance,
-                )
-            )
-        except Exception as exception:
-            handle_exception("b1c8e5d9", user, exception, request_ids=request_body.profile_ids)  # type: ignore[call-arg]
+        retval: list[UUID] = _handle_seq_command(
+            app,
+            handle_exception,
+            "b1c8e5d9",
+            user,
+            command.RetrieveSimilarProfilesCommand(
+                user=user,
+                protocol_id=request_body.protocol_id,
+                profile_ids=request_body.profile_ids,
+                max_distance=request_body.max_distance,
+            ),
+            request_ids=request_body.profile_ids,
+        )
         return retval
 
     @router.post(
@@ -302,15 +324,16 @@ def create_seq_endpoints(
         request_body: model.SampleQuery,
     ) -> model.SampleQueryResult:
         """See router description."""
-        try:
-            retval: model.SampleQueryResult = app.handle(
-                command.RetrieveSamplesByQueryCommand(
-                    user=user,
-                    sample_query=request_body,
-                )
-            )
-        except Exception as exception:
-            handle_exception("8f3a1c7d", user, exception)  # type: ignore[call-arg]
+        retval: model.SampleQueryResult = _handle_seq_command(
+            app,
+            handle_exception,
+            "8f3a1c7d",
+            user,
+            command.RetrieveSamplesByQueryCommand(
+                user=user,
+                sample_query=request_body,
+            ),
+        )
         return retval
 
     @router.post(
@@ -324,15 +347,17 @@ def create_seq_endpoints(
         request_body: RetrieveSamplesByIdsRequestBody,
     ) -> list[model.FullSample]:
         """See router description."""
-        try:
-            retval: list[model.FullSample] = app.handle(
-                command.RetrieveSamplesByIdCommand(
-                    user=user,
-                    sample_ids=request_body.sample_ids,
-                )
-            )
-        except Exception as exception:
-            handle_exception("ac218f73", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
+        retval: list[model.FullSample] = _handle_seq_command(
+            app,
+            handle_exception,
+            "ac218f73",
+            user,
+            command.RetrieveSamplesByIdCommand(
+                user=user,
+                sample_ids=request_body.sample_ids,
+            ),
+            request_ids=request_body.sample_ids,
+        )
         return retval
 
     @router.post(
@@ -346,15 +371,17 @@ def create_seq_endpoints(
         request_body: RetrieveSampleIdentifiersByIdsRequestBody,
     ) -> list[model.SampleIdentifier]:
         """See router description."""
-        try:
-            retval: list[model.SampleIdentifier] = app.handle(
-                command.RetrieveSampleIdentifiersByIdCommand(
-                    user=user,
-                    sample_ids=request_body.sample_ids,
-                )
-            )
-        except Exception as exception:
-            handle_exception("b3f91a2e", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
+        retval: list[model.SampleIdentifier] = _handle_seq_command(
+            app,
+            handle_exception,
+            "b3f91a2e",
+            user,
+            command.RetrieveSampleIdentifiersByIdCommand(
+                user=user,
+                sample_ids=request_body.sample_ids,
+            ),
+            request_ids=request_body.sample_ids,
+        )
         return retval
 
     @router.post(
@@ -368,15 +395,16 @@ def create_seq_endpoints(
         request_body: RetrieveSeqFastaRequestBody,
     ) -> StreamingResponse:
         """See router description."""
-        try:
-            fasta_iterable: Iterable[str] = app.handle(
-                command.RetrieveSeqFastaCommand(
-                    user=user,
-                    seq_ids=request_body.seq_ids,
-                )
-            )
-        except Exception as exception:
-            handle_exception("e4f3b8c1", user, exception)  # type: ignore[call-arg]
+        fasta_iterable: Iterable[str] = _handle_seq_command(
+            app,
+            handle_exception,
+            "e4f3b8c1",
+            user,
+            command.RetrieveSeqFastaCommand(
+                user=user,
+                seq_ids=request_body.seq_ids,
+            ),
+        )
 
         return StreamingResponse(
             fasta_iterable,
@@ -397,19 +425,19 @@ def create_seq_endpoints(
         request_body: ConvertSeqFormatRequestBody,
     ) -> list[UUID]:
         """See router description."""
-        try:
-            retval: list[UUID] = app.handle(
-                command.ConvertSeqFormatCommand(
-                    user=user,
-                    seq_ids=request_body.seq_ids,
-                    from_format=request_body.from_format,
-                    to_format=request_body.to_format,
-                )
-            )
-        except Exception as exception:
-            handle_exception(
-                "b8c4d2e1", user, exception, request_ids=request_body.seq_ids  # type: ignore[call-arg]
-            )
+        retval: list[UUID] = _handle_seq_command(
+            app,
+            handle_exception,
+            "b8c4d2e1",
+            user,
+            command.ConvertSeqFormatCommand(
+                user=user,
+                seq_ids=request_body.seq_ids,
+                from_format=request_body.from_format,
+                to_format=request_body.to_format,
+            ),
+            request_ids=request_body.seq_ids,
+        )
         return retval
 
     @router.post(
@@ -423,15 +451,16 @@ def create_seq_endpoints(
         protocol_id: UUID,
     ) -> datetime | None:
         """See router description."""
-        try:
-            retval: datetime | None = app.handle(
-                command.RetrieveSeqDistanceLastModifiedCommand(
-                    user=user,
-                    protocol_id=protocol_id,
-                )
-            )
-        except Exception as exception:
-            handle_exception("d9e5f4a7", user, exception)  # type: ignore[call-arg]
+        retval: datetime | None = _handle_seq_command(
+            app,
+            handle_exception,
+            "d9e5f4a7",
+            user,
+            command.RetrieveSeqDistanceLastModifiedCommand(
+                user=user,
+                protocol_id=protocol_id,
+            ),
+        )
         return retval
 
     @router.post(
@@ -445,18 +474,19 @@ def create_seq_endpoints(
         request_body: UpdateSeqDistancesRequestBody,
     ) -> list[model.CalculateSeqDistancesEtlResult]:
         """See router description."""
-        try:
-            retval: list[model.CalculateSeqDistancesEtlResult] = app.handle(
-                command.UpdateSeqDistancesCommand(
-                    user=user,
-                    protocol_id=request_body.protocol_id,
-                    limit=request_body.limit,
-                    existing_chunk_size=request_body.existing_chunk_size,
-                    use_numpy_allele_distance=request_body.use_numpy_allele_distance,
-                )
-            )
-        except Exception as exception:
-            handle_exception("a7b3c1d2", user, exception)  # type: ignore[call-arg]
+        retval: list[model.CalculateSeqDistancesEtlResult] = _handle_seq_command(
+            app,
+            handle_exception,
+            "a7b3c1d2",
+            user,
+            command.UpdateSeqDistancesCommand(
+                user=user,
+                protocol_id=request_body.protocol_id,
+                limit=request_body.limit,
+                existing_chunk_size=request_body.existing_chunk_size,
+                use_numpy_allele_distance=request_body.use_numpy_allele_distance,
+            ),
+        )
         return retval
 
     @router.post(
@@ -470,15 +500,16 @@ def create_seq_endpoints(
         request_body: UploadSamplesRequestBody,
     ) -> model.SampleBatchUploadResult:
         """See router description."""
-        try:
-            retval: model.SampleBatchUploadResult = app.handle(
-                command.UploadSamplesCommand(
-                    user=user,
-                    **request_body.model_dump(exclude={"user"}),
-                )
-            )
-        except Exception as exception:
-            handle_exception("f1d282b4", user, exception)  # type: ignore[call-arg]
+        retval: model.SampleBatchUploadResult = _handle_seq_command(
+            app,
+            handle_exception,
+            "f1d282b4",
+            user,
+            command.UploadSamplesCommand(
+                user=user,
+                **request_body.model_dump(exclude={"user"}),
+            ),
+        )
         return retval
 
     # CRUD
@@ -502,16 +533,18 @@ def create_seq_endpoints(
         request_body: RetrieveBestSeqPerSampleRequestBody,
     ) -> dict[UUID, UUID]:
         """See router description."""
-        try:
-            retval: dict[UUID, UUID] = app.handle(
-                command.RetrieveBestSeqPerSampleCommand(
-                    user=user,
-                    protocol_ids=request_body.protocol_ids,
-                    sample_ids=request_body.sample_ids,
-                )
-            )
-        except Exception as exception:
-            handle_exception("c3f7a9e1", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
+        retval: dict[UUID, UUID] = _handle_seq_command(
+            app,
+            handle_exception,
+            "c3f7a9e1",
+            user,
+            command.RetrieveBestSeqPerSampleCommand(
+                user=user,
+                protocol_ids=request_body.protocol_ids,
+                sample_ids=request_body.sample_ids,
+            ),
+            request_ids=request_body.sample_ids,
+        )
         return retval
 
     @router.post(
@@ -525,16 +558,18 @@ def create_seq_endpoints(
         request_body: RetrieveBestSeqProfilePerSampleRequestBody,
     ) -> dict[UUID, UUID]:
         """See router description."""
-        try:
-            retval: dict[UUID, UUID] = app.handle(
-                command.RetrieveBestSeqProfilePerSampleCommand(
-                    user=user,
-                    protocol_ids=request_body.protocol_ids,
-                    sample_ids=request_body.sample_ids,
-                )
-            )
-        except Exception as exception:
-            handle_exception("e2b4d8f6", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
+        retval: dict[UUID, UUID] = _handle_seq_command(
+            app,
+            handle_exception,
+            "e2b4d8f6",
+            user,
+            command.RetrieveBestSeqProfilePerSampleCommand(
+                user=user,
+                protocol_ids=request_body.protocol_ids,
+                sample_ids=request_body.sample_ids,
+            ),
+            request_ids=request_body.sample_ids,
+        )
         return retval
 
     @router.post(
@@ -548,16 +583,18 @@ def create_seq_endpoints(
         request_body: RetrieveBestSeqClassificationPerSampleRequestBody,
     ) -> dict[UUID, UUID]:
         """See router description."""
-        try:
-            retval: dict[UUID, UUID] = app.handle(
-                command.RetrieveBestSeqClassificationPerSampleCommand(
-                    user=user,
-                    protocol_ids=request_body.protocol_ids,
-                    sample_ids=request_body.sample_ids,
-                    ranking_strategy=request_body.ranking_strategy,
-                    return_primary_category_id=request_body.return_primary_category_id,
-                )
-            )
-        except Exception as exception:
-            handle_exception("a6f1c3d9", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
+        retval: dict[UUID, UUID] = _handle_seq_command(
+            app,
+            handle_exception,
+            "a6f1c3d9",
+            user,
+            command.RetrieveBestSeqClassificationPerSampleCommand(
+                user=user,
+                protocol_ids=request_body.protocol_ids,
+                sample_ids=request_body.sample_ids,
+                ranking_strategy=request_body.ranking_strategy,
+                return_primary_category_id=request_body.return_primary_category_id,
+            ),
+            request_ids=request_body.sample_ids,
+        )
         return retval

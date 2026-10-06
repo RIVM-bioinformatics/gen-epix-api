@@ -2,12 +2,12 @@
 
 import ast
 from pathlib import Path
+from test.util.mock_compat import Mock
 from types import SimpleNamespace
 
 import pytest
 from fastapi import APIRouter
 from fastapi.routing import APIRoute
-from test.util.mock_compat import Mock
 
 from gen_epix.commondb.api.system import create_system_endpoints
 from gen_epix.commondb.domain import command, enum, model

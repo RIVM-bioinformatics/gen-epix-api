@@ -115,6 +115,79 @@ def _get_mapped_association_result(
     raise AssertionError(_UNEXPECTED_CASE)
 
 
+def _get_directional_association_result(
+    objs: list[model.Model],
+    key_ids: list[UUID],
+    value_ids: list[UUID],
+    return_type: str,
+    map_return_type: str,
+    ids_return_type: str,
+    match_all: bool,
+    valid_ids: set[UUID] | frozenset[UUID] | None,
+) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
+    """Build one directional ID map, optionally requiring every valid link."""
+    id_map = _group_association_ids(key_ids, value_ids)
+    if match_all:
+        expected_count = len(valid_ids or ())
+        id_map = {
+            key_id: linked_ids
+            for key_id, linked_ids in id_map.items()
+            if len(linked_ids) == expected_count
+        }
+        if return_type == map_return_type:
+            return id_map
+        return _get_mapped_association_result(
+            objs, key_ids, id_map, return_type, ids_return_type
+        )
+    if return_type == map_return_type:
+        return id_map
+    raise AssertionError(_UNEXPECTED_CASE)
+
+
+def _format_association_result(
+    objs: list[model.Model],
+    ids1: list[UUID],
+    ids2: list[UUID],
+    return_type: str,
+    id_map12: bool,
+    id_map21: bool,
+    match_all1: bool,
+    match_all2: bool,
+    valid_ids1: set[UUID] | frozenset[UUID] | None,
+    valid_ids2: set[UUID] | frozenset[UUID] | None,
+) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
+    """Shape association objects and endpoint IDs into the requested result."""
+    if id_map12 or match_all2:
+        return _get_directional_association_result(
+            objs,
+            ids1,
+            ids2,
+            return_type,
+            "id_map12",
+            "ids1",
+            match_all2,
+            valid_ids2,
+        )
+    if id_map21 or match_all1:
+        return _get_directional_association_result(
+            objs,
+            ids2,
+            ids1,
+            return_type,
+            "id_map21",
+            "ids2",
+            match_all1,
+            valid_ids1,
+        )
+    if return_type == "objects":
+        return objs
+    if return_type == "ids1":
+        return ids1
+    if return_type == "ids2":
+        return ids2
+    raise AssertionError(f"Unexpected return_type: {return_type}")
+
+
 def case_service_read_association_with_valid_ids(
     self: BaseCaseService,
     command_class: type[command.CrudCommand],
@@ -180,49 +253,15 @@ def case_service_read_association_with_valid_ids(
             objs = self.crud_repository(uow, cmd)  # type: ignore[assignment]
     ids1 = [getattr(x, field_name1) for x in objs]
     ids2 = [getattr(x, field_name2) for x in objs]
-    # Apply id_map12/id_map21 and match_all1/match_all2 if necessary
-    if id_map12 or id_map21 or match_all1 or match_all2:
-        if id_map12 or match_all2:
-            id_map = _group_association_ids(ids1, ids2)
-            if match_all2:
-                # Keep only ids1 linked to all valid ids2
-                id_map = {
-                    key_id: linked_ids
-                    for key_id, linked_ids in id_map.items()
-                    if len(linked_ids) == len(valid_ids2 or ())
-                }
-                if id_map12:
-                    return id_map
-                return _get_mapped_association_result(
-                    objs, ids1, id_map, return_type, "ids1"
-                )
-            elif id_map12:
-                return id_map
-            raise AssertionError(_UNEXPECTED_CASE)
-        if id_map21 or match_all1:
-            # Create dict[id2, set[id1]]
-            id_map = _group_association_ids(ids2, ids1)
-            if match_all1:
-                # Keep only ids2 linked to all valid ids1
-                id_map = {
-                    key_id: linked_ids
-                    for key_id, linked_ids in id_map.items()
-                    if len(linked_ids) == len(valid_ids1 or ())
-                }
-                if id_map21:
-                    return id_map
-                return _get_mapped_association_result(
-                    objs, ids2, id_map, return_type, "ids2"
-                )
-            elif id_map21:
-                return id_map
-            raise AssertionError(_UNEXPECTED_CASE)
-        raise AssertionError(_UNEXPECTED_CASE)
-    # Return objs or IDs for remaining cases
-    if return_type == "objects":
-        return objs
-    if return_type == "ids1":
-        return ids1
-    if return_type == "ids2":
-        return ids2
-    raise AssertionError(f"Unexpected return_type: {return_type}")
+    return _format_association_result(
+        objs,
+        ids1,
+        ids2,
+        return_type,
+        id_map12,
+        id_map21,
+        match_all1,
+        match_all2,
+        valid_ids1,
+        valid_ids2,
+    )

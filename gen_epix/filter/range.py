@@ -42,25 +42,32 @@ class RangeFilter(Filter):
             AssertionError: If bounds or censor operators form an invalid range.
         """
         # Validate the bounds and censors
-        if self.lower_bound is None:
-            if self.upper_bound is None:
-                raise AssertionError("At least one bound must be set.")
-        else:
-            if self.upper_bound is not None:
-                if self.lower_bound > self.upper_bound:
-                    raise AssertionError(
-                        f"Lower bound ({self.lower_bound}) must be less than or equal"
-                        " to upper bound ({self.upper_bound})."
-                    )
-                if self.lower_bound == self.upper_bound and (
-                    self.lower_bound_censor != ComparisonOperator.GTE
-                    or self.upper_bound_censor != ComparisonOperator.STE
-                ):
-                    raise AssertionError(
-                        f"Lower bound censor ({self.lower_bound_censor}) must be >="
-                        " and upper bound censor ({self.upper_bound_censor}) must be"
-                        " <= in case both bounds are equal."
-                    )
+        if self.lower_bound is None and self.upper_bound is None:
+            raise AssertionError("At least one bound must be set.")
+        if self.lower_bound is not None and self.upper_bound is not None:
+            if self.lower_bound > self.upper_bound:
+                raise AssertionError(
+                    f"Lower bound ({self.lower_bound}) must be less than or equal"
+                    " to upper bound ({self.upper_bound})."
+                )
+            if self.lower_bound == self.upper_bound:
+                self._validate_equal_bound_censors()
+        self._validate_bound_censors()
+
+    def _validate_equal_bound_censors(self) -> None:
+        """Require an equal lower and upper bound to be inclusive."""
+        if (
+            self.lower_bound_censor != ComparisonOperator.GTE
+            or self.upper_bound_censor != ComparisonOperator.STE
+        ):
+            raise AssertionError(
+                f"Lower bound censor ({self.lower_bound_censor}) must be >="
+                " and upper bound censor ({self.upper_bound_censor}) must be"
+                " <= in case both bounds are equal."
+            )
+
+    def _validate_bound_censors(self) -> None:
+        """Validate that lower and upper censors point into the range."""
         if self.lower_bound_censor is not None and self.lower_bound_censor not in {
             ComparisonOperator.GT,
             ComparisonOperator.GTE,
@@ -79,47 +86,59 @@ class RangeFilter(Filter):
         # Generate the function to check if a value is within the range
         # The function is generated instead of defined to be able to optimize the check
         if self.lower_bound is not None and self.upper_bound is not None:
-            if self.lower_bound == self.upper_bound:
-                self._match = lambda x: x == self.lower_bound  # type: ignore
-            elif (
-                self.lower_bound_censor == ComparisonOperator.GTE
-                and self.upper_bound_censor == ComparisonOperator.ST
-            ):
-                self._match = (  # type: ignore
-                    lambda x: self.lower_bound <= x < self.upper_bound  # type: ignore
-                )
-            elif (
-                self.lower_bound_censor == ComparisonOperator.GTE
-                and self.upper_bound_censor == ComparisonOperator.STE
-            ):
-                self._match = (  # type: ignore
-                    lambda x: self.lower_bound <= x <= self.upper_bound  # type: ignore
-                )
-            elif (
-                self.lower_bound_censor == ComparisonOperator.GT
-                and self.upper_bound_censor == ComparisonOperator.ST
-            ):
-                self._match = (  # type: ignore
-                    lambda x: self.lower_bound < x < self.upper_bound  # type: ignore
-                )
-            elif (
-                self.lower_bound_censor == ComparisonOperator.GT
-                and self.upper_bound_censor == ComparisonOperator.STE
-            ):
-                self._match = (  # type: ignore
-                    lambda x: self.lower_bound < x <= self.upper_bound  # type: ignore
-                )
+            self._build_bounded_matcher()
         elif self.lower_bound is not None:
-            if self.lower_bound_censor == ComparisonOperator.GTE:
-                self._match = lambda x: self.lower_bound <= x  # type: ignore
-            elif self.lower_bound_censor == ComparisonOperator.GT:
-                self._match = lambda x: self.lower_bound < x  # type: ignore
+            self._build_lower_bound_matcher()
         elif self.upper_bound is not None:
-            if self.upper_bound_censor == ComparisonOperator.ST:
-                self._match = lambda x: x < self.upper_bound  # type: ignore
-            elif self.upper_bound_censor == ComparisonOperator.STE:
-                self._match = lambda x: x <= self.upper_bound  # type: ignore
+            self._build_upper_bound_matcher()
         return self
+
+    def _build_bounded_matcher(self) -> None:
+        """Build a matcher for a range with both bounds configured."""
+        if self.lower_bound == self.upper_bound:
+            self._match = lambda x: x == self.lower_bound  # type: ignore
+        elif (
+            self.lower_bound_censor == ComparisonOperator.GTE
+            and self.upper_bound_censor == ComparisonOperator.ST
+        ):
+            self._match = (  # type: ignore
+                lambda x: self.lower_bound <= x < self.upper_bound  # type: ignore
+            )
+        elif (
+            self.lower_bound_censor == ComparisonOperator.GTE
+            and self.upper_bound_censor == ComparisonOperator.STE
+        ):
+            self._match = (  # type: ignore
+                lambda x: self.lower_bound <= x <= self.upper_bound  # type: ignore
+            )
+        elif (
+            self.lower_bound_censor == ComparisonOperator.GT
+            and self.upper_bound_censor == ComparisonOperator.ST
+        ):
+            self._match = (  # type: ignore
+                lambda x: self.lower_bound < x < self.upper_bound  # type: ignore
+            )
+        elif (
+            self.lower_bound_censor == ComparisonOperator.GT
+            and self.upper_bound_censor == ComparisonOperator.STE
+        ):
+            self._match = (  # type: ignore
+                lambda x: self.lower_bound < x <= self.upper_bound  # type: ignore
+            )
+
+    def _build_lower_bound_matcher(self) -> None:
+        """Build a matcher for a lower-bounded range."""
+        if self.lower_bound_censor == ComparisonOperator.GTE:
+            self._match = lambda x: self.lower_bound <= x  # type: ignore
+        else:
+            self._match = lambda x: self.lower_bound < x  # type: ignore
+
+    def _build_upper_bound_matcher(self) -> None:
+        """Build a matcher for an upper-bounded range."""
+        if self.upper_bound_censor == ComparisonOperator.ST:
+            self._match = lambda x: x < self.upper_bound  # type: ignore
+        else:
+            self._match = lambda x: x <= self.upper_bound  # type: ignore
 
     def _match(self, value: Any) -> bool:
         """Match a value using the function generated during validation.

@@ -446,7 +446,9 @@ class CrudEndpointGenerator:
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
                 handle_exception_fn(
-                    "3680417c" + route.endpoint_basename + f"/{object_id}",
+                    "3680417c"
+                    + route.endpoint_basename
+                    + _OBJECT_ID_PATH_SUFFIX.format(object_id=object_id),
                     user,
                     exception,
                     request_ids=[object_id],
@@ -495,7 +497,9 @@ class CrudEndpointGenerator:
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
                 handle_exception_fn(
-                    "f2c9e1b6" + route.endpoint_basename + f"/{object_id}",
+                    "f2c9e1b6"
+                    + route.endpoint_basename
+                    + _OBJECT_ID_PATH_SUFFIX.format(object_id=object_id),
                     user,
                     exception,
                     request_ids=[object_id],
@@ -709,7 +713,9 @@ class CrudEndpointGenerator:
                 return retval
             except Exception as exception:
                 handle_exception_fn(
-                    "1459d302" + route.endpoint_basename + f"/{object_id}",
+                    "1459d302"
+                    + route.endpoint_basename
+                    + _OBJECT_ID_PATH_SUFFIX.format(object_id=object_id),
                     user,
                     exception,
                     request_ids=[object_id],
@@ -816,7 +822,9 @@ class CrudEndpointGenerator:
                 return retval
             except Exception as exception:
                 handle_exception_fn(
-                    "ab4df15f" + route.endpoint_basename + f"/{object_id}",
+                    "ab4df15f"
+                    + route.endpoint_basename
+                    + _OBJECT_ID_PATH_SUFFIX.format(object_id=object_id),
                     user,
                     exception,
                     request_ids=[object_id],
@@ -1000,7 +1008,6 @@ class CrudEndpointGenerator:
             Callable[[Filter], bool] | None
         ) = _default_validate_query_filter,
     ) -> None:
-        # Map endpoint types to functions
         """Generate endpoints."""
         function_map: dict[CrudEndpointType, Callable] = {
             CrudEndpointType.GET_ALL: CrudEndpointGenerator.generate_get_all,
@@ -1025,32 +1032,51 @@ class CrudEndpointGenerator:
             for endpoint_type in CrudEndpointGenerator.CRUD_ENDPOINT_TYPE_ORDER:
                 if endpoint_type not in route.endpoint_types:
                     continue
-                extra_args: dict[str, Any] = {}
-                if endpoint_type == CrudEndpointType.POST_QUERY:
-                    extra_args["query_route_suffix"] = query_route_suffix
-                    extra_args["return_id"] = False
-                    extra_args["ids_route_suffix"] = ids_route_suffix
-                    extra_args["validate_query_filter"] = validate_query_filter
-                elif endpoint_type == CrudEndpointType.POST_QUERY_IDS:
-                    extra_args["query_route_suffix"] = query_route_suffix
-                    extra_args["return_id"] = True
-                    extra_args["ids_route_suffix"] = ids_route_suffix
-                    extra_args["validate_query_filter"] = validate_query_filter
-                elif endpoint_type == CrudEndpointType.POST_SOME:
-                    extra_args["batch_route_suffix"] = batch_route_suffix
-                elif endpoint_type == CrudEndpointType.GET_SOME:
-                    extra_args["batch_route_suffix"] = batch_route_suffix
-                elif endpoint_type == CrudEndpointType.PUT_SOME:
-                    extra_args["batch_route_suffix"] = batch_route_suffix
-                elif endpoint_type == CrudEndpointType.DELETE_SOME:
-                    extra_args["batch_route_suffix"] = batch_route_suffix
-                elif endpoint_type == CrudEndpointType.GET_EXISTS_ONE:
-                    extra_args["exists_route_suffix"] = exists_route_suffix
-                elif endpoint_type == CrudEndpointType.GET_EXISTS_SOME:
-                    extra_args["exists_route_suffix"] = exists_route_suffix
+                extra_args = CrudEndpointGenerator._get_endpoint_extra_args(
+                    endpoint_type,
+                    batch_route_suffix,
+                    query_route_suffix,
+                    ids_route_suffix,
+                    exists_route_suffix,
+                    validate_query_filter,
+                )
                 function_map[endpoint_type](
                     fast_api, route, handle_exception_fn, **extra_args
                 )
+
+    @staticmethod
+    def _get_endpoint_extra_args(
+        endpoint_type: CrudEndpointType,
+        batch_route_suffix: str | None,
+        query_route_suffix: str | None,
+        ids_route_suffix: str | None,
+        exists_route_suffix: str | None,
+        validate_query_filter: Callable[[Filter], bool] | None,
+    ) -> dict[str, Any]:
+        """Return optional generator arguments for one CRUD endpoint type."""
+        if endpoint_type in {
+            CrudEndpointType.POST_QUERY,
+            CrudEndpointType.POST_QUERY_IDS,
+        }:
+            return {
+                "query_route_suffix": query_route_suffix,
+                "return_id": endpoint_type == CrudEndpointType.POST_QUERY_IDS,
+                "ids_route_suffix": ids_route_suffix,
+                "validate_query_filter": validate_query_filter,
+            }
+        if endpoint_type in {
+            CrudEndpointType.POST_SOME,
+            CrudEndpointType.GET_SOME,
+            CrudEndpointType.PUT_SOME,
+            CrudEndpointType.DELETE_SOME,
+        }:
+            return {"batch_route_suffix": batch_route_suffix}
+        if endpoint_type in {
+            CrudEndpointType.GET_EXISTS_ONE,
+            CrudEndpointType.GET_EXISTS_SOME,
+        }:
+            return {"exists_route_suffix": exists_route_suffix}
+        return {}
 
     @staticmethod
     def create_crud_endpoint_set_for_domain(
