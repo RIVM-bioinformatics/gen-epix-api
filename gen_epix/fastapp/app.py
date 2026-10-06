@@ -112,7 +112,7 @@ class App:
         self._logger = logger
         self._log_item_class = log_item_class
         self._timestamp_factory = timestamp_factory
-        self._feature_flags = feature_flags or {}
+        self._feature_flags: dict[Hashable, bool] = feature_flags or {}
 
         # Initialize other members
         self._created_at = self.generate_timestamp()
@@ -258,7 +258,7 @@ class App:
         """Set the enabled state for a feature flag.
 
         Args:
-            key: Identifier used to retrieve the feature flag.
+            key: Hashable, e.g. Enum or string, identifying the feature flag.
             value: Enabled state to store for ``key``.
 
         Raises:

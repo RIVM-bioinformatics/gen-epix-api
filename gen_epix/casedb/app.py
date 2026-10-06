@@ -13,14 +13,11 @@ policies, creates authentication dependencies, and constructs ``FAST_API``. The
 """
 
 from gen_epix.casedb.api.router import create_routers
+from gen_epix.casedb.config import CasedbAppCfg
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.app_setup import create_fast_api
-from gen_epix.commondb.config import AppCfg
 from gen_epix.util import get_package_version
-
-APP_NAME = "CASEDB"
-
 
 # Data for openAPI schema
 SCHEMA_KWARGS = {
@@ -40,7 +37,7 @@ SCHEMA_KWARGS = {
 }
 
 # Get configuration data and environment
-APP_CFG = AppCfg(APP_NAME, enum.ServiceType, enum.RepositoryType)
+APP_CFG = CasedbAppCfg()
 APP_COMPOSER = AppComposer(APP_CFG)
 
 # Create fastapi
@@ -49,7 +46,7 @@ FAST_API = create_fast_api(
     create_routers_fn=create_routers,
     setup_logger=APP_CFG.setup_logger,
     api_logger=APP_CFG.api_logger,
-    debug=APP_CFG.cfg.app.debug,
+    debug=APP_CFG.cfg["app"]["debug"],
     update_openapi_schema=True,
     update_openapi_kwargs={
         "get_openapi_kwargs": SCHEMA_KWARGS,

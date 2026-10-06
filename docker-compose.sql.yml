@@ -118,6 +118,8 @@ services:
     command: python run.py api SEQDB NONE SA_SQL --noreload
     environment:
       SEQDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
+      SEQDB_REPOSITORY__DEFAULTS__PROPS__UID: sa
+      SEQDB_REPOSITORY__DEFAULTS__PROPS__PWD: Your_password123
     ports:
       - "8001:8001"
     depends_on:
@@ -137,6 +139,8 @@ services:
     command: python run.py api OMOPDB NONE SA_SQL --noreload
     environment:
       OMOPDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
+      OMOPDB_REPOSITORY__DEFAULTS__PROPS__UID: sa
+      OMOPDB_REPOSITORY__DEFAULTS__PROPS__PWD: Your_password123
     ports:
       - "8002:8002"
     depends_on:
@@ -156,9 +160,13 @@ services:
     command: python run.py api CASEDB NONE SA_SQL --noreload
     environment:
       CASEDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
+      CASEDB_REPOSITORY__DEFAULTS__PROPS__UID: sa
+      CASEDB_REPOSITORY__DEFAULTS__PROPS__PWD: Your_password123
       # casedb's embedded LOCAL seqdb loads its config under the SEQDB_ prefix,
-      # so the server override must be set here too.
+      # so the server/credential overrides must be set here too.
       SEQDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
+      SEQDB_REPOSITORY__DEFAULTS__PROPS__UID: sa
+      SEQDB_REPOSITORY__DEFAULTS__PROPS__PWD: Your_password123
     ports:
       - "8000:8000"
     depends_on:

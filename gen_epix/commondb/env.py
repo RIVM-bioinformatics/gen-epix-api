@@ -63,6 +63,7 @@ class AppComposer(BaseAppComposer):
         policy_class_map: (
             dict[type[fastapp.Policy], type[fastapp.Policy]] | None
         ) = None,
+        feature_flag_enum_classes: tuple[type[Enum], ...] | None = None,
         log_any: bool = True,
         log_setup: bool = True,
         **kwargs: Any,
@@ -79,6 +80,9 @@ class AppComposer(BaseAppComposer):
             model_class_map: Optional mappings to derived model classes.
             command_class_map: Optional mappings to derived command classes.
             policy_class_map: Optional mappings to derived policy classes.
+            feature_flag_enum_classes: Enum classes whose members are valid
+                `[feature_flags]` keys for this app; defaults to
+                `(enum.FeatureFlag,)`.
             log_any: Whether any application logging is enabled.
             log_setup: Whether composition lifecycle events are logged.
             **kwargs: Additional options forwarded to application composition.
@@ -100,6 +104,9 @@ class AppComposer(BaseAppComposer):
         self._model_class_map = model_class_map or {}
         self._command_class_map = command_class_map or {}
         self._policy_class_map = policy_class_map or {}
+        self._feature_flag_enum_classes = feature_flag_enum_classes or (
+            enum.FeatureFlag,
+        )
         self._log_any = log_any
         self._log_setup = log_setup
 
@@ -164,6 +171,22 @@ class AppComposer(BaseAppComposer):
                 dict[str, Any], cfg_dict["service"]["defaults"]["props"]
             )
             _app_cfg_section = cast(dict[str, Any], cfg_dict["app"])
+            flag_by_value: dict[str, Enum] = {
+                member.value: member
+                for flag_enum_class in self._feature_flag_enum_classes
+                for member in flag_enum_class
+            }
+            try:
+                feature_flags = {
+                    flag_by_value[key]: value
+                    for key, value in cfg_dict.get("feature_flags", {}).items()
+                }
+            except KeyError as error:
+                raise exc.InitializationServiceError(
+                    "a83a2c1f",
+                    f"Unrecognized key in [feature_flags] for app "
+                    f"{self._app_cfg.app_name!r}: {error.args[0]!r}",
+                ) from error
             app = App(
                 name=self._app_cfg.app_name,
                 domain=self._domain,
@@ -171,7 +194,7 @@ class AppComposer(BaseAppComposer):
                 impl=app_impl,
                 logger=app_logger if self._log_setup else None,
                 id_factory=_service_defaults["id_factory"],
-                feature_flags=cfg_dict.get("feature_flags", {}),
+                feature_flags=feature_flags,
             )
             ssl_context = create_ssl_context(
                 host=_app_cfg_section["host"],
@@ -534,9 +557,10 @@ class AppComposer(BaseAppComposer):
     def convert_to_bool(value: Any) -> tuple[bool, bool]:
         """Convert a value to boolean when possible.
 
+        Delegates to `gen_epix.commondb.config.cfg.convert_to_bool`, which the
+        config validators also use, so both accept the same values.
+
         Returns a tuple of ``(success, converted_value)``.
-        Accepts boolean values and strings "true", "1", "false", "0" (case
-        insensitive). If conversion is not possible, returns (False, False).
         """
         if isinstance(value, bool):
             return True, value
@@ -546,3 +570,91 @@ class AppComposer(BaseAppComposer):
             elif value.lower() in {"false", "0"}:
                 return True, False
         return False, False
+
+
+class NoAppComposer(AppComposer):
+    """Encapsulates composition for an app that rejects all commands.
+
+    This can be useful for testing or scenarios where command execution should be
+    explicitly blocked.
+    """
+
+    def compose_application(self, **kwargs: Any) -> dict[str, Any]:
+        """Create the application, and set all handlers to raise exceptions.
+
+        Composition returns the dependencies required by the API layer.
+
+        Args:
+            **kwargs: Additional options accepted by composed service constructors.
+
+        Returns:
+            Application, service, repository, and API dependency instances (empty
+            or returning None to maintain interface consistency).
+
+        Raises:
+            Exception: Re-raises an error encountered while composing the application.
+        """
+        # Get loggers
+        setup_logger = self._app_cfg.setup_logger
+        app_logger = self._app_cfg.app_logger
+
+        # Compose application
+        try:
+            if self._log_setup and setup_logger:
+                self._setup_application_logging(setup_logger)
+
+            # Initialize app
+            app = App(
+                name=self._app_cfg.app_name,
+                domain=self._domain,
+                cfg=self._app_cfg.cfg,
+                logger=app_logger if self._log_setup else None,
+            )
+
+            # Register all commands with app with a handler that raises an exception
+            if self._log_setup and setup_logger:
+                setup_logger.debug(
+                    app.create_log_message(
+                        "508a5be8",
+                        "Registering commands with exception-raising handlers",
+                    )
+                )
+
+            def exception_raising_handler(cmd: fastapp.Command) -> None:
+                raise exc.ServiceUnavailableError(
+                    "6b6daeec", "No App available for handling commands"
+                )
+
+            for command_class in self._domain.get_commands(include_crud=True):
+                app.register_handler(
+                    command_class,
+                    exception_raising_handler,
+                )
+
+            # Finalise process
+            if self._log_setup and setup_logger:
+                setup_logger.debug(
+                    app.create_log_message("cdcdbbd1", "Finished composing application")
+                )
+
+        except Exception as e:
+
+            # Print error for deployment log, in regular log is not shown there
+            traceback.print_exc()
+            if self._log_setup and setup_logger:
+                setup_logger.error(
+                    App.create_static_log_message(
+                        "41afabe5",
+                        f"Error setting up application: {e}",
+                    )
+                )
+            raise e
+
+        return {
+            "app": app,
+            "services": {},
+            "repositories": {},
+            "registered_user_dependency": lambda x: None,
+            "new_user_dependency": lambda x: None,
+            "idp_user_dependency": lambda x: None,
+        }

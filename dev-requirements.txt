@@ -4,15 +4,15 @@ pandas==3.0.6
 polars==1.44.2
 xlsxwriter==3.2.9
 pytest
-pytest-gremlins==1.9.0
+pytest-gremlins==1.11.0
 pytest-xdist
-pytest-mock==3.15.*
+pytest-mock==3.16.*
 pytest-dependency==0.6.*
 isort==9.0.*
-black==26.5.*
+black==26.10.*
 ruff==0.16.*
 pylint==4.1.*
-mypy==2.3.*
+mypy==2.4.*
 oauthlib==4.0.0
 coverage==7.16.2
 

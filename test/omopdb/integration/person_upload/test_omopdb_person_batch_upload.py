@@ -99,6 +99,7 @@ class TestPersonBatchUploadHappyPath:
     def test_upload_empty_batch_returns_skipped(self, env: Env) -> None:
         """
         An empty batch (persons=[]) should return HTTP 200 with status=SKIPPED.
+
         No error is raised; the empty result is a valid no-op.
         """
         root_user = env.retrieve_user_by_key("root1_1@org1.org")
@@ -117,6 +118,7 @@ class TestPersonBatchUploadHappyPath:
     def test_upload_single_person_returns_created(self, env: Env) -> None:
         """
         A batch containing exactly one new person should return CREATED at both the
+
         individual result level and the batch level. The assigned ID must be populated.
         """
         root_user = env.retrieve_user_by_key("root1_1@org1.org")
@@ -139,6 +141,7 @@ class TestPersonBatchUploadHappyPath:
     def test_upload_multiple_persons_returns_created(self, env: Env) -> None:
         """
         A batch of three new persons should return CREATED for each individual result
+
         and CREATED at the batch level.
         """
         root_user = env.retrieve_user_by_key("root1_1@org1.org")
@@ -167,6 +170,7 @@ class TestPersonBatchUploadHappyPath:
     ) -> None:
         """
         Uploading the same person a second time using on_exists=UPDATE should return
+
         UPDATED. Without explicitly setting on_exists=UPDATE the default is ERROR,
         which would make the second upload fail (see TestPersonBatchUploadFailureModes).
         """
@@ -219,6 +223,7 @@ class TestPersonBatchUploadHappyPath:
     def test_on_exists_skip_returns_skipped(self, env: Env) -> None:
         """
         When on_exists=SKIP and the person already exists, the upload silently skips
+
         the person. No error is raised; the batch status is SKIPPED.
         """
         root_user = env.retrieve_user_by_key("root1_1@org1.org")
@@ -253,6 +258,7 @@ class TestPersonBatchUploadHappyPath:
     def test_on_new_skip_returns_skipped(self, env: Env) -> None:
         """
         When on_new=SKIP and the person does not exist, the upload silently skips
+
         the person without creating it. The batch status is SKIPPED.
         """
         root_user = env.retrieve_user_by_key("root1_1@org1.org")
@@ -274,6 +280,7 @@ class TestPersonBatchUploadHappyPath:
     def test_verify_only_does_not_persist(self, env: Env) -> None:
         """
         When verify_only=True the upload pipeline runs validation but does not write
+
         anything to the repository. The result shows what would have happened (CREATED),
         but a subsequent fetch confirms the person was not actually stored.
         """
@@ -315,6 +322,7 @@ class TestPersonBatchUploadHappyPath:
 class TestPersonBatchUploadFailureModes:
     """
     Tests for cases where the upload should fail or be rejected, either at the
+
     business-logic level (HTTP 200, status=FAILED in the body) or at the HTTP level
     (4xx response code).
     """
@@ -322,6 +330,7 @@ class TestPersonBatchUploadFailureModes:
     def test_on_exists_error_default_returns_failed(self, env: Env) -> None:
         """
         The default on_exists value is ERROR. Uploading a person that already exists
+
         without explicitly setting on_exists=UPDATE must fail. Both the individual
         person result and the batch result should have status FAILED.
         """
@@ -412,6 +421,7 @@ class TestPersonBatchUploadFailureModes:
     def test_malformed_body_returns_422(self, env: Env) -> None:
         """
         A POST with a body that is missing required Person fields (year_of_birth,
+
         gender_concept_id, etc.) must be rejected with HTTP 422 by FastAPI's request
         validation before the command handler runs.
         """

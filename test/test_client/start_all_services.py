@@ -9,15 +9,16 @@ from test.test_client.server_manager import ServerManager
 import pytest
 
 from gen_epix.casedb.api.router import create_routers as casedb_create_routers
+from gen_epix.casedb.config import CasedbAppCfg
 from gen_epix.casedb.domain import enum as casedb_enum
 from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.commondb.app_setup import create_fast_api
-from gen_epix.commondb.config.cfg import AppCfg
-from gen_epix.commondb.domain.enum import AppType
 from gen_epix.omopdb.api.router import create_routers as omopdb_create_routers
+from gen_epix.omopdb.config import OmopdbAppCfg
 from gen_epix.omopdb.domain import enum as omopdb_enum
 from gen_epix.omopdb.env import AppComposer as OmopdbAppComposer
 from gen_epix.seqdb.api.router import create_routers as seqdb_create_routers
+from gen_epix.seqdb.config import SeqdbAppCfg
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
@@ -29,10 +30,8 @@ SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
 def omopdb_server(use_dict_repository: bool) -> Generator[ServerManager, None, None]:
     """Start omopdb server"""
 
-    omopdb_app_cfg = AppCfg(
-        AppType.OMOPDB,
-        omopdb_enum.ServiceType,
-        (
+    omopdb_app_cfg = OmopdbAppCfg(
+        repository_type_enum=(
             omopdb_enum.RepositoryType.DICT
             if use_dict_repository
             else omopdb_enum.RepositoryType.SA_SQL
@@ -66,10 +65,8 @@ def seqdb_server(use_dict_repository: bool) -> Generator[ServerManager, None, No
     """Start seqdb server"""
 
     # Create seqdb app and fastapi instance
-    seqdb_app_cfg = AppCfg(
-        AppType.SEQDB,
-        seqdb_enum.ServiceType,
-        (
+    seqdb_app_cfg = SeqdbAppCfg(
+        repository_type_enum=(
             seqdb_enum.RepositoryType.DICT
             if use_dict_repository
             else seqdb_enum.RepositoryType.SA_SQL
@@ -104,10 +101,8 @@ def casedb_server(use_dict_repository: bool) -> Generator[ServerManager, None, N
     """Start casedb server"""
 
     # Create casedb app and fastapi instance
-    casedb_app_cfg = AppCfg(
-        AppType.CASEDB,
-        casedb_enum.ServiceType,
-        (
+    casedb_app_cfg = CasedbAppCfg(
+        repository_type_enum=(
             casedb_enum.RepositoryType.DICT
             if use_dict_repository
             else casedb_enum.RepositoryType.SA_SQL

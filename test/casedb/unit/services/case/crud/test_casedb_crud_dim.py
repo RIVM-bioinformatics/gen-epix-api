@@ -617,6 +617,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
     def test_two_new_dims_same_batch_get_sequential_occurrences(self) -> None:
         """
         Two new dims in same batch with same (case_type_id, ref_dim_id)
+
         get sequential occurrences 1 and 2 when no persisted dims exist.
         """
         # 1. Input
@@ -645,6 +646,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
     def test_two_new_dims_deterministic_regardless_of_initial_values(self) -> None:
         """
         Two new dims get the same occurrences regardless of their
+
         initial (temporary) occurrence values.
 
         This tests the core bug fix: temporary occurrence values should
@@ -700,6 +702,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
     ) -> None:
         """
         Two new dims get the same occurrences regardless of the order
+
         they are processed.
 
         Tests that the algorithm is order-independent by processing
@@ -788,6 +791,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
     def test_new_dims_with_existing_dims_get_correct_sequence(self) -> None:
         """
         When persisted dims and new dims exist together, new dims
+
         continue the sequence from the max persisted occurrence.
         """
         # 1. Input
@@ -828,6 +832,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
     def test_different_case_types_not_included_in_calculation(self) -> None:
         """
         Dims with different case_type_id in batch are not included
+
         in occurrence calculation for another case_type_id.
 
         Note: existing_dims is already filtered by case_type at the
@@ -859,6 +864,7 @@ class TestSetDimOccurrence(BaseDimTestCase):
     def test_different_ref_dims_not_included_in_calculation(self) -> None:
         """
         Dims with different ref_dim_id in batch are not included
+
         in occurrence calculation for another ref_dim_id.
 
         Note: existing_dims is already filtered by ref_dim at the
@@ -969,6 +975,7 @@ class TestCrudCreateDimBatch(BaseDimTestCase):
     def test_large_batch_same_key_sequential_occurrences(self) -> None:
         """
         50 dims sharing (case_type_id, ref_dim_id) with no existing dims
+
         get occurrences 1..50 assigned deterministically by str(id) sort.
         """
         n = 50
@@ -991,6 +998,7 @@ class TestCrudCreateDimBatch(BaseDimTestCase):
     def test_large_batch_matches_pre_refactor_set_dim_occurrence(self) -> None:
         """
         The new grouping approach assigns identical occurrences to what
+
         _set_dim_occurrence would have computed when called per-dim.
         """
         from gen_epix.casedb.services.case.crud_dim import _set_dim_occurrence
@@ -1029,6 +1037,7 @@ class TestCrudCreateDimBatch(BaseDimTestCase):
     def test_two_groups_independent_occurrence_sequences(self) -> None:
         """
         Dims belonging to different (case_type_id, ref_dim_id) groups
+
         each get independent sequential occurrences starting from 1.
         """
         other_ref = UUID("550e8400-e29b-41d4-a716-446655440099")

@@ -51,8 +51,9 @@ def _create_field_description(
 
 
 class Protocol(Model):
-    """Represents an analytical method used to derive a result from source data. The class
-    is conceptually polymorphic, with the protocol_type field determining which
+    """Represents an analytical method for deriving results from source data.
+
+    The class is conceptually polymorphic, with the protocol_type field determining which
     additional fields are required and which results it may be linked to. This design
     allows for a flexible and extensible representation of various analytical protocols
     while maintaining a single model for this type of reference data.
@@ -352,8 +353,10 @@ class Protocol(Model):
 
 
 class HasProtocolMixin:
-    """Encapsulates models that have an associated Protocol. Provides a protocol_id field
-    and a method to retrieve the associated Protocol.
+    """Encapsulates protocol relationship fields for a model.
+
+    It provides a protocol_id field and a method to retrieve the associated
+    Protocol.
     """
 
     # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
@@ -368,8 +371,7 @@ class HasProtocolMixin:
 
 
 class ProtocolSet(Model):
-    """Represents a set of Protocols, for example a set of Protocol that are relevant for a specific
-    analysis or application."""
+    """Represents a set of protocols relevant to an analysis or application."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="protocol_sets",
@@ -383,8 +385,9 @@ class ProtocolSet(Model):
 
 
 class ProtocolSetMember(Model):
-    """Represents the membership of an entity in a protocol set. This is used to link
-    protocols to protocol sets, allowing for grouping of protocols based on shared
+    """Represents a protocol's membership in a protocol set.
+
+    Membership links protocols to sets so they can be grouped by shared
     characteristics or purposes.
     """
 

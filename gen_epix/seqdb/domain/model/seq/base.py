@@ -420,6 +420,8 @@ class BaseSeq(Model):
 
     @staticmethod
     def get_seq_hash(seq: str) -> UUID:
-        """Compute a hash for the given string, which is expected to contain a
-        nucleotide sequence that may have gaps."""
+        """Compute a UUID hash for a nucleotide sequence.
+
+        The sequence may contain gaps.
+        """
         return UUID(hashlib.sha256(seq.encode("ascii")).digest()[:16].hex())

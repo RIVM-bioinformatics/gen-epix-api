@@ -113,8 +113,9 @@ class SeqForUpload(Seq, IdentifiersMixin, ValidateRefDataIdCodeMixin):
 
 
 class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMixin):
-    """Represents a sequence profile record intended for upload. Equal to a SeqProfile,
-    with additional variables.
+    """Represents a sequence profile record intended for upload.
+
+    It extends SeqProfile with identifier and reference-data code fields.
 
     Model validation: Exactly one representation is accepted for allele, MLVA,
     and k-mer profiles. Ordered representations derive content and its hash;
@@ -389,9 +390,7 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
 
 
 class AlleleForUpload(Allele):
-    """Represents an allele intended for upload. Equal to an Allele, with
-    additional variables.
-    """
+    """Represents an allele intended for upload."""
 
     ENTITY: ClassVar = Allele.model_entity().clone(update={"persistable": False})
     NAME: ClassVar = "AlleleForUpload"
@@ -403,8 +402,9 @@ class AlleleForUpload(Allele):
 
 
 class SeqClassificationForUpload(SeqClassification, ValidateRefDataIdCodeMixin):
-    """Represents a sequence classification intended for upload. Equal to a SeqClassification, with
-    additional variables.
+    """Represents a sequence classification intended for upload.
+
+    It extends SeqClassification with reference-data code fields.
 
     Model validation: Content validation is not implemented yet, so classification
     content is accepted unchanged after inherited validation.
@@ -613,10 +613,10 @@ class SampleUploadResult(ParentUploadResult):
 
 
 class SampleBatchForUpload(BaseBatchForUpload):
-    """Represents a set of samples intended for upload, together with any new reference data required
-    for the storage of these data.
+    """Represents a batch of samples intended for upload.
 
-    The batch can include new alleles required to store its sample data.
+    The batch can include new reference data and alleles required to store its
+    samples.
     """
 
     ENTITY: ClassVar = SampleForUpload.model_entity().clone()
@@ -693,15 +693,11 @@ class SampleBatchForUpload(BaseBatchForUpload):
                     continue
                 if profile.locus_allele_id_map is not None:
                     referenced.update(
-                        x
-                        for x in profile.locus_allele_id_map.values()
-                        if x != NULL_ID
+                        x for x in profile.locus_allele_id_map.values() if x != NULL_ID
                     )
                 elif profile.allele_ids is not None:
                     referenced.update(
-                        x
-                        for x in profile.allele_ids
-                        if x is not None and x != NULL_ID
+                        x for x in profile.allele_ids if x is not None and x != NULL_ID
                     )
                 elif profile.content != "":
                     referenced.update(

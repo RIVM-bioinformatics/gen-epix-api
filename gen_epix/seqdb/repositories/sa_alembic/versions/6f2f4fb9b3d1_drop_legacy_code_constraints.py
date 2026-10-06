@@ -1,4 +1,4 @@
-"""drop legacy SeqDB code unique constraints
+"""drop legacy SeqDB code unique constraints.
 
 Revision ID: 6f2f4fb9b3d1
 Revises: 973d81851aeb
