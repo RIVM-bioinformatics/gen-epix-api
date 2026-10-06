@@ -20,6 +20,19 @@ from typing import Any
 LazyExport = str | tuple[str, str]
 
 
+def exports_from(module_path: str, *names: str) -> dict[str, LazyExport]:
+    """Create the lazy exports for names that are exported under their own name.
+
+    Args:
+        module_path: Path of the module that defines the names.
+        *names: Names of the attributes of that module to export.
+
+    Returns:
+        Each name mapped to its ``(module path, attribute name)`` pair.
+    """
+    return {name: (module_path, name) for name in names}
+
+
 def lazy_exports(
     module_name: str, exports: Mapping[str, LazyExport]
 ) -> tuple[Callable[[str], Any], Callable[[], list[str]]]:

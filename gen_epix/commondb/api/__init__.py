@@ -7,7 +7,7 @@ system commands plus request/response models used by remote commondb clients.
 # pylint: disable=useless-import-alias
 from typing import TYPE_CHECKING
 
-from gen_epix._lazy import LazyExport, lazy_exports
+from gen_epix._lazy import LazyExport, exports_from, lazy_exports
 from gen_epix.commondb.api.organization_schema import ApiPermission as ApiPermission
 from gen_epix.commondb.api.organization_schema import (
     DataCollectionSetDataCollectionUpdateAssociationRequestBody as DataCollectionSetDataCollectionUpdateAssociationRequestBody,
@@ -55,16 +55,12 @@ if TYPE_CHECKING:
 # The endpoint factories depend on FastAPI and are resolved on first access, so
 # that a remote client can import the request and response models without it
 _LAZY_EXPORTS: dict[str, LazyExport] = {
-    "create_auth_endpoints": ("gen_epix.commondb.api.auth", "create_auth_endpoints"),
-    "create_organization_endpoints": (
-        "gen_epix.commondb.api.organization",
-        "create_organization_endpoints",
+    **exports_from("gen_epix.commondb.api.auth", "create_auth_endpoints"),
+    **exports_from(
+        "gen_epix.commondb.api.organization", "create_organization_endpoints"
     ),
-    "create_rbac_endpoints": ("gen_epix.commondb.api.rbac", "create_rbac_endpoints"),
-    "create_system_endpoints": (
-        "gen_epix.commondb.api.system",
-        "create_system_endpoints",
-    ),
+    **exports_from("gen_epix.commondb.api.rbac", "create_rbac_endpoints"),
+    **exports_from("gen_epix.commondb.api.system", "create_system_endpoints"),
 }
 
 if not TYPE_CHECKING:

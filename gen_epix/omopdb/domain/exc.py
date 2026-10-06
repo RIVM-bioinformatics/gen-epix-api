@@ -3,7 +3,7 @@
 # pylint: disable=useless-import-alias
 from typing import TYPE_CHECKING
 
-from gen_epix._lazy import LazyExport, lazy_exports
+from gen_epix._lazy import LazyExport, exports_from, lazy_exports
 from gen_epix.fastapp.exc import AlreadyExistingIdsError as AlreadyExistingIdsError
 from gen_epix.fastapp.exc import AuthException as AuthException
 from gen_epix.fastapp.exc import (
@@ -86,52 +86,20 @@ if TYPE_CHECKING:
 
 # The HTTP exceptions depend on FastAPI and are resolved on first access, so that
 # the domain exceptions can be imported without it
-_LAZY_EXPORTS: dict[str, LazyExport] = {
-    "BadRequest400HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "BadRequest400HTTPException",
-    ),
-    "UnauthorizedUser401HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "UnauthorizedUser401HTTPException",
-    ),
-    "Forbidden403HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "Forbidden403HTTPException",
-    ),
-    "ResourceNotFound404HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "ResourceNotFound404HTTPException",
-    ),
-    "MethodNotAllowed405HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "MethodNotAllowed405HTTPException",
-    ),
-    "ResourceConflict409HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "ResourceConflict409HTTPException",
-    ),
-    "ForeignKeyConstraint409HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "ForeignKeyConstraint409HTTPException",
-    ),
-    "UnprocessableEntity422HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "UnprocessableEntity422HTTPException",
-    ),
-    "InternalServerError500HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "InternalServerError500HTTPException",
-    ),
-    "NotImplemented501HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "NotImplemented501HTTPException",
-    ),
-    "ServiceUnavailableError503HTTPException": (
-        "gen_epix.fastapp.api.exc",
-        "ServiceUnavailableError503HTTPException",
-    ),
-}
+_LAZY_EXPORTS: dict[str, LazyExport] = exports_from(
+    "gen_epix.fastapp.api.exc",
+    "BadRequest400HTTPException",
+    "UnauthorizedUser401HTTPException",
+    "Forbidden403HTTPException",
+    "ResourceNotFound404HTTPException",
+    "MethodNotAllowed405HTTPException",
+    "ResourceConflict409HTTPException",
+    "ForeignKeyConstraint409HTTPException",
+    "UnprocessableEntity422HTTPException",
+    "InternalServerError500HTTPException",
+    "NotImplemented501HTTPException",
+    "ServiceUnavailableError503HTTPException",
+)
 
 if not TYPE_CHECKING:
     # Not visible to type checkers, which would otherwise accept any attribute

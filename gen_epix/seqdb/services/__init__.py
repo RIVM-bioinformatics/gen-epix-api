@@ -3,7 +3,7 @@
 # pylint: disable=useless-import-alias
 from typing import TYPE_CHECKING
 
-from gen_epix._lazy import LazyExport, lazy_exports
+from gen_epix._lazy import LazyExport, exports_from, lazy_exports
 
 if TYPE_CHECKING:
     from gen_epix.commondb.services import AuthService as AuthService
@@ -19,15 +19,18 @@ if TYPE_CHECKING:
 # Services are resolved on first access, so that importing one of them, such
 # as the remote client, does not load all the others and their dependencies
 _LAZY_EXPORTS: dict[str, LazyExport] = {
-    "AuthService": ("gen_epix.commondb.services", "AuthService"),
-    "OrganizationService": ("gen_epix.commondb.services", "OrganizationService"),
-    "RbacService": ("gen_epix.commondb.services", "RbacService"),
-    "SystemService": ("gen_epix.commondb.services", "SystemService"),
-    "UserManager": ("gen_epix.commondb.services", "UserManager"),
-    "AbacService": ("gen_epix.seqdb.services.abac", "AbacService"),
-    "SeqdbClient": ("gen_epix.seqdb.services.client", "SeqdbClient"),
-    "FileService": ("gen_epix.seqdb.services.file", "FileService"),
-    "SeqService": ("gen_epix.seqdb.services.seq", "SeqService"),
+    **exports_from(
+        "gen_epix.commondb.services",
+        "AuthService",
+        "OrganizationService",
+        "RbacService",
+        "SystemService",
+        "UserManager",
+    ),
+    **exports_from("gen_epix.seqdb.services.abac", "AbacService"),
+    **exports_from("gen_epix.seqdb.services.client", "SeqdbClient"),
+    **exports_from("gen_epix.seqdb.services.file", "FileService"),
+    **exports_from("gen_epix.seqdb.services.seq", "SeqService"),
 }
 
 if not TYPE_CHECKING:

@@ -10,7 +10,7 @@ identity-provider models. Applications normally import these types from
 # pylint: disable=useless-import-alias
 from typing import TYPE_CHECKING
 
-from gen_epix._lazy import LazyExport, lazy_exports
+from gen_epix._lazy import LazyExport, exports_from, lazy_exports
 from gen_epix.fastapp.app import App as App
 from gen_epix.fastapp.client import Client as Client
 from gen_epix.fastapp.domain import Domain as Domain
@@ -61,10 +61,9 @@ if TYPE_CHECKING:
 
 # The SQLAlchemy implementations are resolved on first access, so that the
 # framework can be imported without SQLAlchemy installed
-_LAZY_EXPORTS: dict[str, LazyExport] = {
-    "SARepository": ("gen_epix.fastapp.repositories", "SARepository"),
-    "SAUnitOfWork": ("gen_epix.fastapp.repositories", "SAUnitOfWork"),
-}
+_LAZY_EXPORTS: dict[str, LazyExport] = exports_from(
+    "gen_epix.fastapp.repositories", "SARepository", "SAUnitOfWork"
+)
 
 if not TYPE_CHECKING:
     # Not visible to type checkers, which would otherwise accept any attribute

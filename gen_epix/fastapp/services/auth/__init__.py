@@ -10,7 +10,7 @@ composition without exposing the authentication package's internal layout.
 # pylint: disable=useless-import-alias
 from typing import TYPE_CHECKING
 
-from gen_epix._lazy import LazyExport, lazy_exports
+from gen_epix._lazy import LazyExport, exports_from, lazy_exports
 from gen_epix.fastapp.services.auth.base import BaseAuthService as BaseAuthService
 from gen_epix.fastapp.services.auth.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
@@ -40,16 +40,10 @@ if TYPE_CHECKING:
 # The server-side classes depend on FastAPI and are resolved on first access,
 # so that clients can use the models and token retrieval without FastAPI installed
 _LAZY_EXPORTS: dict[str, LazyExport] = {
-    "IdpClient": ("gen_epix.fastapp.services.auth.idp_client", "IdpClient"),
-    "MockIDPClient": (
-        "gen_epix.fastapp.services.auth.mock_idp_client",
-        "MockIDPClient",
-    ),
-    "OauthIdpClient": (
-        "gen_epix.fastapp.services.auth.oauth_idp_client",
-        "OauthIdpClient",
-    ),
-    "AuthService": ("gen_epix.fastapp.services.auth.service", "AuthService"),
+    **exports_from("gen_epix.fastapp.services.auth.idp_client", "IdpClient"),
+    **exports_from("gen_epix.fastapp.services.auth.mock_idp_client", "MockIDPClient"),
+    **exports_from("gen_epix.fastapp.services.auth.oauth_idp_client", "OauthIdpClient"),
+    **exports_from("gen_epix.fastapp.services.auth.service", "AuthService"),
 }
 
 if not TYPE_CHECKING:
