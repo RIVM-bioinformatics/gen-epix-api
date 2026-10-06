@@ -22,18 +22,12 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 requires-python = ">=3.14"
+# Needed to use the domain models and to call the applications as a remote client.
+# Running an application additionally needs the `server` extra below.
 dependencies = [
-    # For compatibility with apache-airflow-core 3.3.0 used in other repositories, fastapi must be pinned to <0.137.0
-    # "fastapi[standard]==0.141.1",
-    "fastapi[standard]>=0.129.0,<0.137.0", 
-    "gunicorn==26.2.*",
-    "starlette==1.7.*",
     "httpx==0.28.1",
     "pyjwt==2.15.1",
     "urllib3==2.8.0",
-    "sqlalchemy==2.0.54",
-    "sqlalchemy_utils==0.42.1",
-    "alembic==1.20.0",
     "pydantic==2.13.5",
     "ulid-py==1.1.0",
     "fire==0.7.1",
@@ -44,14 +38,29 @@ dependencies = [
     "numpy==2.5.3",
     "biopython==1.88",
     "cachetools==7.2.0",
-    "slowapi==0.1.10",
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
     "types-setuptools==84.0.*",
+    "pyinstrument==5.1.*",
+]
+
+[project.optional-dependencies]
+# Needed to run an application: the web framework, the SQLAlchemy repositories
+# and the validation of signed tokens. requirements.txt lists the base
+# dependencies plus this extra.
+server = [
+    # For compatibility with apache-airflow-core 3.3.0 used in other repositories, fastapi must be pinned to <0.137.0
+    # "fastapi[standard]==0.141.1",
+    "fastapi[standard]>=0.129.0,<0.137.0", 
+    "gunicorn==26.2.*",
+    "starlette==1.7.*",
+    "sqlalchemy==2.0.54",
+    "sqlalchemy_utils==0.42.1",
+    "alembic==1.20.0",
+    "slowapi==0.1.10",
     "cryptography==50.0.2",
     "oauthlib==4.0.0",
     "python-multipart==0.0.32",
-    "pyinstrument==5.1.*",
 ]
 
 [project.urls]

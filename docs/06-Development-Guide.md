@@ -183,6 +183,26 @@ mypy, and writes output to `test/output/`. (Source: `run.py`; Source:
 
 (Source: `requirements.txt#L3-L35`; Source: `dev-requirements.txt#L1-L25`)
 
+### Installing as a package: client versus server
+
+`pyproject.toml` splits the runtime dependencies in two, for projects that install
+`gen-epix` as a package instead of from `requirements.txt`:
+
+| Install | Contents | Use |
+|---------|----------|-----|
+| `pip install gen-epix` | Base `dependencies` | Domain models, commands and the remote clients (`CasedbClient`, `SeqdbClient`, `OmopdbClient`, `CommondbClient`) |
+| `pip install "gen-epix[server]"` | Base plus the `server` extra: FastAPI, Starlette, gunicorn, slowapi, python-multipart, SQLAlchemy, Alembic, cryptography, oauthlib | Running an application, composing one in-process (`AppComposer`), SQLAlchemy repositories |
+
+`requirements.txt` equals the base dependencies plus the `server` extra; a test
+keeps them in sync. (Source: `test/general/code/test_general_dependency_list.py`)
+
+The client side stays importable without the `server` extra because packages that
+re-export server-side names resolve them on first access (`gen_epix/_lazy.py`),
+and because the request and response models live in `*_schema.py` modules apart
+from the routes. When adding an export, keep anything that imports a `server`
+package out of the import chain of the remote clients;
+`test/general/code/test_general_client_import_isolation.py` fails otherwise.
+
 ---
 
 ## 5. Graphify Setup For Coding Agents
