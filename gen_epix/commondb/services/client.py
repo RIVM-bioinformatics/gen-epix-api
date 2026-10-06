@@ -10,8 +10,6 @@ from enum import Enum
 from logging import Logger
 from typing import Any, Literal
 
-import jwt
-
 from gen_epix.commondb import api
 from gen_epix.commondb.domain import command, enum, model, util
 from gen_epix.fastapp import Client, HttpProtocol, exc
@@ -228,7 +226,7 @@ class CommondbClient(Client):
         self._oauth_idp_client = oauth_idp_client
         self._oauth_scope = oauth_scope
         self._oauth_token_refresh_margin = oauth_token_refresh_margin
-        self._oauth_header_cache: tuple[int, dict[str, str]] | None = None
+        self._oauth_header_cache: tuple[float, dict[str, str]] | None = None
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
         """Return request headers, refreshing an OAuth token when needed.
@@ -250,29 +248,26 @@ class CommondbClient(Client):
             assert self._oauth_idp_client is not None
             assert self._oauth_scope is not None
             # Check if cached token is still valid
+            now = datetime.now(timezone.utc).timestamp()
             if self._oauth_header_cache and self._oauth_header_cache[0] > (
-                datetime.now(timezone.utc).timestamp()
-                - self._oauth_token_refresh_margin
+                now + self._oauth_token_refresh_margin
             ):
                 # Return cached header
                 return self._oauth_header_cache[1]
             # Retrieve new token
-            jwt_token = (
-                self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            jwt_token, expires_in = (
+                self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry(
                     scope=self._oauth_scope
                 )
             )
             # Create headers
             headers = dict(self._default_headers)
             headers["Authorization"] = f"Bearer {jwt_token}"
+            # Cache only while the lifetime reported by the token endpoint is valid.
             # Put header in cache together with its expiry time
-            claims = jwt.decode(jwt_token, options={"verify_signature": False})
-            exp: int | None = claims.get("exp")
-            if exp is None:
-                # No expiration claim, valid forever
-                self._oauth_header_cache = (int(datetime.max.timestamp()), headers)
-            else:
-                self._oauth_header_cache = (exp, headers)
+            self._oauth_header_cache = (
+                (now + expires_in, headers) if expires_in is not None else None
+            )
             return headers
         raise exc.InitializationServiceError(
             "7bf9fe04",

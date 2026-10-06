@@ -27,6 +27,8 @@ from gen_epix.filter.regex import RegexFilter
 from gen_epix.filter.string_set import StringSetFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
 
+_ROW_FILTER_KEY_REQUIRED = "Key must be set for each filter to apply filter to a row."
+
 FilterUnion = (
     ExistsFilter
     | EqualsBooleanFilter
@@ -297,9 +299,7 @@ class CompositeFilter(Filter):
             ValueError: If a child filter lacks a row key or mappings are invalid.
         """
         if not self._all_subfilters_have_key():
-            raise ValueError(
-                "Key must be set for each filter to apply filter to a row."
-            )
+            raise ValueError(_ROW_FILTER_KEY_REQUIRED)
         # Match, per filter, if both key exists, value not null and value matches
         map_fn = self._get_map_fun_list(map_fn)
         if na_values is None:
@@ -369,9 +369,7 @@ class CompositeFilter(Filter):
         """
         # Match, per row and filter, if both key exists, value not null and value matches
         if not self._all_subfilters_have_key():
-            raise ValueError(
-                "Key must be set for each filter to apply filter to a row."
-            )
+            raise ValueError(_ROW_FILTER_KEY_REQUIRED)
         map_fn = self._get_map_fun_list(map_fn)
         if na_values is None:
             for row in rows:
@@ -437,9 +435,7 @@ class CompositeFilter(Filter):
         """
         # Match, per row and filter, if both key exists, value not null and value matches
         if not self._all_subfilters_have_key():
-            raise ValueError(
-                "Key must be set for each filter to apply filter to a row."
-            )
+            raise ValueError(_ROW_FILTER_KEY_REQUIRED)
         map_fn = self._get_map_fun_list(map_fn)
         if na_values is None:
             for row in rows:

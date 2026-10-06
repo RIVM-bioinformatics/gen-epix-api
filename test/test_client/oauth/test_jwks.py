@@ -153,13 +153,10 @@ class TestJWKSManager:
         key = jwks["keys"][0]
 
         # Test that n and e are valid base64url
-        try:
-            n_bytes = base64.urlsafe_b64decode(key["n"] + "==")  # Add padding
-            e_bytes = base64.urlsafe_b64decode(key["e"] + "==")  # Add padding
-            assert len(n_bytes) > 0
-            assert len(e_bytes) > 0
-        except Exception as e:
-            pytest.fail(f"Invalid base64url encoding: {e}")
+        n_bytes = base64.urlsafe_b64decode(key["n"] + "==")  # Add padding
+        e_bytes = base64.urlsafe_b64decode(key["e"] + "==")  # Add padding
+        assert len(n_bytes) > 0
+        assert len(e_bytes) > 0
 
     def test_rotate_keys(self) -> None:
         """Test key rotation functionality."""

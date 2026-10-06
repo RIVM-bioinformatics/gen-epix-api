@@ -28,6 +28,8 @@ from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import CompositeFilter, LogicalOperator
 
+_REPOSITORY_NOT_SET = "Repository not set"
+
 
 class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
     """Encapsulates a service that groups together related domain models
@@ -131,7 +133,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
     def repository(self) -> Repository:
         """Repository the requested value."""
         if not self._repository:
-            raise exc.ServiceException("529122a8", "Repository not set")
+            raise exc.ServiceException("529122a8", _REPOSITORY_NOT_SET)
         return self._repository
 
     @repository.setter
@@ -233,7 +235,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                 )
             )
         if not self.repository:
-            raise exc.ServiceException("334086fe", "Repository not set")
+            raise exc.ServiceException("334086fe", _REPOSITORY_NOT_SET)
         # Call BEFORE listeners
         for listener in self._crud_listeners.get((type(cmd), EventTiming.BEFORE), []):
             cmd, _ = listener(self, cmd, None)
@@ -408,7 +410,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                 )
             )
         if not self.repository:
-            raise exc.ServiceException("ca36f8e8", "Repository not set")
+            raise exc.ServiceException("ca36f8e8", _REPOSITORY_NOT_SET)
 
         same_service_links, other_service_links = self._get_model_links(cmd)
         id_field_name = cmd.ASSOCIATION_CLASS.ENTITY.id_field_name
@@ -559,7 +561,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
     ) -> None:
         """Verify same service links."""
         if not self.repository:
-            raise exc.ServiceException("63baf129", "Repository not set")
+            raise exc.ServiceException("63baf129", _REPOSITORY_NOT_SET)
         if not cmd.verify_same_service_links or not same_service_links:
             return
         for link in same_service_links.values():

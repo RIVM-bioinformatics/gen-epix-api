@@ -17,6 +17,8 @@ from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.omopdb.domain.model.omop.base import validate_int_for_uuid_field
 from gen_epix.omopdb.domain.model.omop.ontology import Concept
 
+_NO_OMOP_GUIDANCE_DESCRIPTION = "User guidance:\nNone\nETL conventions:\nNone"
+
 
 class Location(Model):
     """The LOCATION table represents a generic way to capture physical location or address information of Persons and Care Sites."""
@@ -43,12 +45,12 @@ class Location(Model):
     )
     city: str | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nNone",
+        description=_NO_OMOP_GUIDANCE_DESCRIPTION,
         max_length=50,
     )
     state: str | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nNone",
+        description=_NO_OMOP_GUIDANCE_DESCRIPTION,
         max_length=2,
     )
     zip: str | None = Field(
@@ -58,7 +60,7 @@ class Location(Model):
     )
     county: str | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nNone",
+        description=_NO_OMOP_GUIDANCE_DESCRIPTION,
         max_length=20,
     )
     location_source_value: str | None = Field(
@@ -191,7 +193,7 @@ class Provider(Model):
         description="User guidance:\nThis is the CARE_SITE_ID for the location that the provider primarily practices in.\nETL conventions:\nIf a Provider has more than one Care Site, the main or most often exerted CARE_SITE_ID should be recorded.",
     )
     year_of_birth: int | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     gender_concept_id: UUID | None = Field(
         default=None,

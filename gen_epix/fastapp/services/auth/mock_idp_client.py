@@ -13,6 +13,8 @@ from gen_epix.fastapp.log import BaseLogItem, LogItem
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider
 
+_METHOD_NOT_YET_IMPLEMENTED = "Method not yet implemented"
+
 
 class MockIDPClient(IdpClient):
     """Encapsulates identity-provider client that serves configured mock claims."""
@@ -36,19 +38,19 @@ class MockIDPClient(IdpClient):
 
     def get_identity_provider(self) -> IdentityProvider:
         """Return identity provider."""
-        raise NotImplementedError("Method not yet implemented")
+        raise NotImplementedError(_METHOD_NOT_YET_IMPLEMENTED)
 
     async def get_claims_from_jwt(
         self, jwt_token: str
     ) -> dict[str, str | int | bool | list[str]] | None:
         """Return claims from jwt."""
-        raise NotImplementedError("Method not yet implemented")
+        raise NotImplementedError(_METHOD_NOT_YET_IMPLEMENTED)
 
     def get_claims_from_userinfo(
         self, access_token: str
     ) -> dict[str, str | int | bool | list[str]]:
         """Return claims from userinfo."""
-        raise NotImplementedError("Method not yet implemented")
+        raise NotImplementedError(_METHOD_NOT_YET_IMPLEMENTED)
 
     async def __call__(self, request: Request) -> Claims | None:
         """Call the requested value."""

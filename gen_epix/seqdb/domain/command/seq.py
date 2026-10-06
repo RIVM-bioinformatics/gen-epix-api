@@ -18,6 +18,15 @@ from gen_epix.commondb.domain.command import Command, CrudCommand
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.seqdb.domain import enum, model
 
+_USE_NUMPY_ALLELE_DISTANCE_DESCRIPTION = (
+    "If True, use numpy-vectorised ALLELE Hamming with an automatic "
+    "variant gate: numpy_batch for n_new < 200, int32_vocab for "
+    "n_new >= 200. No effect on non-ALLELE profile types."
+)
+_SAMPLE_IDS_SEARCH_DESCRIPTION = (
+    "The IDs of the samples to search among. If None, search among all samples."
+)
+
 # Non-CRUD commands
 
 
@@ -75,11 +84,7 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     # TODO: is a temporary option, to be removed once the numpy-vectorised ALLELE distance calculation (or any other that is eventually chosen) is fully validated and deployed. It is intended to allow testing of the new implementation without affecting existing behaviour.
     use_numpy_allele_distance: bool = Field(
         default=False,
-        description=(
-            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
-            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
-            "n_new >= 200. No effect on non-ALLELE profile types."
-        ),
+        description=_USE_NUMPY_ALLELE_DISTANCE_DESCRIPTION,
     )
 
 
@@ -130,11 +135,7 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
     )
     use_numpy_allele_distance: bool = Field(
         default=False,
-        description=(
-            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
-            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
-            "n_new >= 200. No effect on non-ALLELE profile types."
-        ),
+        description=_USE_NUMPY_ALLELE_DISTANCE_DESCRIPTION,
     )
 
 
@@ -170,11 +171,7 @@ class UpdateSeqDistancesCommand(Command):
     )
     use_numpy_allele_distance: bool = Field(
         default=False,
-        description=(
-            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
-            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
-            "n_new >= 200. No effect on non-ALLELE profile types."
-        ),
+        description=_USE_NUMPY_ALLELE_DISTANCE_DESCRIPTION,
     )
 
 
@@ -294,6 +291,10 @@ class ConvertSeqFormatCommand(Command):
 
     Returns:
       The IDs of the sequences converted to the target format.
+
+    Model validation:
+        Sequence IDs must be unique. Both formats must be DNA formats, and
+        conversions between gapless and gap-inclusive formats are not supported.
     """
 
     seq_ids: list[UUID] = Field(
@@ -363,7 +364,7 @@ class RetrieveBestSeqPerSampleCommand(Command):
         description="The IDs of the assembly protocols to search among. If None, search among all seqs.",
     )
     sample_ids: set[UUID] | None = Field(
-        description="The IDs of the samples to search among. If None, search among all samples.",
+        description=_SAMPLE_IDS_SEARCH_DESCRIPTION,
     )
     ranking_strategy: enum.SeqProfileRankingStrategy = Field(
         default=enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
@@ -384,7 +385,7 @@ class RetrieveBestSeqProfilePerSampleCommand(Command):
         min_length=1,
     )
     sample_ids: set[UUID] | None = Field(
-        description="The IDs of the samples to search among. If None, search among all samples.",
+        description=_SAMPLE_IDS_SEARCH_DESCRIPTION,
     )
     ranking_strategy: enum.SeqProfileRankingStrategy = Field(
         default=enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
@@ -405,7 +406,7 @@ class RetrieveBestSeqClassificationPerSampleCommand(Command):
         min_length=1,
     )
     sample_ids: set[UUID] | None = Field(
-        description="The IDs of the samples to search among. If None, search among all samples.",
+        description=_SAMPLE_IDS_SEARCH_DESCRIPTION,
     )
     ranking_strategy: enum.SeqClassificationRankingStrategy = Field(
         default=enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,

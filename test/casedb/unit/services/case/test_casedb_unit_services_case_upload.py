@@ -1091,8 +1091,8 @@ class TestExistingCaseDataCollectionMutability(BaseUploadTestCase):
 
         success, result, updated_objs = self.update_case(existing_case, uploaded_case)
 
-        # update_objects logs per-object immutable-field errors but does not abort batch.
-        assert success
+        # The invalid update is skipped and causes the operation to report failure.
+        assert not success
         assert result.status == EtlStatus.FAILED
         assert len(updated_objs) == 0
 

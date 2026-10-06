@@ -3,6 +3,7 @@
 import base64
 import json
 import logging
+import math
 import ssl
 import time
 import urllib.parse
@@ -156,10 +157,11 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         url: str | None = None,
         doc: dict[str, Any] | None = None,
     ) -> None:
-        """
-        Update the OIDC configuration from the discovery URL or, if provided, the
-        discovery document.
+        """Update OIDC configuration from a discovery URL or document.
 
+        Raises:
+            InitializationServiceError: If discovery data is missing, unavailable, or
+                invalid.
         """
         url = url or self.server_cfg.discovery_url
         if url is None and doc is None:
@@ -213,7 +215,12 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             raise exc.InitializationServiceError("66b9919e", msg) from exception
 
     async def get_jwk_from_jwt(self, jwt_token: str) -> jwt.PyJWK:
-        """Return jwk from jwt."""
+        """Return the signing key identified by a JWT.
+
+        Raises:
+            UnauthorizedAuthError: If the token has no key ID or its key is unknown.
+            InitializationServiceError: If signing keys cannot be loaded.
+        """
         key_id = self._parse_kid(jwt_token)
         if not key_id:
             if self.logger:
@@ -291,13 +298,25 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             raise exc.UnauthorizedAuthError("5bb8ffb6") from e
 
     async def get_claims_from_jwt(self, jwt_token: str) -> dict[str, Any] | None:
-        """Return claims from jwt."""
-        claims = self._decode_jwt_unverified(jwt_token)
-        if not self._validate_issuer(claims):
-            return None
+        """Return validated claims from a JWT, or ``None`` for an untrusted issuer.
+
+        Raises:
+            CredentialsAuthError: If the JWT header is malformed.
+            UnauthorizedAuthError: If the token cannot be verified or lacks required
+                claims.
+            InitializationServiceError: If signing keys cannot be loaded.
+        """
+        try:
+            jwt.get_unverified_header(jwt_token)
+        except jwt.PyJWTError as exception:
+            raise exc.CredentialsAuthError(
+                "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            ) from exception
         key = await self.get_jwk_from_jwt(jwt_token)
 
         claims = self._verify_token(jwt_token, key)
+        if not self._validate_issuer(claims):
+            return None
         self._check_required_claims(claims)
 
         # optionally apply token introspection
@@ -358,8 +377,8 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                 key=key,
                 algorithms=self._allowed_signing_algorithms,
                 audience=self.audience,
-                issuer=self.server_cfg.issuer,
                 options={
+                    "require": ["iss"],
                     "require_iat": True,
                     "verify_iat": True,
                     "require_exp": True,
@@ -406,15 +425,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             return False
         return True
 
-    def _decode_jwt_unverified(self, jwt_token: str) -> dict[str, Any]:
-        """Decode jwt unverified."""
-        try:
-            return jwt.decode(jwt_token, options={"verify_signature": False})
-        except jwt.PyJWTError as exception:
-            raise exc.CredentialsAuthError(
-                "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-            ) from exception
-
     def retrieve_jwt_with_client_credentials_flow(
         self,
         scope: str,
@@ -423,6 +433,19 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         base_delay: float | None = None,
     ) -> str:
         """Call server to get token through OAuth Client Credentials flow."""
+        token, _ = self.retrieve_jwt_with_client_credentials_flow_and_expiry(
+            scope, headers, max_retries, base_delay
+        )
+        return token
+
+    def retrieve_jwt_with_client_credentials_flow_and_expiry(
+        self,
+        scope: str,
+        headers: dict[str, str] | None = None,
+        max_retries: int | None = None,
+        base_delay: float | None = None,
+    ) -> tuple[str, float | None]:
+        """Return an OAuth access token and its advertised lifetime in seconds."""
         # Parse input
         headers = dict(headers or self._client_credential_flow_request_headers)
         max_retries = max_retries or self._client_credential_flow_max_retries
@@ -445,7 +468,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         base_delay: float,
         url: str,
         token_data: str,
-    ) -> str:
+    ) -> tuple[str, float | None]:
         """Request token with retries."""
         last_exception: Exception | None = None
         for attempt in range(max_retries + 1):
@@ -459,7 +482,20 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                     response.raise_for_status()
                     token_response = response.json()
                     token: str = token_response["access_token"]
-                    return token
+                    expires_in = token_response.get("expires_in")
+                    if isinstance(expires_in, bool) or not isinstance(
+                        expires_in, (int, float)
+                    ):
+                        expires_in = None
+                    try:
+                        expires_in = (
+                            float(expires_in) if expires_in is not None else None
+                        )
+                    except OverflowError:
+                        expires_in = None
+                    if expires_in is not None and not math.isfinite(expires_in):
+                        expires_in = None
+                    return token, expires_in
             except Exception as exception:
                 last_exception = exception
                 if self.logger:

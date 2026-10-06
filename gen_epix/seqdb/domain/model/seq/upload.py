@@ -38,6 +38,17 @@ from gen_epix.seqdb.domain.model.seq.seq import (
 )
 from gen_epix.util import copy_model_field
 
+_PROTOCOL_ID_DESCRIPTION = (
+    "The UUID of the protocol, if available. If not available, the null ID is put. "
+    "Must be present if protocol_code is not present. The use of protocol_id is "
+    "preferred over protocol_code since the latter may change."
+)
+_PROTOCOL_CODE_DESCRIPTION = (
+    "The code of the protocol. Must be present if protocol_id is not present. "
+    "The use of protocol_code is meant for situations where the protocol_id is "
+    "not known, but the code is and/or improves human interpretation."
+)
+
 
 class ValidateRefDataIdCodeMixin:
     """Encapsulates the requirement to identify upload reference data by an ID or a code.
@@ -78,11 +89,11 @@ class ReadSetForUpload(ReadSet, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     )
     protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
+        description=_PROTOCOL_ID_DESCRIPTION,
     )
     protocol_code: str | None = Field(
         default=None,
-        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
+        description=_PROTOCOL_CODE_DESCRIPTION,
         max_length=255,
     )
 
@@ -103,11 +114,11 @@ class SeqForUpload(Seq, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     )
     protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
+        description=_PROTOCOL_ID_DESCRIPTION,
     )
     protocol_code: str | None = Field(
         default=None,
-        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
+        description=_PROTOCOL_CODE_DESCRIPTION,
         max_length=255,
     )
 
@@ -140,11 +151,11 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
     )
     protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
+        description=_PROTOCOL_ID_DESCRIPTION,
     )
     protocol_code: str | None = Field(
         default=None,
-        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
+        description=_PROTOCOL_CODE_DESCRIPTION,
         max_length=255,
     )
     content: str = Field(

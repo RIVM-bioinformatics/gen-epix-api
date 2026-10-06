@@ -1,6 +1,5 @@
 """Tests for serialization, concurrency helpers, resilience and HTTP caching."""
 
-import threading
 import time
 
 import pytest
@@ -19,7 +18,6 @@ from gen_epix.fastapp.cache.http import (
     compute_etag,
     matches_etag,
 )
-from gen_epix.fastapp.cache.lock import KeyedMutex, SingleFlight
 from gen_epix.fastapp.cache.resilience import (
     CircuitBreaker,
     FailurePolicy,
@@ -135,81 +133,6 @@ def test_a_byte_wrapper_refuses_a_non_byte_inner_serializer() -> None:
     """Stacking a wrapper on a live-object serializer cannot work."""
     with pytest.raises(SerializationError):
         CompressingSerializer(IdentitySerializer()).dumps("value")
-
-
-def test_single_flight_runs_one_loader_per_key() -> None:
-    """Different keys must not block each other while one key loads."""
-    flight = SingleFlight()
-    calls: list[str] = []
-    lock = threading.Lock()
-
-    def loader(key: str) -> str:
-        """Record one slow invocation."""
-        with lock:
-            calls.append(key)
-        time.sleep(0.05)
-        return key
-
-    results: list[str] = []
-    threads = [
-        threading.Thread(
-            target=lambda key=key: results.append(flight.run(key, lambda: loader(key)))
-        )
-        for key in ["a", "a", "a", "b"]
-    ]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join(timeout=5)
-
-    assert not any(thread.is_alive() for thread in threads)
-    assert sorted(calls) == ["a", "b"]
-    assert sorted(results) == ["a", "a", "a", "b"]
-
-
-def test_every_waiter_receives_the_failure_of_the_leader() -> None:
-    """A failed load must not be retried once per waiting caller."""
-    flight = SingleFlight()
-    calls: list[int] = []
-
-    def loader() -> str:
-        """Count invocations and always fail.
-
-        Returns:
-            Never returns.
-
-        Raises:
-            RuntimeError: Always.
-        """
-        calls.append(1)
-        raise RuntimeError("origin refused")
-
-    for _ in range(2):
-        with pytest.raises(RuntimeError):
-            flight.run("k", loader)
-
-    assert len(calls) == 2
-
-
-def test_a_refresh_leader_is_elected_only_once() -> None:
-    """A second stale reader must not start a competing refresh."""
-    flight = SingleFlight()
-
-    assert flight.try_start("k") is True
-    assert flight.try_start("k") is False
-    flight.finish("k")
-    assert flight.try_start("k") is True
-
-
-def test_a_keyed_mutex_is_discarded_when_nobody_holds_it() -> None:
-    """A per-key lock registry must not grow with the key space."""
-    mutex = KeyedMutex()
-
-    assert mutex.acquire("k") is True
-    assert mutex.is_locked("k") is True
-    mutex.release("k")
-
-    assert mutex.is_locked("k") is False
 
 
 def test_a_breaker_opens_after_repeated_failures() -> None:

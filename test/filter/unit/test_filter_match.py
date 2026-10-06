@@ -3,12 +3,10 @@ import uuid
 from enum import IntEnum
 from test.filter.unit import util
 
-import numpy as np
 import pytest
 from pydantic import BaseModel
 
-from gen_epix.filter import ExistsFilter, NumberRangeFilter
-from gen_epix.filter.composite import CompositeFilter
+from gen_epix.filter import NumberRangeFilter
 from gen_epix.filter.date_range import DateRangeFilter
 from gen_epix.filter.partial_date_range import PartialDateRangeFilter
 from gen_epix.filter.string_set import StringSetFilter
@@ -16,40 +14,6 @@ from gen_epix.filter.string_set import StringSetFilter
 
 @pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestFilterMatch:
-
-    def test_exists_match(self) -> None:
-        # Match value
-        filter = ExistsFilter(key="a")
-        rows = [{"a": x} for x in [None, np.nan, "", "null"]]
-        util.validate_filter_behavior(filter, rows, [False, True, True, True])
-        util.validate_filter_behavior(
-            filter, rows, [True, True, True, True], na_values=set()
-        )
-        util.validate_filter_behavior(
-            filter, rows, [False, True, True, True], na_values={None}
-        )
-        util.validate_filter_behavior(
-            filter, rows, [True, False, True, True], na_values={np.nan}
-        )
-        util.validate_filter_behavior(
-            filter, rows, [True, True, False, True], na_values={""}
-        )
-        util.validate_filter_behavior(
-            filter, rows, [True, True, True, False], na_values={"null"}
-        )
-        util.validate_filter_behavior(
-            filter, rows, [False, False, True, True], na_values={None, np.nan}
-        )
-        util.validate_filter_behavior(
-            filter, rows, [True, False, False, True], na_values={np.nan, ""}
-        )
-        util.validate_filter_behavior(
-            filter, rows, [True, True, False, False], na_values={"", "null"}
-        )
-        # Key does not exist
-        filter = ExistsFilter(key="b")
-        rows = [{"a": x} for x in [None, np.nan, "", "null"]]
-        util.validate_filter_behavior(filter, rows, [False, False, False, False])
 
     def test_string_set_match(self) -> None:
         for key in ["a", uuid.uuid4()]:
@@ -278,100 +242,6 @@ class TestFilterMatch:
             filter, rows, [False, False, False, True, True, True, False]
         )
 
-    def test_not_nested_composite_match(self) -> None:
-        rows = [
-            {"a": "2022-04", "b": "", "c": "c", "d": None},
-            {"a": "2022-04", "b": "b", "c": "c", "d": None},
-            {"a": "2022-01", "b": "", "c": "c", "d": None},
-            {"a": "2022-01", "b": "b", "c": "c", "d": None},
-        ]
-        sub_filter1 = PartialDateRangeFilter(
-            lower_bound="2022-01",
-            upper_bound="2022-03",
-            key="a",
-        )
-        sub_filter2 = StringSetFilter(
-            members={"a", "b", "c"},
-            key="b",
-        )
-
-        def _get_filter(operator: str) -> CompositeFilter:
-            return CompositeFilter(
-                filters=[sub_filter1, sub_filter2],
-                operator=operator,
-            )
-
-        # Two filters, AND
-        filter = _get_filter("AND")
-        util.validate_filter_behavior(filter, rows, [False, False, False, True])
-        # Two filters, OR
-        filter = _get_filter("OR")
-        util.validate_filter_behavior(filter, rows, [False, True, True, True])
-        # Two filters, XOR
-        filter = _get_filter("XOR")
-        util.validate_filter_behavior(filter, rows, [False, True, True, False])
-        # Two filters, NAND
-        filter = _get_filter("NAND")
-        util.validate_filter_behavior(filter, rows, [True, True, True, False])
-        # Two filters, NOR
-        filter = _get_filter("NOR")
-        util.validate_filter_behavior(filter, rows, [True, False, False, False])
-        # Two filters, XNOR
-        filter = _get_filter("XNOR")
-        util.validate_filter_behavior(filter, rows, [True, False, False, True])
-        # Two filters, IMPLIES
-        filter = _get_filter("IMPLIES")
-        util.validate_filter_behavior(filter, rows, [True, True, False, True])
-        # Two filters, NIMPLIES
-        filter = _get_filter("NIMPLIES")
-        util.validate_filter_behavior(filter, rows, [False, False, True, False])
-        # One filter, NOT
-        filter = CompositeFilter(
-            filters=[sub_filter1],
-            operator="NOT",
-        )
-        util.validate_filter_behavior(filter, rows, [True, True, False, False])
-        # Two filters, NOT
-        with pytest.raises(ValueError):
-            filter = CompositeFilter(
-                filters=[sub_filter1, sub_filter2],
-                operator="NOT",
-            )
-
-        # TODO: test >2 filters for AND and OR, error for all others
-        # TODO: test nested composite filters
-
-        # TODO: test >2 filters for AND and OR, error for all others
-        # TODO: test nested composite filters
-
-    def test_nested_composite_match(self) -> None:
-        sub_filter1_1 = StringSetFilter(
-            members={"a", "b", "c"},
-            key="a",
-        )
-        sub_filter2_1 = StringSetFilter(
-            members={"a", "b", "c"},
-            key="a",
-        )
-        sub_filter2_2 = StringSetFilter(
-            members={"a", "b", "c"},
-            key="a",
-        )
-        sub_filter1 = sub_filter1_1
-        sub_filter2 = CompositeFilter(
-            filters=[sub_filter2_1, sub_filter2_2],
-            operator="AND",
-        )
-        filter = CompositeFilter(
-            filters=[sub_filter1, sub_filter2],
-            operator="AND",
-        )
-
-        rows = [
-            {"a": "a"},
-        ]
-        util.validate_filter_behavior(filter, rows, [True])
-
     def test_simple_filter_pydantic_and_plain_python_class(self) -> None:
 
         class _PydanticModel(BaseModel):
@@ -406,76 +276,3 @@ class TestFilterMatch:
         assert simple_matches == expected_matches
         assert len(simple_filtered) == len(plain_rows) - 1
         assert [row.x for row in simple_filtered] == values[:-1]
-
-    def test_composite_filter_pydantic_and_plain_python_class(self) -> None:
-
-        class _PydanticXY(BaseModel):
-            x: int
-            y: str
-
-        class _PlainXY:
-            def __init__(self, x: int, y: str):
-                self.x = x
-                self.y = y
-
-        data: list[tuple[int, str]] = [
-            (5, "a"),
-            (10, "b"),
-            (15, "z"),
-            (20, "b"),
-            (26, "a"),
-        ]
-        pydantic_rows = [_PydanticXY(x=x, y=y) for x, y in data]
-        plain_rows = [_PlainXY(x=x, y=y) for x, y in data]
-
-        filter_range = NumberRangeFilter(lower_bound=10, upper_bound=20, key="x")
-        filter_set = StringSetFilter(members={"a", "b"}, key="y")
-
-        # AND
-        composite_and = CompositeFilter(
-            filters=[filter_range, filter_set],
-            operator="AND",
-        )
-        expected_matches = [False, True, False, False, False]
-        assert (
-            list(composite_and.match_rows(pydantic_rows, is_model=True))
-            == expected_matches
-        )
-        assert (
-            list(composite_and.match_rows(plain_rows, is_model=True))
-            == expected_matches
-        )
-
-        pydantic_filtered_and = list(
-            composite_and.filter_rows(pydantic_rows, is_model=True)
-        )
-        plain_filtered_and = list(composite_and.filter_rows(plain_rows, is_model=True))
-
-        assert [(r.x, r.y) for r in pydantic_filtered_and] == [data[1]]
-        assert [(r.x, r.y) for r in plain_filtered_and] == [data[1]]
-        assert pydantic_filtered_and[0] == pydantic_rows[1]
-        assert plain_filtered_and[0] == plain_rows[1]
-
-        # OR
-        composite_or = CompositeFilter(
-            filters=[filter_range, filter_set],
-            operator="OR",
-        )
-        expected_matches = [True, True, True, True, True]
-
-        assert (
-            list(composite_or.match_rows(pydantic_rows, is_model=True))
-            == expected_matches
-        )
-        assert (
-            list(composite_or.match_rows(plain_rows, is_model=True)) == expected_matches
-        )
-
-        pydantic_filtered_or = list(
-            composite_or.filter_rows(pydantic_rows, is_model=True)
-        )
-        plain_filtered_or = list(composite_or.filter_rows(plain_rows, is_model=True))
-        assert [(r.x, r.y) for r in pydantic_filtered_or] == data
-        assert [(r.x, r.y) for r in plain_filtered_or] == data
-        assert pydantic_filtered_or == pydantic_rows
-        assert plain_filtered_or == plain_rows

@@ -242,72 +242,10 @@ class BatchUploader:
         """Initialize the batch upload result. Override as needed."""
         assert isinstance(cmd, command.Command)
         # Initialize parent results
-        parent_results: list[model.ParentUploadResult] = []
-        for parent_for_upload in self.get_parents_for_upload(cmd):
-            # Intialize parent result
-            parent_result = self.parent_result_class(status=EtlStatus.PENDING)
-            # Initialise Identifier results
-            identifiers = parent_for_upload.identifiers
-            identifier_results = (
-                None
-                if identifiers is None
-                else [
-                    UploadResultWithIdentifiers(status=EtlStatus.PENDING)
-                    for _ in identifiers
-                ]
-            )
-            parent_result.identifiers = identifier_results
-            # Initialize child results
-            for (
-                child_model_class,
-                children_field_name,
-            ) in self.child_children_field_name_map.items():
-                child_id_field_name = self.child_id_field_name_map[child_model_class]
-                children_for_upload: list[Model] | None = getattr(
-                    parent_for_upload, children_field_name
-                )
-                # Special case: no children
-                if not children_for_upload:
-                    setattr(
-                        parent_result,
-                        children_field_name,
-                        None if children_for_upload is None else [],
-                    )
-                    continue
-                # Determine if child model has identifiers
-                has_identifiers = child_model_class in self.child_identifier_class_map
-                child_results: list[UploadResult] = []
-                if has_identifiers:
-                    # Child class has identifiers, for which (sub)upload results also need to be initialized
-                    for child_for_upload in children_for_upload:
-                        assert isinstance(child_for_upload, IdentifiersMixin)
-                        identifiers = child_for_upload.identifiers
-                        identifier_results = (
-                            None
-                            if identifiers is None
-                            else [
-                                UploadResult(status=EtlStatus.PENDING)
-                                for _ in identifiers
-                            ]
-                        )
-                        child_results.append(
-                            UploadResultWithIdentifiers(
-                                status=EtlStatus.PENDING,
-                                identifiers=identifier_results,
-                            )
-                        )
-                else:
-                    # Child class does not have identifiers, only initialize corresponding upload result for the child
-                    child_results = [
-                        UploadResult(
-                            id=getattr(x, child_id_field_name),
-                            status=EtlStatus.PENDING,
-                        )
-                        for x in children_for_upload
-                    ]
-                setattr(parent_result, children_field_name, child_results)
-            # Add parent result to parent results
-            parent_results.append(parent_result)
+        parent_results = [
+            self._init_parent_upload_result(parent_for_upload)
+            for parent_for_upload in self.get_parents_for_upload(cmd)
+        ]
 
         # Initialize batch result
         kwargs = {self.batch_parents_for_upload_field_name: parent_results}
@@ -317,6 +255,73 @@ class BatchUploader:
             **kwargs,  # type: ignore[arg-type]
         )
         return batch_result
+
+    def _init_parent_upload_result(
+        self, parent_for_upload: model.ParentForUpload
+    ) -> model.ParentUploadResult:
+        # Intialize parent result
+        parent_result = self.parent_result_class(status=EtlStatus.PENDING)
+        # Initialise Identifier results
+        parent_result.identifiers = self._init_identifier_upload_results(
+            parent_for_upload.identifiers
+        )
+        # Initialize child results
+        for (
+            child_model_class,
+            children_field_name,
+        ) in self.child_children_field_name_map.items():
+            children_for_upload: list[Model] | None = getattr(
+                parent_for_upload, children_field_name
+            )
+            child_results = self._init_child_upload_results(
+                child_model_class,
+                children_for_upload,
+            )
+            setattr(parent_result, children_field_name, child_results)
+        # Add parent result to parent results
+        return parent_result
+
+    def _init_child_upload_results(
+        self,
+        child_model_class: type[Model],
+        children_for_upload: list[Model] | None,
+    ) -> list[UploadResult] | None:
+        # Special case: no children
+        if not children_for_upload:
+            return None if children_for_upload is None else []
+        # Determine if child model has identifiers
+        if child_model_class in self.child_identifier_class_map:
+            # Child class has identifiers, for which (sub)upload results also need to be initialized
+            return [
+                self._init_child_upload_result(child_for_upload)
+                for child_for_upload in children_for_upload
+            ]
+        # Child class does not have identifiers, only initialize corresponding upload result for the child
+        child_id_field_name = self.child_id_field_name_map[child_model_class]
+        return [
+            UploadResult(
+                id=getattr(child_for_upload, child_id_field_name),
+                status=EtlStatus.PENDING,
+            )
+            for child_for_upload in children_for_upload
+        ]
+
+    def _init_child_upload_result(self, child_for_upload: Model) -> UploadResult:
+        assert isinstance(child_for_upload, IdentifiersMixin)
+        return UploadResultWithIdentifiers(
+            status=EtlStatus.PENDING,
+            identifiers=self._init_identifier_upload_results(
+                child_for_upload.identifiers
+            ),
+        )
+
+    @staticmethod
+    def _init_identifier_upload_results(
+        identifiers: list[model.IdentifierForUpload] | None,
+    ) -> list[UploadResult] | None:
+        if identifiers is None:
+            return None
+        return [UploadResult(status=EtlStatus.PENDING) for _ in identifiers]
 
     def verify_batch(
         self,
@@ -332,8 +337,13 @@ class BatchUploader:
         success &= self.verify_children_identifiers(cmd, batch_result, uow)
         # Verify children before parents. Child parent links may resolve missing
         # parent IDs, so parent existence/newness must be evaluated afterwards.
-        success &= self.verify_children(cmd, batch_result, uow)
-        success &= self.verify_parents(cmd, batch_result, uow)
+        child_verified_parent_results: set[int] = set()
+        success &= self.verify_children(
+            cmd, batch_result, uow, child_verified_parent_results
+        )
+        success &= self.verify_parents(
+            cmd, batch_result, uow, child_verified_parent_results
+        )
         # Verify reference data last since it may depend on parent and children verification
         success &= self.verify_refdata(cmd, batch_result, uow)
         return success
@@ -459,63 +469,102 @@ class BatchUploader:
         cmd: command.UploadBatchCommandMixin,
         batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
+        child_verified_parent_results: set[int] | None = None,
     ) -> bool:
         """Check parent model existence when ID is given."""
         assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
-        success = True
-        n_parents = cmd.get_n_parents()
-        if n_parents == 0:
-            return success
-
         # Get parent IDs and set status when no parent
-        parent_ids: list[UUID | None] = [None] * n_parents
+        parent_ids, has_parent_ids, success = self._prepare_parent_ids(
+            cmd, batch_result, child_verified_parent_results
+        )
+        if not has_parent_ids:
+            # No parent IDs given, nothing left to check
+            return success
+        self._mark_duplicate_parent_ids(cmd, batch_result, parent_ids)
+        # Some parent IDs are given, check existence
+        parents_exist = self.objects_exist(uow, user_id, self.parent_class, parent_ids)
+        for parent_exists, (parent_for_upload, parent_result) in zip(
+            parents_exist, self.parent_result_items(cmd, batch_result)
+        ):
+            if parent_result.status == EtlStatus.FAILED:
+                continue  # already marked by duplicate detection above
+            success &= self._apply_parent_existence_result(
+                cmd, parent_for_upload, parent_result, parent_exists
+            )
+        return success
+
+    def _prepare_parent_ids(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        batch_result: BaseBatchUploadResult,
+        child_verified_parent_results: set[int] | None = None,
+    ) -> tuple[list[UUID | None], bool, bool]:
+        parent_ids: list[UUID | None] = [None] * cmd.get_n_parents()
         has_parent_ids = False
-        for i, (parent_for_upload, parent_result) in enumerate(
+        success = True
+        for index, (parent_for_upload, parent_result) in enumerate(
             self.parent_result_items(cmd, batch_result)
         ):
             if parent_result.status == EtlStatus.FAILED:
                 continue
-            # TODO: parents resolved in verify_children (child-inferred parent ID)
-            # also land here and get existence-checked + on_exists/on_new applied a
-            # second time. Detected cases: SKIPPED (guard above misses it), and
-            # PENDING parents where verify_children set parent_result.id or
-            # parent_result.is_new. Consequence is redundant DB calls and duplicate
-            # info log messages; final state is identical so no correctness bug.
-            parent_id = parent_for_upload.id
-            parent = parent_for_upload.get_parent()
-            if parent is None:
-                # Parent not given: skip writing the parent record (children may still
-                # be processed if the parent ID is resolved via identifier lookup).
-                parent_result.status = EtlStatus.SKIPPED
-                parent_result.add_info(
-                    "a740e288",
-                    f"{self.parent_class.NAME} model not provided; parent record will not be written",
-                )
+            if (
+                child_verified_parent_results is not None
+                and id(parent_result) in child_verified_parent_results
+            ):
+                # Child verification already resolved and checked this parent.
                 continue
-            if self.is_null(parent_id):
-                # Parent given but no ID: always a new entity.
-                parent_result.is_new = True
-                if cmd.on_new == UploadAction.ERROR:
-                    success = False
-                    parent_result.add_error(
-                        "eacd67d4",
-                        f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
-                    )
-                elif cmd.on_new == UploadAction.SKIP:
-                    parent_result.status = EtlStatus.SKIPPED
-                    parent_result.add_info(
-                        "f457324b",
-                        f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
-                    )
+            parent_id, parent_success = self._prepare_parent_id(
+                cmd, parent_for_upload, parent_result
+            )
+            success &= parent_success
+            if parent_id is None:
                 continue
-            parent_ids[i] = parent_id
+            parent_ids[index] = parent_id
             has_parent_ids = True
+        return parent_ids, has_parent_ids, success
 
-        if not has_parent_ids:
-            # No parent IDs given, nothing left to check
-            return success
+    def _prepare_parent_id(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        parent_for_upload: model.ParentForUpload,
+        parent_result: model.ParentUploadResult,
+    ) -> tuple[UUID | None, bool]:
+        parent_id = parent_for_upload.id
+        parent = parent_for_upload.get_parent()
+        if parent is None:
+            # Parent not given: skip writing the parent record (children may still
+            # be processed if the parent ID is resolved via identifier lookup).
+            parent_result.status = EtlStatus.SKIPPED
+            parent_result.add_info(
+                "a740e288",
+                f"{self.parent_class.NAME} model not provided; parent record will not be written",
+            )
+            return None, True
+        if not self.is_null(parent_id):
+            return parent_id, True
+        # Parent given but no ID: always a new entity.
+        parent_result.is_new = True
+        if cmd.on_new == UploadAction.ERROR:
+            parent_result.add_error(
+                "eacd67d4",
+                f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
+            )
+            return None, False
+        if cmd.on_new == UploadAction.SKIP:
+            parent_result.status = EtlStatus.SKIPPED
+            parent_result.add_info(
+                "f457324b",
+                f"{self.parent_class.NAME} has no ID and on_new={cmd.on_new.value}.",
+            )
+        return None, True
 
+    def _mark_duplicate_parent_ids(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        batch_result: BaseBatchUploadResult,
+        parent_ids: list[UUID | None],
+    ) -> None:
         # Detect duplicate parent IDs. Mark every occurrence of a duplicated UUID as
         # FAILED (including the first — a duplicate UUID is always ambiguous) and
         # remove them from the existence-check list so the repository never sees it.
@@ -537,281 +586,411 @@ class BatchUploader:
                 )
                 parent_ids[i] = None  # exclude from objects_exist()
 
-        # Some parent IDs are given, check existence
-        parents_exist = self.objects_exist(uow, user_id, self.parent_class, parent_ids)
-        for parent_exists, (parent_for_upload, parent_result) in zip(
-            parents_exist, self.parent_result_items(cmd, batch_result)
-        ):
-            if parent_result.status == EtlStatus.FAILED:
-                continue  # already marked by duplicate detection above
-            if parent_exists:
-                parent_result.id = parent_for_upload.id
-                if cmd.on_exists == UploadAction.ERROR:
-                    success = False
-                    parent_result.add_error(
-                        "1e5e22b3",
-                        f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
-                    )
-                elif cmd.on_exists == UploadAction.SKIP:
-                    # Existing parent and on_exists=SKIP: do not update
-                    parent_result.status = EtlStatus.SKIPPED
-                    parent_result.add_info(
-                        "a7c3f42e",
-                        f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
-                    )
-            else:
-                parent_result.is_new = True
-                if cmd.on_new == UploadAction.ERROR:
-                    success = False
-                    parent_result.add_error(
-                        "c544eba4",
-                        f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
-                    )
-                elif cmd.on_new == UploadAction.SKIP:
-                    # New parent and on_new=SKIP: do not create
-                    parent_result.status = EtlStatus.SKIPPED
-                    parent_result.add_info(
-                        "cd349a43",
-                        f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
-                    )
-                elif cmd.on_new == UploadAction.CREATE:
-                    # New parent and on_new=CREATE: will be created, nothing left to check for this parent
-                    if self.is_null(parent_for_upload.id):
-                        parent_result.add_info(
-                            "8f289ecb",
-                            f"{self.parent_class.NAME} will be created with generated ID",
-                        )
-                    else:
-                        parent_result.add_info(
-                            "46b0bce4",
-                            f"{self.parent_class.NAME} will be created with provided ID",
-                        )
-        return success
+    def _apply_parent_existence_result(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        parent_for_upload: model.ParentForUpload,
+        parent_result: model.ParentUploadResult,
+        parent_exists: bool,
+    ) -> bool:
+        if parent_exists:
+            parent_result.id = parent_for_upload.id
+            if cmd.on_exists == UploadAction.ERROR:
+                parent_result.add_error(
+                    "1e5e22b3",
+                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                )
+                return False
+            if cmd.on_exists == UploadAction.SKIP:
+                # Existing parent and on_exists=SKIP: do not update
+                parent_result.status = EtlStatus.SKIPPED
+                parent_result.add_info(
+                    "a7c3f42e",
+                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                )
+            return True
+        parent_result.is_new = True
+        if cmd.on_new == UploadAction.ERROR:
+            parent_result.add_error(
+                "c544eba4",
+                f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
+            )
+            return False
+        if cmd.on_new == UploadAction.SKIP:
+            # New parent and on_new=SKIP: do not create
+            parent_result.status = EtlStatus.SKIPPED
+            parent_result.add_info(
+                "cd349a43",
+                f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
+            )
+        elif cmd.on_new == UploadAction.CREATE:
+            # New parent and on_new=CREATE: will be created, nothing left to check for this parent
+            id_message = (
+                "generated ID" if self.is_null(parent_for_upload.id) else "provided ID"
+            )
+            info_code = "8f289ecb" if id_message == "generated ID" else "46b0bce4"
+            parent_result.add_info(
+                info_code,
+                f"{self.parent_class.NAME} will be created with {id_message}",
+            )
+        return True
 
     def verify_children(
         self,
         cmd: command.UploadBatchCommandMixin,
         batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
+        child_verified_parent_results: set[int] | None = None,
     ) -> bool:
         """Check child model existence and consistency."""
         assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
         success = True
 
-        # Verify each child model for each parent
         parents_for_upload = self.get_parents_for_upload(cmd)
         parent_results = self.get_parent_results(batch_result)
+        # Verify each child model for each parent
         for (
             child_model_class,
             children_field_name,
         ) in self.child_children_field_name_map.items():
-            child_id_field_name = self.child_id_field_name_map[child_model_class]
-            child_parent_id_field_name = self.child_parent_id_field_name_map[
-                child_model_class
-            ]
-            parent_child_tuples = self._get_parents_and_children(
-                parents_for_upload, parent_results, children_field_name
+            success &= self._verify_child_model(
+                cmd,
+                uow,
+                user_id,
+                parents_for_upload,
+                parent_results,
+                child_model_class,
+                children_field_name,
+                child_verified_parent_results,
             )
+        return success
 
-            # Get existing children
-            child_ids = [
-                getattr(x, child_id_field_name) for _, _, x, _ in parent_child_tuples
-            ]
-
-            # Detect duplicate child IDs (within a parent or across parents).
-            # For every duplicated child UUID, mark all parent results that contain
-            # it as FAILED and remove those child slots from the existence-check list.
-            child_id_to_entries: defaultdict[
-                UUID,
-                list[tuple[int, model.ParentForUpload, model.ParentUploadResult]],
-            ] = defaultdict(list)
-            for idx, (parent_for_upload, parent_result, _, _) in enumerate(
-                parent_child_tuples
-            ):
-                child_id = child_ids[idx]
-                if self.is_null(child_id):
-                    continue
-                child_id_to_entries[child_id].append(
-                    (idx, parent_for_upload, parent_result)
-                )
-            for child_id, entries in child_id_to_entries.items():
-                if len(entries) <= 1:
-                    continue
-                seen_parent_results: set[int] = set()
-                parent_ids_str = ", ".join(
-                    str(e[1].id) for e in entries if e[1].id is not None
-                )
-                for idx, parent_for_upload, parent_result in entries:
-                    child_ids[idx] = None  # exclude from objects_exist()
-                    if id(parent_result) not in seen_parent_results:
-                        seen_parent_results.add(id(parent_result))
-                        parent_result.add_error(
-                            "e5f6a7b8",
-                            f"{child_model_class.NAME} id={child_id} appears in multiple "
-                            f"entries in the batch (parents: {parent_ids_str}).",
-                        )
-
-            # Single read_fields replaces the old EXISTS_SOME + read_fields pair.
-            # Presence in the result means the child exists; absence means new.
-            # Duplicate-nulled entries (None) are excluded from the query and
-            # correctly map to children_exist=False via the `in` check below.
-            actual_child_ids = frozenset(x for x in child_ids if not self.is_null(x))
-            child_parent_id_map: dict[UUID, UUID] = {}
-            if actual_child_ids:
-                result_iter = self.service.repository.read_fields(
-                    uow,
-                    user_id,
-                    child_model_class,
-                    [child_id_field_name, child_parent_id_field_name],
-                    filter=UuidSetFilter(
-                        key=child_id_field_name,
-                        members=actual_child_ids,
-                    ),
-                )
-                child_parent_id_map = {x[0]: x[1] for x in result_iter}
-            children_exist = [x in child_parent_id_map for x in child_ids]
-
-            # Process all children (both with and without IDs)
-            for (
+    def _verify_child_model(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        uow: fastapp.BaseUnitOfWork,
+        user_id: UUID | None,
+        parents_for_upload: list[model.ParentForUpload],
+        parent_results: list[model.ParentUploadResult],
+        child_model_class: type[Model],
+        children_field_name: str,
+        child_verified_parent_results: set[int] | None,
+    ) -> bool:
+        """Verify identifiers, parent links, and actions for one child model."""
+        child_id_field_name = self.child_id_field_name_map[child_model_class]
+        child_parent_id_field_name = self.child_parent_id_field_name_map[
+            child_model_class
+        ]
+        parent_child_tuples = self._get_parents_and_children(
+            parents_for_upload, parent_results, children_field_name
+        )
+        child_ids = [
+            getattr(child_for_upload, child_id_field_name)
+            for _, _, child_for_upload, _ in parent_child_tuples
+        ]
+        # Detect duplicate child IDs (within a parent or across parents).
+        # For every duplicated child UUID, mark all parent results that contain
+        # it as FAILED and remove those child slots from the existence-check list.
+        self._mark_duplicate_child_ids(
+            child_model_class, parent_child_tuples, child_ids
+        )
+        # Get existing children
+        child_parent_id_map = self._get_child_parent_id_map(
+            uow,
+            user_id,
+            child_model_class,
+            child_id_field_name,
+            child_parent_id_field_name,
+            child_ids,
+        )
+        success = True
+        # Process all children (both with and without IDs)
+        for (
+            parent_for_upload,
+            parent_result,
+            child_for_upload,
+            child_result,
+        ), child_id in zip(parent_child_tuples, child_ids):
+            if parent_result.status == EtlStatus.FAILED:
+                continue  # parent already marked FAILED by duplicate detection above
+            # Child ID given
+            child_exists = child_id in child_parent_id_map
+            # Set child is new
+            child_result.is_new = not child_exists
+            # Check consistency of parent ID in child and assign in either direction if possible
+            success &= self._verify_child_parent_link(
+                cmd,
+                uow,
+                user_id,
                 parent_for_upload,
                 parent_result,
                 child_for_upload,
+                child_model_class,
                 child_result,
-            ), child_exists in zip(parent_child_tuples, children_exist):
-                if parent_result.status == EtlStatus.FAILED:
-                    continue  # parent already marked FAILED by duplicate detection above
-                parent_id = parent_for_upload.id
-                has_parent_id = not self.is_null(parent_id)
-                child_id = getattr(child_for_upload, child_id_field_name)
-                child_parent_id = getattr(
-                    child_for_upload, child_parent_id_field_name, None
-                )
-                has_child_parent_id = not self.is_null(child_parent_id)
-                # Set child is new
-                child_result.is_new = not child_exists
-                # Check consistency of parent ID in child and assign in either direction if possible
-                if has_parent_id:
-                    # Parent ID given
-                    if has_child_parent_id:
-                        # Child parent ID given: check if identical
-                        if parent_id != child_parent_id:
-                            success = False
-                            child_result.add_error(
-                                "13ba4246",
-                                f"{child_parent_id_field_name}={child_parent_id} does not match {self.parent_for_upload_class.NAME}.{self.parent_id_field_name}={parent_id}",
-                            )
-                        if child_exists:
-                            # Child exists: check if parent ID matches existing data
-                            assert child_id is not None
-                            existing_parent_id = child_parent_id_map.get(child_id)
-                            if existing_parent_id != parent_id:
-                                success = False
-                                child_result.add_error(
-                                    "cfc3da21",
-                                    f"{child_model_class.NAME}.id={child_id} refers to {child_parent_id_field_name}={existing_parent_id}, which does not match existing {self.parent_for_upload_class.NAME}.{self.parent_id_field_name}={parent_id}",
-                                )
-                    else:
-                        # Child parent ID not given: fill in from parent
-                        setattr(child_for_upload, child_parent_id_field_name, parent_id)
-                else:
-                    # Parent ID not given
-                    if has_child_parent_id:
-                        # Parent ID not given: infer from child and re-apply
-                        # on_exists/on_new semantics for the resolved parent ID.
-                        parent_for_upload.id = child_parent_id
-                        parent = parent_for_upload.get_parent()
-                        if parent is not None:
-                            setattr(parent, self.parent_id_field_name, child_parent_id)
-                        parent_exists = self.objects_exist(
-                            uow,
-                            user_id,
-                            self.parent_class,
-                            [child_parent_id],
-                        )[0]
-                        if parent_exists:
-                            parent_result.id = child_parent_id
-                            parent_result.is_new = False
-                            if cmd.on_exists == UploadAction.ERROR:
-                                success = False
-                                parent_result.add_error(
-                                    "f2a13b7c",
-                                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
-                                )
-                            elif cmd.on_exists == UploadAction.SKIP:
-                                parent_result.status = EtlStatus.SKIPPED
-                                parent_result.add_info(
-                                    "9f43d602",
-                                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
-                                )
-                        else:
-                            parent_result.is_new = True
-                            if cmd.on_new == UploadAction.ERROR:
-                                success = False
-                                parent_result.add_error(
-                                    "1ca29f8e",
-                                    f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
-                                )
-                            elif cmd.on_new == UploadAction.SKIP:
-                                parent_result.status = EtlStatus.SKIPPED
-                                parent_result.add_info(
-                                    "6e8ab14d",
-                                    f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
-                                )
-                            elif cmd.on_new == UploadAction.CREATE:
-                                parent_result.add_info(
-                                    "3b9d87f4",
-                                    f"{self.parent_class.NAME} will be created with provided ID",
-                                )
-                    else:
-                        # Neither parent ID nor child parent ID given
-                        pass
-                # Child ID given
-                # Apply on_exists/on_new based on existence determined from storage,
-                # not just on whether a child ID value is present in the payload.
-                if child_exists:
-                    # Child already exists
-                    if cmd.on_exists == UploadAction.ERROR:
-                        success = False
-                        child_result.add_error(
-                            "c351c931",
-                            f"{child_for_upload.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
-                        )
-                    elif cmd.on_exists == UploadAction.SKIP:
-                        # Existing child and on_exists=SKIP: do not update
-                        child_result.status = EtlStatus.SKIPPED
-                        child_result.add_info(
-                            "7a3f2c81",
-                            f"{child_for_upload.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
-                        )
-                else:
-                    # Child does not exist yet
-                    if cmd.on_new == UploadAction.ERROR:
-                        success = False
-                        child_result.add_error(
-                            "2824fa39",
-                            f"{child_for_upload.__class__.NAME} does not exist and on_new={cmd.on_new.value}",
-                        )
-                    elif cmd.on_new == UploadAction.SKIP:
-                        # New child and on_new=SKIP: do not create
-                        child_result.status = EtlStatus.SKIPPED
-                        child_result.add_info(
-                            "cfd622df",
-                            f"{child_for_upload.__class__.NAME} does not exist and on_new={cmd.on_new.value}",
-                        )
-                    elif cmd.on_new == UploadAction.CREATE:
-                        # New child and on_new=CREATE: will be created
-                        if self.is_null(child_id):
-                            child_result.add_info(
-                                "85401e0e",
-                                f"{child_for_upload.__class__.NAME} will be created with generated ID",
-                            )
-                        else:
-                            child_result.add_info(
-                                "9b5d4e32",
-                                f"{child_for_upload.__class__.NAME} will be created with provided ID",
-                            )
+                child_id_field_name,
+                child_parent_id_field_name,
+                child_exists,
+                child_parent_id_map,
+                child_verified_parent_results,
+            )
+            # Apply on_exists/on_new based on existence determined from storage,
+            # not just on whether a child ID value is present in the payload.
+            success &= self._apply_child_existence_action(
+                cmd, child_for_upload, child_id, child_result, child_exists
+            )
         return success
+
+    def _mark_duplicate_child_ids(
+        self,
+        child_model_class: type[Model],
+        parent_child_tuples: list[
+            tuple[model.ParentForUpload, model.ParentUploadResult, Model, UploadResult]
+        ],
+        child_ids: list[UUID | None],
+    ) -> None:
+        """Fail parent results containing duplicate non-null child IDs."""
+        child_id_to_entries: defaultdict[
+            UUID,
+            list[tuple[int, model.ParentForUpload, model.ParentUploadResult]],
+        ] = defaultdict(list)
+        for idx, (parent_for_upload, parent_result, _, _) in enumerate(
+            parent_child_tuples
+        ):
+            child_id = child_ids[idx]
+            if child_id is None or self.is_null(child_id):
+                continue
+            child_id_to_entries[child_id].append(
+                (idx, parent_for_upload, parent_result)
+            )
+        for child_id, entries in child_id_to_entries.items():
+            if len(entries) <= 1:
+                continue
+            seen_parent_results: set[int] = set()
+            parent_ids_str = ", ".join(
+                str(entry[1].id) for entry in entries if entry[1].id is not None
+            )
+            for idx, _, parent_result in entries:
+                child_ids[idx] = None
+                if id(parent_result) in seen_parent_results:
+                    continue
+                seen_parent_results.add(id(parent_result))
+                parent_result.add_error(
+                    "e5f6a7b8",
+                    f"{child_model_class.NAME} id={child_id} appears in multiple "
+                    f"entries in the batch (parents: {parent_ids_str}).",
+                )
+
+    def _get_child_parent_id_map(
+        self,
+        uow: fastapp.BaseUnitOfWork,
+        user_id: UUID | None,
+        child_model_class: type[Model],
+        child_id_field_name: str,
+        child_parent_id_field_name: str,
+        child_ids: list[UUID | None],
+    ) -> dict[UUID, UUID]:
+        """Read existing child IDs and their parent IDs in one query."""
+        # Single read_fields replaces the old EXISTS_SOME + read_fields pair.
+        # Presence in the result means the child exists; absence means new.
+        # Duplicate-nulled entries (None) are excluded from the query and
+        # correctly map to children_exist=False via the `in` check below.
+        actual_child_ids = frozenset(
+            child_id
+            for child_id in child_ids
+            if child_id is not None and not self.is_null(child_id)
+        )
+        if not actual_child_ids:
+            return {}
+        result_iter = self.service.repository.read_fields(
+            uow,
+            user_id,
+            child_model_class,
+            [child_id_field_name, child_parent_id_field_name],
+            filter=UuidSetFilter(
+                key=child_id_field_name,
+                members=actual_child_ids,
+            ),
+        )
+        return {row[0]: row[1] for row in result_iter}
+
+    def _verify_child_parent_link(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        uow: fastapp.BaseUnitOfWork,
+        user_id: UUID | None,
+        parent_for_upload: model.ParentForUpload,
+        parent_result: model.ParentUploadResult,
+        child_for_upload: Model,
+        child_model_class: type[Model],
+        child_result: UploadResult,
+        child_id_field_name: str,
+        child_parent_id_field_name: str,
+        child_exists: bool,
+        child_parent_id_map: dict[UUID, UUID],
+        child_verified_parent_results: set[int] | None,
+    ) -> bool:
+        """Check or infer a child-to-parent link and update parent status."""
+        parent_id = parent_for_upload.id
+        child_id = getattr(child_for_upload, child_id_field_name)
+        child_parent_id = getattr(child_for_upload, child_parent_id_field_name, None)
+        if not self.is_null(parent_id):
+            # Parent ID given
+            if self.is_null(child_parent_id):
+                # Child parent ID not given: fill in from parent
+                setattr(child_for_upload, child_parent_id_field_name, parent_id)
+                return True
+            # Child parent ID given: check if identical
+            success = True
+            if parent_id != child_parent_id:
+                success = False
+                child_result.add_error(
+                    "13ba4246",
+                    f"{child_parent_id_field_name}={child_parent_id} does not match "
+                    f"{self.parent_for_upload_class.NAME}.{self.parent_id_field_name}={parent_id}",
+                )
+            if child_exists:
+                # Child exists: check if parent ID matches existing data
+                assert child_id is not None
+                existing_parent_id = child_parent_id_map.get(child_id)
+                if existing_parent_id != parent_id:
+                    success = False
+                    child_result.add_error(
+                        "cfc3da21",
+                        f"{child_model_class.NAME}.id={child_id} refers to "
+                        f"{child_parent_id_field_name}={existing_parent_id}, which does "
+                        f"not match existing {self.parent_for_upload_class.NAME}."
+                        f"{self.parent_id_field_name}={parent_id}",
+                    )
+            return success
+        # Parent ID not given
+        if child_parent_id is not None and not self.is_null(child_parent_id):
+            # Parent ID not given: infer from child and re-apply
+            # on_exists/on_new semantics for the resolved parent ID.
+            return self._resolve_parent_from_child_id(
+                cmd,
+                uow,
+                user_id,
+                parent_for_upload,
+                parent_result,
+                child_parent_id,
+                child_verified_parent_results,
+            )
+        # Neither parent ID nor child parent ID given
+        return True
+
+    def _resolve_parent_from_child_id(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        uow: fastapp.BaseUnitOfWork,
+        user_id: UUID | None,
+        parent_for_upload: model.ParentForUpload,
+        parent_result: model.ParentUploadResult,
+        child_parent_id: UUID,
+        child_verified_parent_results: set[int] | None = None,
+    ) -> bool:
+        """Infer a parent ID from its child and apply the parent's upload action."""
+        parent_for_upload.id = child_parent_id
+        parent = parent_for_upload.get_parent()
+        if parent is not None:
+            setattr(parent, self.parent_id_field_name, child_parent_id)
+        parent_exists = self.objects_exist(
+            uow, user_id, self.parent_class, [child_parent_id]
+        )[0]
+        if child_verified_parent_results is not None:
+            child_verified_parent_results.add(id(parent_result))
+        if parent_exists:
+            parent_result.id = child_parent_id
+            parent_result.is_new = False
+            if cmd.on_exists == UploadAction.ERROR:
+                parent_result.add_error(
+                    "f2a13b7c",
+                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                )
+                return False
+            if cmd.on_exists == UploadAction.SKIP:
+                parent_result.status = EtlStatus.SKIPPED
+                parent_result.add_info(
+                    "9f43d602",
+                    f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                )
+            return True
+        parent_result.is_new = True
+        if cmd.on_new == UploadAction.ERROR:
+            parent_result.add_error(
+                "1ca29f8e",
+                f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
+            )
+            return False
+        if cmd.on_new == UploadAction.SKIP:
+            parent_result.status = EtlStatus.SKIPPED
+            parent_result.add_info(
+                "6e8ab14d",
+                f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
+            )
+        elif cmd.on_new == UploadAction.CREATE:
+            parent_result.add_info(
+                "3b9d87f4",
+                f"{self.parent_class.NAME} will be created with provided ID",
+            )
+        return True
+
+    def _apply_child_existence_action(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        child_for_upload: Model,
+        child_id: UUID | None,
+        child_result: UploadResult,
+        child_exists: bool,
+    ) -> bool:
+        """Apply on-exists or on-new behavior to one child result."""
+        if child_exists:
+            # Child already exists
+            if cmd.on_exists == UploadAction.ERROR:
+                child_result.add_error(
+                    "c351c931",
+                    f"{child_for_upload.__class__.NAME} already exists and "
+                    f"on_exists={cmd.on_exists.value}",
+                )
+                return False
+            if cmd.on_exists == UploadAction.SKIP:
+                # Existing child and on_exists=SKIP: do not update
+                child_result.status = EtlStatus.SKIPPED
+                child_result.add_info(
+                    "7a3f2c81",
+                    f"{child_for_upload.__class__.NAME} already exists and "
+                    f"on_exists={cmd.on_exists.value}",
+                )
+            return True
+        # Child does not exist yet
+        if cmd.on_new == UploadAction.ERROR:
+            child_result.add_error(
+                "2824fa39",
+                f"{child_for_upload.__class__.NAME} does not exist and "
+                f"on_new={cmd.on_new.value}",
+            )
+            return False
+        if cmd.on_new == UploadAction.SKIP:
+            # New child and on_new=SKIP: do not create
+            child_result.status = EtlStatus.SKIPPED
+            child_result.add_info(
+                "cfd622df",
+                f"{child_for_upload.__class__.NAME} does not exist and "
+                f"on_new={cmd.on_new.value}",
+            )
+        elif cmd.on_new == UploadAction.CREATE:
+            # New child and on_new=CREATE: will be created
+            if self.is_null(child_id):
+                child_result.add_info(
+                    "85401e0e",
+                    f"{child_for_upload.__class__.NAME} will be created with generated ID",
+                )
+            else:
+                child_result.add_info(
+                    "9b5d4e32",
+                    f"{child_for_upload.__class__.NAME} will be created with provided ID",
+                )
+        return True
 
     def verify_refdata(
         self,
@@ -834,10 +1013,34 @@ class BatchUploader:
     ) -> bool:
         """Create any parents."""
         assert isinstance(cmd, command.Command)
-        success = True
-
         # Determine which parents need to be created
-        to_create_parent_result_tuples: list[
+        to_create_parent_result_tuples = self._get_parent_result_tuples_to_create(
+            cmd, batch_result
+        )
+        if not to_create_parent_result_tuples:
+            # Nothing to do
+            return True
+        to_create_parent_result_pairs = [
+            (x[1], x[2]) for x in to_create_parent_result_tuples
+        ]
+        # Create parents
+        success = self.create_objects(
+            uow,
+            cmd.user.id if cmd.user else None,
+            self.parent_class,
+            to_create_parent_result_pairs,
+        )
+        # Update parent IDs in ParentForUpload instances and in child parent ID fields
+        for parent_for_upload, parent, _ in to_create_parent_result_tuples:
+            self._update_parent_and_child_ids(parent_for_upload, parent)
+        return success
+
+    def _get_parent_result_tuples_to_create(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        batch_result: BaseBatchUploadResult,
+    ) -> list[tuple[model.ParentForUpload, Model, model.UploadResult]]:
+        parent_result_tuples: list[
             tuple[model.ParentForUpload, Model, model.UploadResult]
         ] = []
         for parent_for_upload, parent_result in self.parent_result_items(
@@ -849,48 +1052,32 @@ class BatchUploader:
             if parent_result.status != EtlStatus.PENDING:
                 # Only PENDING parents can be created
                 continue
-            # Parent to be created
             parent: Model = parent_for_upload.get_parent()  # type: ignore[assignment]
-            to_create_parent_result_tuples.append(
-                (parent_for_upload, parent, parent_result)
+            # Parent to be created
+            parent_result_tuples.append((parent_for_upload, parent, parent_result))
+        return parent_result_tuples
+
+    def _update_parent_and_child_ids(
+        self, parent_for_upload: model.ParentForUpload, parent: Model
+    ) -> None:
+        parent_for_upload.id = getattr(parent, self.parent_id_field_name)
+        # Update child parent ID fields for this parent
+        for (
+            child_model_class,
+            children_field_name,
+        ) in self.child_children_field_name_map.items():
+            child_parent_id_field_name = self.child_parent_id_field_name_map[
+                child_model_class
+            ]
+            children_for_upload: list[Model] | None = getattr(
+                parent_for_upload, children_field_name
             )
-        if not to_create_parent_result_tuples:
-            # Nothing to do
-            return success
-        to_create_parent_result_pairs = [
-            (x[1], x[2]) for x in to_create_parent_result_tuples
-        ]
-
-        # Create parents
-        success &= self.create_objects(
-            uow,
-            cmd.user.id if cmd.user else None,
-            self.parent_class,
-            to_create_parent_result_pairs,
-        )
-
-        # Update parent IDs in ParentForUpload instances and in child parent ID fields
-        for parent_for_upload, parent, _ in to_create_parent_result_tuples:
-            parent_for_upload.id = getattr(parent, self.parent_id_field_name)
-            # Update child parent ID fields for this parent
-            for (
-                child_model_class,
-                children_field_name,
-            ) in self.child_children_field_name_map.items():
-                child_parent_id_field_name = self.child_parent_id_field_name_map[
-                    child_model_class
-                ]
-                children_for_upload: list[Model] | None = getattr(
-                    parent_for_upload, children_field_name
+            for child_for_upload in children_for_upload or []:
+                setattr(
+                    child_for_upload,
+                    child_parent_id_field_name,
+                    parent_for_upload.id,
                 )
-                for child_for_upload in children_for_upload or []:
-                    setattr(
-                        child_for_upload,
-                        child_parent_id_field_name,
-                        parent_for_upload.id,
-                    )
-
-        return success
 
     def update_parents(
         self,
@@ -982,31 +1169,17 @@ class BatchUploader:
                 child_for_upload,
                 child_result,
             ) in parent_child_tuples:
-                if not child_result.is_new:
-                    # Child already exists, should not be created
-                    continue
-                if child_result.status != EtlStatus.PENDING:
-                    # Only PENDING children can be created
-                    continue
-                parent_id = parent_for_upload.id
-                if self.is_null(parent_id):
-                    child_result.add_error(
-                        "f701df83",
-                        f"Child cannot be created: parent has no resolved ID "
-                        f"(parent status={parent_result.status.value})",
-                    )
-                    continue
-                # Set parent ID link in child, which is known for certain at this point
-                setattr(child_for_upload, child_parent_id_field_name, parent_id)
-                # Collect for creation
-                if isinstance(child_for_upload, child_model_for_upload_class):
-                    actual_child = child_model_class(**child_for_upload.model_dump())
-                    to_create_child_result_pairs.append((actual_child, child_result))
-                else:
-                    to_create_child_result_pairs.append(
-                        (child_for_upload, child_result)
-                    )
-                to_create_child_for_uploads.append(child_for_upload)
+                self._prepare_child_for_creation(
+                    child_model_class,
+                    child_model_for_upload_class,
+                    child_parent_id_field_name,
+                    parent_for_upload,
+                    parent_result,
+                    child_for_upload,
+                    child_result,
+                    to_create_child_result_pairs,
+                    to_create_child_for_uploads,
+                )
 
             if to_create_child_result_pairs:
                 success &= self.create_objects(
@@ -1026,6 +1199,42 @@ class BatchUploader:
                         getattr(created_obj, child_id_field_name),
                     )
         return success
+
+    def _prepare_child_for_creation(
+        self,
+        child_model_class: type[Model],
+        child_model_for_upload_class: type[Model],
+        child_parent_id_field_name: str,
+        parent_for_upload: model.ParentForUpload,
+        parent_result: model.ParentUploadResult,
+        child_for_upload: Model,
+        child_result: UploadResult,
+        to_create_child_result_pairs: list[tuple[Model, UploadResult]],
+        to_create_child_for_uploads: list[Model],
+    ) -> None:
+        if not child_result.is_new:
+            # Child already exists, should not be created
+            return
+        if child_result.status != EtlStatus.PENDING:
+            # Only PENDING children can be created
+            return
+        parent_id = parent_for_upload.id
+        if self.is_null(parent_id):
+            child_result.add_error(
+                "f701df83",
+                f"Child cannot be created: parent has no resolved ID "
+                f"(parent status={parent_result.status.value})",
+            )
+            return
+        # Set parent ID link in child, which is known for certain at this point
+        setattr(child_for_upload, child_parent_id_field_name, parent_id)
+        if isinstance(child_for_upload, child_model_for_upload_class):
+            actual_child = child_model_class(**child_for_upload.model_dump())
+            to_create_child_result_pairs.append((actual_child, child_result))
+        else:
+            to_create_child_result_pairs.append((child_for_upload, child_result))
+        # Collect for creation
+        to_create_child_for_uploads.append(child_for_upload)
 
     def update_children(
         self,
@@ -1052,7 +1261,7 @@ class BatchUploader:
                 child_model_class
             ]
             # Determine which children need to be updated
-            to_update_child_result_pairs = []
+            to_update_child_result_pairs: list[tuple[Model, UploadResult]] = []
             parent_child_tuples = self._get_parents_and_children(
                 parents_for_upload, parent_results, children_field_name
             )
@@ -1062,30 +1271,16 @@ class BatchUploader:
                 child_for_upload,
                 child_result,
             ) in parent_child_tuples:
-                if child_result.is_new:
-                    # Child did not exist, should not be updated
-                    continue
-                if child_result.status != EtlStatus.PENDING:
-                    # Only PENDING children can be updated
-                    continue
-                parent_id = parent_for_upload.id
-                if self.is_null(parent_id):
-                    child_result.add_error(
-                        "1417de99",
-                        f"Child cannot be updated: parent has no resolved ID "
-                        f"(parent status={parent_result.status.value})",
-                    )
-                    continue
-                # Set parent ID link in child, which is known for certain at this point
-                setattr(child_for_upload, child_parent_id_field_name, parent_id)
-                # Collect for update
-                if isinstance(child_for_upload, child_model_for_upload_class):
-                    actual_child = child_model_class(**child_for_upload.model_dump())
-                    to_update_child_result_pairs.append((actual_child, child_result))
-                else:
-                    to_update_child_result_pairs.append(
-                        (child_for_upload, child_result)
-                    )
+                self._prepare_child_for_update(
+                    child_model_class,
+                    child_model_for_upload_class,
+                    child_parent_id_field_name,
+                    parent_for_upload,
+                    parent_result,
+                    child_for_upload,
+                    child_result,
+                    to_update_child_result_pairs,
+                )
             if not to_update_child_result_pairs:
                 continue
 
@@ -1096,6 +1291,41 @@ class BatchUploader:
                 to_update_child_result_pairs,
             )
         return success
+
+    def _prepare_child_for_update(
+        self,
+        child_model_class: type[Model],
+        child_model_for_upload_class: type[Model],
+        child_parent_id_field_name: str,
+        parent_for_upload: model.ParentForUpload,
+        parent_result: model.ParentUploadResult,
+        child_for_upload: Model,
+        child_result: UploadResult,
+        to_update_child_result_pairs: list[tuple[Model, UploadResult]],
+    ) -> None:
+        if child_result.is_new:
+            # Child did not exist, should not be updated
+            return
+        if child_result.status != EtlStatus.PENDING:
+            # Only PENDING children can be updated
+            return
+        parent_id = parent_for_upload.id
+        if self.is_null(parent_id):
+            child_result.add_error(
+                "1417de99",
+                f"Child cannot be updated: parent has no resolved ID "
+                f"(parent status={parent_result.status.value})",
+            )
+            return
+        # Set parent ID link in child, which is known for certain at this point
+        setattr(child_for_upload, child_parent_id_field_name, parent_id)
+        if isinstance(child_for_upload, child_model_for_upload_class):
+            actual_child = child_model_class(**child_for_upload.model_dump())
+            # Collect for update
+            to_update_child_result_pairs.append((actual_child, child_result))
+        else:
+            # Collect for update
+            to_update_child_result_pairs.append((child_for_upload, child_result))
 
     def verify_identifiers(
         self,

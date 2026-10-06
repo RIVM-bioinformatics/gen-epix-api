@@ -741,6 +741,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.casedb.unit.domain.command",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/domain/command"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.casedb.unit.domain.model",
         "type": "debugpy",
         "request": "launch",
@@ -868,18 +880,6 @@
         "args": [
                 "run_test",
                 "test/casedb/unit/services/case/update_case_created_in_data_collection"
-        ],
-        "console": "integratedTerminal",
-        "justMyCode": true
-},
-{
-        "name": "test.casedb.unit.services.case.upload",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "run.py",
-        "args": [
-                "run_test",
-                "test/casedb/unit/services/case/upload"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1785,6 +1785,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.seqdb.unit.domain.command",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/domain/command"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.seqdb.unit.domain.model",
         "type": "debugpy",
         "request": "launch",
@@ -2020,6 +2032,18 @@
         "args": [
                 "run_test",
                 "test/transform/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.transform.unit.transformers",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/transform/unit/transformers"
         ],
         "console": "integratedTerminal",
         "justMyCode": true

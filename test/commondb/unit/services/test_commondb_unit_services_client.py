@@ -315,8 +315,9 @@ class TestGetHeaders(BaseCommondbClientTestCase):
             {"exp": exp_time}, _JWT_TEST_HS256_SECRET, algorithm="HS256"
         )
 
-        mock_idp_client.retrieve_jwt_with_client_credentials_flow.return_value = (
-            jwt_token
+        mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.return_value = (
+            jwt_token,
+            3600.0,
         )
 
         with patch(
@@ -342,7 +343,7 @@ class TestGetHeaders(BaseCommondbClientTestCase):
             assert "Authorization" in headers1
             assert headers1["Authorization"] == f"Bearer {jwt_token}"
             call_count1 = (
-                mock_idp_client.retrieve_jwt_with_client_credentials_flow.call_count
+                mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.call_count
             )
 
             # Second call uses cached token
@@ -350,7 +351,7 @@ class TestGetHeaders(BaseCommondbClientTestCase):
             assert headers2 == headers1
             # Call count should not increase (token was cached)
             call_count2 = (
-                mock_idp_client.retrieve_jwt_with_client_credentials_flow.call_count
+                mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.call_count
             )
             assert call_count2 == call_count1
 
@@ -372,9 +373,9 @@ class TestGetHeaders(BaseCommondbClientTestCase):
             {"exp": exp_time2}, _JWT_TEST_HS256_SECRET, algorithm="HS256"
         )
 
-        mock_idp_client.retrieve_jwt_with_client_credentials_flow.side_effect = [
-            jwt_token1,
-            jwt_token2,
+        mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.side_effect = [
+            (jwt_token1, 0.0),
+            (jwt_token2, 3600.0),
         ]
 
         with patch(
@@ -402,38 +403,24 @@ class TestGetHeaders(BaseCommondbClientTestCase):
             # Margin is 50 seconds, token expired 100 seconds ago, so it was
             # refreshed immediately on first call (not cached)
             call_count_after_first = (
-                mock_idp_client.retrieve_jwt_with_client_credentials_flow.call_count
+                mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.call_count
             )
 
             # Second call should also refresh since first token was expired
             headers2 = app.get_headers(cmd)
             assert "Authorization" in headers2
             assert (
-                mock_idp_client.retrieve_jwt_with_client_credentials_flow.call_count
+                mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.call_count
                 > call_count_after_first
             )
 
     def test_get_headers_handles_token_without_expiration(self) -> None:
-        """get_headers caches long-lived tokens correctly.
-
-        Note: Tokens without an 'exp' claim use datetime.max which has platform
-        limitations (Windows). This test uses a very distant future time instead.
-        """
+        """get_headers does not cache a token with no reported lifetime."""
         mock_idp_client = Mock()
-
-        # Create JWT token with very distant expiration (simulates no exp claim)
-        # Using a far future date rather than datetime.max to avoid Windows issues
-        far_future_ts = int(datetime.now(timezone.utc).timestamp()) + (
-            365 * 24 * 60 * 60 * 100
-        )  # 100 years
-        jwt_token = jwt.encode(
-            {"exp": far_future_ts, "sub": "user123"},
-            _JWT_TEST_HS256_SECRET,
-            algorithm="HS256",
-        )
-
-        mock_idp_client.retrieve_jwt_with_client_credentials_flow.return_value = (
-            jwt_token
+        jwt_token = "token-without-lifetime"
+        mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.return_value = (
+            jwt_token,
+            None,
         )
 
         with patch(
@@ -459,17 +446,17 @@ class TestGetHeaders(BaseCommondbClientTestCase):
             assert "Authorization" in headers
             assert headers["Authorization"] == f"Bearer {jwt_token}"
             call_count_1 = (
-                mock_idp_client.retrieve_jwt_with_client_credentials_flow.call_count
+                mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.call_count
             )
 
-            # Second call should use cached token
+            # Unknown lifetime means the client requests a fresh token.
             headers2 = app.get_headers(cmd)
             assert headers2 == headers
-            # Should still only have been called once (token was cached)
+            # The token endpoint was called again.
             call_count_2 = (
-                mock_idp_client.retrieve_jwt_with_client_credentials_flow.call_count
+                mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.call_count
             )
-            assert call_count_2 == call_count_1
+            assert call_count_2 == call_count_1 + 1
 
 
 # ============================================================================
@@ -645,8 +632,9 @@ class TestIntegration(BaseCommondbClientTestCase):
         jwt_token = jwt.encode(
             {"exp": exp_time}, _JWT_TEST_HS256_SECRET, algorithm="HS256"
         )
-        mock_idp_client.retrieve_jwt_with_client_credentials_flow.return_value = (
-            jwt_token
+        mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.return_value = (
+            jwt_token,
+            3600.0,
         )
 
         with patch(

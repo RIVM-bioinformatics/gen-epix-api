@@ -2403,6 +2403,66 @@ class TestUploadEdgeCases(BaseUploadTestCase):
         self.service.app.handle.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "parent_exists,on_exists,on_new,expected_status,info_code",
+    [
+        (
+            True,
+            UploadAction.SKIP,
+            UploadAction.CREATE,
+            EtlStatus.SKIPPED,
+            "9f43d602",
+        ),
+        (
+            False,
+            UploadAction.UPDATE,
+            UploadAction.CREATE,
+            EtlStatus.PENDING,
+            "3b9d87f4",
+        ),
+    ],
+    ids=["existing-parent-skipped", "new-parent-created"],
+)
+class TestChildInferredParentVerification(BaseUploadTestCase):
+    def test_parent_resolved_by_child_is_not_verified_twice(
+        self,
+        parent_exists: bool,
+        on_exists: UploadAction,
+        on_new: UploadAction,
+        expected_status: EtlStatus,
+        info_code: str,
+    ) -> None:
+        parent_for_upload = self.create_parent_for_upload(
+            children1=[
+                self.create_child1_for_upload(
+                    parent_id=self.random_ids[0],
+                    ref1_id=self.ref1_id,
+                )
+            ]
+        )
+        cmd = self.create_command_for_parents(
+            parent_for_upload,
+            on_exists=on_exists,
+            on_new=on_new,
+        )
+        batch_result = self.batch_uploader.init_batch_upload_result(cmd)
+        parent_result = batch_result.parents[0]
+        inferred_parent_id = self.random_ids[0]
+        self.service.repository.crud.return_value = [parent_exists]
+        self.service.repository.read_fields.return_value = [
+            (self.ref1_id, "test_ref1_code")
+        ]
+
+        assert self.batch_uploader.verify_batch(cmd, batch_result, self.uow)
+
+        assert parent_for_upload.id == inferred_parent_id
+        assert parent_result.status == expected_status
+        assert sum(log.code == info_code for log in parent_result.logs) == 1
+
+        self.service.repository.crud.assert_called_once()
+        assert sum(log.code == info_code for log in parent_result.logs) == 1
+
+
 @pytest.mark.scenario_ids("TC-11-13-01")
 class TestDuplicateIds(BaseUploadTestCase):
     """Duplicate-ID detection converts per-item hard failures into soft FAILED results."""

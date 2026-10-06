@@ -17,6 +17,12 @@ from gen_epix.omopdb.domain.model.omop.base import (
 from gen_epix.omopdb.domain.model.omop.health_system import CareSite, Location, Provider
 from gen_epix.omopdb.domain.model.omop.ontology import Concept
 
+_NO_OMOP_GUIDANCE_DESCRIPTION = "User guidance:\nNone\nETL conventions:\nNone"
+_DATE_AT_MIDNIGHT_DESCRIPTION = "User guidance:\nNone\nETL conventions:\nIf a source does not specify datetime the convention is to set the time to midnight (00:00:0000)"
+_DATE_AT_MIDNIGHT_V6_DESCRIPTION = "User guidance:\nNone\nETL conventions:\nThis is not required, though it is in v6. If a source does not specify datetime the convention is to set the time to midnight (00:00:0000)"
+_NON_OMOP_DATE_DESCRIPTION = "User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone"
+_NON_OMOP_PRIMARY_KEY_DESCRIPTION = "User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
+
 
 class Person(Model, DataLineageMixin):
     """This table serves as the central identity management for all Persons in the database. It contains records that uniquely identify each person or patient, and some demographic information."""
@@ -170,12 +176,12 @@ class ObservationPeriod(Model, DataLineageMixin):
     )
     observation_period_start_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     observation_period_end_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     provided_by_organization_id: UUID | None = Field(
@@ -215,7 +221,7 @@ class VisitOccurrence(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nUse this to identify unique interactions between a person and the health care system. This identifier links across the other CDM event tables to associate events with a visit.\nETL conventions:\nThis should be populated by creating a unique identifier for each unique interaction between a person and the healthcare system where the person receives a medical good or service over a span of time.",
     )
-    person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    person_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     visit_concept_id: UUID = Field(
         description='User guidance:\nThis field contains a concept id representing the kind of visit, like inpatient or outpatient. All concepts in this field should be standard and belong to the Visit domain.\nETL conventions:\nPopulate this field based on the kind of visit that took place for the person. For example this could be "Inpatient Visit", "Outpatient Visit", "Ambulatory Visit", etc. This table will contain standard concepts in the Visit domain. These concepts are arranged in a hierarchical structure to facilitate cohort definitions by rolling up to generally familiar Visits adopted in most healthcare systems worldwide. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?domain=Visit&standardConcept=Standard&page=1&pageSize=15&query=).'
     )
@@ -320,7 +326,7 @@ class VisitDetail(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nUse this to identify unique interactions between a person and the health care system. This identifier links across the other CDM event tables to associate events with a visit detail.\nETL conventions:\nThis should be populated by creating a unique identifier for each unique interaction between a person and the healthcare system where the person receives a medical good or service over a span of time.",
     )
-    person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    person_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     visit_detail_concept_id: UUID = Field(
         description='User guidance:\nThis field contains a concept id representing the kind of visit detail, like inpatient or outpatient. All concepts in this field should be standard and belong to the Visit domain.\nETL conventions:\nPopulate this field based on the kind of visit that took place for the person. For example this could be "Inpatient Visit", "Outpatient Visit", "Ambulatory Visit", etc. This table will contain standard concepts in the Visit domain. These concepts are arranged in a hierarchical structure to facilitate cohort definitions by rolling up to generally familiar Visits adopted in most healthcare systems worldwide. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?domain=Visit&standardConcept=Standard&page=1&pageSize=15&query=).'
     )
@@ -442,7 +448,7 @@ class ConditionOccurrence(Model, DataLineageMixin):
     )
     condition_start_datetime: datetime | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nIf a source does not specify datetime the convention is to set the time to midnight (00:00:0000)",
+        description=_DATE_AT_MIDNIGHT_DESCRIPTION,
     )
     condition_end_date: date | None = Field(
         default=None,
@@ -450,7 +456,7 @@ class ConditionOccurrence(Model, DataLineageMixin):
     )
     condition_end_datetime: datetime | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nIf a source does not specify datetime the convention is to set the time to midnight (00:00:0000)",
+        description=_DATE_AT_MIDNIGHT_DESCRIPTION,
     )
     condition_type_concept_id: UUID = Field(
         description="User guidance:\nThis field can be used to determine the provenance of the Condition record, as in whether the condition was from an EHR system, insurance claim, registry, or other sources.\nETL conventions:\nChoose the CONDITION_TYPE_CONCEPT_ID that best represents the provenance of the record. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?domain=Type+Concept&standardConcept=Standard&page=1&pageSize=15&query=). A more detailed explanation of each Type Concept can be found on the [vocabulary wiki](https://github.com/OHDSI/Vocabulary-v5.0/wiki/Vocab.-TYPE_CONCEPT)."
@@ -492,12 +498,12 @@ class ConditionOccurrence(Model, DataLineageMixin):
     )
     condition_start_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     condition_end_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     provided_by_organization_id: UUID | None = Field(
@@ -603,7 +609,7 @@ class ProcedureOccurrence(Model, DataLineageMixin):
     )
     procedure_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     provided_by_organization_id: UUID | None = Field(
@@ -660,14 +666,14 @@ class DrugExposure(Model, DataLineageMixin):
     )
     drug_exposure_start_datetime: datetime | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nThis is not required, though it is in v6. If a source does not specify datetime the convention is to set the time to midnight (00:00:0000)",
+        description=_DATE_AT_MIDNIGHT_V6_DESCRIPTION,
     )
     drug_exposure_end_date: date = Field(
         description="User guidance:\nThe DRUG_EXPOSURE_END_DATE denotes the day the drug exposure ended for the patient.\nETL conventions:\nIf this information is not explicitly available in the data, infer the end date from start date and duration.<br>For detailed conventions for how to populate this field, please see the [THEMIS repository](https://ohdsi.github.io/Themis/tag_drug_exposure.html)."
     )
     drug_exposure_end_datetime: datetime | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nThis is not required, though it is in v6. If a source does not specify datetime the convention is to set the time to midnight (00:00:0000)",
+        description=_DATE_AT_MIDNIGHT_V6_DESCRIPTION,
     )
     verbatim_end_date: date | None = Field(
         default=None,
@@ -703,7 +709,7 @@ class DrugExposure(Model, DataLineageMixin):
     )
     lot_number: str | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nNone",
+        description=_NO_OMOP_GUIDANCE_DESCRIPTION,
         max_length=50,
     )
     provider_id: UUID | None = Field(
@@ -739,12 +745,12 @@ class DrugExposure(Model, DataLineageMixin):
     )
     drug_exposure_start_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     drug_exposure_end_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     provided_by_organization_id: UUID | None = Field(
@@ -791,7 +797,7 @@ class DeviceExposure(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nThe unique key given to records a person's exposure to a foreign physical object or instrument.\nETL conventions:\nEach instance of an exposure to a foreign object or device present in the source data should be assigned this unique key.",
     )
-    person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    person_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     device_concept_id: UUID = Field(
         description="User guidance:\nThe DEVICE_CONCEPT_ID field is recommended for primary use in analyses, and must be used for network studies. This is the standard concept mapped from the source concept id which represents a foreign object or instrument the person was exposed to.\nETL conventions:\nThe CONCEPT_ID that the DEVICE_SOURCE_VALUE maps to."
     )
@@ -800,7 +806,7 @@ class DeviceExposure(Model, DataLineageMixin):
     )
     device_exposure_start_datetime: datetime | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nThis is not required, though it is in v6. If a source does not specify datetime the convention is to set the time to midnight (00:00:0000)",
+        description=_DATE_AT_MIDNIGHT_V6_DESCRIPTION,
     )
     device_exposure_end_date: date | None = Field(
         default=None,
@@ -808,7 +814,7 @@ class DeviceExposure(Model, DataLineageMixin):
     )
     device_exposure_end_datetime: datetime | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nIf a source does not specify datetime the convention is to set the time to midnight (00:00:0000)",
+        description=_DATE_AT_MIDNIGHT_DESCRIPTION,
     )
     device_type_concept_id: UUID = Field(
         description="User guidance:\nYou can use the TYPE_CONCEPT_ID to denote the provenance of the record, as in whether the record is from administrative claims or EHR.\nETL conventions:\nChoose the device_type_concept_id that best represents the provenance of the record. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?domain=Type+Concept&standardConcept=Standard&page=1&pageSize=15&query=). A more detailed explanation of each Type Concept can be found on the [vocabulary wiki](https://github.com/OHDSI/Vocabulary-v5.0/wiki/Vocab.-TYPE_CONCEPT)."
@@ -861,12 +867,12 @@ class DeviceExposure(Model, DataLineageMixin):
     )
     device_exposure_start_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     device_exposure_end_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     provided_by_organization_id: UUID | None = Field(
@@ -925,7 +931,7 @@ class Specimen(Model, DataLineageMixin):
         description="User guidance:\nThe date the specimen was collected.\nETL conventions:\nNone"
     )
     specimen_datetime: datetime | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     quantity: float | None = Field(
         default=None,
@@ -940,7 +946,7 @@ class Specimen(Model, DataLineageMixin):
         description="User guidance:\nThis is the site on the body where the specimen is from.\nETL conventions:\nMap the ANATOMIC_SITE_SOURCE_VALUE to a Standard Concept in the Spec Anatomic Site domain. This should be coded at the lowest level of granularity [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?standardConcept=Standard&domain=Spec+Anatomic+Site&conceptClass=Body+Structure&page=4&pageSize=15&query=)",
     )
     disease_status_concept_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     specimen_source_id: str | None = Field(
         default=None,
@@ -949,7 +955,7 @@ class Specimen(Model, DataLineageMixin):
     )
     specimen_source_value: str | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nNone",
+        description=_NO_OMOP_GUIDANCE_DESCRIPTION,
         max_length=50,
     )
     unit_source_value: str | None = Field(
@@ -964,12 +970,12 @@ class Specimen(Model, DataLineageMixin):
     )
     disease_status_source_value: str | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nNone",
+        description=_NO_OMOP_GUIDANCE_DESCRIPTION,
         max_length=50,
     )
     specimen_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     derived_from_specimen_id: UUID | None = Field(
@@ -1041,7 +1047,7 @@ class Measurement(Model, DataLineageMixin):
     )
     measurement_datetime: datetime | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nThis is not required, though it is in v6. If a source does not specify datetime the convention is to set the time to midnight (00:00:0000)",
+        description=_DATE_AT_MIDNIGHT_V6_DESCRIPTION,
     )
     measurement_time: str | None = Field(
         default=None,
@@ -1120,7 +1126,7 @@ class Measurement(Model, DataLineageMixin):
     )
     measurement_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     derived_from_specimen_id: UUID | None = Field(
@@ -1273,12 +1279,12 @@ class Observation(Model, DataLineageMixin):
     )
     observation_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     value_as_iso_interval: str | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
+        description=_NON_OMOP_DATE_DESCRIPTION,
         max_length=55,
     )
     provided_by_organization_id: UUID | None = Field(
@@ -1328,7 +1334,7 @@ class Note(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nA unique identifier for each note.\nETL conventions:\nNone",
     )
-    person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    person_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     note_date: date = Field(
         description="User guidance:\nThe date the note was recorded.\nETL conventions:\nNone"
     )
@@ -1437,10 +1443,10 @@ class NoteNlp(Model, DataLineageMixin):
         max_length=250,
     )
     note_nlp_concept_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     note_nlp_source_concept_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     nlp_system: str | None = Field(
         default=None,
@@ -1503,20 +1509,14 @@ class FactRelationship(Model):
             }
         ),
     )
-    domain_concept_id_1: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    fact_id_1: int = Field(description="User guidance:\nNone\nETL conventions:\nNone")
-    domain_concept_id_2: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    fact_id_2: int = Field(description="User guidance:\nNone\nETL conventions:\nNone")
-    relationship_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
+    domain_concept_id_1: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    fact_id_1: int = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    domain_concept_id_2: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    fact_id_2: int = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    relationship_concept_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     fact_relationship_id: UUID | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
+        description=_NON_OMOP_PRIMARY_KEY_DESCRIPTION,
     )
 
     @field_validator(
@@ -1550,7 +1550,7 @@ class MeasurementRelation(Model):
     )
     measurement_relation_id: UUID | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
+        description=_NON_OMOP_PRIMARY_KEY_DESCRIPTION,
     )
     person_id: UUID = Field(
         description="User guidance:\nNot part of OMOP CDM. The PERSON_ID of the PERSON for whom the measurement is recorded. This may be a system generated code.\nETL conventions:\nNone"
@@ -1597,9 +1597,9 @@ class Death(Model, DataLineageMixin):
     )
     death_id: UUID | None = Field(
         default=None,
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
+        description=_NON_OMOP_PRIMARY_KEY_DESCRIPTION,
     )
-    person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    person_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     death_date: date = Field(
         description="User guidance:\nThe date the person was deceased.\nETL conventions:\nIf the precise date include day or month is not known or not allowed, December is used as the default month, and the last day of the month the default day. For additional conventions related to this field, please refer to the [THEMIS repository](https://ohdsi.github.io/Themis/tag_death_date.html)."
     )

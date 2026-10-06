@@ -183,38 +183,29 @@ def test_casedb_seqdb_connection(
     # Test that the OAuth server is accessible
     import httpx
 
-    try:
-        with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
-            response = client.get(f"{protocol}://localhost:{oauth_server.port}/health")
-            assert response.status_code == 200
-            if VERBOSE:
-                logging.info("OAuth server is accessible")
-    except Exception as e:
-        pytest.fail(f"OAuth server health check failed: {e}")
+    with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
+        response = client.get(f"{protocol}://localhost:{oauth_server.port}/health")
+        assert response.status_code == 200
+        if VERBOSE:
+            logging.info("OAuth server is accessible")
 
     # Test that the seqdb server is accessible
-    try:
-        with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
-            response = client.get(f"{protocol}://127.0.0.1:8003/v1/health")
-            assert response.status_code == 200
-            if VERBOSE:
-                logging.info("seqdb server is accessible")
-    except Exception as e:
-        pytest.fail(f"seqdb server health check failed: {e}")
+    with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
+        response = client.get(f"{protocol}://127.0.0.1:8003/v1/health")
+        assert response.status_code == 200
+        if VERBOSE:
+            logging.info("seqdb server is accessible")
 
     # Verify OAuth discovery endpoint
-    try:
-        with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
-            response = client.get(
-                f"{protocol}://localhost:{oauth_server.port}/.well-known/openid-configuration"
-            )
-            assert response.status_code == 200
-            discovery_data = response.json()
-            assert "token_endpoint" in discovery_data
-            if VERBOSE:
-                logging.info("OAuth discovery endpoint is accessible")
-    except Exception as e:
-        pytest.fail(f"OAuth discovery endpoint failed: {e}")
+    with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
+        response = client.get(
+            f"{protocol}://localhost:{oauth_server.port}/.well-known/openid-configuration"
+        )
+        assert response.status_code == 200
+        discovery_data = response.json()
+        assert "token_endpoint" in discovery_data
+        if VERBOSE:
+            logging.info("OAuth discovery endpoint is accessible")
 
     # Create root user
     root_user = test_util.create_root_user_from_claims(

@@ -1773,7 +1773,7 @@ class SARepository(BaseRepository):
         cls,
         connection_string: str,
         **kwargs: Any,
-    ) -> BaseException | None:
+    ) -> Exception | None:
         """
         Try to open a database connection; return None on success or the
         exception on failure.
@@ -1786,6 +1786,6 @@ class SARepository(BaseRepository):
             ).connect()
             connection.close()
             return None
-        except BaseException as exception:
+        except Exception as exception:
             # Connection failed, skip loading
             return exception

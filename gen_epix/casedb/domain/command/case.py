@@ -17,6 +17,8 @@ from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
+_CASE_TYPE_ID_DESCRIPTION = "The CaseType ID that all the cases must belong to."
+
 # Non-CRUD
 
 
@@ -245,9 +247,7 @@ class RetrievePhylogeneticTreeByProfilesCommand(Command):
 class RetrievePhylogeneticTreeByCasesCommand(Command):
     """Represents a request to calculate a phylogenetic tree from cases and genetic distances."""
 
-    case_type_id: UUID = Field(
-        description="The CaseType ID that all the cases must belong to."
-    )
+    case_type_id: UUID = Field(description=_CASE_TYPE_ID_DESCRIPTION)
     tree_algorithm: enum.TreeAlgorithmType = Field(
         description="The algorithm to use for constructing the phylogenetic tree."
     )
@@ -270,9 +270,7 @@ class RetrieveSimilarCasesCommand(Command):
     threshold applied to the supplied case IDs.
     """
 
-    case_type_id: UUID = Field(
-        description="The CaseType ID that all the cases must belong to."
-    )
+    case_type_id: UUID = Field(description=_CASE_TYPE_ID_DESCRIPTION)
 
     max_distance: float = Field(
         description="The maximum genetic distance for cases to be considered similar.",
@@ -301,9 +299,7 @@ class RetrieveGeneticSequenceFastaByCaseCommand(Command):
     through the specified genetic-sequence column.
     """
 
-    case_type_id: UUID = Field(
-        description="The CaseType ID that all the cases must belong to."
-    )
+    case_type_id: UUID = Field(description=_CASE_TYPE_ID_DESCRIPTION)
     genetic_sequence_col_id: UUID = Field(
         description="The ID of the genetic sequence Col to use."
     )
@@ -369,9 +365,7 @@ class RetrieveIsOwnCasesCommand(Command):
     The response contains the supplied case IDs that the user owns or may access.
     """
 
-    case_type_id: UUID = Field(
-        description="The CaseType ID that all the cases must belong to."
-    )
+    case_type_id: UUID = Field(description=_CASE_TYPE_ID_DESCRIPTION)
     case_ids: list[UUID] = Field(
         description="The IDs of the cases to check ownership for."
     )
