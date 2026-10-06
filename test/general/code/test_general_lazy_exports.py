@@ -15,12 +15,16 @@ from gen_epix.util import get_package_root
 
 
 def _find_lazy_packages() -> list[str]:
-    """Return the names of all gen_epix packages that use lazy exports."""
+    """Return the names of all gen_epix packages and modules that use lazy exports."""
     root = get_package_root()
     packages = []
-    for path in sorted((root / "gen_epix").rglob("__init__.py")):
+    for path in sorted((root / "gen_epix").rglob("*.py")):
+        if path.name == "_lazy.py":
+            continue
         if "lazy_exports(" in path.read_text(encoding="utf-8"):
-            packages.append(".".join(path.parent.relative_to(root).parts))
+            module_path = path.parent if path.name == "__init__.py" else path
+            parts = module_path.relative_to(root).with_suffix("").parts
+            packages.append(".".join(parts))
     return packages
 
 
@@ -62,6 +66,7 @@ def test_lazy_packages_found() -> None:
     assert "gen_epix" in LAZY_PACKAGES
     assert "gen_epix.fastapp" in LAZY_PACKAGES
     assert "gen_epix.casedb.services" in LAZY_PACKAGES
+    assert "gen_epix.commondb.domain.exc" in LAZY_PACKAGES
 
 
 @pytest.mark.parametrize("package_name", LAZY_PACKAGES)
