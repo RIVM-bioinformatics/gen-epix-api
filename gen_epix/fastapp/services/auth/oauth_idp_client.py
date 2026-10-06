@@ -1,11 +1,8 @@
 """OAuth and OpenID Connect identity-provider client."""
 
-import base64
 import json
 import logging
 import ssl
-import time
-import urllib.parse
 from typing import Any
 from uuid import UUID
 
@@ -24,23 +21,23 @@ from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import BaseLogItem, LogItem
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
+from gen_epix.fastapp.services.auth.oauth_token_client import OauthTokenClient
 from gen_epix.fastapp.services.auth.token_introspection_manager import (
     TokenIntrospectionManager,
 )
 
 
-class OauthIdpClient(IdpClient, OpenIdConnect):
-    """Encapsulates OAuth identity-provider client that validates and obtains tokens."""
+class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
+    """Encapsulates OAuth identity-provider client that validates and obtains tokens.
+
+    Obtaining tokens is inherited from ``OauthTokenClient``; this class adds the
+    server-side validation of incoming tokens as a FastAPI security scheme.
+    """
 
     DEFAULT_INTROSPECTION_REQUEST_HEADERS: dict[str, str] = {
         "Content-Type": "application/x-www-form-urlencoded",
     }
     DEFAULT_INTROSPECTION_AUTH_METHOD: str = "client_secret_basic"
-    DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS: dict[str, str] = {
-        "Content-Type": "application/x-www-form-urlencoded",
-    }
-    DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES: int = 3
-    DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY: float = 1.0  # in seconds
     DEFAULT_ALLOWED_SIGNING_ALGORITHMS: list[str] = ["RS256"]
 
     def __init__(
@@ -65,7 +62,10 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         if issuer is None:
             # Fetch issuer later from discovery document
             issuer = ""
-        super().__init__(
+        # Initialize the bases explicitly: OauthTokenClient has its own standalone
+        # initializer and OpenIdConnect is only used for its security scheme
+        IdpClient.__init__(
+            self,
             issuer,
             token_name=token_name or self.DEFAULT_TOKEN,
             id=id,
@@ -74,22 +74,15 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         )
 
         # Set input properties
-        self.server_cfg = server_cfg.model_copy()
-        self.logger = logger
-        self._log_item_class = log_item_class
+        self._init_token_client(
+            server_cfg,
+            logger=logger,
+            log_item_class=log_item_class,
+            client_credential_flow_request_headers=client_credential_flow_request_headers,
+            client_credential_flow_max_retries=client_credential_flow_max_retries,
+            client_credential_flow_base_delay=client_credential_flow_base_delay,
+        )
         self._signing_keys: dict[str, jwt.PyJWK] = {}
-        self._client_credential_flow_request_headers = (
-            client_credential_flow_request_headers
-            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS
-        )
-        self._client_credential_flow_max_retries = (
-            client_credential_flow_max_retries
-            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES
-        )
-        self._client_credential_flow_base_delay = (
-            client_credential_flow_base_delay
-            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY
-        )
         self._allowed_signing_algorithms = (
             self.server_cfg.id_token_signing_alg_values_supported
             or self.DEFAULT_ALLOWED_SIGNING_ALGORITHMS
@@ -150,67 +143,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         """Scope the requested value."""
         assert self.server_cfg.scope is not None
         return self.server_cfg.scope
-
-    def update_server_config_from_discovery(
-        self,
-        url: str | None = None,
-        doc: dict[str, Any] | None = None,
-    ) -> None:
-        """
-        Update the OIDC configuration from the discovery URL or, if provided, the
-        discovery document.
-
-        """
-        url = url or self.server_cfg.discovery_url
-        if url is None and doc is None:
-            raise exc.InitializationServiceError(
-                "109f98e6",
-                "No discovery URL or document provided for OIDC configuration",
-            )
-
-        # Special case: discovery document provided -> update from that first
-        if doc:
-            # Update current configuration from provided discovery document
-            for key, value in doc.items():
-                setattr(self.server_cfg, key, value)
-
-        # Update from discovery URL
-        if not url:
-            return
-        try:
-            # Get discovery document
-            with httpx.Client(verify=self.ssl_context) as client:
-                response = client.get(url)
-                response.raise_for_status()
-                discovery_doc = response.json()
-
-            # Update current configuration with discovery data, preserving client credentials
-            for key, value in discovery_doc.items():
-                if (
-                    key not in OidcServerCfg.NON_SPEC_FIELDS
-                    and key in self.server_cfg.__class__.model_fields
-                ):
-                    setattr(self.server_cfg, key, value)
-
-            if not self.server_cfg.is_valid():
-                invalid_fields = self.server_cfg.get_invalid_fields()
-                raise exc.InitializationServiceError(
-                    "53851a9e",
-                    f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}",
-                )
-        except Exception as exception:
-            msg = "Error accessing discovery URL"
-            # Add more specific error message for SSL certificate issues
-            if self.logger:
-                self.logger.error(
-                    self._log_item_class(
-                        code="cfe970aa",
-                        msg=msg,
-                        scheme_name=self.server_cfg.name,
-                        exception=exception,
-                    ).dumps()
-                )
-            raise exc.InitializationServiceError("66b9919e", msg) from exception
 
     async def get_jwk_from_jwt(self, jwt_token: str) -> jwt.PyJWK:
         """Return jwk from jwt."""
@@ -414,123 +346,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             raise exc.CredentialsAuthError(
                 "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             ) from exception
-
-    def retrieve_jwt_with_client_credentials_flow(
-        self,
-        scope: str,
-        headers: dict[str, str] | None = None,
-        max_retries: int | None = None,
-        base_delay: float | None = None,
-    ) -> str:
-        """Call server to get token through OAuth Client Credentials flow."""
-        # Parse input
-        headers = dict(headers or self._client_credential_flow_request_headers)
-        max_retries = max_retries or self._client_credential_flow_max_retries
-        base_delay = base_delay or self._client_credential_flow_base_delay
-        # Add basic auth header
-        self._set_authorization_header(headers)
-        # Get token endpoint URL
-        url = self._get_token_endpoint()
-        # Create request body
-        token_data = self._generate_token_data(scope)
-        # Call server with retries
-        return self._request_token_with_retries(
-            headers, max_retries, base_delay, url, token_data
-        )
-
-    def _request_token_with_retries(
-        self,
-        headers: dict[str, str],
-        max_retries: int,
-        base_delay: float,
-        url: str,
-        token_data: str,
-    ) -> str:
-        """Request token with retries."""
-        last_exception: Exception | None = None
-        for attempt in range(max_retries + 1):
-            try:
-                with httpx.Client(verify=self.ssl_context) as client:
-                    response = client.post(
-                        url,
-                        data=token_data,
-                        headers=headers,
-                    )
-                    response.raise_for_status()
-                    token_response = response.json()
-                    token: str = token_response["access_token"]
-                    return token
-            except Exception as exception:
-                last_exception = exception
-                if self.logger:
-                    self.logger.warning(
-                        self._log_item_class(
-                            code="a7f3e9d2",
-                            msg=f"OAuth Client Credentials flow token retrieval attempt {attempt + 1} failed for server {self.server_cfg.name}",
-                            scheme_name=self.scheme_name,
-                            exception=exception,
-                        ).dumps()
-                    )
-            if attempt < max_retries:
-                time.sleep(base_delay)
-
-        self._log_failed_token_retrieval_attempts(max_retries)
-        raise exc.ServiceUnavailableError(
-            "721b8f82",
-            f"Token retrieval failed for server {self.server_cfg.name}: {last_exception}",
-        )
-
-    def _log_failed_token_retrieval_attempts(self, max_retries: int) -> None:
-        """Log failed token retrieval attempts."""
-        if self.logger:
-            self.logger.error(
-                self._log_item_class(
-                    code="f8a3d7b2",
-                    msg=f"OAuth Client Credentials flow token retrieval failed after {max_retries + 1} attempts for server {self.server_cfg.name}",
-                    scheme_name=self.scheme_name,
-                ).dumps()
-            )
-
-    def _generate_token_data(self, scope: str) -> str:
-        """Helper method to build token data / request body for client credentials flow."""
-        token_data: str = "&".join(
-            (
-                "grant_type=client_credentials",
-                f"scope={urllib.parse.quote(scope)}",
-            )
-        )
-
-        return token_data
-
-    def _set_authorization_header(self, headers: dict[str, str]) -> None:
-        """Set authorization header."""
-        headers["Authorization"] = (
-            "Basic "
-            + base64.b64encode(
-                f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
-            ).decode()
-        )
-
-    def _get_token_endpoint(self) -> str:
-        """Return token endpoint."""
-        url = self.server_cfg.token_endpoint
-        if not isinstance(url, str):
-            # Try to get from discovery document
-            if self.logger and self.logger.level <= logging.DEBUG:
-                self.logger.debug(
-                    self._log_item_class(
-                        code="8f3a2b1c",
-                        msg=f"Token endpoint URL is not set in OIDC server configuration for server {self.server_cfg.name}, trying to update from discovery URL",
-                        scheme_name=self.scheme_name,
-                    ).dumps()
-                )
-            self.update_server_config_from_discovery()
-            url = self.server_cfg.token_endpoint
-        if not isinstance(url, str):
-            raise exc.ServiceUnavailableError(
-                "3266c09e", "Token endpoint URL is not set"
-            )
-        return url
 
     def get_claims_from_userinfo(self, access_token: str) -> dict[str, Any]:
         """Return claims from userinfo."""

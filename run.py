@@ -193,6 +193,10 @@ class Run:
                 "test/omopdb/integration",
                 "test/general/docs",
                 "test/general/migrations",
+                # The other tests in test/general/code are not normally included
+                "test/general/code/test_general_client_import_isolation.py",
+                "test/general/code/test_general_dependency_list.py",
+                "test/general/code/test_general_lazy_exports.py",
             ]
             + (["test/end_to_end"] if include_e2e else [])
             + [

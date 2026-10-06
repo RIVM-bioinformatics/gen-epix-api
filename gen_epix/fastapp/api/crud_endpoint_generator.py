@@ -16,7 +16,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
 
-from gen_epix.fastapp import exc, model
+from gen_epix.fastapp import exc, literal, model
 from gen_epix.fastapp.api import exc as api_exc
 from gen_epix.fastapp.api.crud_endpoint_set import CrudEndpointSet
 from gen_epix.fastapp.app import App
@@ -61,10 +61,10 @@ class CrudEndpointGenerator:
     enforced by the command policies and handlers invoked through ``App.handle``.
     """
 
-    DEFAULT_BATCH_ROUTE_SUFFIX = "/batch"
-    DEFAULT_QUERY_ROUTE_SUFFIX = "/query"
-    DEFAULT_IDS_ROUTE_SUFFIX = "/ids"
-    DEFAULT_EXISTS_ROUTE_SUFFIX = "/exists"
+    DEFAULT_BATCH_ROUTE_SUFFIX = literal.DEFAULT_BATCH_ROUTE_SUFFIX
+    DEFAULT_QUERY_ROUTE_SUFFIX = literal.DEFAULT_QUERY_ROUTE_SUFFIX
+    DEFAULT_IDS_ROUTE_SUFFIX = literal.DEFAULT_IDS_ROUTE_SUFFIX
+    DEFAULT_EXISTS_ROUTE_SUFFIX = literal.DEFAULT_EXISTS_ROUTE_SUFFIX
 
     CRUD_OPERATION_TO_ENDPOINT_TYPE: dict[CrudOperation, CrudEndpointType] = {
         CrudOperation.READ_ALL: CrudEndpointType.GET_ALL,

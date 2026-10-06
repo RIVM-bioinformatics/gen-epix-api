@@ -20,8 +20,7 @@ from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, HttpMethod, OAuthFlow
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command, Permission
-from gen_epix.fastapp.services.auth.model import OidcServerCfg
-from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
+from gen_epix.fastapp.services.auth import OauthTokenClient, OidcServerCfg
 
 
 class CommondbClient(Client):
@@ -186,7 +185,7 @@ class CommondbClient(Client):
         self.register_handler(command.RetrieveOutagesCommand, self.retrieve_outages)
 
         # Initialize IDP client if needed
-        oauth_idp_client: OauthIdpClient | None = None
+        oauth_idp_client: OauthTokenClient | None = None
         if auth_protocol == AuthProtocol.NONE:
             pass
         elif auth_protocol == AuthProtocol.OAUTH2:
@@ -204,7 +203,7 @@ class CommondbClient(Client):
                 raise exc.InitializationServiceError(
                     "683cf2a0", "OAuth scope must be provided for OAUTH2 auth protocol"
                 )
-            oauth_idp_client = OauthIdpClient(
+            oauth_idp_client = OauthTokenClient(
                 server_cfg=OidcServerCfg(
                     name="",
                     label="",

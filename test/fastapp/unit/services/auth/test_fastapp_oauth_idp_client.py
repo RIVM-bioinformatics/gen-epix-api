@@ -699,7 +699,7 @@ class TestClientCredentialsFlow(BaseOauthIdpClientTestCase):
         p.start()  # type: ignore[attr-defined]
         try:
             with patch(
-                "gen_epix.fastapp.services.auth.oauth_idp_client.time.sleep"
+                "gen_epix.fastapp.services.auth.oauth_token_client.time.sleep"
             ) as sleep_mock:
                 with pytest.raises(exc.ServiceUnavailableError):
                     client.retrieve_jwt_with_client_credentials_flow(
