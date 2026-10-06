@@ -18,6 +18,7 @@ from fastapi.security import OAuth2
 # from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
 from fastapi.security.open_id_connect_url import OpenIdConnect
 from fastapi.security.utils import get_authorization_scheme_param
+from pydantic import ValidationError
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
@@ -318,13 +319,27 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
     def _map_claims(self, claims: dict[str, Any]) -> dict[str, Any]:
         """Map claims."""
+        print(
+            "OIDC claims before mapping:",
+            {name: type(value).__name__ for name, value in claims.items()},
+        )
+        print("OIDC configured claim map:", self.server_cfg.claim_map)
         for new_claim_name, orig_claim_names in self.server_cfg.claim_map.items():
             for orig_claim_name in orig_claim_names:
                 value = claims.get(orig_claim_name)
+                print(
+                    "OIDC claim mapping:",
+                    f"{orig_claim_name!r} -> {new_claim_name!r}",
+                    f"value_type={type(value).__name__ if value is not None else None}",
+                )
                 if value is not None:
                     claims[new_claim_name] = value
                     break
 
+        print(
+            "OIDC claims after mapping:",
+            {name: type(value).__name__ for name, value in claims.items()},
+        )
         return claims
 
     def _check_required_claims(self, claims: dict[str, Any]) -> None:
@@ -674,11 +689,29 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             return None
         try:
             claims = await self.get_claims_from_jwt(token)
-            return (
-                Claims(claims=claims, scheme=scheme, token=token, idp_client_id=self.id)
-                if claims
-                else None
+            if not claims:
+                return None
+            print(
+                "OIDC claims before Claims construction:",
+                {name: type(value).__name__ for name, value in claims.items()},
             )
+            try:
+                return Claims(
+                    claims=claims, scheme=scheme, token=token, idp_client_id=self.id
+                )
+            except ValidationError as exception:
+                print(
+                    "Claims construction failed:",
+                    [
+                        {
+                            "location": error["loc"],
+                            "type": error["type"],
+                            "input_type": type(error.get("input")).__name__,
+                        }
+                        for error in exception.errors()
+                    ],
+                )
+                raise
         except exc.AuthException as exception:
             self._log_auth_error(exception)
             return None
