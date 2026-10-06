@@ -18,7 +18,7 @@ SEQDB exports include ``SEQDB_DOMAIN``, ``SeqdbAppComposer``, ``SeqdbClient``,
 
 from typing import TYPE_CHECKING
 
-from gen_epix._lazy import LazyExport, lazy_exports
+from gen_epix._lazy import LazyExport, exports_from, lazy_exports
 
 if TYPE_CHECKING:
     # pylint: disable=useless-import-alias
@@ -93,11 +93,13 @@ _EXPORTS: dict[str, LazyExport] = {
     "exc": "gen_epix.commondb.domain.exc",
     "literal": "gen_epix.commondb.domain.literal",
     "commondb_model": "gen_epix.commondb.domain.model",
-    "DevIdpConfig": ("gen_epix.commondb.domain.enum", "DevIdpConfig"),
-    "DevRepositoryConfig": ("gen_epix.commondb.domain.enum", "DevRepositoryConfig"),
+    **exports_from(
+        "gen_epix.commondb.domain.enum", "DevIdpConfig", "DevRepositoryConfig"
+    ),
     "NULL_ID": ("gen_epix.commondb.domain.literal", "NULL_ID"),
-    "get_app_cfg_class": ("gen_epix.commondb.domain.util", "get_app_cfg_class"),
-    "set_env_variables": ("gen_epix.commondb.domain.util", "set_env_variables"),
+    **exports_from(
+        "gen_epix.commondb.domain.util", "get_app_cfg_class", "set_env_variables"
+    ),
     "AppComposer": ("gen_epix.commondb.env", "AppComposer"),
     "CommondbClient": ("gen_epix.commondb.services.client", "CommondbClient"),
     "etl_model": "gen_epix.etl.model",
