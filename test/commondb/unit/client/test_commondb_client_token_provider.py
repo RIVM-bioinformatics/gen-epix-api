@@ -9,10 +9,10 @@ import httpx
 import jwt
 import pytest
 
+from gen_epix import fastapp
 from gen_epix.commondb.domain import DOMAIN
 from gen_epix.commondb.services.client import CommondbClient
 from gen_epix.fastapp import exc
-from gen_epix.fastapp.client import RemoteRetryPolicy
 from gen_epix.fastapp.enum import AuthProtocol, HttpProtocol
 from gen_epix.fastapp.model import Command
 
@@ -199,7 +199,7 @@ class TestTokenProviderHandle:
         monkeypatch.setattr("tenacity.nap.time.sleep", sleeps.append)
         provider = Provider(RuntimeError("login failed"))
         client = _make_client(
-            provider, retry_policy=RemoteRetryPolicy(frozenset({500}), (1, 1))
+            provider, retry_policy=fastapp.RetryPolicy(frozenset({500}), (1, 1))
         )
 
         def handler(cmd: Command) -> str:
@@ -220,7 +220,7 @@ class TestTokenProviderHandle:
         monkeypatch.setattr("tenacity.nap.time.sleep", lambda _: None)
         provider = Provider(_token(3600, "a"), _token(3600, "b"))
         client = _make_client(
-            provider, retry_policy=RemoteRetryPolicy(frozenset({503}), (1,))
+            provider, retry_policy=fastapp.RetryPolicy(frozenset({503}), (1,))
         )
         errors = [_status_error(401), _status_error(503)]
         calls = 0

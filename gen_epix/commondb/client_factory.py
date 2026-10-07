@@ -89,12 +89,12 @@ client-credentials flow, which renews tokens by expiry time only.
 
 Retrying transient failures
 ---------------------------
-By default a failing command is raised immediately. Pass a ``RemoteRetryPolicy`` to
+By default a failing command is raised immediately. Pass a ``fastapp.RetryPolicy`` to
 repeat it::
 
-    from gen_epix import RemoteRetryPolicy
+    from gen_epix import fastapp, create_client
 
-    policy = RemoteRetryPolicy(
+    policy = fastapp.RetryPolicy(
         retryable_status_codes=frozenset({502, 503, 504}),
         wait_schedule=(10, 20, 30),  # seconds to wait before each retry
     )
@@ -135,11 +135,11 @@ from typing import TYPE_CHECKING, Literal
 from pydantic import Field, SecretStr, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from gen_epix import fastapp
 from gen_epix.casedb.services.client import CasedbClient
 from gen_epix.commondb.domain import DOMAIN as COMMONDB_DOMAIN
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.services.client import CommondbClient
-from gen_epix.fastapp.client import RemoteRetryPolicy
 from gen_epix.fastapp.enum import AuthProtocol
 from gen_epix.omopdb.services.client import OmopdbClient
 from gen_epix.seqdb.services.client import SeqdbClient
@@ -320,7 +320,7 @@ def create_client(
     *,
     token: str | None = None,
     token_provider: Callable[[], str] | None = None,
-    retry_policy: RemoteRetryPolicy | None = None,
+    retry_policy: fastapp.RetryPolicy | None = None,
     settings: ClientSettings | None = None,
 ) -> CommondbClient:
     """Create a client for a running Gen-EpiX service.

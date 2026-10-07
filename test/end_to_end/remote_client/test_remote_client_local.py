@@ -23,16 +23,13 @@ from test.test_client.server_manager import ServerManager
 
 import pytest
 
-from gen_epix import create_client, seqdb_command
+from gen_epix import create_client, fastapp, seqdb_command
 from gen_epix.commondb.app_setup import create_fast_api
-from gen_epix.commondb.config.cfg import AppCfg
-from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.services.client import CommondbClient
 from gen_epix.fastapp import exc
-from gen_epix.fastapp.client import RemoteRetryPolicy, get_remote_http_status
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.api.router import create_routers as seqdb_create_routers
-from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.config import SeqdbAppCfg
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
 pytestmark = pytest.mark.e2e
@@ -113,9 +110,7 @@ def seqdb_server(
     with pytest.MonkeyPatch.context() as env, _logging_disabled():
         for key, value in _envvars(settings_file).items():
             env.setenv(key, value)
-        app_cfg = AppCfg(
-            AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType
-        )
+        app_cfg = SeqdbAppCfg()
         composer = SeqdbAppComposer(app_cfg, log_setup=False)
         fastapi_app = create_fast_api(
             app=composer.app,
@@ -205,7 +200,7 @@ def test_client_credentials_read_all(command_class: type) -> None:
 
 def test_retry_policy_does_not_disturb_successful_calls() -> None:
     """A client with a retry policy behaves normally when nothing fails."""
-    policy = RemoteRetryPolicy(frozenset({502, 503, 504}), (0.1, 0.1))
+    policy = fastapp.RetryPolicy(frozenset({502, 503, 504}), (0.1, 0.1))
     client = create_client("seqdb", retry_policy=policy)
     _read_all(client, seqdb_command.LocusCrudCommand)
 
@@ -215,7 +210,7 @@ def test_invalid_token_is_rejected() -> None:
     client = create_client("seqdb", token="not-a-valid-token")
     with pytest.raises(exc.ServiceException) as info:
         _read_all(client, seqdb_command.LocusCrudCommand)
-    assert get_remote_http_status(info.value) in (401, 403)
+    assert fastapp.RetryPolicy.get_remote_http_status(info.value) in (401, 403)
 
 
 def test_stale_token_from_provider_is_refreshed_once() -> None:

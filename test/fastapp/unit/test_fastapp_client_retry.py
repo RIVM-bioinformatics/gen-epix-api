@@ -8,19 +8,14 @@ from typing import Any
 import httpx
 import pytest
 
+from gen_epix import fastapp
 from gen_epix.commondb.domain import DOMAIN
 from gen_epix.commondb.services.client import CommondbClient
 from gen_epix.fastapp import exc
-from gen_epix.fastapp.client import (
-    RemoteRetryPolicy,
-    get_remote_http_status,
-    is_network_error,
-    is_retryable_status,
-)
 from gen_epix.fastapp.enum import AuthProtocol, HttpProtocol
 from gen_epix.fastapp.model import Command
 
-POLICY = RemoteRetryPolicy(
+POLICY = fastapp.RetryPolicy(
     retryable_status_codes=frozenset({404, 429, 500, 502, 503, 504}),
     wait_schedule=(1, 2, 3),
 )
@@ -39,7 +34,7 @@ def _status_error(status: int) -> httpx.HTTPStatusError:
 
 
 def _make_client(
-    handler: Callable[[Command], Any], retry_policy: RemoteRetryPolicy | None
+    handler: Callable[[Command], Any], retry_policy: fastapp.RetryPolicy | None
 ) -> CommondbClient:
     client = CommondbClient(
         DOMAIN,
@@ -81,7 +76,7 @@ class TestRemoteRetryPolicy:
         for code in (401, 403):
             codes = frozenset({500, code})
             with pytest.raises(ValueError):
-                RemoteRetryPolicy(codes, (1,))
+                fastapp.RetryPolicy(codes, (1,))
 
     def test_is_retryable_for_network_and_listed_status(self) -> None:
         assert POLICY.is_retryable(httpx.ConnectError("x"))
@@ -92,28 +87,37 @@ class TestRemoteRetryPolicy:
 class TestStatusHelpers:
     def test_status_from_message(self) -> None:
         e = exc.ServiceException("11111111", "HTTP status 502 error when handling")
-        assert get_remote_http_status(e) == 502
+        assert fastapp.RetryPolicy.get_remote_http_status(e) == 502
 
     def test_status_from_cause(self) -> None:
         e = exc.ServiceException("11111111", "no status here")
         e.__cause__ = _status_error(503)
-        assert get_remote_http_status(e) == 503
+        assert fastapp.RetryPolicy.get_remote_http_status(e) == 503
 
     def test_status_fallback_and_non_http(self) -> None:
-        assert get_remote_http_status(exc.ServiceException("11111111", "x")) == 500
-        assert get_remote_http_status(_status_error(404)) == 404
-        assert get_remote_http_status(ValueError("x")) is None
+        assert (
+            fastapp.RetryPolicy.get_remote_http_status(
+                exc.ServiceException("11111111", "x")
+            )
+            == 500
+        )
+        assert fastapp.RetryPolicy.get_remote_http_status(_status_error(404)) == 404
+        assert fastapp.RetryPolicy.get_remote_http_status(ValueError("x")) is None
 
     def test_is_network_error_through_wrapper(self) -> None:
         wrapped = exc.ServiceException("11111111", "wrapped")
         wrapped.__cause__ = httpx.ConnectError("x")
-        assert is_network_error(wrapped)
-        assert not is_network_error(exc.ServiceException("11111111", "x"))
+        assert fastapp.RetryPolicy.is_network_error(wrapped)
+        assert not fastapp.RetryPolicy.is_network_error(
+            exc.ServiceException("11111111", "x")
+        )
 
     def test_is_retryable_status_never_auth(self) -> None:
         e = exc.ServiceException("11111111", "HTTP status 401 error")
-        assert not is_retryable_status(e, frozenset({401, 500}))
-        assert not is_retryable_status(exc.AuthException("11111111", "x"), {500})
+        assert not fastapp.RetryPolicy.is_retryable_status(e, frozenset({401, 500}))
+        assert not fastapp.RetryPolicy.is_retryable_status(
+            exc.AuthException("11111111", "x"), {500}
+        )
 
 
 class TestClientHandleRetry:
@@ -152,7 +156,7 @@ class TestClientHandleRetry:
 
     def test_network_error_always_retried(self, sleeps: list[float]) -> None:
         handler = Flaky(httpx.ReadTimeout("t"), httpx.ConnectError("c"))
-        client = _make_client(handler, RemoteRetryPolicy(frozenset(), (5, 5)))
+        client = _make_client(handler, fastapp.RetryPolicy(frozenset(), (5, 5)))
         assert client.handle(RetryCommand()) == "ok"
         assert handler.calls == 3
 

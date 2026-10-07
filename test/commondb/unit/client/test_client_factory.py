@@ -10,7 +10,7 @@ import httpx
 import jwt
 import pytest
 
-from gen_epix import AppType, RemoteRetryPolicy, create_client
+from gen_epix import AppType, create_client, fastapp
 from gen_epix.casedb.services.client import CasedbClient
 from gen_epix.commondb import client_factory
 from gen_epix.commondb.services.client import CommondbClient
@@ -121,7 +121,7 @@ class TestCreateClient:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _set_env(monkeypatch, "SEQDB", DEFAULT_REQUEST_TIMEOUT="12.5")
-        policy = RemoteRetryPolicy(frozenset({503}), (1,))
+        policy = fastapp.RetryPolicy(frozenset({503}), (1,))
         client = create_client("seqdb", retry_policy=policy)
         assert client.retry_policy is policy
         assert client._default_request_timeout == 12.5

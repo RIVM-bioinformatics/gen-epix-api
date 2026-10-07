@@ -14,11 +14,11 @@ from typing import Any, Literal
 
 import jwt
 
+from gen_epix import fastapp
 from gen_epix.commondb import api
 from gen_epix.commondb.domain import command, enum, model, util
 from gen_epix.fastapp import Client, HttpProtocol, exc
 from gen_epix.fastapp.app import App
-from gen_epix.fastapp.client import get_remote_http_status
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, HttpMethod, OAuthFlow
 from gen_epix.fastapp.log import LogItem
@@ -368,7 +368,7 @@ class CommondbClient(Client):
         try:
             return super()._handle_once(cmd)
         except exc.ServiceException as e:
-            if get_remote_http_status(e) != 401:
+            if fastapp.RetryPolicy.get_remote_http_status(e) != 401:
                 raise
         self._oauth_header_cache = None
         return super()._handle_once(cmd)

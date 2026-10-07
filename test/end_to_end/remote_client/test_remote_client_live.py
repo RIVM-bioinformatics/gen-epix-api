@@ -50,11 +50,11 @@ from gen_epix import (
     CommondbClient,
     casedb_command,
     create_client,
+    fastapp,
     omopdb_command,
     seqdb_command,
 )
 from gen_epix.fastapp import exc
-from gen_epix.fastapp.client import get_remote_http_status
 from gen_epix.fastapp.enum import CrudOperation
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
@@ -108,4 +108,4 @@ def test_invalid_token_is_rejected(app: str) -> None:
     cmd = seqdb_command.SeqCategoryCrudCommand(operation=CrudOperation.READ_ALL)
     with pytest.raises(exc.ServiceException) as info:
         client.handle(cmd)
-    assert get_remote_http_status(info.value) in (401, 403)
+    assert fastapp.RetryPolicy.get_remote_http_status(info.value) in (401, 403)

@@ -47,7 +47,6 @@ from gen_epix.commondb.domain.util import set_env_variables as set_env_variables
 from gen_epix.commondb.env import AppComposer as AppComposer
 from gen_epix.commondb.services.client import CommondbClient as CommondbClient
 from gen_epix.etl import model as etl_model
-from gen_epix.fastapp.client import RemoteRetryPolicy as RemoteRetryPolicy
 from gen_epix.omopdb.config import OmopdbAppCfg as OmopdbAppCfg
 from gen_epix.omopdb.domain import DOMAIN as OMOPDB_DOMAIN
 from gen_epix.omopdb.domain import command as omopdb_command
@@ -76,7 +75,6 @@ __all__ = [
     "NULL_ID",
     "AppCfg",
     "AppType",
-    "RemoteRetryPolicy",
     "create_client",
     "AppComposer",
     "COMMONDB_DOMAIN",
