@@ -266,7 +266,7 @@ class TestOIDCProvider:
 
         expires_in = 7200  # 2 hours
 
-        with patch("oidc_provider.datetime") as mock_datetime:
+        with patch("test.test_client.oauth.oidc_provider.datetime") as mock_datetime:
             # Mock current time
             mock_now = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
             mock_datetime.now.return_value = mock_now

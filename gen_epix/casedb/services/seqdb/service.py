@@ -172,6 +172,19 @@ class SeqdbService(BaseSeqdbService):
         fasta_iterator: Iterable[str] = self.seqdb_app.handle(seqdb_cmd)
         return fasta_iterator
 
+    def retrieve_seq_distances_by_seq_profiles(
+        self,
+        cmd: seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand,
+    ) -> list[seqdb_model.SeqDistance]:
+        """Retrieve sequence distances from Seqdb under the functional user."""
+        seqdb_cmd = seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand(
+            user=self.seqdb_user,
+            seq_profile_ids=cmd.seq_profile_ids,
+            protocol_id=cmd.protocol_id,
+        )
+        seq_distances: list[seqdb_model.SeqDistance] = self.seqdb_app.handle(seqdb_cmd)
+        return seq_distances
+
     def upload_samples(
         self,
         cmd: seqdb_command.UploadSamplesCommand,

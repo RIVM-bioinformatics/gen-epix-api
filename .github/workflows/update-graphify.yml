@@ -64,7 +64,8 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add graphify-out/
-          git commit -m "chore: update knowledge graph [skip azurepipelines]
+          # Keep CI enabled when these commits are merged into main.
+          git commit -m "chore: update knowledge graph
 
           - Regenerate graph.json with latest codebase
           - Update GRAPH_REPORT.md and visualizations

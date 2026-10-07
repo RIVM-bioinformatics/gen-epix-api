@@ -68,6 +68,7 @@ class RoleGenerator(CommonRoleGenerator):
                 command.RetrieveCaseCohortLinksByCaseTypeCommand,
                 PermissionTypeSet.E,
             ),
+            (command.RetrieveSeqDistancesByCasesCommand, PermissionTypeSet.E),
             # abac
             (command.OrganizationAccessCasePolicyCrudCommand, PermissionTypeSet.CUD),
             (

@@ -152,12 +152,14 @@ def _remove_timezone_from_datetime(test: list[dict[str, Any]]) -> None:
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
-    """Skip performance tests unless -m performance (or a superset) is requested."""
-    if "performance" not in (config.getoption("-m", default="") or ""):
-        skip = pytest.mark.skip(reason="use -m performance to run")
-        for item in items:
-            if item.get_closest_marker("performance"):
-                item.add_marker(skip)
+    """Skip performance and live tests unless explicitly requested via -m."""
+    markexpr = config.getoption("-m", default="") or ""
+    for marker in ("performance", "live"):
+        if marker not in markexpr:
+            skip = pytest.mark.skip(reason=f"use -m {marker} to run")
+            for item in items:
+                if item.get_closest_marker(marker):
+                    item.add_marker(skip)
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:

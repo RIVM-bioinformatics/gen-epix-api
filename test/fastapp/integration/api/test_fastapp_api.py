@@ -477,7 +477,7 @@ class TestGetOneEndpoint:
             "/model1",
             json={"name": "Test", "description": "Description"},
         )
-        assert create_response.status_code == status.HTTP_200_OK
+        assert create_response.status_code == status.HTTP_201_CREATED
         created_data = create_response.json()
         model_id = created_data["id"]
 
@@ -509,7 +509,7 @@ class TestExistsEndpoints:
             "/model1",
             json={"name": "Test", "description": "Description"},
         )
-        assert create_response.status_code == status.HTTP_200_OK
+        assert create_response.status_code == status.HTTP_201_CREATED
         model_id = create_response.json()["id"]
 
         response = client.get(f"/model1/{model_id}/exists")
@@ -529,7 +529,7 @@ class TestExistsEndpoints:
             "/model1",
             json={"name": "Test", "description": "Description"},
         )
-        assert create_response.status_code == status.HTTP_200_OK
+        assert create_response.status_code == status.HTTP_201_CREATED
         existing_id = create_response.json()["id"]
         missing_id = str(uuid4())
 
@@ -561,7 +561,7 @@ class TestPostOneEndpoint:
             "/model1",
             json={"name": "New Item", "description": "A new item"},
         )
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert data["name"] == "New Item"
         assert data["description"] == "A new item"
@@ -573,7 +573,7 @@ class TestPostOneEndpoint:
             "/model2",
             json={"title": "Title", "count": 5},
         )
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert data["title"] == "Title"
         assert data["count"] == 5
@@ -605,7 +605,7 @@ class TestPutOneEndpoint:
             "/model1",
             json={"name": "Original", "description": "Original desc"},
         )
-        assert create_response.status_code == status.HTTP_200_OK
+        assert create_response.status_code == status.HTTP_201_CREATED
         created_data = create_response.json()
         model_id = created_data["id"]
 
@@ -651,7 +651,7 @@ class TestDeleteOneEndpoint:
             "/model1",
             json={"name": "To Delete", "description": "Desc"},
         )
-        assert create_response.status_code == status.HTTP_200_OK
+        assert create_response.status_code == status.HTTP_201_CREATED
         created_data = create_response.json()
         model_id = created_data["id"]
 
@@ -744,7 +744,7 @@ class TestParametrizedCRUD:
         """Verify create then read cycle works for all models."""
         # Create
         response = client.post(model_endpoint, json=create_payload)
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         item_id = data["id"]
 
@@ -763,7 +763,7 @@ class TestParametrizedCRUD:
         """Verify create then update cycle works for all models."""
         # Create
         response = client.post(model_endpoint, json=create_payload)
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         item_id = data["id"]
 
@@ -789,7 +789,7 @@ class TestParametrizedCRUD:
         """Verify create then delete cycle works for all models."""
         # Create
         response = client.post(model_endpoint, json=create_payload)
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         item_id = data["id"]
 

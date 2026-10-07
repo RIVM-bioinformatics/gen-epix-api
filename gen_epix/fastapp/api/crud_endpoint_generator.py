@@ -14,7 +14,7 @@ from collections.abc import Callable, Hashable
 from typing import Any, get_type_hints
 from uuid import UUID
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, status
 
 from gen_epix.fastapp import exc, model
 from gen_epix.fastapp.api import exc as api_exc
@@ -590,6 +590,7 @@ class CrudEndpointGenerator:
             route,
             operation_id=(route.operation_id_basename or route.endpoint_basename)
             + "__post_one",
+            status_code=status.HTTP_201_CREATED,
         )
 
     @staticmethod
@@ -663,6 +664,7 @@ class CrudEndpointGenerator:
             route,
             operation_id=(route.operation_id_basename or route.endpoint_basename)
             + "__post_some",
+            status_code=status.HTTP_201_CREATED,
         )
 
     @staticmethod
@@ -982,6 +984,7 @@ class CrudEndpointGenerator:
         response_model: Any | None,
         route: CrudEndpointSet,
         operation_id: str | None = None,
+        status_code: int | None = None,
     ) -> None:
         """Add route."""
         endpoint_fn.__annotations__ = get_type_hints(
@@ -1011,6 +1014,7 @@ class CrudEndpointGenerator:
             description=route.description,
             operation_id=operation_id,
             response_model_exclude_none=bool(route.response_model_exclude_none),
+            status_code=status_code,
         )
 
     @staticmethod

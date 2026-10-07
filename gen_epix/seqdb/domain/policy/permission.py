@@ -71,6 +71,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrieveSampleIdentifiersByIdCommand, PermissionTypeSet.E),
             (command.RetrieveSamplesByIdCommand, PermissionTypeSet.E),
             (command.RetrieveSamplesByQueryCommand, PermissionTypeSet.E),
+            (command.RetrieveSeqDistancesBySeqProfilesCommand, PermissionTypeSet.E),
             (command.RetrieveSeqDistanceLastModifiedCommand, PermissionTypeSet.E),
             (command.RetrieveSeqFastaCommand, PermissionTypeSet.E),
             (command.RetrieveSimilarProfilesCommand, PermissionTypeSet.E),
