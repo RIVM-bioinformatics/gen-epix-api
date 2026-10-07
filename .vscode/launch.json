@@ -1125,6 +1125,30 @@
         "justMyCode": true
 },
 {
+        "name": "test.end_to_end.remote_client.test_remote_client_live",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/end_to_end/remote_client/test_remote_client_live.py"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.end_to_end.remote_client.test_remote_client_local",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/end_to_end/remote_client/test_remote_client_local.py"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.etl",
         "type": "debugpy",
         "request": "launch",
