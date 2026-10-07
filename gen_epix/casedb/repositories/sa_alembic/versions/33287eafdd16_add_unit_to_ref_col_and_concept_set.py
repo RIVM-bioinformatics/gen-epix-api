@@ -1,4 +1,4 @@
-"""add unit to ref_col and concept_set
+"""add unit to ref_col and concept_set.
 
 Revision ID: 33287eafdd16
 Revises: bbc386e12a58
@@ -18,6 +18,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Add unit columns to reference columns and concept sets."""
     op.add_column(
         "ref_col",
         sa.Column(
@@ -65,5 +66,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Remove the unit columns from reference columns and concept sets."""
     op.drop_column("concept_set", "unit", schema="ontology")
     op.drop_column("ref_col", "unit", schema="case")

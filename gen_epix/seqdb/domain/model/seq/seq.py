@@ -31,8 +31,7 @@ from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
 class Contig(BaseSeq, QualityMixin):
-    """
-    Represents a contiguous DNA sequence. Any IUPAC ambiguity codes are allowed in the sequence.
+    """Represents a contiguous DNA sequence. Any IUPAC ambiguity codes are allowed in the sequence.
 
     A contig is not persistable on its own, but is meant to be part of other objects
     through composition.
@@ -57,8 +56,9 @@ class Contig(BaseSeq, QualityMixin):
 
 
 class Seq(Model, HasSampleMixin, QualityMixin):
-    """Represents a DNA sequence, typically representing an assembled genome or a part thereof. A
-    sequence consists of one or more contiguous sequences (contigs).
+    """Represents a DNA sequence made up of one or more contigs.
+
+    A sequence typically represents an assembled genome or part of one.
 
     The actual sequence data need not be provided on creation of this instance, to
     allow for deferred upload and processing of the sequence data. The is_available

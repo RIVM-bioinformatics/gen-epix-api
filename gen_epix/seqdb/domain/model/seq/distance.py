@@ -96,12 +96,12 @@ class SeqDistance(
 
 
 class CalculateSeqDistancesEtlResult(LoadResult):
-    """Represents the result of calculating distances between existing profiles and new
-    profiles or between new profiles themselves, as part of the upload process.
-    The seq_distance_profile_id refers to the sequence distance profile (i.e.,
-    AlleleProfile or MlvaProfile).
+    """Represents the result of calculating sequence distances during upload.
 
-    ``seq_distance_profile_id`` identifies the profile containing these distances.
+    Distances may be calculated between existing and new profiles or among new
+    profiles. The ``seq_distance_profile_id`` identifies the profile containing
+    these distances, such as an AlleleProfile or MlvaProfile.
+
     """
 
     ID: ClassVar[str] = "6e359c57"

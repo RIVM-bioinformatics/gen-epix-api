@@ -90,6 +90,9 @@ from gen_epix.casedb.services.case.retrieve_seq import (
     case_service_retrieve_phylogenetic_tree,
     case_service_retrieve_protocols,
 )
+from gen_epix.casedb.services.case.retrieve_seq_distances_by_cases import (
+    case_service_retrieve_seq_distances_by_cases,
+)
 from gen_epix.casedb.services.case.retrieve_similar_cases import (
     case_service_retrieve_similar_cases,
 )
@@ -433,6 +436,12 @@ class CaseService(BaseCaseService):
             UnauthorizedAuthError: If the selected tree algorithm is not allowed.
         """
         return case_service_retrieve_phylogenetic_tree(self, cmd)
+
+    def retrieve_seq_distances_by_cases(
+        self, cmd: command.RetrieveSeqDistancesByCasesCommand
+    ) -> list[seqdb_model.SeqDistance]:
+        """Retrieve sequence distances for accessible case profiles."""
+        return case_service_retrieve_seq_distances_by_cases(self, cmd)
 
     def retrieve_similar_cases(
         self, cmd: command.RetrieveSimilarCasesCommand

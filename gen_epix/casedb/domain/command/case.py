@@ -21,8 +21,7 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 
 
 class CaseTypeSetCaseTypeUpdateAssociationCommand(UpdateAssociationCommand):
-    """Represents a request to replace the association between a case type set and its
-    case types.
+    """Represents a request to replace a case type set's case type associations.
 
     The provided members keep the set synchronized for downstream access
     policies and presets.
@@ -261,6 +260,24 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
     allowed_qc_results: set[seqdb_enum.QualityControlResult] = Field(
         default=set(seqdb_enum.QualityControlResultSet.ALL.value),
         description="Set of allowed quality control results for the profiles to consider in the tree. Only profiles whose qc_result is in this set will be included in the tree. This allows excluding low-quality profiles from the tree.",
+    )
+
+
+class RetrieveSeqDistancesByCasesCommand(Command):
+    """Represents a request to retrieve sequence distances for cases."""
+
+    case_type_id: UUID = Field(
+        description="The CaseType ID that all the cases must belong to."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to retrieve sequence distances for."
+    )
+    genetic_distance_col_id: UUID = Field(
+        description="The ID of the genetic distance Col to use."
+    )
+    filter_other_cases: bool = Field(
+        default=True,
+        description="Whether to omit distances to cases not included in case_ids.",
     )
 
 

@@ -5,6 +5,8 @@ NONE-mode default headers or OAuth2 client-credentials authentication.
 """
 
 import importlib
+import math
+from collections.abc import Callable
 from datetime import datetime, timezone
 from enum import Enum
 from logging import Logger
@@ -12,9 +14,9 @@ from typing import Any, Literal
 
 import jwt
 
+from gen_epix import fastapp
 from gen_epix.commondb import api
-from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain import command, enum, model, util
 from gen_epix.fastapp import Client, HttpProtocol, exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
@@ -23,6 +25,9 @@ from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command, Permission
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
+
+# Decode options for reading the ``exp`` claim of a token without verifying it
+_UNVERIFIED_OPTIONS = {"verify_signature": False}
 
 
 class CommondbClient(Client):
@@ -36,6 +41,7 @@ class CommondbClient(Client):
 
     ROUTE_MAP: dict[type[Command], str] = {
         command.DeleteAllOperationalDataCommand: "/operational_data",
+        command.DeleteAllRefDataCommand: "/ref_data",
         command.GetIdentityProvidersCommand: "/identity_providers",
         command.InviteUserCommand: "/invite_user",
         command.RetrieveInviteUserConstraintsCommand: "/invite_user/constraints",
@@ -78,6 +84,7 @@ class CommondbClient(Client):
         oauth_scope: str | None = None,
         oauth_token_endpoint: str | None = None,
         oauth_token_refresh_margin: float | None = None,
+        token_provider: Callable[[], str] | None = None,
         logger: Logger | None = None,
         log_item_class: type[LogItem] = LogItem,
         **kwargs: Any,
@@ -101,14 +108,22 @@ class CommondbClient(Client):
             oauth_scope: OAuth2 scope requested for client credentials.
             oauth_token_endpoint: Optional OAuth2 token endpoint override.
             oauth_token_refresh_margin: Seconds before expiry to refresh a token.
+            token_provider: Optional callable returning a bearer token, used instead
+                of the OAuth2 client-credentials flow, e.g. for a token of a human
+                user. Must be combined with ``auth_protocol=NONE``. The token is
+                cached until shortly before its ``exp`` claim; on a 401 response the
+                cache is dropped, the provider is called again and the command is
+                retried once.
             logger: Optional logger for identity-provider requests.
             log_item_class: Structured log item implementation.
             **kwargs: Additional remote application configuration.
 
         Raises:
-            InitializationServiceError: If authentication settings are unsupported or
-                required OAuth2 settings are missing.
+            InitializationServiceError: If authentication settings are unsupported,
+                required OAuth2 settings are missing, or ``token_provider`` conflicts
+                with the OAuth2 settings or an ``Authorization`` default header.
         """
+        self._check_token_provider(token_provider, auth_protocol, default_headers)
         if isinstance(auth_protocol, str):
             auth_protocol = AuthProtocol(auth_protocol)
         if isinstance(oauth_flow, str):
@@ -140,6 +155,7 @@ class CommondbClient(Client):
         self.register_handler(
             command.DeleteAllOperationalDataCommand, self.delete_all_operational_data
         )
+        self.register_handler(command.DeleteAllRefDataCommand, self.delete_all_ref_data)
         self.register_handler(
             command.GetIdentityProvidersCommand, self.get_identity_providers
         )
@@ -229,7 +245,35 @@ class CommondbClient(Client):
         self._oauth_idp_client = oauth_idp_client
         self._oauth_scope = oauth_scope
         self._oauth_token_refresh_margin = oauth_token_refresh_margin
-        self._oauth_header_cache: tuple[int, dict[str, str]] | None = None
+        self._token_provider = token_provider
+        self._oauth_header_cache: tuple[float, dict[str, str]] | None = None
+
+    @staticmethod
+    def _check_token_provider(
+        token_provider: Callable[[], str] | None,
+        auth_protocol: AuthProtocol | str,
+        default_headers: dict[str, str] | None,
+    ) -> None:
+        """Reject token provider combinations that conflict with other auth settings.
+
+        Raises:
+            InitializationServiceError: If a token provider is combined with the
+                OAUTH2 auth protocol or with an ``Authorization`` default header.
+        """
+        if token_provider is None:
+            return
+        if auth_protocol not in (AuthProtocol.NONE, AuthProtocol.NONE.value):
+            raise exc.InitializationServiceError(
+                "b4a99708",
+                "token_provider cannot be combined with the OAUTH2 auth protocol; use auth_protocol NONE",
+            )
+        if default_headers and any(
+            key.lower() == "authorization" for key in default_headers
+        ):
+            raise exc.InitializationServiceError(
+                "82dd3da9",
+                "token_provider cannot be combined with an Authorization default header",
+            )
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
         """Return request headers, refreshing an OAuth token when needed.
@@ -244,41 +288,92 @@ class CommondbClient(Client):
             InitializationServiceError: If the configured authentication protocol cannot
                 provide request headers.
         """
-        # Call identity provider to get JWT
+        if self._token_provider is not None:
+            return self._get_cached_bearer_headers(self._retrieve_provided_token)
         if self._auth_protocol == AuthProtocol.NONE:
             return self._default_headers
         if self._auth_protocol == AuthProtocol.OAUTH2:
             assert self._oauth_idp_client is not None
             assert self._oauth_scope is not None
-            # Check if cached token is still valid
-            if self._oauth_header_cache and self._oauth_header_cache[0] > (
-                datetime.now(timezone.utc).timestamp()
-                - self._oauth_token_refresh_margin
-            ):
-                # Return cached header
-                return self._oauth_header_cache[1]
-            # Retrieve new token
-            jwt_token = (
-                self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
-                    scope=self._oauth_scope
-                )
+            return self._get_cached_bearer_headers(
+                self._retrieve_client_credentials_token
             )
-            # Create headers
-            headers = dict(self._default_headers)
-            headers["Authorization"] = f"Bearer {jwt_token}"
-            # Put header in cache together with its expiry time
-            claims = jwt.decode(jwt_token, options={"verify_signature": False})
-            exp: int | None = claims.get("exp")
-            if exp is None:
-                # No expiration claim, valid forever
-                self._oauth_header_cache = (int(datetime.max.timestamp()), headers)
-            else:
-                self._oauth_header_cache = (exp, headers)
-            return headers
         raise exc.InitializationServiceError(
             "7bf9fe04",
             f"Auth protocol {self._auth_protocol.value} not supported for token retrieval",
         )
+
+    def get_access_token(self) -> str:
+        """Return a valid bearer token from the configured token source.
+
+        Raises:
+            InitializationServiceError: If no token source is configured.
+        """
+        authorization = self.get_headers(Command()).get("Authorization", "")
+        if not authorization.startswith("Bearer "):
+            raise exc.InitializationServiceError(
+                "b9ebc5bf", "Client is not configured to retrieve an access token"
+            )
+        return authorization.removeprefix("Bearer ")
+
+    def _retrieve_client_credentials_token(self) -> str:
+        """Retrieve a new token from the identity provider via client credentials."""
+        assert self._oauth_idp_client is not None
+        assert self._oauth_scope is not None
+        return self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            scope=self._oauth_scope
+        )
+
+    def _retrieve_provided_token(self) -> str:
+        """Retrieve a new token from the token provider, wrapping its failures."""
+        assert self._token_provider is not None
+        try:
+            return self._token_provider()
+        except Exception as e:
+            raise exc.AuthException(
+                "f2bf14f1", f"Token provider failed to supply a token: {e}"
+            ) from e
+
+    def _get_cached_bearer_headers(
+        self, retrieve_token: Callable[[], str]
+    ) -> dict[str, str]:
+        """Return headers with a bearer token, calling ``retrieve_token`` only near expiry."""
+        if self._oauth_header_cache and self._oauth_header_cache[0] > (
+            datetime.now(timezone.utc).timestamp() + self._oauth_token_refresh_margin
+        ):
+            return self._oauth_header_cache[1]
+        jwt_token = retrieve_token()
+        headers = dict(self._default_headers)
+        headers["Authorization"] = f"Bearer {jwt_token}"
+        # Put header in cache together with its expiry time
+        exp: int | None
+        try:
+            # Only the unverified ``exp`` claim is read, to schedule renewal of the
+            # cached token; the token is not trusted based on it. The service
+            # verifies the signature on every request.
+            claims = jwt.decode(jwt_token, options=_UNVERIFIED_OPTIONS)  # NOSONAR
+            exp = claims.get("exp")
+        except jwt.DecodeError:
+            # Opaque (non-JWT) token, expiry unknown
+            exp = None
+        if exp is None:
+            # No expiration claim, valid forever
+            self._oauth_header_cache = (math.inf, headers)
+        else:
+            self._oauth_header_cache = (exp, headers)
+        return headers
+
+    def _handle_once(self, cmd: Command) -> Any:
+        """Handle a command; on a 401 with a token provider, refresh the token and retry once."""
+        if self._token_provider is None:
+            return super()._handle_once(cmd)
+        try:
+            return super()._handle_once(cmd)
+        except exc.ServiceException as e:
+            if fastapp.RetryPolicy.get_remote_http_status(e) != 401:
+                raise
+        self._oauth_header_cache = None
+        return super()._handle_once(cmd)
 
     # --- Non-CRUD command handlers ---
 
@@ -432,9 +527,15 @@ class CommondbClient(Client):
         Returns a specific subclass of `model.DeleteAllOperationalDataResult`
         containing the result of the deletion operation.
         """
-
         response_body: dict[str, Any] = self.request(cmd, HttpMethod.DELETE)  # type: ignore[assignment]
         return model.DeleteAllOperationalDataResult(**response_body)
+
+    def delete_all_ref_data(
+        self, cmd: command.DeleteAllRefDataCommand
+    ) -> model.DeleteAllRefDataResult:
+        """Delete all reference data after operational data has been deleted."""
+        response_body: dict[str, Any] = self.request(cmd, HttpMethod.DELETE)  # type: ignore[assignment]
+        return model.DeleteAllRefDataResult(**response_body)
 
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand
@@ -461,9 +562,10 @@ class CommondbClient(Client):
     def create_local_or_remote(
         cls,
         app_type: enum.AppType,
-        app_setup_type: Literal["LOCAL", "REMOTE"],
+        app_setup_type: Literal["LOCAL", "REMOTE", "NONE"],
         local_client_props: dict[str, Any] | None = None,
         remote_client_props: dict[str, Any] | None = None,
+        no_client_props: dict[str, Any] | None = None,
         app_composer_class: type | None = None,
         user_class: type[model.User] | None = None,
         service_type_enum: type[Enum] | None = None,
@@ -474,9 +576,10 @@ class CommondbClient(Client):
 
         Args:
             app_type: Application type to create locally.
-            app_setup_type: Setup mode, either ``LOCAL`` or ``REMOTE``.
+            app_setup_type: Setup mode, either ``LOCAL``, ``REMOTE``, or ``NONE``.
             local_client_props: Properties for local client (app) construction.
             remote_client_props: Properties for remote client construction.
+            no_client_props: Properties for no-client construction.
             app_composer_class: Composer class for local setup.
             user_class: User model class for local setup.
             service_type_enum: Service-type enum for local setup.
@@ -491,10 +594,10 @@ class CommondbClient(Client):
         """
         # Parse input
         app_setup_type = app_setup_type.upper()  # type: ignore[assignment]
-        if app_setup_type not in ("LOCAL", "REMOTE"):
+        if app_setup_type not in ("LOCAL", "REMOTE", "NONE"):
             raise exc.InitializationServiceError(
                 "2ceb9c7c",
-                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'.",
+                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL', 'REMOTE', or 'NONE'.",
             )
         # Create local or remote app
         app: App
@@ -513,10 +616,22 @@ class CommondbClient(Client):
         elif app_setup_type == "REMOTE":
             # Parse remote app props
             app, user = CommondbClient._create_client(remote_client_props)
+        elif app_setup_type == "NONE":
+            # Parse no-client props
+            app = cls._create_no_client(
+                app_type,
+                no_client_props,
+                app_composer_class,
+                user_class,
+                service_type_enum,
+                repository_type_enum,
+                logger,
+            )
+            user = None
         else:
             raise exc.InitializationServiceError(
                 "84a87605",
-                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'.",
+                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL', 'REMOTE', or 'NONE'.",
             )
         return app, user
 
@@ -568,7 +683,9 @@ class CommondbClient(Client):
         if "app_cfg" in local_client_props:
             app_cfg = local_client_props.pop("app_cfg")
         else:
-            app_cfg = AppCfg(app_type, service_type_enum, repository_type_enum)
+            app_cfg = util.get_app_cfg_class(app_type)(
+                app_type, service_type_enum, repository_type_enum
+            )
         log_setup = local_client_props.get("log_setup", logger is not None)
         # Create local app and user
         app_composer = app_composer_class(app_cfg, log_setup=log_setup)
@@ -576,6 +693,57 @@ class CommondbClient(Client):
         user = user_class(**local_client_props["user"])
 
         return app, user
+
+    @classmethod
+    def _create_no_client(
+        cls,
+        app_type: enum.AppType,
+        no_client_props: dict[str, Any] | None,
+        app_composer_class: type | None,
+        user_class: type[model.User] | None,
+        service_type_enum: type[Enum] | None,
+        repository_type_enum: type[Enum] | None,
+        logger: Logger | None = None,
+    ) -> App:
+        """Instantiate a no-client application from configuration and a user definition.
+
+        Args:
+            app_type: Application type to configure.
+            no_client_props: No-client configuration containing user properties.
+            app_composer_class: Composer used to construct the local application.
+            user_class: User model used to construct the local user.
+            service_type_enum: Application service-type enum.
+            repository_type_enum: Application repository-type enum.
+            logger: Optional logger used to determine setup logging.
+
+        Returns:
+            Local application that raises an exception on use.
+
+        Raises:
+            InitializationServiceError: If required local setup properties are missing.
+        """
+        if (
+            no_client_props is None
+            or app_composer_class is None
+            or user_class is None
+            or service_type_enum is None
+            or repository_type_enum is None
+        ):
+            raise exc.InitializationServiceError(
+                "2f572747",
+                "no_client_props, app_composer_class, user_class, service_type_enum, and repository_type_enum must be provided for NO_CLIENT app setup.",
+            )
+        # Get app config
+        if "app_cfg" in no_client_props:
+            app_cfg = no_client_props.pop("app_cfg")
+        else:
+            app_cfg = AppCfg(app_type, service_type_enum, repository_type_enum)
+        log_setup = no_client_props.get("log_setup", logger is not None)
+        # Create local app and user
+        app_composer = app_composer_class(app_cfg, log_setup=log_setup)
+        app = app_composer.app
+
+        return app
 
     @classmethod
     def _create_client(cls, client_props: dict[str, Any] | None) -> tuple[App, None]:

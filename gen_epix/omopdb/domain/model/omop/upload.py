@@ -21,9 +21,9 @@ from gen_epix.util import copy_model_field
 
 
 class MeasurementForUpload(model.Measurement, IdentifiersMixin):
-    """
-    Represents a measurement record intended for upload. Equal to a Measurement, with
-    additional variables.
+    """Represents a measurement record intended for upload.
+
+    It extends Measurement with identifier fields.
     """
 
     ENTITY: ClassVar = model.Measurement.model_entity().clone(
@@ -43,9 +43,9 @@ class MeasurementForUpload(model.Measurement, IdentifiersMixin):
 
 
 class ObservationForUpload(model.Observation, IdentifiersMixin):
-    """
-    Represents an observation record intended for upload. Equal to an Observation, with
-    additional variables.
+    """Represents an observation record intended for upload.
+
+    It extends Observation with identifier fields.
     """
 
     ENTITY: ClassVar = model.Observation.model_entity().clone(
@@ -65,9 +65,9 @@ class ObservationForUpload(model.Observation, IdentifiersMixin):
 
 
 class SpecimenForUpload(model.Specimen, IdentifiersMixin):
-    """
-    Represents a specimen record intended for upload. Equal to a Specimen, with
-    additional variables.
+    """Represents a specimen record intended for upload.
+
+    It extends Specimen with identifier fields.
     """
 
     ENTITY: ClassVar = model.Specimen.model_entity().clone(
@@ -87,9 +87,9 @@ class SpecimenForUpload(model.Specimen, IdentifiersMixin):
 
 
 class MeasurementRelationForUpload(model.MeasurementRelation, IdentifiersMixin):
-    """
-    Represents a measurement relation record intended for upload. Equal to a MeasurementRelation, with
-    additional variables.
+    """Represents a measurement relation record intended for upload.
+
+    It extends MeasurementRelation with identifier fields.
     """
 
     ENTITY: ClassVar = model.MeasurementRelation.model_entity().clone(
@@ -105,9 +105,7 @@ class MeasurementRelationForUpload(model.MeasurementRelation, IdentifiersMixin):
 
 
 class PersonForUpload(ParentForUpload):
-    """
-    Represents a person, together with any relevant associated data, intended for upload.
-    """
+    """Represents a person, together with any relevant associated data, intended for upload."""
 
     ENTITY: ClassVar = ParentForUpload.model_entity().clone(
         update={"persistable": False}
@@ -169,9 +167,7 @@ class PersonDataIssue(DataIssue):
 
 
 class PersonUploadResult(ParentUploadResult):
-    """
-    Represents the result of uploading a single person.
-    """
+    """Represents the result of uploading a single person."""
 
     ID: ClassVar[str] = "c6dd271e"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
@@ -222,9 +218,9 @@ class PersonUploadResult(ParentUploadResult):
 
 
 class PersonBatchForUpload(BaseBatchForUpload):
-    """
-    Represents a set of persons intended for upload, together with any new reference data required
-    for the storage of these data.
+    """Represents a batch of persons intended for upload.
+
+    It includes new reference data required to store these persons.
     """
 
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone()
@@ -319,9 +315,7 @@ class PersonBatchForUpload(BaseBatchForUpload):
 
 
 class PersonBatchUploadResult(BaseBatchUploadResult):
-    """
-    Represents the result of uploading a batch of persons.
-    """
+    """Represents the result of uploading a batch of persons."""
 
     ID: ClassVar[str] = "3d81faf1"
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone()

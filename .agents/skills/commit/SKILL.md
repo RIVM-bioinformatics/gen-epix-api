@@ -1,13 +1,10 @@
 ---
 name: commit
 description: >-
-  Create one or more git commits with Conventional Commits messages that are
-  descriptive but compact — one subject sentence, followed by a short body
-  paragraph only when it genuinely adds value.
-  Infers the commit type and the bracketed scope from the staged diff, the branch
-  name, and the previous two commits, ties the message to recent work when it
-  genuinely continues it, and splits unrelated changes into separate commits. Use
-  when asked to commit staged changes.
+  Create one or more compact Conventional Commits from staged changes. Check
+  for unstaged or untracked changes first and ask before staging them. Infer the
+  type and scope from the diff, branch, and recent history; split only clearly
+  unrelated changes. Use when asked to commit changes.
 argument-hint: 'Optional: a scope hint or the gist of the change'
 ---
 
@@ -16,9 +13,19 @@ argument-hint: 'Optional: a scope hint or the gist of the change'
 Compose and create git commit(s) for the **currently staged** changes, using
 Conventional Commits messages that are descriptive but compact.
 
-## 1. Gather context first (read-only)
+## 1. Check for unstaged changes first
 
-Run these and use their output — do not skip:
+Run `git status --short`. If it reports any unstaged or untracked changes, 
+present a yes/no prompt that asks the user: “There are unstaged changes. Should I stage them?”. 
+Do not stage anything until the user answers **yes**. If the answer is yes, stage all
+reported changes with `git add -A`; if the answer is no, leave them untouched
+and continue with the currently staged changes.
+
+## 2. Gather context in one pass (read-only)
+
+In one tool invocation, collect and use all of this output — do not rerun these
+commands or inspect unrelated files unless the output is missing or a commit
+attempt fails:
 
 - `git diff --staged --stat` and `git diff --staged` — what is actually staged. Commit
   only this; never `git add` beyond regrouping already-staged changes unless the user
@@ -30,17 +37,14 @@ Run these and use their output — do not skip:
 
 If nothing is staged, stop and tell the user.
 
-## 2. Decide how many commits
+## 3. Choose commits and messages
 
-Group the staged changes by purpose. If they form one cohesive change, make a single
-commit. If they span clearly distinct purposes or features (e.g. a feature *plus* an
-unrelated docs fix *plus* a config change), split them into **multiple commits — one per
-coherent purpose** — and commit them in a sensible order (e.g. refactors/deps before the
-feature that uses them). Stage each group precisely with `git add <paths>` (or
-`git add -p` for hunks within a file), then apply the rules below to each commit. Do not
-force unrelated changes into one commit just to save steps.
+Default to one commit when the staged diff is cohesive. Split only when it contains
+clearly unrelated purposes and the groups are obvious from the current diff; stage
+each group precisely with `git add <paths>` or `git add -p`, then commit in a sensible
+order. Do not search the repository for additional context just to decide grouping.
 
-## 3. Message format
+For each commit, use:
 
 ```
 type(scope): description
@@ -59,33 +63,13 @@ type(scope): description
 - **description** — one lower-case, imperative sentence that summarizes the change.
   No trailing period on the subject line.
 
-## 4. Keep it compact
+- Keep the subject under about 72 characters and add a short body only when it
+  genuinely adds value. If the change clearly continues either recent commit,
+  reuse its scope and use wording such as "extend" or "finish"; never fabricate
+  that relationship.
 
-- Use **one descriptive subject sentence**. Aim for a subject under ~72 characters
-  while keeping it clear.
-- Add **one short body paragraph** after a blank line only when it genuinely adds
-  value, such as explaining the why or linking the change to recent work.
+## 4. Commit immediately
 
-## 5. Relate to recent work when relevant
-
-If a change continues, completes, or fixes up either of the previous two commits, reflect
-that: reuse their scope and phrase the description as a continuation (e.g. "extend",
-"finish", "follow up on"). Never fabricate a relationship that isn't supported by the
-diff and history.
-
-## 6. Commit
-
-Create each commit with its composed message. Append any attribution trailer your
-environment requires (e.g. a `Co-Authored-By:` line) after a blank line. Then report each
-final message and its resulting short hash.
-
-## Examples
-
-- Branch `LSP-3559-cache-oidc-keys`; last commit
-  `feat(auth): add OIDC key cache`; staged diff updates the cache and tests →
-  `fix(auth): refresh expired OIDC keys`
-- Last commit `feat(skills): add refdata-troubleshooting skill`; staged diff only fixes a
-  broken path in that skill →
-  `fix(skills): correct the loader path in refdata-troubleshooting`
-- Staged diff mixes a new ETL feature with an unrelated README typo → two commits:
-  `feat(etl): add batch retry backoff` and `docs: fix typo in setup instructions`.
+Create each commit with its composed message, appending any required attribution
+trailer after a blank line. Do not run tests, formatters, or extra validation unless
+the user asks or a commit hook fails. Report each final message and short hash.

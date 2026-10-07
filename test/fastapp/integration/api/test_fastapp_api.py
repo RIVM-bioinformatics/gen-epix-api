@@ -360,6 +360,8 @@ def fastapi_app(app_instance: App, test_service: CrudTestService) -> FastAPI:
             CrudEndpointType.GET_SOME,
             CrudEndpointType.POST_QUERY,
             CrudEndpointType.GET_ONE,
+            CrudEndpointType.GET_EXISTS_ONE,
+            CrudEndpointType.GET_EXISTS_SOME,
             CrudEndpointType.POST_ONE,
             CrudEndpointType.POST_SOME,
             CrudEndpointType.PUT_ONE,
@@ -386,6 +388,8 @@ def fastapi_app(app_instance: App, test_service: CrudTestService) -> FastAPI:
             CrudEndpointType.GET_SOME,
             CrudEndpointType.POST_QUERY,
             CrudEndpointType.GET_ONE,
+            CrudEndpointType.GET_EXISTS_ONE,
+            CrudEndpointType.GET_EXISTS_SOME,
             CrudEndpointType.POST_ONE,
             CrudEndpointType.POST_SOME,
             CrudEndpointType.PUT_ONE,
@@ -473,7 +477,7 @@ class TestGetOneEndpoint:
             "/model1",
             json={"name": "Test", "description": "Description"},
         )
-        assert create_response.status_code == status.HTTP_200_OK
+        assert create_response.status_code == status.HTTP_201_CREATED
         created_data = create_response.json()
         model_id = created_data["id"]
 
@@ -492,6 +496,58 @@ class TestGetOneEndpoint:
 
 
 # ============================================================================
+# Tests: EXISTS_ONE / EXISTS_SOME Endpoints
+# ============================================================================
+
+
+class TestExistsEndpoints:
+    """Tests for GET_EXISTS_ONE and GET_EXISTS_SOME CRUD endpoints."""
+
+    def test_exists_one_model1_true(self, client: TestClient) -> None:
+        """Verify GET /model1/{id}/exists returns true for an existing record."""
+        create_response = client.post(
+            "/model1",
+            json={"name": "Test", "description": "Description"},
+        )
+        assert create_response.status_code == status.HTTP_201_CREATED
+        model_id = create_response.json()["id"]
+
+        response = client.get(f"/model1/{model_id}/exists")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() is True
+
+    def test_exists_one_model1_false(self, client: TestClient) -> None:
+        """Verify GET /model1/{id}/exists returns false for a missing record."""
+        model_id = uuid4()
+        response = client.get(f"/model1/{model_id}/exists")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() is False
+
+    def test_exists_some_model1(self, client: TestClient) -> None:
+        """Verify GET /model1/exists returns per-id existence in request order."""
+        create_response = client.post(
+            "/model1",
+            json={"name": "Test", "description": "Description"},
+        )
+        assert create_response.status_code == status.HTTP_201_CREATED
+        existing_id = create_response.json()["id"]
+        missing_id = str(uuid4())
+
+        response = client.get(
+            "/model1/exists",
+            params={"ids": f"{existing_id},{missing_id}"},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == [True, False]
+
+    def test_exists_some_model1_empty(self, client: TestClient) -> None:
+        """Verify GET /model1/exists returns an empty list for no ids."""
+        response = client.get("/model1/exists", params={"ids": "[]"})
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == []
+
+
+# ============================================================================
 # Tests: POST_ONE Endpoint
 # ============================================================================
 
@@ -505,7 +561,7 @@ class TestPostOneEndpoint:
             "/model1",
             json={"name": "New Item", "description": "A new item"},
         )
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert data["name"] == "New Item"
         assert data["description"] == "A new item"
@@ -517,7 +573,7 @@ class TestPostOneEndpoint:
             "/model2",
             json={"title": "Title", "count": 5},
         )
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert data["title"] == "Title"
         assert data["count"] == 5
@@ -549,7 +605,7 @@ class TestPutOneEndpoint:
             "/model1",
             json={"name": "Original", "description": "Original desc"},
         )
-        assert create_response.status_code == status.HTTP_200_OK
+        assert create_response.status_code == status.HTTP_201_CREATED
         created_data = create_response.json()
         model_id = created_data["id"]
 
@@ -595,7 +651,7 @@ class TestDeleteOneEndpoint:
             "/model1",
             json={"name": "To Delete", "description": "Desc"},
         )
-        assert create_response.status_code == status.HTTP_200_OK
+        assert create_response.status_code == status.HTTP_201_CREATED
         created_data = create_response.json()
         model_id = created_data["id"]
 
@@ -688,7 +744,7 @@ class TestParametrizedCRUD:
         """Verify create then read cycle works for all models."""
         # Create
         response = client.post(model_endpoint, json=create_payload)
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         item_id = data["id"]
 
@@ -707,7 +763,7 @@ class TestParametrizedCRUD:
         """Verify create then update cycle works for all models."""
         # Create
         response = client.post(model_endpoint, json=create_payload)
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         item_id = data["id"]
 
@@ -733,7 +789,7 @@ class TestParametrizedCRUD:
         """Verify create then delete cycle works for all models."""
         # Create
         response = client.post(model_endpoint, json=create_payload)
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         item_id = data["id"]
 

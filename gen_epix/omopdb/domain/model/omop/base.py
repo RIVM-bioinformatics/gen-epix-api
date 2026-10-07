@@ -9,9 +9,7 @@ from gen_epix.util import int_to_uuid, str_to_uuid
 
 
 class DataLineageMixin:
-    """
-    Encapsulates optional provenance and source-traceback fields to an OMOP model.
-    """
+    """Encapsulates optional provenance and source-traceback fields to an OMOP model."""
 
     # Annotation-only: an assigned Field lingers as class attr -> pydantic shadow warning
     provenance_id: Annotated[
@@ -24,8 +22,7 @@ class DataLineageMixin:
 
 
 def validate_str_key_args(data: Any, uuid_field_name: str, str_field_name: str) -> Any:
-    """
-    Validate and synchronize string-based primary key arguments.
+    """Validate and synchronize string-based primary key arguments.
 
     Mutates ``data`` in place: derives ``uuid_field_name`` from
     ``str_field_name`` when absent, or verifies consistency when both
@@ -68,8 +65,7 @@ def validate_str_key_args(data: Any, uuid_field_name: str, str_field_name: str) 
 
 
 def validate_int_key_args(data: Any, uuid_field_name: str, int_field_name: str) -> Any:
-    """
-    Validate and synchronize integer-based primary key arguments.
+    """Validate and synchronize integer-based primary key arguments.
 
     Mutates ``data`` in place: derives ``uuid_field_name`` from
     ``int_field_name`` when absent, or verifies consistency when both
@@ -117,13 +113,14 @@ def validate_int_key_args(data: Any, uuid_field_name: str, int_field_name: str) 
 
 
 def validate_int_for_uuid_field(value: Any | None) -> UUID | None:
-    """
-    Validate that the input value is either a UUID or an integer that can be converted to a UUID.
+    """Validate that the input value is either a UUID or an integer that can be converted to a UUID.
 
     Args:
         value (Any or None): The input value to validate.
+
     Returns:
         UUID or None: The validated UUID value.
+
     Raises:
         ValueError: If the input value is neither a valid UUID string nor an integer.
     """
@@ -144,16 +141,18 @@ def validate_int_for_uuid_field(value: Any | None) -> UUID | None:
 
 
 def validate_str_for_uuid_field(value: Any | None) -> UUID | None:
-    """
-    Validate that the input value is either a UUID or a string that can be converted
-    to a UUID. If a string of length 32 or 36 is provided, it is first checked if it
+    """Convert a UUID-compatible string to a UUID.
+
+    If a string of length 32 or 36 is provided, it is first checked if it
     is a UUID string representation and converted accordingly. Otherwise, it is treated
     as a string that can be converted to a UUID.
 
     Args:
         value (Any or None): The input value to validate.
+
     Returns:
         UUID or None: The validated UUID value.
+
     Raises:
         ValueError: If the input value is neither a valid UUID string nor a string that can be converted to a UUID.
     """

@@ -30,6 +30,10 @@ class BaseSeqService(BaseService):
             self.retrieve_sample_identifiers_by_id,
         )
         f(
+            command.RetrieveSeqDistancesBySeqProfilesCommand,
+            self.retrieve_seq_distances_by_seq_profiles,
+        )
+        f(
             command.RetrieveSeqFastaCommand,
             self.retrieve_seq_fasta,
         )
@@ -267,6 +271,24 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def retrieve_seq_distances_by_seq_profiles(
+        self,
+        cmd: command.RetrieveSeqDistancesBySeqProfilesCommand,
+    ) -> list[model.SeqDistance]:
+        """Retrieve distances between profiles.
+
+        Args:
+            cmd: Sequence-distance retrieval command to execute.
+
+        Returns:
+            Distances between the requested profiles.
+
+        Raises:
+            NotImplementedError: Always, until a concrete sequence service implements it.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         """Stream sequence data in FASTA format.
 
@@ -290,6 +312,7 @@ class BaseSeqService(BaseService):
 
         Args:
             cmd: Sequence-format conversion command to execute.
+
         Returns:
             Identifiers of the converted sequences.
 

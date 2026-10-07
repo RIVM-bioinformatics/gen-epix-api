@@ -124,9 +124,7 @@ class PersonBatchUploader(BatchUploader):
         batch_result: model.PersonBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Verify the person content and add any derived values.
-        """
+        """Verify the person content and add any derived values."""
         success = True
         # Initialize some
         status_count_before = batch_result.get_status_count()
@@ -148,7 +146,7 @@ class PersonBatchUploader(BatchUploader):
         return success
 
     def _get_person_validator(self, user_id: UUID) -> PersonValidator:
-        """Get person validator for the given complete person type"""
+        """Get person validator for the given complete person type."""
         return PersonValidator(self.service, user_id)
 
 

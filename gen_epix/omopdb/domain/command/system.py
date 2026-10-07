@@ -5,10 +5,15 @@ from typing import ClassVar
 from gen_epix.commondb.domain.command import (
     DeleteAllOperationalDataCommand as CommonDeleteAllOperationalDataCommand,
 )
+from gen_epix.commondb.domain.command import (
+    DeleteAllRefDataCommand as CommonDeleteAllRefDataCommand,
+)
 from gen_epix.omopdb.domain import model
 
 
 class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
+    """Represents a request to delete all OMOP operational data."""
+
     SORTED_OPERATIONAL_DATA_MODEL_CLASSES: ClassVar = [
         model.Cohort,
         model.ConditionEra,
@@ -49,4 +54,27 @@ class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
         model.VisitDetail,
         model.VisitOccurrence,
         model.Person,
+    ]
+
+
+class DeleteAllRefDataCommand(CommonDeleteAllRefDataCommand):
+    """Request deletion of all persisted OMOP reference data."""
+
+    SORTED_REF_DATA_MODEL_CLASSES: ClassVar = [
+        model.Provider,
+        model.ConceptRelationship,
+        model.Metadata,
+        model.CareSite,
+        model.DrugStrength,
+        model.SourceToConceptMap,
+        model.ConceptSynonym,
+        model.ConceptAncestor,
+        model.Relationship,
+        model.Concept,
+        model.CohortDefinition,
+        model.CdmSource,
+        model.Location,
+        model.ConceptClass,
+        model.Domain,
+        model.Vocabulary,
     ]

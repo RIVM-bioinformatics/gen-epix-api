@@ -13,16 +13,16 @@ import pytest
 import yaml
 
 import gen_epix.commondb.test.util as test_util
+from gen_epix.casedb.config import CasedbAppCfg
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain import enum as enum
 from gen_epix.casedb.domain import model
 from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.commondb.app_setup import create_fast_api
-from gen_epix.commondb.config.cfg import AppCfg
-from gen_epix.commondb.domain.enum import AppType
 from gen_epix.fastapp import CrudOperation, exc
 from gen_epix.seqdb.api.router import create_routers as seqdb_create_routers
-from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.config import SeqdbAppCfg
+from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
 pytestmark = pytest.mark.e2e
@@ -138,12 +138,7 @@ def seqdb_server(
     set_envvar(oauth_discovery_settings_file)
 
     # Create seqdb app and fastapi instance
-    seqdb_app_cfg = AppCfg(
-        AppType.SEQDB,
-        seqdb_enum.ServiceType,
-        seqdb_enum.RepositoryType,
-        log_any=VERBOSE,
-    )
+    seqdb_app_cfg = SeqdbAppCfg(log_any=VERBOSE)
     seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=VERBOSE)
     seqdb_app = seqdb_app_composer.app
     seqdb_fastapi_app = create_fast_api(
@@ -180,12 +175,7 @@ def test_casedb_seqdb_connection(
     protocol = "https" if SSL_CERTFILE and SSL_KEYFILE else "http"
 
     # Create casedb app instance
-    casedb_app_cfg = AppCfg(
-        AppType.CASEDB,
-        enum.ServiceType,
-        enum.RepositoryType,
-        log_any=VERBOSE,
-    )
+    casedb_app_cfg = CasedbAppCfg(log_any=VERBOSE)
     casedb_app_composer = CasedbAppComposer(
         casedb_app_cfg, log_any=VERBOSE, log_setup=VERBOSE
     )
@@ -268,6 +258,8 @@ def test_casedb_seqdb_connection(
     ]
     phylogenetic_tree: model.PhylogeneticTree | None = None
     similar_case_ids: list[UUID] = []
+    selected_distance_col: model.Col | None = None
+    selected_case_ids: list[UUID] = []
     for col_id in genetic_distance_col_ids:
         col = cols[col_id]
         assert col.genetic_sequence_col_id is not None
@@ -283,6 +275,8 @@ def test_casedb_seqdb_connection(
             case_ids = case_ids[0:5]
         if col.tree_algorithm_codes and col.id:
             for tree_algorithm_code in col.tree_algorithm_codes:
+                selected_distance_col = col
+                selected_case_ids = case_ids
                 phylogenetic_tree = casedb_app.handle(
                     command.RetrievePhylogeneticTreeByCasesCommand(
                         user=root_user,
@@ -315,6 +309,121 @@ def test_casedb_seqdb_connection(
     assert isinstance(similar_case_ids, list)
     assert len(similar_case_ids) > 0
     assert any(isinstance(case_id, UUID) for case_id in similar_case_ids)
+
+    assert selected_distance_col is not None
+    assert selected_distance_col.id is not None
+    selected_ref_col = ref_cols[selected_distance_col.ref_col_id]
+    genetic_distance_protocol: model.GeneticDistanceProtocol = casedb_app.handle(
+        command.GeneticDistanceProtocolCrudCommand(
+            user=root_user,
+            operation=CrudOperation.READ_ONE,
+            obj_ids=selected_ref_col.genetic_distance_protocol_id,
+        )
+    )
+    expected_profile_ids: dict[UUID, UUID] = {}
+    for case in cases:
+        if case.id in selected_case_ids:
+            assert case.id is not None
+            profile_id = case.content.get(selected_distance_col.id)
+            assert isinstance(profile_id, str)
+            expected_profile_ids[case.id] = UUID(profile_id)
+
+    requested_profile_ids = set(expected_profile_ids.values())
+    filtered_distances: list[seqdb_model.SeqDistance] = casedb_app.handle(
+        command.RetrieveSeqDistancesByCasesCommand(
+            user=root_user,
+            case_type_id=selected_distance_col.case_type_id,
+            genetic_distance_col_id=selected_distance_col.id,
+            case_ids=selected_case_ids,
+            filter_other_cases=True,
+        )
+    )
+    unfiltered_distances: list[seqdb_model.SeqDistance] = casedb_app.handle(
+        command.RetrieveSeqDistancesByCasesCommand(
+            user=root_user,
+            case_type_id=selected_distance_col.case_type_id,
+            genetic_distance_col_id=selected_distance_col.id,
+            case_ids=selected_case_ids,
+            filter_other_cases=False,
+        )
+    )
+    assert (
+        casedb_app.handle(
+            command.RetrieveSeqDistancesByCasesCommand(
+                user=root_user,
+                case_type_id=selected_distance_col.case_type_id,
+                genetic_distance_col_id=selected_distance_col.id,
+                case_ids=[],
+            )
+        )
+        == []
+    )
+
+    assert filtered_distances
+    assert all(
+        isinstance(distance, seqdb_model.SeqDistance) for distance in filtered_distances
+    )
+    assert all(
+        isinstance(distance, seqdb_model.SeqDistance)
+        for distance in unfiltered_distances
+    )
+    filtered_case_ids = [distance.id for distance in filtered_distances]
+    unfiltered_case_ids = [distance.id for distance in unfiltered_distances]
+    assert all(case_id is not None for case_id in filtered_case_ids)
+    assert all(case_id is not None for case_id in unfiltered_case_ids)
+    assert len(filtered_case_ids) == len(set(filtered_case_ids))
+    assert set(filtered_case_ids) <= set(selected_case_ids)
+    assert set(unfiltered_case_ids) == set(filtered_case_ids)
+
+    filtered_maps: dict[UUID, dict[UUID, float]] = {}
+    unfiltered_maps: dict[UUID, dict[UUID, float]] = {}
+    for filtered_distance in filtered_distances:
+        assert filtered_distance.id is not None
+        assert (
+            filtered_distance.seq_profile_id
+            == expected_profile_ids[filtered_distance.id]
+        )
+        assert (
+            filtered_distance.protocol_id
+            == genetic_distance_protocol.seqdb_seq_distance_protocol_id
+        )
+        filtered_map = filtered_distance.get_profile_distance_map()
+        assert all(isinstance(profile_id, UUID) for profile_id in filtered_map)
+        assert all(
+            isinstance(distance, float) and distance >= 0
+            for distance in filtered_map.values()
+        )
+        assert set(filtered_map) <= requested_profile_ids
+        filtered_maps[filtered_distance.id] = filtered_map
+
+    for unfiltered_distance in unfiltered_distances:
+        assert unfiltered_distance.id is not None
+        assert (
+            unfiltered_distance.seq_profile_id
+            == expected_profile_ids[unfiltered_distance.id]
+        )
+        assert (
+            unfiltered_distance.protocol_id
+            == genetic_distance_protocol.seqdb_seq_distance_protocol_id
+        )
+        unfiltered_map = unfiltered_distance.get_profile_distance_map()
+        assert all(isinstance(profile_id, UUID) for profile_id in unfiltered_map)
+        assert all(
+            isinstance(distance, float) and distance >= 0
+            for distance in unfiltered_map.values()
+        )
+        unfiltered_maps[unfiltered_distance.id] = unfiltered_map
+
+    for case_id, filtered_map in filtered_maps.items():
+        restricted_unfiltered_map = {
+            profile_id: distance
+            for profile_id, distance in unfiltered_maps[case_id].items()
+            if profile_id in requested_profile_ids
+        }
+        assert restricted_unfiltered_map == filtered_map
+
+    assert phylogenetic_tree.leaf_ids is not None
+    assert set(phylogenetic_tree.leaf_ids) <= set(filtered_case_ids)
 
     genetic_sequence_cols = [
         x

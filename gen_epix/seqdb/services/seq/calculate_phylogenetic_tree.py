@@ -14,13 +14,12 @@ from scipy.cluster.hierarchy import ClusterNode  # type: ignore[import-untyped]
 
 from gen_epix.commondb.domain import exc
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.filter.composite import CompositeFilter
-from gen_epix.filter.enum import LogicalOperator
-from gen_epix.filter.equals_uuid import EqualsUuidFilter
-from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.repository.seq import BaseSeqRepository
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
+from gen_epix.seqdb.services.seq.retrieve_seq_distances_by_seq_profiles import (
+    seq_service_retrieve_seq_distances_by_seq_profiles,
+)
 
 
 def seq_service_calculate_phylogenetic_tree(
@@ -86,30 +85,19 @@ def seq_service_calculate_phylogenetic_tree(
                 newick_repr=f"({leaf_names[0]});" if seq_profile_ids else "();",
             )
 
-        # Retrieve distance matrix
-        if tree_algorithm in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
-            seq_distances = repository.crud(
-                uow,
-                user_id,
-                model.SeqDistance,
-                CrudOperation.READ_ALL,
-                filter=CompositeFilter(
-                    filters=[
-                        UuidSetFilter(
-                            key="seq_profile_id", members=frozenset(seq_profile_ids)
-                        ),
-                        EqualsUuidFilter(
-                            key="protocol_id",
-                            value=protocol_id,
-                        ),
-                    ],
-                    operator=LogicalOperator.AND,
-                ),
-            )
-        else:
+        if tree_algorithm not in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
             raise exc.InvalidArgumentsError(
                 "1165f060", f"{tree_algorithm.value} tree algorithm not yet implemented"
             )
+
+    seq_distances = seq_service_retrieve_seq_distances_by_seq_profiles(
+        self,
+        command.RetrieveSeqDistancesBySeqProfilesCommand(
+            user=cmd.user,
+            protocol_id=protocol_id,
+            seq_profile_ids=seq_profile_ids,
+        ),
+    )
 
     # Stop transaction here, releasing resources, since the rest of the operations are in-memory and do not require database access. This also allows for better parallelisation if the tree calculation would be made asynchronous in the future, without the need to keep the transaction open for the entire duration of the tree calculation.
     if tree_algorithm in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
@@ -239,8 +227,10 @@ def seq_service_calculate_phylogenetic_tree(
 
 
 def _correct_nj_tree_negative_branch_lengths_recursion(clade: Any) -> None:
-    """Recursively update negative branch lengths by adding the negative branch
-    length to all siblings. Only one sibling may have a negative branch length.
+    """Correct a negative child branch length by adjusting its siblings.
+
+    Only one sibling may have a negative branch length. The correction adds the
+    negative branch length to all siblings.
 
     Args:
         clade: Biopython clade whose descendants are corrected recursively.
@@ -270,8 +260,7 @@ def _correct_nj_tree_negative_branch_lengths_recursion(clade: Any) -> None:
 def _get_newick_repr_recursion(
     node: ClusterNode, parent_dist: float, leaf_names: list[str], newick: str = ""
 ) -> str:
-    """
-    Convert sciply.cluster.hierarchy.to_tree()-output to Newick format.
+    """Convert sciply.cluster.hierarchy.to_tree()-output to Newick format.
 
     :param node: output of sciply.cluster.hierarchy.to_tree()
     :param parent_dist: output of sciply.cluster.hierarchy.to_tree().dist
