@@ -7,9 +7,9 @@
 # registered by the init-mock-oidc one-shot container after the server is ready.
 #
 # Usage:
-#   docker compose -f docker-compose.sql.idp.yaml up --wait
-#   docker compose -f docker-compose.sql.idp.yaml down        # keep data
-#   docker compose -f docker-compose.sql.idp.yaml down -v     # wipe data
+#   docker compose -f docker-compose.sql.idp.yml up --wait
+#   docker compose -f docker-compose.sql.idp.yml down        # keep data
+#   docker compose -f docker-compose.sql.idp.yml down -v     # wipe data
 #
 # lsp-data .env settings needed to match:
 #   *_AUTH_PROTOCOL=OAUTH2
@@ -227,11 +227,16 @@ services:
       CASEDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
       CASEDB_REPOSITORY__DEFAULTS__PROPS__UID: sa
       CASEDB_REPOSITORY__DEFAULTS__PROPS__PWD: Your_password123
-      # casedb's embedded LOCAL seqdb loads its config under the SEQDB_ prefix,
-      # so the server/credential overrides must be set here too.
-      SEQDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
-      SEQDB_REPOSITORY__DEFAULTS__PROPS__UID: sa
-      SEQDB_REPOSITORY__DEFAULTS__PROPS__PWD: Your_password123
+      # casedb calls the seqdb service over HTTP (REMOTE mode) instead of
+      # running an embedded copy. It authenticates with the same "mock" client
+      # as lsp-data, so seqdb resolves it to the root user (sub="mock").
+      CASEDB_SERVICE__SEQDB__PROPS__SEQDB_CLIENT_TYPE: REMOTE
+      CASEDB_SERVICE__SEQDB__PROPS__REMOTE_CLIENT__PROTOCOL: HTTP
+      CASEDB_SERVICE__SEQDB__PROPS__REMOTE_CLIENT__HOST: seqdb
+      CASEDB_SERVICE__SEQDB__PROPS__REMOTE_CLIENT__OAUTH_CLIENT_ID: mock
+      CASEDB_SERVICE__SEQDB__PROPS__REMOTE_CLIENT__OAUTH_CLIENT_SECRET: mock
+      CASEDB_SERVICE__SEQDB__PROPS__REMOTE_CLIENT__OAUTH_SCOPE: "openid profile email"
+      CASEDB_SERVICE__SEQDB__PROPS__REMOTE_CLIENT__OAUTH_DISCOVERY_URL: "http://mock-oidc:8080/.well-known/openid-configuration"
     volumes:
       - ./config/mock_identity_provider.docker.toml:/app/config/mock_identity_provider.toml:ro
     ports:
@@ -242,6 +247,8 @@ services:
       init-mock-oidc:
         condition: service_completed_successfully
       # seqdb must be healthy before casedb starts (same reasoning as docker-compose.sql.yml).
+      # init-mock-oidc above also guards casedb's seqdb client, which fetches the
+      # OIDC discovery document at startup.
       seqdb:
         condition: service_healthy
     healthcheck:
