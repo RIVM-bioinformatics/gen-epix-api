@@ -271,6 +271,29 @@ class RetrieveSampleIdentifiersByIdCommand(Command):
         return sample_ids
 
 
+class RetrieveSeqDistancesBySeqProfilesCommand(Command):
+    """
+    Represents a request to retrieve distances between sequences.
+
+    The result contains a matrix of distances between the requested sequences.
+    """
+
+    seq_profile_ids: list[UUID] = Field(
+        description="IDs of the profiles to retrieve distances for. Must be unique.",
+        min_length=1,
+    )
+    protocol_id: UUID = Field(
+        description="ID of the protocol to use for distance calculation.",
+    )
+
+    @field_validator("seq_profile_ids", mode="after")
+    def _validate_profile_ids(cls, seq_profile_ids: list[UUID]) -> list[UUID]:
+        """Require every requested profile identifier to occur at most once."""
+        if len(set(seq_profile_ids)) != len(seq_profile_ids):
+            raise ValueError("seq_profile_ids must be unique")
+        return seq_profile_ids
+
+
 class RetrieveSeqFastaCommand(Command):
     """Represents a request to retrieve sequences in FASTA format.
 

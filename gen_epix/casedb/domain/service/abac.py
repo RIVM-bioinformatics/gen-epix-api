@@ -85,6 +85,7 @@ class BaseAbacService(CommonAbacService):
         command.RefColCrudCommand,
         command.RefDimCrudCommand,
         command.RetrievePhylogeneticTreeByCasesCommand,
+        command.RetrieveSeqDistancesByCasesCommand,
         command.RetrieveSimilarCasesCommand,
         command.RetrieveGeneticSequenceFastaByCaseCommand,
         command.DimCrudCommand,
