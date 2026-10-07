@@ -182,6 +182,9 @@ from gen_epix.casedb.domain.command.seqdb import (
 from gen_epix.casedb.domain.command.system import (
     DeleteAllOperationalDataCommand as DeleteAllOperationalDataCommand,
 )
+from gen_epix.casedb.domain.command.system import (
+    DeleteAllRefDataCommand as DeleteAllRefDataCommand,
+)
 from gen_epix.commondb.domain import command as commondb_command
 from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.command import (
@@ -348,8 +351,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     enum.ServiceType.SYSTEM: set(
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.SYSTEM]
     )
-    - {commondb_command.DeleteAllOperationalDataCommand}
-    | {DeleteAllOperationalDataCommand},
+    - {
+        commondb_command.DeleteAllOperationalDataCommand,
+        commondb_command.DeleteAllRefDataCommand,
+    }
+    | {DeleteAllOperationalDataCommand, DeleteAllRefDataCommand},
     enum.ServiceType.RBAC: set(
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.RBAC]
     ),
@@ -365,4 +371,5 @@ COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {
     commondb_command.UpdateUserCommand: UpdateUserCommand,
     commondb_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
     commondb_command.DeleteAllOperationalDataCommand: DeleteAllOperationalDataCommand,
+    commondb_command.DeleteAllRefDataCommand: DeleteAllRefDataCommand,
 }
