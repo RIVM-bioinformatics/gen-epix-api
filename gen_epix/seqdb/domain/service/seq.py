@@ -312,6 +312,7 @@ class BaseSeqService(BaseService):
 
         Args:
             cmd: Sequence-format conversion command to execute.
+
         Returns:
             Identifiers of the converted sequences.
 

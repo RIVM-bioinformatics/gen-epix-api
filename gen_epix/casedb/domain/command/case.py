@@ -21,8 +21,7 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 
 
 class CaseTypeSetCaseTypeUpdateAssociationCommand(UpdateAssociationCommand):
-    """Represents a request to replace the association between a case type set and its
-    case types.
+    """Represents a request to replace a case type set's case type associations.
 
     The provided members keep the set synchronized for downstream access
     policies and presets.

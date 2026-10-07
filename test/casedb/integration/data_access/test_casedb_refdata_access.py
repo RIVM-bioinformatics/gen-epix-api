@@ -63,6 +63,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
 def get_test_client() -> Env:
     """
     Get a test client for casedb integration tests.
+
     This fixture initializes a test client with the appropriate configuration for casedb integration tests.
     It uses the DEV_REPOSITORY_CONFIG specified in the base_refdata_access.py file,
     which is set to use an empty dictionary repository for testing edge cases with no data.
@@ -150,6 +151,7 @@ class TestcasedbEdgeCasesRefDataAccess:
     ) -> None:
         """
         For each edge case, assert that the set of accessible CaseTypes exactly matches
+
         the expected set declared in EdgeCaseSpec — neither more nor less.
 
         Failure output includes the full edge case description so the cause is immediately clear, example:
@@ -189,6 +191,7 @@ class TestcasedbEdgeCasesRefDataAccess:
     ) -> None:
         """
         For each edge case, assert that the set of accessible CaseTypeSets exactly matches
+
         the expected set declared in EdgeCaseSpec.expected_case_type_sets — neither more nor less.
 
         Only CaseTypeSets referenced in org-level policies should be accessible.
@@ -225,6 +228,7 @@ class TestcasedbEdgeCasesRefDataAccess:
     ) -> None:
         """
         For each edge case, assert that the set of accessible ColSets exactly matches
+
         the expected set declared in EdgeCaseSpec.expected_col_sets — neither more nor less.
 
         Only ColSets referenced in org-level policies should be accessible.
@@ -264,6 +268,7 @@ class TestcasedbEdgeCasesRefDataAccess:
     ) -> None:
         """
         For each edge case, assert that the set of accessible cols exactly matches
+
         the expected set declared in EdgeCaseSpec.expected_ref_cols — neither more nor less.
 
         Accessible cols are derived from accessible Cols (via org access policies only).
@@ -299,6 +304,7 @@ class TestcasedbEdgeCasesRefDataAccess:
     ) -> None:
         """
         For each edge case, assert that the set of accessible ref_dims exactly matches
+
         the expected set declared in EdgeCaseSpec.expected_ref_dims — neither more nor less.
 
         Accessible ref_dims are derived from accessible Cols (via org access policies only).
@@ -327,6 +333,7 @@ class TestcasedbEdgeCasesRefDataAccess:
     def test_disease_access_matches_all(self, setup_case_data_reference: None) -> None:
         """
         take first edge case spec as a representative case (since disease access is not expected to vary across cases in this setup)
+
         and assert that the set of accessible diseases matches all diseases, get them from env.db since they are created there by setup_case_data_reference
         """
 
@@ -359,6 +366,7 @@ class TestcasedbEdgeCasesRefDataAccess:
     ) -> None:
         """
         similar to test_disease_access_matches_all but for etiological agents instead of diseases,
+
          since both are created as reference data in setup_case_data_reference and not expected to be filtered by access policies in this setup
         """
         spec = EDGE_CASES[
@@ -388,6 +396,7 @@ class TestcasedbEdgeCasesRefDataAccess:
     ) -> None:
         """
         Assert that all created CaseTypeSet categories are accessible to any user,
+
         since category access is not filtered by access policies in this setup.
         """
         spec = EDGE_CASES[
@@ -422,6 +431,7 @@ class TestcasedbEdgeCasesRefDataAccess:
     ) -> None:
         """
         For each edge case, assert that the set of accessible cols exactly matches
+
         the expected set declared in EdgeCaseSpec.expected_cols — neither more nor less.
 
         Accessible cols are derived from accessible case type cols (via org access policies only).

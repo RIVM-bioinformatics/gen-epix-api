@@ -1,5 +1,6 @@
 """
 This module defines the setup_case_data_reference fixture, which creates reference data
+
 (diseases, etiological agents, CaseTypes, CaseTypeSets, ColSets,
 and all four policy types) for tests.
 """
@@ -29,6 +30,7 @@ def setup_case_data_reference(
 ) -> None:  # noqa: ARG001
     """
     Create reference data (diseases, etiological agents, CaseTypes, CaseTypeSets, ColSets, and all four policy types) for tests.
+
     Objects are automatically stored in env.db by create methods.
 
     Policy creation is driven by EDGE_CASES:

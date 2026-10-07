@@ -255,9 +255,5 @@ When observed log levels do not match expectation, verify in this order:
 - `gen_epix/seqdb/config/settings.toml#L46-L52`
 - `gen_epix/omopdb/config/settings.toml#L46-L52`
 - `gen_epix/commondb/config/settings.toml#L46-L52`
-- `gen_epix/casedb/config/feature_flags.toml#L1-L3`
-- `gen_epix/seqdb/config/feature_flags.toml#L1-L3`
-- `gen_epix/omopdb/config/feature_flags.toml#L1-L3`
-- `gen_epix/commondb/config/feature_flags.toml#L1-L3`
 - `test/commondb/unit/domain/test_logging_yaml.py#L1-L113`
 - `test/commondb/unit/domain/test_cfg_log_level.py#L22-L79`

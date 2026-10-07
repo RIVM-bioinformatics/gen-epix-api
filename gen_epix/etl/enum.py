@@ -1,3 +1,9 @@
+"""Define lifecycle status enums for ETL processing.
+
+The public types are ``EtlStatus``, for individual outcomes, and
+``EtlStatusSet``, for groups of statuses by outcome.
+"""
+
 from enum import Enum
 
 

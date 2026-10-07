@@ -1,4 +1,4 @@
-"""OMOP CDM v6.0 - Standardized Health System Models
+"""OMOP CDM v6.0 - Standardized Health System Models.
 
 This module contains the health system domain models representing physical
 locations and healthcare providers as defined in the OMOP Common Data Model.
