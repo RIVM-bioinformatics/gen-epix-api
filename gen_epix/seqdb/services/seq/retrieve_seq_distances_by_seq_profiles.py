@@ -1,4 +1,4 @@
-"""Implement seqdb sequence service behavior for SeqDistance retrieval (and Phylogenetic tree calculation)"""
+"""Implement seqdb sequence service behavior for SeqDistance retrieval (and Phylogenetic tree calculation)."""
 
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.composite import CompositeFilter
