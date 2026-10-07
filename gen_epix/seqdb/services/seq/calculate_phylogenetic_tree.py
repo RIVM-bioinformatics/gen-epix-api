@@ -239,8 +239,10 @@ def seq_service_calculate_phylogenetic_tree(
 
 
 def _correct_nj_tree_negative_branch_lengths_recursion(clade: Any) -> None:
-    """Recursively update negative branch lengths by adding the negative branch
-    length to all siblings. Only one sibling may have a negative branch length.
+    """Correct a negative child branch length by adjusting its siblings.
+
+    Only one sibling may have a negative branch length. The correction adds the
+    negative branch length to all siblings.
 
     Args:
         clade: Biopython clade whose descendants are corrected recursively.
@@ -270,8 +272,7 @@ def _correct_nj_tree_negative_branch_lengths_recursion(clade: Any) -> None:
 def _get_newick_repr_recursion(
     node: ClusterNode, parent_dist: float, leaf_names: list[str], newick: str = ""
 ) -> str:
-    """
-    Convert sciply.cluster.hierarchy.to_tree()-output to Newick format.
+    """Convert sciply.cluster.hierarchy.to_tree()-output to Newick format.
 
     :param node: output of sciply.cluster.hierarchy.to_tree()
     :param parent_dist: output of sciply.cluster.hierarchy.to_tree().dist

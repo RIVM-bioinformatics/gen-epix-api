@@ -1,5 +1,6 @@
 """
 Unit tests for get_full_persons_by_person_ids in OmopDictRepository and
+
 OmopSARepository.
 
 Regression: the SA implementation queried IDENTIFIER_CLASSES (e.g.
@@ -131,6 +132,7 @@ def _col_mapper(model_class: type) -> Mock:
 @pytest.fixture(scope="module")
 def _sa_session() -> Session:  # type: ignore[misc]
     """In-memory SQLite DB with Person, Specimen, SpecimenIdentifier, and
+
     all other Phase-1 class tables (empty).
 
     The SA models use schema "omop"; attach a second in-memory database

@@ -1,5 +1,6 @@
 """
 Integration tests for metadata field stamping (created_at, modified_at, modified_by)
+
 in casedb on create and update operations.
 
 Parametrized for both the SQLite and dictionary backends.
@@ -65,7 +66,7 @@ def get_test_client(request) -> Env:
     cfg_key = f"{TEST_TYPE.value}__{params.dev_repository_config.value}"
     app_cfg = copy.copy(CASEDB_APP_CFGS[cfg_key])
     app_cfg._name = f"{TEST_TYPE.value}__{params.id}"
-    app_cfg.cfg["service"]["seqdb"]["props"]["seqdb_local_app"]["app_cfg"] = (
+    app_cfg.cfg["service"]["seqdb"]["props"]["local_client"]["app_cfg"] = (
         SEQDB_APP_CFGS[cfg_key]
     )
     return Env.get_test_client(  # type: ignore[return-value]
@@ -98,6 +99,7 @@ def setup_reference_data(env: Env) -> None:
 class TestCasedbModelProcessMetadata:
     """
     Verifies that the CommondbSAMapper (SA backend) and CommondbDictModelModifier
+
     (dict backend) correctly stamp metadata fields on CaseType create and update.
     """
 

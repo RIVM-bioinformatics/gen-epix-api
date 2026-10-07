@@ -68,7 +68,7 @@ def get_test_client(request) -> Env:
     cfg_key = f"{TEST_TYPE.value}__{params.dev_repository_config.value}"
     app_cfg = copy.copy(CASEDB_APP_CFGS[cfg_key])
     app_cfg._name = f"{TEST_TYPE.value}__{params.id}"
-    app_cfg.cfg["service"]["seqdb"]["props"]["seqdb_local_app"]["app_cfg"] = (
+    app_cfg.cfg["service"]["seqdb"]["props"]["local_client"]["app_cfg"] = (
         SEQDB_APP_CFGS[cfg_key]
     )
     return Env.get_test_client(  # type: ignore[return-value]
@@ -84,6 +84,7 @@ def get_test_client(request) -> Env:
 def setup_users_and_data(env: Env) -> None:
     """
     Minimal setup: root + org1 (from bootstrap), invite org_admin and org_user,
+
     create one CaseType with an org access policy so non-root users can read it.
     """
     root_user = env.get_root_user()

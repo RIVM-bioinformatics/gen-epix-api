@@ -1,5 +1,6 @@
 """
 TDD tests for _summarise_command_object(), the helper that prevents large list
+
 fields inside a serialized Command from blowing through downstream log-sink
 size limits.
 
@@ -152,6 +153,7 @@ def test_create_log_message_uses_configured_threshold_and_sample_size() -> None:
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_large_dict_is_summarised() -> None:
     """Dicts with more than DEFAULT_LOG_MAX_DICT_ITEMS entries (e.g. locus_allele_id_map)
+
     are replaced with a _count/_sample summary, even when individual values are short.
     """
     app = App(logger=None, log_item_class=LogItem)
@@ -178,6 +180,7 @@ def test_small_dict_passes_through() -> None:
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_long_string_is_truncated() -> None:
     """Strings longer than DEFAULT_LOG_MAX_STRING_LENGTH are shortened to a
+
     prefix with a suffix showing the total character count; they are NOT
     replaced by the _count/_sample dict pattern used for lists."""
     app = App(logger=None, log_item_class=LogItem)
@@ -204,6 +207,7 @@ def test_short_string_passes_through() -> None:
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_long_string_respects_configured_max_string_length() -> None:
     """Config key max_string_length controls both the truncation threshold and
+
     the length of the preserved prefix."""
     app = App(
         logger=None,
@@ -228,6 +232,7 @@ def test_long_string_respects_configured_max_string_length() -> None:
 @pytest.mark.scenario_ids("TC-LOG-01-01")
 def test_long_exception_message_is_truncated_from_the_middle() -> None:
     """Exceptions get their own, longer budget than plain strings, and are
+
     truncated from the middle: DB driver errors (e.g. FK constraint
     violations) often echo the full SQL statement first and put the actual
     error message at the end, so a head-only cut would hide it."""
@@ -282,6 +287,7 @@ def test_create_log_message_invalid_bool_config_raises() -> None:
 def test_create_log_message_with_large_command_stays_under_16384_bytes() -> None:
     """
     End-to-end: a command carrying 500 UUIDs in case_ids produces a log message
+
     that is strictly under 16 384 bytes.
     """
     from gen_epix.fastapp.app import App

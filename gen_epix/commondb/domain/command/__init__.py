@@ -103,6 +103,9 @@ from gen_epix.commondb.domain.command.system import (
     DeleteAllOperationalDataCommand as DeleteAllOperationalDataCommand,
 )
 from gen_epix.commondb.domain.command.system import (
+    DeleteAllRefDataCommand as DeleteAllRefDataCommand,
+)
+from gen_epix.commondb.domain.command.system import (
     OutageCrudCommand as OutageCrudCommand,
 )
 from gen_epix.commondb.domain.command.system import (
@@ -160,6 +163,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
     enum.ServiceType.SYSTEM: frozenset(
         {
             DeleteAllOperationalDataCommand,
+            DeleteAllRefDataCommand,
             OutageCrudCommand,
             RetrieveFeatureFlagsCommand,
             RetrieveOutagesCommand,

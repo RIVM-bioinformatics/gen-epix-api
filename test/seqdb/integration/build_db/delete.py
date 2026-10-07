@@ -33,6 +33,7 @@ class TestDelete:
     def test_delete_user(self, env: Env) -> None:
         """
         RBAC permissions:
+
         - root: CRUD
         - app_admin: R
         - refdata_admin: R

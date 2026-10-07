@@ -17,8 +17,7 @@ from gen_epix.util import copy_model_field
 
 
 class OrganizationSetOrganizationUpdateAssociationCommand(UpdateAssociationCommand):
-    """Represents a request to update the association between an OrganizationSet and
-    Organizations.
+    """Represents a request to update an organization set's organization associations.
 
     This command manages the many-to-many relationship by creating or updating
     {organization_set_member} associations between organization sets and
@@ -41,8 +40,7 @@ class OrganizationSetOrganizationUpdateAssociationCommand(UpdateAssociationComma
 
 
 class DataCollectionSetDataCollectionUpdateAssociationCommand(UpdateAssociationCommand):
-    """Represents a request to update the association between a DataCollectionSet and
-    DataCollections.
+    """Represents a request to update a data collection set's data collection associations.
 
     This command manages the many-to-many relationship by creating or updating
     {data_collection_set_member} associations between data collection sets and
@@ -145,20 +143,18 @@ class UpdateUserOwnOrganizationCommand(Command):
 
 
 class RetrieveInviteUserConstraintsCommand(Command):
-    """Represents a request to retrieve the constraints for inviting a user, such as
-    valid roles and organizations.
+    """Represents a request to retrieve user invitation constraints.
 
-    This command is used to gather the necessary information for the user invitation process.
+    Constraints include valid roles and organizations needed for user invitations.
     """
 
     pass
 
 
 class RetrieveOrganizationAdminNameEmailsCommand(Command):
-    """Represents a request to retrieve the names and email addresses of organization
-    administrators.
+    """Represents a request to retrieve organization administrator contact details.
 
-    Results include all administrators for the user's
+    Results include the names and email addresses of administrators for the user's
     organization.
     """
 
@@ -254,8 +250,7 @@ class OrganizationIdentifierIssuerLinkCrudCommand(CrudCommand):
 class OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
     UpdateAssociationCommand
 ):
-    """Represents a request to update the association between an Organization and
-    IdentifierIssuers."""
+    """Represents a request to update an organization's identifier issuer associations."""
 
     ASSOCIATION_CLASS: ClassVar = model.OrganizationIdentifierIssuerLink
     LINK_FIELD_NAME1: ClassVar = "organization_id"

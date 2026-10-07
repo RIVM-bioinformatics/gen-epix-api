@@ -167,7 +167,8 @@ cython_debug/
 # Ignore dynaconf secret files
 gen_epix/casedb/config/.ignore/*
 
-# Test output
+# Temporary output
+tmp
 test/output/*
 .gremlins_cache
 
@@ -194,9 +195,20 @@ graphify-out/converted/
 graphify-out/memory/
 graphify-out/reflections/
 graphify-out/.graphify_*
+# Curated community names, produced by periodic manual `graphify label` runs.
+# Tracked so the CI update can reuse them instead of falling back to
+# "Community N" placeholders. The .sig holds per-community membership
+# signatures, which is how CI detects a name that clustering has invalidated.
+!graphify-out/.graphify_labels.json
+!graphify-out/.graphify_labels.json.sig
 graphify-out/????-??-??/
 
 # Ruff linter
 .ruff_cache/
+
+# Local SA_SQL repository credential overrides — copied from each app's
+# .example.secrets.repository.sa_sql.toml and filled in with this
+# deployment's own database credentials; never committed.
+gen_epix/*/config/secrets.repository.sa_sql.toml
 
 .github/docs

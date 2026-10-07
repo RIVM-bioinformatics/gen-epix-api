@@ -18,8 +18,7 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
         modified_since: datetime | None = None,
         modified_until: datetime | None = None,
     ) -> list[UUID]:
-        """See parent class method"""
-
+        """See parent class method."""
         modified_since = modified_since or datetime.min
         modified_until = modified_until or datetime.max
         modified_person_ids: set[UUID] = set()
@@ -40,7 +39,7 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
         cohort_definition_id: UUID,
         cohort_ids: list[UUID],
     ) -> dict[UUID, list[UUID]]:
-        """See parent class method"""
+        """See parent class method."""
         cohort_id_set = frozenset(cohort_ids)
         person_id_to_cohorts: dict[UUID, list[tuple[UUID, date, date]]] = {}
         for cohort in self.db[model.Cohort].values():
@@ -70,7 +69,7 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
         self,
         person_ids: list[UUID],
     ) -> list[model.FullPerson]:
-        """See parent class method"""
+        """See parent class method."""
         # Retrieve all data per person
         person_id_set = set(person_ids)
         model_classes = (

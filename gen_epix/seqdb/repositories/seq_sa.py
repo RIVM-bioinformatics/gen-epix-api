@@ -398,9 +398,23 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         """Return requested profile IDs whose quality result is allowed."""
         if not seq_profile_ids or not allowed_qc_results:
             return []
+        # qc_result is a denormalized, cached copy of the effective quality result
+        # (qc_result_human when not PENDING, else qc_result_machine) that is only
+        # refreshed on create, not on update. Resolve the effective result directly
+        # from qc_result_machine/qc_result_human here instead, so a quality result
+        # updated after creation (e.g. a manual review added later) is still
+        # honored.
+        effective_qc_result = sa.case(
+            (
+                sa_model.SeqProfile.qc_result_human
+                != enum.QualityControlResult.PENDING,
+                sa_model.SeqProfile.qc_result_human,
+            ),
+            else_=sa_model.SeqProfile.qc_result_machine,
+        )
         stmt = sa.select(sa_model.SeqProfile.id).where(
             (sa_model.SeqProfile.id.in_(seq_profile_ids))
-            & sa_model.SeqProfile.qc_result.in_(allowed_qc_results)
+            & effective_qc_result.in_(allowed_qc_results)
         )
         assert isinstance(uow, SAUnitOfWork)
         retval: list[UUID] = uow.session.execute(stmt).scalars().all()  # type: ignore[assignment]

@@ -26,11 +26,11 @@ class PersonValidator:
         cmd: command.UploadPersonsCommand,
         batch_result: model.PersonBatchUploadResult,
     ) -> model.PersonBatchUploadResult:
-        """
-        Validate and transform the content of the persons in batch upload command.
-        Where applicable, individual values are transformed from synonymous values to
-        standard values, and combinations of values are transformed based on defined
-        relations.
+        """Validate and transform the persons in an upload batch.
+
+        Individual values are transformed from synonymous values to standard
+        values where applicable, and combinations are transformed according to
+        defined relations.
 
         The method adds resulting ValidatedPersonForUpload to the upload result,
         including any data issues found during validation and transformation.
@@ -46,10 +46,7 @@ class PersonValidator:
         cmd: command.UploadPersonsCommand,
         batch_result: model.PersonBatchUploadResult,
     ) -> list[list[model.PersonDataIssue] | None]:
-        """
-        Get references to data_issues for all persons, as a convenience for easily
-        updating these in-place.
-        """
+        """Return references to each person's data issues for in-place updates."""
         # Get and data_issues_list references
         data_issues_list: list[list[model.PersonDataIssue] | None] = [
             None if x is None else x.data_issues for x in batch_result.persons
@@ -71,9 +68,7 @@ class PersonValidator:
         cmd: command.UploadPersonsCommand,
         data_issues_list: list[list[model.PersonDataIssue] | None],
     ) -> None:
-        """
-        Validate and transform pairs of values.
-        """
+        """Validate and transform pairs of values."""
         # TODO: implement
         pass
 

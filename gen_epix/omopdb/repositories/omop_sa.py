@@ -43,7 +43,7 @@ class OmopSARepository(SARepository, BaseOmopRepository):
         cohort_definition_id: UUID,
         cohort_ids: list[UUID],
     ) -> dict[UUID, list[UUID]]:
-        """See parent class method"""
+        """See parent class method."""
         if not cohort_ids:
             return {}
         with self.uow() as uow:

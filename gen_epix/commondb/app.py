@@ -34,7 +34,7 @@ FAST_API = create_fast_api(
     app=APP_COMPOSER.app,
     setup_logger=APP_CFG.setup_logger,
     api_logger=APP_CFG.api_logger,
-    debug=APP_CFG.cfg.app.debug,
+    debug=APP_CFG.cfg["app"]["debug"],
     update_openapi_schema=True,
     update_openapi_kwargs={
         "get_openapi_kwargs": SCHEMA_KWARGS,

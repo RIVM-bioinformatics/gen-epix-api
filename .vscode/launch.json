@@ -717,6 +717,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.casedb.unit.api",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/api"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.casedb.unit.case_date",
         "type": "debugpy",
         "request": "launch",
@@ -777,13 +789,13 @@
         "justMyCode": true
 },
 {
-        "name": "test.casedb.unit.remote_app",
+        "name": "test.casedb.unit.client",
         "type": "debugpy",
         "request": "launch",
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/casedb/unit/remote_app"
+                "test/casedb/unit/client"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -880,6 +892,18 @@
         "args": [
                 "run_test",
                 "test/casedb/unit/services/case/upload"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.services.seqdb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services/seqdb"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1029,18 +1053,6 @@
         "justMyCode": true
 },
 {
-        "name": "test.commondb.unit.remote_app",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "run.py",
-        "args": [
-                "run_test",
-                "test/commondb/unit/remote_app"
-        ],
-        "console": "integratedTerminal",
-        "justMyCode": true
-},
-{
         "name": "test.commondb.unit.repositories",
         "type": "debugpy",
         "request": "launch",
@@ -1120,6 +1132,30 @@
         "args": [
                 "run_test",
                 "test/end_to_end/client_credential_flow/apps"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.end_to_end.remote_client.test_remote_client_live",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/end_to_end/remote_client/test_remote_client_live.py"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.end_to_end.remote_client.test_remote_client_local",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/end_to_end/remote_client/test_remote_client_local.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1509,6 +1545,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.omopdb.unit.api",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/api"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.omopdb.unit.domain",
         "type": "debugpy",
         "request": "launch",
@@ -1516,6 +1564,18 @@
         "args": [
                 "run_test",
                 "test/omopdb/unit/domain"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.unit.domain.command",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/domain/command"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1701,6 +1761,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.seqdb.unit.api",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/api"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.seqdb.unit.calculate_seq_distance",
         "type": "debugpy",
         "request": "launch",
@@ -1749,13 +1821,13 @@
         "justMyCode": true
 },
 {
-        "name": "test.seqdb.unit.remote_app",
+        "name": "test.seqdb.unit.client",
         "type": "debugpy",
         "request": "launch",
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/remote_app"
+                "test/seqdb/unit/client"
         ],
         "console": "integratedTerminal",
         "justMyCode": true

@@ -33,8 +33,11 @@ class ContentMixin[FormatType: IntEnum]:
 class QualityMixin:
     """Encapsulates a SQLAlchemy model mixin for adding standard fields."""
 
-    qc_result: Mapped[enum.QualityControlResult] = get_mixin_mapped_column(
-        model.QualityMixin, "qc_result", sa.String
+    qc_result_machine: Mapped[enum.QualityControlResult] = get_mixin_mapped_column(
+        model.QualityMixin, "qc_result_machine", sa.String
+    )
+    qc_result_human: Mapped[enum.QualityControlResult] = get_mixin_mapped_column(
+        model.QualityMixin, "qc_result_human", sa.String
     )
     qc_score: Mapped[float] = get_mixin_mapped_column(
         model.QualityMixin, "qc_score", sa.Float
