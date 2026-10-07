@@ -5,11 +5,16 @@ NONE-mode default headers or OAuth2 client-credentials authentication.
 """
 
 import importlib
-from datetime import datetime, timezone
+import math
+from collections.abc import Callable
+from datetime import UTC, datetime
 from enum import Enum
 from logging import Logger
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
+import jwt
+
+from gen_epix import fastapp
 from gen_epix.commondb import api
 from gen_epix.commondb.domain import command, enum, model, util
 from gen_epix.fastapp import Client, HttpProtocol, exc
@@ -21,6 +26,9 @@ from gen_epix.fastapp.model import Command, Permission
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
+# Decode options for reading the ``exp`` claim of a token without verifying it
+_UNVERIFIED_OPTIONS = {"verify_signature": False}
+
 
 class CommondbClient(Client):
     """Encapsulates a remote app client for the commondb service with OAuth2/NONE authentication."""
@@ -29,9 +37,9 @@ class CommondbClient(Client):
 
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
-    DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {}
+    DEFAULT_HTTP_TIMEOUTS: ClassVar[dict[type[Command], float]] = {}
 
-    ROUTE_MAP: dict[type[Command], str] = {
+    ROUTE_MAP: ClassVar[dict[type[Command], str]] = {
         command.DeleteAllOperationalDataCommand: "/operational_data",
         command.GetIdentityProvidersCommand: "/identity_providers",
         command.InviteUserCommand: "/invite_user",
@@ -75,6 +83,7 @@ class CommondbClient(Client):
         oauth_scope: str | None = None,
         oauth_token_endpoint: str | None = None,
         oauth_token_refresh_margin: float | None = None,
+        token_provider: Callable[[], str] | None = None,
         logger: Logger | None = None,
         log_item_class: type[LogItem] = LogItem,
         **kwargs: Any,
@@ -98,14 +107,22 @@ class CommondbClient(Client):
             oauth_scope: OAuth2 scope requested for client credentials.
             oauth_token_endpoint: Optional OAuth2 token endpoint override.
             oauth_token_refresh_margin: Seconds before expiry to refresh a token.
+            token_provider: Optional callable returning a bearer token, used instead
+                of the OAuth2 client-credentials flow, e.g. for a token of a human
+                user. Must be combined with ``auth_protocol=NONE``. The token is
+                cached until shortly before its ``exp`` claim; on a 401 response the
+                cache is dropped, the provider is called again and the command is
+                retried once.
             logger: Optional logger for identity-provider requests.
             log_item_class: Structured log item implementation.
             **kwargs: Additional remote application configuration.
 
         Raises:
-            InitializationServiceError: If authentication settings are unsupported or
-                required OAuth2 settings are missing.
+            InitializationServiceError: If authentication settings are unsupported,
+                required OAuth2 settings are missing, or ``token_provider`` conflicts
+                with the OAuth2 settings or an ``Authorization`` default header.
         """
+        self._check_token_provider(token_provider, auth_protocol, default_headers)
         if isinstance(auth_protocol, str):
             auth_protocol = AuthProtocol(auth_protocol)
         if isinstance(oauth_flow, str):
@@ -226,7 +243,35 @@ class CommondbClient(Client):
         self._oauth_idp_client = oauth_idp_client
         self._oauth_scope = oauth_scope
         self._oauth_token_refresh_margin = oauth_token_refresh_margin
+        self._token_provider = token_provider
         self._oauth_header_cache: tuple[float, dict[str, str]] | None = None
+
+    @staticmethod
+    def _check_token_provider(
+        token_provider: Callable[[], str] | None,
+        auth_protocol: AuthProtocol | str,
+        default_headers: dict[str, str] | None,
+    ) -> None:
+        """Reject token provider combinations that conflict with other auth settings.
+
+        Raises:
+            InitializationServiceError: If a token provider is combined with the
+                OAUTH2 auth protocol or with an ``Authorization`` default header.
+        """
+        if token_provider is None:
+            return
+        if auth_protocol not in (AuthProtocol.NONE, AuthProtocol.NONE.value):
+            raise exc.InitializationServiceError(
+                "b4a99708",
+                "token_provider cannot be combined with the OAUTH2 auth protocol; use auth_protocol NONE",
+            )
+        if default_headers and any(
+            key.lower() == "authorization" for key in default_headers
+        ):
+            raise exc.InitializationServiceError(
+                "82dd3da9",
+                "token_provider cannot be combined with an Authorization default header",
+            )
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
         """Return request headers, refreshing an OAuth token when needed.
@@ -241,38 +286,99 @@ class CommondbClient(Client):
             InitializationServiceError: If the configured authentication protocol cannot
                 provide request headers.
         """
-        # Call identity provider to get JWT
+        if self._token_provider is not None:
+            return self._get_cached_bearer_headers(self._retrieve_provided_token)
         if self._auth_protocol == AuthProtocol.NONE:
             return self._default_headers
         if self._auth_protocol == AuthProtocol.OAUTH2:
             assert self._oauth_idp_client is not None
             assert self._oauth_scope is not None
-            # Check if cached token is still valid
-            now = datetime.now(timezone.utc).timestamp()
-            if self._oauth_header_cache and self._oauth_header_cache[0] > (
-                now + self._oauth_token_refresh_margin
-            ):
-                # Return cached header
-                return self._oauth_header_cache[1]
-            # Retrieve new token
-            jwt_token, expires_in = (
-                self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry(
-                    scope=self._oauth_scope
-                )
+            return self._get_cached_bearer_headers(
+                self._retrieve_client_credentials_token
             )
-            # Create headers
-            headers = dict(self._default_headers)
-            headers["Authorization"] = f"Bearer {jwt_token}"
-            # Cache only while the lifetime reported by the token endpoint is valid.
-            # Put header in cache together with its expiry time
-            self._oauth_header_cache = (
-                (now + expires_in, headers) if expires_in is not None else None
-            )
-            return headers
         raise exc.InitializationServiceError(
             "7bf9fe04",
             f"Auth protocol {self._auth_protocol.value} not supported for token retrieval",
         )
+
+    def get_access_token(self) -> str:
+        """Return a valid bearer token from the configured token source.
+
+        Raises:
+            InitializationServiceError: If no token source is configured.
+        """
+        authorization = self.get_headers(Command()).get("Authorization", "")
+        if not authorization.startswith("Bearer "):
+            raise exc.InitializationServiceError(
+                "b9ebc5bf", "Client is not configured to retrieve an access token"
+            )
+        return authorization.removeprefix("Bearer ")
+
+    def _retrieve_client_credentials_token(self) -> tuple[str, float | None]:
+        """Retrieve a token and its advertised lifetime via client credentials."""
+        assert self._oauth_idp_client is not None
+        assert self._oauth_scope is not None
+        return (
+            self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry(
+                scope=self._oauth_scope
+            )
+        )
+
+    def _retrieve_provided_token(self) -> str:
+        """Retrieve a new token from the token provider, wrapping its failures."""
+        assert self._token_provider is not None
+        try:
+            return self._token_provider()
+        except Exception as e:
+            raise exc.AuthException(
+                "f2bf14f1", f"Token provider failed to supply a token: {e}"
+            ) from e
+
+    def _get_cached_bearer_headers(
+        self, retrieve_token: Callable[[], str | tuple[str, float | None]]
+    ) -> dict[str, str]:
+        """Return headers with a bearer token, calling ``retrieve_token`` only near expiry."""
+        now = datetime.now(UTC).timestamp()
+        if self._oauth_header_cache and self._oauth_header_cache[0] > (
+            now + self._oauth_token_refresh_margin
+        ):
+            return self._oauth_header_cache[1]
+
+        token_result = retrieve_token()
+        if isinstance(token_result, tuple):
+            jwt_token, expires_in = token_result
+            expires_at = now + expires_in if expires_in is not None else None
+        else:
+            jwt_token = token_result
+            try:
+                # Only the unverified ``exp`` claim is read, to schedule renewal of
+                # the cached token; the service verifies the signature per request.
+                claims = jwt.decode(jwt_token, options=_UNVERIFIED_OPTIONS)  # NOSONAR
+                exp = claims.get("exp")
+            except jwt.DecodeError:
+                # Opaque (non-JWT) token, expiry unknown
+                exp = None
+            # Provider tokens without an exp claim are cached until a 401 forces refresh.
+            expires_at = exp if exp is not None else math.inf
+
+        headers = dict(self._default_headers)
+        headers["Authorization"] = f"Bearer {jwt_token}"
+        self._oauth_header_cache = (
+            (expires_at, headers) if expires_at is not None else None
+        )
+        return headers
+
+    def _handle_once(self, cmd: Command) -> Any:
+        """Handle a command; on a 401 with a token provider, refresh the token and retry once."""
+        if self._token_provider is None:
+            return super()._handle_once(cmd)
+        try:
+            return super()._handle_once(cmd)
+        except exc.ServiceException as e:
+            if fastapp.RetryPolicy.get_remote_http_status(e) != 401:
+                raise
+        self._oauth_header_cache = None
+        return super()._handle_once(cmd)
 
     # --- Non-CRUD command handlers ---
 
@@ -629,7 +735,9 @@ class CommondbClient(Client):
         if "app_cfg" in no_client_props:
             app_cfg = no_client_props.pop("app_cfg")
         else:
-            app_cfg = AppCfg(app_type, service_type_enum, repository_type_enum)
+            app_cfg = util.get_app_cfg_class(app_type)(
+                app_type, service_type_enum, repository_type_enum
+            )
         log_setup = no_client_props.get("log_setup", logger is not None)
         # Create local app and user
         app_composer = app_composer_class(app_cfg, log_setup=log_setup)

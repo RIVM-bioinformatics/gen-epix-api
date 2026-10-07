@@ -44,3 +44,7 @@ oauthlib==4.0.0
 
 # profiling
 pyinstrument==5.1.*
+
+# remote client retry and settings
+tenacity==9.1.*
+pydantic-settings==2.*

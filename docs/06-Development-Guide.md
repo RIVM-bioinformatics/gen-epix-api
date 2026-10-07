@@ -58,6 +58,22 @@ configurations automatically call `run_test` with the appropriate folder path.
 python run.py test_end_to_end
 ```
 
+### Live tests
+
+Tests marked `live` (currently `test/end_to_end/remote_client`) call real, deployed
+services with real credentials, using `create_client` and the `<APP>_*` settings
+from the environment or a `.env` file in the working directory. They are skipped
+unless explicitly selected, so `run.py test_all` (including its e2e folder) never
+runs them even when a `.env` is present:
+
+```
+python -m pytest test/end_to_end/remote_client -m live
+```
+
+An app whose settings are missing or whose host is unreachable is skipped rather than
+failed. The module docstring of `test_remote_client_live.py` lists the exact variables
+expected in the `.env` file. Only non-destructive reads are performed.
+
 ---
 
 ## 3. Code Quality Checks
