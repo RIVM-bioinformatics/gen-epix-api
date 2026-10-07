@@ -64,26 +64,12 @@ class LicensesResponseBody(PydanticBaseModel):
     packages: list[PackageMetadata]
 
 
-def _is_feature_flag_enabled(app: App, feature_flag: enum.FeatureFlag) -> bool:
-    """Return whether a feature flag is enabled using supported configuration keys.
-
-    Configuration files use lowercase keys while the enum values are uppercase
-    public identifiers. Prefer the enum value when present, then the lowercase
-    enum key and the legacy operational-data configuration key.
-    """
-    keys = [feature_flag.value, feature_flag.value.lower()]
-    if feature_flag is enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA:
-        keys.append("allow_delete_all_operational_data")
-    return any(app.get_feature_flag(key) for key in keys)
-
-
 def create_system_endpoints(
     router: APIRouter | FastAPI,
     app: App,
     service_type: enum.ServiceType = enum.ServiceType.SYSTEM,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     delete_all_operational_data_command_class: type[Command] | None = None,
-    delete_all_operational_data_result_class: type[PydanticBaseModel] | None = None,
     delete_all_ref_data_command_class: type[Command] | None = None,
     **kwargs: Any,
 ) -> None:
@@ -95,8 +81,6 @@ def create_system_endpoints(
         service_type: Domain service type used to generate CRUD endpoints.
         handle_exception: Exception adapter used by endpoint handlers.
         delete_all_operational_data_command_class: Command class used to delete
-          operational data. Must be provided if the corresponding feature flag is enabled.
-        delete_all_operational_data_result_class: Result class returned after deleting
           operational data. Must be provided if the corresponding feature flag is enabled.
         delete_all_ref_data_command_class: Command class used to delete reference data.
           Defaults to the shared command for commondb and must be provided by an
@@ -216,10 +200,7 @@ def create_system_endpoints(
     if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA):
         assert (
             delete_all_operational_data_command_class is not None
-        ), "delete_all_command_class must be provided"
-        assert (
-            delete_all_operational_data_result_class is not None
-        ), "delete_all_result_class must be provided"
+        ), "delete_all_operational_data_command_class must be provided"
 
         @router.delete(
             "/operational_data",
@@ -230,9 +211,9 @@ def create_system_endpoints(
         )
         async def operational_data__delete(
             user: registered_user_dependency,  # type: ignore[valid-type]
-        ) -> delete_all_operational_data_result_class:  # type: ignore[valid-type]
+        ) -> model.DeleteAllOperationalDataResult:
             """Delete operational data using the authenticated command lifecycle."""
-            retval: delete_all_operational_data_result_class = exc.handle_command(  # type: ignore[valid-type]
+            retval: model.DeleteAllOperationalDataResult = exc.handle_command(
                 app=app,
                 user=user,
                 exception_code="12b97ab6",
@@ -241,7 +222,7 @@ def create_system_endpoints(
             )
             return retval
 
-    if _is_feature_flag_enabled(app, enum.FeatureFlag.ALLOW_DELETE_REF_DATA):
+    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_ALL_REF_DATA):
         assert (
             delete_all_ref_data_command_class is not None
         ), "delete_all_ref_data_command_class must be provided"

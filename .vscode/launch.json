@@ -717,6 +717,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.casedb.unit.api",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/api"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.casedb.unit.case_date",
         "type": "debugpy",
         "request": "launch",
@@ -1533,6 +1545,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.omopdb.unit.api",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/api"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.omopdb.unit.domain",
         "type": "debugpy",
         "request": "launch",
@@ -1720,6 +1744,18 @@
         "args": [
                 "run_test",
                 "test/seqdb/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.api",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/api"
         ],
         "console": "integratedTerminal",
         "justMyCode": true

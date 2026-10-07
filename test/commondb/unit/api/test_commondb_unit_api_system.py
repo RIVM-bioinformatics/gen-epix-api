@@ -1,6 +1,6 @@
 """Test feature-gated system API endpoints."""
 
-from test.util.mock_compat import Mock, patch
+from test.util.mock_compat import patch
 from types import SimpleNamespace
 from typing import Any, NoReturn
 
@@ -11,6 +11,7 @@ from fastapi.routing import APIRoute
 from gen_epix.commondb.api.system import create_system_endpoints
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.fastapp.api import CrudEndpointGenerator
+from gen_epix.fastapp.app import App
 
 
 class ConcreteDeleteAllRefDataCommand(command.DeleteAllRefDataCommand):
@@ -22,17 +23,15 @@ def _handle_exception(*_args: Any) -> NoReturn:
     raise AssertionError("unexpected endpoint exception")
 
 
-def _create_app(feature_flags: dict[str, bool]) -> Mock:
+def _create_app(feature_flags: dict[enum.FeatureFlag, bool]) -> App:
     """Create an app double with the dependencies needed by the endpoint factory."""
-    app = Mock()
-    app.impl = SimpleNamespace(
-        registered_user_dependency=lambda: None,
-        idp_user_dependency=lambda: None,
+    return App(
+        impl=SimpleNamespace(
+            registered_user_dependency=lambda: None,
+            idp_user_dependency=lambda: None,
+        ),
+        feature_flags=feature_flags,
     )
-    app.get_feature_flag.side_effect = lambda key, default=False: feature_flags.get(
-        key, default
-    )
-    return app
 
 
 def _get_route(router: APIRouter, path: str) -> APIRoute | None:
@@ -65,7 +64,7 @@ def test_reset_routes_are_absent_when_feature_flags_are_disabled() -> None:
             app,
             handle_exception=_handle_exception,
             delete_all_operational_data_command_class=command.DeleteAllOperationalDataCommand,
-            delete_all_operational_data_result_class=model.DeleteAllOperationalDataResult,
+            delete_all_ref_data_command_class=ConcreteDeleteAllRefDataCommand,
         )
 
     assert _get_route(router, "/operational_data") is None
@@ -77,8 +76,8 @@ def test_reset_routes_return_json_results_with_success_status() -> None:
     router = APIRouter()
     app = _create_app(
         {
-            "allow_delete_all_operational_data": True,
-            "allow_delete_ref_data": True,
+            enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA: True,
+            enum.FeatureFlag.ALLOW_DELETE_ALL_REF_DATA: True,
         }
     )
 
@@ -95,7 +94,6 @@ def test_reset_routes_return_json_results_with_success_status() -> None:
             app,
             handle_exception=_handle_exception,
             delete_all_operational_data_command_class=command.DeleteAllOperationalDataCommand,
-            delete_all_operational_data_result_class=model.DeleteAllOperationalDataResult,
             delete_all_ref_data_command_class=ConcreteDeleteAllRefDataCommand,
         )
 
@@ -112,7 +110,7 @@ def test_reset_routes_return_json_results_with_success_status() -> None:
 def test_ref_data_route_requires_concrete_application_command() -> None:
     """Fail startup instead of exposing the empty shared refdata command."""
     router = APIRouter()
-    app = _create_app({"allow_delete_ref_data": True})
+    app = _create_app({enum.FeatureFlag.ALLOW_DELETE_ALL_REF_DATA: True})
 
     with (
         patch.object(
