@@ -30,6 +30,7 @@ from gen_epix.casedb.domain import policy as casedb_policy
 from gen_epix.casedb.domain import service as casedb_service
 from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.casedb.services.client import CasedbClient as CasedbClient
+from gen_epix.commondb.client_factory import create_client as create_client
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import DOMAIN as COMMONDB_DOMAIN
 from gen_epix.commondb.domain import command as commondb_command
@@ -37,6 +38,7 @@ from gen_epix.commondb.domain import enum as commondb_enum
 from gen_epix.commondb.domain import exc as exc
 from gen_epix.commondb.domain import literal as literal
 from gen_epix.commondb.domain import model as commondb_model
+from gen_epix.commondb.domain.enum import AppType as AppType
 from gen_epix.commondb.domain.enum import DevIdpConfig as DevIdpConfig
 from gen_epix.commondb.domain.enum import DevRepositoryConfig as DevRepositoryConfig
 from gen_epix.commondb.domain.literal import NULL_ID as NULL_ID
@@ -72,6 +74,8 @@ __all__ = [
     "literal",
     "NULL_ID",
     "AppCfg",
+    "AppType",
+    "create_client",
     "AppComposer",
     "COMMONDB_DOMAIN",
     "CommondbClient",

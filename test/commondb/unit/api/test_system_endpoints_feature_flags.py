@@ -10,7 +10,7 @@ from fastapi import APIRouter
 from fastapi.routing import APIRoute
 
 from gen_epix.commondb.api.system import create_system_endpoints
-from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain import command, enum
 
 _REPO_ROOT = Path(__file__).parents[4]
 _ROUTER_FILES = [
@@ -29,7 +29,9 @@ def test_delete_all_operational_data_route_registration(flag_enabled: bool) -> N
     """The delete-all-operational-data route registers only when the flag is set."""
     router = APIRouter()
     app = Mock()
-    app.get_feature_flag.return_value = flag_enabled
+    app.get_feature_flag.side_effect = lambda key, default=False: (
+        key == enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA and flag_enabled
+    )
     # Real callables, not further Mocks: create_system_endpoints uses these as
     # bare parameter type annotations on the routes it registers, which
     # FastAPI inspects at decoration time to build response/request schemas —
@@ -49,7 +51,6 @@ def test_delete_all_operational_data_route_registration(flag_enabled: bool) -> N
         app,
         handle_exception=Mock(),
         delete_all_operational_data_command_class=command.DeleteAllOperationalDataCommand,
-        delete_all_operational_data_result_class=model.DeleteAllOperationalDataResult,
     )
 
     app.get_feature_flag.assert_any_call(
@@ -64,21 +65,8 @@ def test_delete_all_operational_data_route_registration(flag_enabled: bool) -> N
 @pytest.mark.parametrize(
     "router_file", _ROUTER_FILES, ids=lambda p: p.parent.parent.name
 )
-def test_router_wiring_supplies_result_class_alongside_command_class(
-    router_file: Path,
-) -> None:
-    """Every router.py that wires a delete-all-operational-data command also
-
-    wires its result class.
-
-    create_system_endpoints asserts both are present whenever the feature
-    flag is enabled; supplying only the command class was reachable only
-    after the ALLOW_DELETE_ALL_OPERATIONAL_DATA lookup bug (LSP-3596 Phase
-    1) was fixed, and crashed app startup the first time it was actually
-    reachable. This is a static contract check on router.py's own source,
-    since exercising create_routers() end-to-end would require a fully
-    functional App/Domain rather than a lightweight double.
-    """
+def test_router_wiring_supplies_delete_command_classes(router_file: Path) -> None:
+    """Each app router wires commands required by the reset endpoints."""
     tree = ast.parse(router_file.read_text(encoding="utf-8"))
     dicts_with_command_class = [
         node
@@ -97,8 +85,7 @@ def test_router_wiring_supplies_result_class_alongside_command_class(
     )
     for node in dicts_with_command_class:
         key_names = {key.value for key in node.keys if isinstance(key, ast.Constant)}
-        assert "delete_all_operational_data_result_class" in key_names, (
+        assert "delete_all_ref_data_command_class" in key_names, (
             f"{router_file} passes delete_all_operational_data_command_class "
-            "without delete_all_operational_data_result_class; "
-            "create_system_endpoints asserts both are present"
+            "without delete_all_ref_data_command_class"
         )

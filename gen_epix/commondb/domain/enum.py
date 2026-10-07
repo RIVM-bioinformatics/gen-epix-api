@@ -27,21 +27,10 @@ class IdFactory(Enum):
 
 
 class FeatureFlag(Enum):
-    """Identify feature-flag keys shared by every application domain.
-
-    The auto-create-new-users flag deliberately has no member here: its
-    value comes from service.auth.props.auto_create_new_users, and
-    AuthService sets it on the app directly under
-    gen_epix.fastapp.enum.AuthFeatureFlag.AUTO_CREATE_NEW_USERS. A same-named
-    member here would collide in value but not in Enum identity with that
-    one — App.get_feature_flag()/set_feature_flag() key by the Enum member
-    itself, so a caller querying FeatureFlag.AUTO_CREATE_NEW_USERS would
-    silently see the default (False) even when auth was actually configured
-    with auto_create_new_users=True. Always read this flag via
-    AuthFeatureFlag.AUTO_CREATE_NEW_USERS.
-    """
+    """Identify feature-flag keys shared by every application domain."""
 
     ALLOW_DELETE_ALL_OPERATIONAL_DATA = "allow_delete_all_operational_data"
+    ALLOW_DELETE_ALL_REF_DATA = "allow_delete_all_ref_data"
     UPDATE_OWN_ORGANIZATION = "update_own_organization"
 
 
@@ -51,6 +40,7 @@ class FeatureFlag(Enum):
 # exclude here — see the docstring above.
 FEATURE_FLAG_TOML_KEYS: tuple[FeatureFlag, ...] = (
     FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA,
+    FeatureFlag.ALLOW_DELETE_ALL_REF_DATA,
     FeatureFlag.UPDATE_OWN_ORGANIZATION,
 )
 

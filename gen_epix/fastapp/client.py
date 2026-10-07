@@ -1,14 +1,18 @@
 """Client for dispatching commands to a remote application instance."""
 
 import json
+import logging
+import re
 import ssl
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Sequence
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 from uuid import UUID
 
 import httpx
+import tenacity
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.fastapp import exc, model
@@ -26,6 +30,130 @@ from gen_epix.fastapp.enum import (
 from gen_epix.fastapp.exc import ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Model, Policy
 from gen_epix.fastapp.util import create_ssl_context
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class RetryPolicy:
+    """Encapsulates retry settings and status helpers for remote command calls.
+
+    Network-level errors (timeouts, connection errors) are always retried. HTTP
+    errors are retried only if their status code is in ``retryable_status_codes``.
+    Static helpers extract remote response statuses and classify authentication
+    and network failures.
+
+    Attributes:
+        AUTH_HTTP_STATUS_CODES: Authentication statuses that are never retried.
+        retryable_status_codes: HTTP status codes considered transient. Must not
+            contain 401 or 403, which are handled by authentication logic.
+        wait_schedule: Seconds to wait before each successive retry. The command
+            is attempted ``len(wait_schedule) + 1`` times at most.
+    """
+
+    AUTH_HTTP_STATUS_CODES: ClassVar[frozenset[int]] = frozenset({401, 403})
+    _HTTP_STATUS_PATTERN: ClassVar[re.Pattern[str]] = re.compile(r"HTTP status (\d{3})")
+
+    retryable_status_codes: frozenset[int]
+    wait_schedule: Sequence[float]
+
+    @staticmethod
+    def _get_http_status_from_message(exception: ServiceException) -> int | None:
+        """Extract the real HTTP status code embedded in a ServiceException message."""
+        match = RetryPolicy._HTTP_STATUS_PATTERN.search(exception.message or "")
+        return int(match.group(1)) if match else None
+
+    @staticmethod
+    def get_remote_http_status(exception: BaseException) -> int | None:
+        """Return the HTTP status code returned by a remote service, if any.
+
+        Args:
+            exception: Exception raised while handling a command on a remote client.
+
+        Returns:
+            The status code embedded in the message of a ``ServiceException``, the
+            status of its ``__cause__`` ``httpx.HTTPStatusError``, or the exception's
+            own status code, in that order. For a bare ``httpx.HTTPStatusError`` its
+            response status. ``None`` for any other exception.
+        """
+        if isinstance(exception, ServiceException):
+            message_status = RetryPolicy._get_http_status_from_message(exception)
+            if message_status is not None:
+                return message_status
+            if isinstance(exception.__cause__, httpx.HTTPStatusError):
+                response = exception.__cause__.response
+                if response is not None:
+                    return response.status_code
+            return exception.get_http_status_code()
+        if (
+            isinstance(exception, httpx.HTTPStatusError)
+            and exception.response is not None
+        ):
+            return exception.response.status_code
+        return None
+
+    @staticmethod
+    def is_network_error(exception: BaseException) -> bool:
+        """Return whether an exception is a raw httpx network or timeout error.
+
+        Covers ReadTimeout, ConnectTimeout, ConnectError, RemoteProtocolError, etc.
+        These occur when e.g. a Kubernetes pod is killed mid-request or an ingress
+        times out before returning an HTTP response at all. Also true for a
+        ``ServiceException`` wrapping such an error.
+        """
+        if isinstance(exception, ServiceException) and exception.__cause__ is not None:
+            exception = exception.__cause__
+        return isinstance(exception, (httpx.TimeoutException, httpx.NetworkError))
+
+    @staticmethod
+    def is_auth_failure(exception: BaseException) -> bool:
+        """Return whether an exception, or any exception in its cause chain, is an ``AuthException``.
+
+        ``apply_handler`` re-wraps every handler error in a plain ``ServiceException``,
+        so the cause chain has to be inspected to recognise e.g. token provider failures.
+        """
+        seen: set[int] = set()
+        current: BaseException | None = exception
+        while current is not None and id(current) not in seen:
+            if isinstance(current, exc.AuthException):
+                return True
+            seen.add(id(current))
+            current = current.__cause__
+        return False
+
+    @staticmethod
+    def is_retryable_status(
+        exception: BaseException, status_codes: frozenset[int] | set[int]
+    ) -> bool:
+        """Return whether the remote HTTP status of an exception is in ``status_codes``.
+
+        Authentication failures (401, 403) are never retryable, regardless of
+        ``status_codes``.
+        """
+        if RetryPolicy.is_auth_failure(exception):
+            return False
+        status = RetryPolicy.get_remote_http_status(exception)
+        if status is None or status in RetryPolicy.AUTH_HTTP_STATUS_CODES:
+            return False
+        return status in status_codes
+
+    def __post_init__(self) -> None:
+        """Reject status codes that belong to authentication handling.
+
+        Raises:
+            ValueError: If the retryable codes include 401 or 403.
+        """
+        auth_codes = self.retryable_status_codes & RetryPolicy.AUTH_HTTP_STATUS_CODES
+        if auth_codes:
+            raise ValueError(
+                f"retryable_status_codes must not contain authentication status codes: {sorted(auth_codes)}"
+            )
+
+    def is_retryable(self, exception: BaseException) -> bool:
+        """Return whether the exception is transient according to this policy."""
+        return RetryPolicy.is_network_error(
+            exception
+        ) or RetryPolicy.is_retryable_status(exception, self.retryable_status_codes)
 
 
 class Client(App):
@@ -49,10 +177,17 @@ class Client(App):
         add_generated_crud_route_handlers: bool = True,
         ssl_cert_file: Path | str | None = None,
         disable_ssl_verification: bool = False,
+        retry_policy: RetryPolicy | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize connection parameters, SSL context, routes, and optional CRUD handlers."""
+        """Initialize connection parameters, SSL context, routes, and optional CRUD handlers.
+
+        Args:
+            retry_policy: Optional policy for retrying transient failures in
+                ``handle``. If None, commands are never retried.
+        """
         super().__init__(domain, **kwargs)
+        self._retry_policy = retry_policy
         self._host = host
         self._port = port
         self._protocol = protocol
@@ -119,19 +254,59 @@ class Client(App):
         """SSL context for HTTPS connections, or False to disable verification."""
         return self._ssl_context
 
+    @property
+    def retry_policy(self) -> RetryPolicy | None:
+        """Policy for retrying transient failures, or None if retrying is disabled."""
+        return self._retry_policy
+
+    def handle(self, cmd: Command) -> Any:
+        """Dispatch a command, retrying transient failures if a retry policy is set.
+
+        Without a retry policy this is identical to ``App.handle``. With one, the
+        whole command attempt is repeated according to the policy and the last
+        exception is re-raised once the attempts are exhausted.
+        """
+        policy = self._retry_policy
+        if policy is None:
+            return self._handle_once(cmd)
+        retrying = tenacity.Retrying(
+            retry=tenacity.retry_if_exception(policy.is_retryable),
+            wait=tenacity.wait_chain(
+                *[tenacity.wait_fixed(seconds) for seconds in policy.wait_schedule]
+            ),
+            stop=tenacity.stop_after_attempt(len(policy.wait_schedule) + 1),
+            before_sleep=tenacity.before_sleep_log(
+                logger, logging.WARNING, exc_info=False
+            ),
+            reraise=True,
+        )
+        return retrying(self._handle_once, cmd)
+
+    def _handle_once(self, cmd: Command) -> Any:
+        """Make a single attempt at handling a command. Override to wrap attempts."""
+        return super().handle(cmd)
+
     def register_policy(
         self,
         command_class: type[Command],
         policy: Policy,
         timing: EventTiming = EventTiming.BEFORE,
     ) -> None:
-        """Raise ServiceException; policies are not supported on Client."""
+        """Reject policy registration because policies are unsupported on Client.
+
+        Raises:
+            ServiceException: Always, because Client does not support policies.
+        """
         raise ServiceException("Policies cannot be registered on Client instances")
 
     def unregister_policy(
         self, command_class: type[Command], policy: Policy, timing: EventTiming
     ) -> None:
-        """Raise ServiceException; policies are not supported on Client."""
+        """Reject policy removal because policies are unsupported on Client.
+
+        Raises:
+            ServiceException: Always, because Client does not support policies.
+        """
         raise ServiceException("Policies cannot be unregistered on Client instances")
 
     def register_route(
@@ -141,10 +316,19 @@ class Client(App):
         add_host: bool = True,
         add_prefix: bool = True,
     ) -> str:
-        """
-        Registers the route that is able to handle the command after it is
-        converted into a request by the handler.
+        """Register the route used to send requests for a command.
 
+        Args:
+            command_class: Command class handled by the route.
+            route: Endpoint path relative to the configured route prefix.
+            add_host: Whether to prepend the client's host URL.
+            add_prefix: Whether to prepend the default route prefix.
+
+        Returns:
+            The registered route URL.
+
+        Raises:
+            ServiceException: If a route is already registered for the command.
         """
         if command_class in self._routes:
             raise ServiceException(
@@ -160,7 +344,11 @@ class Client(App):
         return route
 
     def unregister_route(self, command_class: type[Command]) -> None:
-        """Remove the registered route for the given command class."""
+        """Remove the registered route for the given command class.
+
+        Raises:
+            ServiceException: If no route is registered for the command.
+        """
         if command_class not in self._routes:
             raise ServiceException(
                 f"No route registered for command: {command_class.__name__}"
@@ -168,7 +356,11 @@ class Client(App):
         del self._routes[command_class]
 
     def get_route(self, cmd: Command) -> str:
-        """Return the registered URL for the given command, raising if not found."""
+        """Return the registered URL for a command.
+
+        Raises:
+            NotImplementedError: If no route is registered for the command.
+        """
         route = self._routes.get(cmd.__class__, None)
         if not route:
             raise NotImplementedError(
@@ -185,7 +377,12 @@ class Client(App):
         cmd: Command,
         handler: Callable[[Command], Any],
     ) -> Any:
-        """Invoke the handler, wrapping transport and HTTP errors in ServiceException."""
+        """Invoke a handler and wrap its transport and HTTP errors.
+
+        Raises:
+            NotImplementedError: If no route is registered for the command.
+            ServiceException: If the handler raises an exception.
+        """
         command_class = cmd.__class__
         route = self._routes.get(command_class, None)
         if not route:
@@ -225,7 +422,15 @@ class Client(App):
         )
 
     def set_timeout(self, command_class: type[Command], timeout_seconds: float) -> None:
-        """Set a custom timeout for a specific command class. This will be used instead of the default timeout when making requests for that command."""
+        """Set the request timeout for a specific command class.
+
+        Args:
+            command_class: Command class whose timeout is being configured.
+            timeout_seconds: Positive timeout in seconds.
+
+        Raises:
+            ServiceException: If ``timeout_seconds`` is not positive.
+        """
         if timeout_seconds <= 0:
             raise exc.ServiceException("7f3a9c2e", "Timeout must be a positive integer")
         self._timeouts[command_class] = timeout_seconds
@@ -261,6 +466,13 @@ class Client(App):
         properly and some fields can be excluded as necessary. If both model and
         json_body are None, no request body will be sent. Other types of request bodies
         are currently not supported by this method.
+
+        Raises:
+            ValueError: If both ``model`` and ``json_body`` are provided.
+            NotImplementedError: If no route is registered and ``route`` is omitted.
+            httpx.RequestError: If the request fails before receiving a response.
+            httpx.HTTPStatusError: If the response has an unsuccessful status.
+            json.JSONDecodeError: If a response body is not valid JSON.
         """
         # Parse input
         if model is not None:
@@ -303,6 +515,12 @@ class Client(App):
         When `form_data` is provided, the request is sent as form-encoded data
         without the default headers (e.g. for endpoints that authenticate via a
         form field instead of an Authorization header).
+
+        Raises:
+            ValueError: If both ``model`` and ``json_body`` are provided.
+            NotImplementedError: If no route is registered and ``route`` is omitted.
+            httpx.RequestError: If the request fails before receiving a response.
+            httpx.HTTPStatusError: If the response has an unsuccessful status.
         """
         if model is not None:
             if json_body is not None:

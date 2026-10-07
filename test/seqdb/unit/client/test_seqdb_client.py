@@ -419,3 +419,88 @@ class TestRetrieveSeqDistanceLastModified:
         )
         result = client.retrieve_seq_distance_last_modified(cmd)
         assert result is None
+
+
+class TestRetrieveSeqDistancesBySeqProfiles:
+    """Test remote retrieval of sequence distances by profile IDs."""
+
+    @pytest.fixture
+    def client(self) -> SeqdbClient:
+        return SeqdbClient(host="localhost", port=8001)
+
+    @pytest.fixture
+    def mock_client(self) -> Any:
+        with patch("gen_epix.fastapp.client.httpx.Client") as mock_client_class:
+            client = MagicMock()
+            client.__enter__.return_value = client
+            client.__exit__.return_value = None
+            mock_client_class.return_value = client
+            yield client
+
+    @pytest.fixture
+    def command(self) -> seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand:
+        return seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand(
+            user=None,
+            seq_profile_ids=[uuid4(), uuid4()],
+            protocol_id=uuid4(),
+        )
+
+    def test_route_is_registered(self, client: SeqdbClient) -> None:
+        """Register the profile-distance command on the existing Seqdb route."""
+        command_class = seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand
+        assert (
+            client.ROUTE_MAP[command_class] == "/retrieve/seq_distances_by_seq_profiles"
+        )
+        assert client._routes[command_class] == (
+            client.host_url
+            + client._default_route_prefix
+            + "/retrieve/seq_distances_by_seq_profiles"
+        )
+
+    def test_request_and_response_conversion(
+        self,
+        client: SeqdbClient,
+        mock_client: Any,
+        command: seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand,
+    ) -> None:
+        """Serialize the command and hydrate returned distance models."""
+        distance = seqdb_model.SeqDistance(
+            id=uuid4(),
+            sample_id=uuid4(),
+            protocol_id=command.protocol_id,
+            seq_profile_id=command.seq_profile_ids[0],
+            format=seqdb_enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+            content=json.dumps({str(command.seq_profile_ids[1]): 1.5}),
+        )
+        response = Mock(status_code=200)
+        response.json.return_value = [json.loads(distance.model_dump_json())]
+        response.raise_for_status.return_value = None
+        mock_client.request.return_value = response
+        client.get_headers = Mock(return_value={})
+
+        result = client.retrieve_seq_distances_by_seq_profiles(command)
+
+        assert result == [distance]
+        request_kwargs = mock_client.request.call_args.kwargs
+        assert request_kwargs["json"] == {
+            "seq_profile_ids": [str(x) for x in command.seq_profile_ids],
+            "protocol_id": str(command.protocol_id),
+        }
+        assert request_kwargs["headers"] == {}
+
+    def test_http_error_propagates(
+        self,
+        client: SeqdbClient,
+        mock_client: Any,
+        command: seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand,
+    ) -> None:
+        """Propagate a failed remote request."""
+        response = Mock(status_code=500)
+        response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Server Error", request=Mock(), response=response
+        )
+        mock_client.request.return_value = response
+        client.get_headers = Mock(return_value={})
+
+        with pytest.raises(httpx.HTTPStatusError):
+            client.retrieve_seq_distances_by_seq_profiles(command)

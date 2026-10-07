@@ -327,6 +327,47 @@ class TestNonCrudHandlers:
         }
         assert result == model.PhylogeneticTree(**data)
 
+    def test_retrieve_seq_distances_by_cases(
+        self, app: CasedbClient, mock_client: Any
+    ) -> None:
+        case_type_id = uuid4()
+        genetic_distance_col_id = uuid4()
+        case_id = uuid4()
+        protocol_id = uuid4()
+        profile_id = uuid4()
+        cmd = command.RetrieveSeqDistancesByCasesCommand(
+            user=None,
+            case_type_id=case_type_id,
+            case_ids=[case_id],
+            genetic_distance_col_id=genetic_distance_col_id,
+            filter_other_cases=False,
+        )
+        distance = seqdb_model.SeqDistance(
+            id=case_id,
+            sample_id=uuid4(),
+            protocol_id=protocol_id,
+            seq_profile_id=profile_id,
+            format=seqdb_enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+            content=json.dumps({str(profile_id): 1.5}),
+        )
+        mock_client.request.return_value = _mock_response(
+            [json.loads(distance.model_dump_json())]
+        )
+
+        result = app.retrieve_seq_distances_by_cases(cmd)
+
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "POST"
+        assert url == app._routes[command.RetrieveSeqDistancesByCasesCommand]
+        assert json_body == {
+            "case_type_id": str(case_type_id),
+            "genetic_distance_col_id": str(genetic_distance_col_id),
+            "case_ids": [str(case_id)],
+            "filter_other_cases": False,
+        }
+        assert result == [distance]
+
     def test_retrieve_similar_cases(self, app: CasedbClient, mock_client: Any) -> None:
         case_type_id = uuid4()
         genetic_distance_col_id = uuid4()

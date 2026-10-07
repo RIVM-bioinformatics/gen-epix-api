@@ -263,6 +263,24 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
     )
 
 
+class RetrieveSeqDistancesByCasesCommand(Command):
+    """Represents a request to retrieve sequence distances for cases."""
+
+    case_type_id: UUID = Field(
+        description="The CaseType ID that all the cases must belong to."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to retrieve sequence distances for."
+    )
+    genetic_distance_col_id: UUID = Field(
+        description="The ID of the genetic distance Col to use."
+    )
+    filter_other_cases: bool = Field(
+        default=True,
+        description="Whether to omit distances to cases not included in case_ids.",
+    )
+
+
 class RetrieveSimilarCasesCommand(Command):
     """Represents a request to retrieve genetically similar cases.
 
