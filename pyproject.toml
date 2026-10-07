@@ -51,7 +51,7 @@ dependencies = [
     "cryptography==50.0.2",
     "python-multipart==0.0.32",
     "pyinstrument==5.1.*",
-    "tenacity==9.1.*",
+    "tenacity==9.2.*",
     "pydantic-settings==2.*",
 ]
 
