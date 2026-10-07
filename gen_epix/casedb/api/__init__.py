@@ -44,6 +44,9 @@ from gen_epix.casedb.api.case_schema import (
     RetrievePhylogeneticTreeRequestBody as RetrievePhylogeneticTreeRequestBody,
 )
 from gen_epix.casedb.api.case_schema import (
+    RetrieveSeqDistancesByCasesRequestBody as RetrieveSeqDistancesByCasesRequestBody,
+)
+from gen_epix.casedb.api.case_schema import (
     RetrieveSimilarCasesRequestBody as RetrieveSimilarCasesRequestBody,
 )
 from gen_epix.casedb.api.case_schema import (

@@ -131,6 +131,26 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     )
 
 
+class RetrieveSeqDistancesByCasesRequestBody(PydanticBaseModel):
+    """Docstring assigned automatically"""  # noqa: D415
+
+    __doc__ = command.RetrieveSeqDistancesByCasesCommand.__doc__
+    case_type_id: UUID = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand, "case_type_id"
+    )
+    genetic_distance_col_id: UUID = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand, "genetic_distance_col_id"
+    )
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand,
+        "case_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    filter_other_cases: bool = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand, "filter_other_cases"
+    )
+
+
 class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
     """Docstring assigned automatically"""  # noqa: D415
 

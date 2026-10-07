@@ -416,7 +416,11 @@ class TestContent:
 
         # Go over all CaseTypes with data
         found_some_similar_cases = False
+        found_some_seq_distances = False
         retrieved_some_sequences = False
+        first_seq_distance_case_data: (
+            tuple[model.CompleteCaseType, model.Col, list[UUID]] | None
+        ) = None
         has_cases_case_type_ids = {x.case_type_id for x in case_stats if x.n_cases > 0}
         for case_type in case_types:
             if VERBOSE:
@@ -527,6 +531,50 @@ class TestContent:
                     if len(similar_cases_retval.cases) > 0:
                         found_similar_cases = True
 
+                # profiler = pyinstrument.Profiler(async_mode="enabled")
+                # profiler.start()
+
+                seq_distances: list[seqdb_model.SeqDistance] = app.handle(
+                    command.RetrieveSeqDistancesByCasesCommand(
+                        user=root_user,
+                        case_type_id=complete_case_type.id,
+                        genetic_distance_col_id=dist_col.id,
+                        case_ids=case_ids,
+                        filter_other_cases=True,
+                    )
+                )
+
+                # profiler.stop()
+                # print(profiler.output_text())
+                # with open(env.test_dir / f"{uuid4()}", "w") as f:
+                #     f.write("".join(profiler.output_text()))
+
+                assert all(
+                    isinstance(seq_distance, seqdb_model.SeqDistance)
+                    for seq_distance in seq_distances
+                )
+                distance_case_ids = [seq_distance.id for seq_distance in seq_distances]
+                assert len(distance_case_ids) == len(set(distance_case_ids))
+                assert set(distance_case_ids).issubset(set(case_ids))
+                profile_ids = {
+                    UUID(case.content[dist_col.id])
+                    for case in cases
+                    if case.content.get(dist_col.id)
+                }
+                assert all(
+                    profile_id in profile_ids
+                    for seq_distance in seq_distances
+                    for profile_id in seq_distance.get_profile_distance_map()
+                )
+                if seq_distances:
+                    found_some_seq_distances = True
+                if first_seq_distance_case_data is None and len(case_ids) >= 2:
+                    first_seq_distance_case_data = (
+                        complete_case_type,
+                        dist_col,
+                        case_ids,
+                    )
+
             if found_similar_cases:
                 found_some_similar_cases = True
                 assert len(dist_cols) >= 1
@@ -606,9 +654,61 @@ class TestContent:
             raise ValueError(
                 "Did not find similar cases for any CaseType, cannot validate RetrieveSimilarCasesCommand"
             )
+        if not found_some_seq_distances:
+            raise ValueError(
+                "Did not retrieve sequence distances for any CaseType, cannot validate RetrieveSeqDistancesByCasesCommand"
+            )
         if not retrieved_some_sequences:
             raise ValueError(
                 "Did not retrieve any genetic sequences for any CaseType, cannot validate RetrieveGeneticSequenceFastaByCaseCommand"
+            )
+
+        if first_seq_distance_case_data is None:
+            raise ValueError(
+                "Did not find two cases for any CaseType, cannot validate read_max_n_cases"
+            )
+        limit_case_type, limit_dist_col, limit_case_ids = first_seq_distance_case_data
+        original_case_type: model.CaseType = app.handle(
+            command.CaseTypeCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ONE,
+                obj_ids=limit_case_type.id,
+            )
+        )
+        limited_case_type = original_case_type.model_copy(
+            update={
+                "props": original_case_type.props.model_copy(
+                    update={"read_max_n_cases": 1}
+                )
+            }
+        )
+        app.handle(
+            command.CaseTypeCrudCommand(
+                user=root_user,
+                operation=CrudOperation.UPDATE_ONE,
+                objs=limited_case_type,
+            )
+        )
+        try:
+            with pytest.raises(exc.RequestLimitExceededAuthError) as limit_error:
+                app.handle(
+                    command.RetrieveSeqDistancesByCasesCommand(
+                        user=root_user,
+                        case_type_id=limit_case_type.id,
+                        genetic_distance_col_id=limit_dist_col.id,
+                        case_ids=limit_case_ids[:2],
+                        filter_other_cases=True,
+                    )
+                )
+            if hasattr(limit_error.value, "code"):
+                assert limit_error.value.code == "f9c1adb2"
+        finally:
+            app.handle(
+                command.CaseTypeCrudCommand(
+                    user=root_user,
+                    operation=CrudOperation.UPDATE_ONE,
+                    objs=original_case_type,
+                )
             )
 
         # Go over all case sets
@@ -839,6 +939,30 @@ class TestContent:
         assert (
             env.handle(
                 command.CaseCrudCommand(
+                    user=root_user,
+                    operation=CrudOperation.READ_ALL,
+                ),
+                use_endpoint=False,
+            )
+            == []
+        )
+
+        ref_result = env.handle(
+            command.DeleteAllRefDataCommand(user=root_user),
+            use_endpoint=False,
+        )
+        assert ref_result.success, {
+            key: value[:300]
+            for key, value in ref_result.details.items()
+            if isinstance(value, str)
+        }
+        assert set(ref_result.details) == {
+            model_class.ENTITY.name
+            for model_class in command.DeleteAllRefDataCommand.SORTED_REF_DATA_MODEL_CLASSES
+        }
+        assert (
+            env.handle(
+                command.CaseTypeCrudCommand(
                     user=root_user,
                     operation=CrudOperation.READ_ALL,
                 ),

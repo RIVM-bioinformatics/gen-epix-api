@@ -47,6 +47,9 @@ from gen_epix.casedb.api.case_schema import (
     RetrievePhylogeneticTreeRequestBody as RetrievePhylogeneticTreeRequestBody,
 )
 from gen_epix.casedb.api.case_schema import (
+    RetrieveSeqDistancesByCasesRequestBody as RetrieveSeqDistancesByCasesRequestBody,
+)
+from gen_epix.casedb.api.case_schema import (
     RetrieveSimilarCasesRequestBody as RetrieveSimilarCasesRequestBody,
 )
 from gen_epix.casedb.api.case_schema import (
@@ -431,6 +434,34 @@ def create_case_endpoints(
                     genetic_distance_col_id=request_body.genetic_distance_col_id,
                     tree_algorithm=request_body.tree_algorithm_code,
                     case_ids=request_body.case_ids,
+                ),
+            ),
+        )
+
+    @router.post(
+        "/retrieve/seq_distances_by_cases",
+        operation_id="retrieve__seq_distances_by_cases",
+        name="Retrieve sequence distances",
+        description=command.RetrieveSeqDistancesByCasesCommand.__doc__,
+    )
+    async def retrieve__seq_distances_by_cases(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: RetrieveSeqDistancesByCasesRequestBody,
+    ) -> list[seqdb_model.SeqDistance]:
+        """See router description."""
+        return cast(
+            list[seqdb_model.SeqDistance],
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="b983141b",
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveSeqDistancesByCasesCommand(
+                    user=user,
+                    case_type_id=request_body.case_type_id,
+                    case_ids=request_body.case_ids,
+                    genetic_distance_col_id=request_body.genetic_distance_col_id,
+                    filter_other_cases=request_body.filter_other_cases,
                 ),
             ),
         )

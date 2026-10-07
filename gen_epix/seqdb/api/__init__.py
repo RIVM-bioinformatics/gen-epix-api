@@ -30,6 +30,9 @@ from gen_epix.seqdb.api.seq_schema import (
     RetrieveSamplesByIdsRequestBody as RetrieveSamplesByIdsRequestBody,
 )
 from gen_epix.seqdb.api.seq_schema import (
+    RetrieveSeqDistancesBySeqProfilesRequestBody as RetrieveSeqDistancesBySeqProfilesRequestBody,
+)
+from gen_epix.seqdb.api.seq_schema import (
     RetrieveSeqFastaRequestBody as RetrieveSeqFastaRequestBody,
 )
 from gen_epix.seqdb.api.seq_schema import (

@@ -24,10 +24,16 @@ jobs:
       contents: read # for actions/checkout to fetch code
       pull-requests: write # for marocchino/sticky-pull-request-comment to create or update PR comment
     runs-on: ubuntu-latest
+    outputs:
+      # Exact patch version the cached venv is built against. The venv symlinks to
+      # this interpreter in the runner toolcache, so every job restoring the venv
+      # must install the same version rather than rely on the runner image.
+      python-version: ${{ steps.setup-python.outputs.python-version }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Set up Python 3.14
+        id: setup-python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: 3.14
@@ -40,7 +46,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.venv
-          key: ${{ runner.os }}-pip-v2-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
+          key: ${{ runner.os }}-pip-v2-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
       - name: Install dependencies
         if: steps.cache-pip.outputs.cache-hit != 'true'
         run: |
@@ -61,11 +67,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ needs.setup-env.outputs.python-version }}
       - name: Restore pip dependencies
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.venv
-          key: ${{ runner.os }}-pip-v2-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
+          key: ${{ runner.os }}-pip-v2-py${{ needs.setup-env.outputs.python-version }}-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
       - name: Check imports and formatting
         run: |
           source ~/.venv/bin/activate
@@ -91,11 +101,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ needs.setup-env.outputs.python-version }}
       - name: Restore pip dependencies
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.venv
-          key: ${{ runner.os }}-pip-v2-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
+          key: ${{ runner.os }}-pip-v2-py${{ needs.setup-env.outputs.python-version }}-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
       - name: Run pylint and capture score
         id: pylint-run
         run: |
@@ -129,11 +143,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ needs.setup-env.outputs.python-version }}
       - name: Restore pip dependencies
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.venv
-          key: ${{ runner.os }}-pip-v2-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
+          key: ${{ runner.os }}-pip-v2-py${{ needs.setup-env.outputs.python-version }}-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
       - name: Run mypy
         run: |
           source ~/.venv/bin/activate
@@ -148,11 +166,15 @@ jobs:
       CASEDB_SECRETS_DIR: ${{ github.workspace }}/gen_epix/casedb/config/.secret
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ needs.setup-env.outputs.python-version }}
       - name: Restore pip dependencies
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.venv
-          key: ${{ runner.os }}-pip-v2-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
+          key: ${{ runner.os }}-pip-v2-py${{ needs.setup-env.outputs.python-version }}-${{ hashFiles('**/requirements.txt', '**/dev-requirements.txt') }}
       - name: CI diagnostics (pytest stack)
         run: |
           source ~/.venv/bin/activate
@@ -164,7 +186,7 @@ jobs:
           python run.py test_all --include_e2e=False
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-report
           path: test/output/coverage.xml
@@ -179,7 +201,7 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for SonarCloud analysis
       - name: Download coverage report
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: coverage-report
           path: test/output/

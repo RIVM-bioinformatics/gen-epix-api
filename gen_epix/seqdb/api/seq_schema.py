@@ -113,6 +113,21 @@ class UpdateSeqDistancesRequestBody(PydanticBaseModel):
         return self
 
 
+class RetrieveSeqDistancesBySeqProfilesRequestBody(PydanticBaseModel):
+    """Docstring assigned automatically."""
+
+    __doc__ = command.RetrieveSeqDistancesBySeqProfilesCommand.__doc__
+
+    seq_profile_ids: list[UUID] = copy_model_field(
+        command.RetrieveSeqDistancesBySeqProfilesCommand,
+        "seq_profile_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    protocol_id: UUID = copy_model_field(
+        command.RetrieveSeqDistancesBySeqProfilesCommand, "protocol_id"
+    )
+
+
 class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
     """Docstring assigned automatically."""
 

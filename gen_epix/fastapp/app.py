@@ -258,7 +258,9 @@ class App:
         """Set the enabled state for a feature flag.
 
         Args:
-            key: Hashable, e.g. Enum or string, identifying the feature flag.
+            key: Hashable, e.g. Enum or string, identifying the feature flag. If a
+                string, it will be treated case-insensitively by storing its uppercase
+                version.
             value: Enabled state to store for ``key``.
 
         Raises:
@@ -266,11 +268,17 @@ class App:
         """
         if not isinstance(value, bool):
             raise ValueError("Feature flag value must be a boolean")
+        if isinstance(key, str):
+            key = key.upper()
         self._feature_flags[key] = value
 
     def get_feature_flag(self, key: Hashable, default: bool = False) -> bool:
-        """Return feature flag."""
-        return self._feature_flags.get(key, default)
+        """Return a feature flag using case-insensitive string-key matching."""
+        if isinstance(key, str):
+            key = key.upper()
+        if key in self._feature_flags:
+            return self._feature_flags[key]
+        return default
 
     def register_command(
         self,

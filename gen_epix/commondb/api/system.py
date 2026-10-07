@@ -39,7 +39,7 @@ def create_system_endpoints(
     service_type: enum.ServiceType = enum.ServiceType.SYSTEM,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     delete_all_operational_data_command_class: type[Command] | None = None,
-    delete_all_operational_data_result_class: type[PydanticBaseModel] | None = None,
+    delete_all_ref_data_command_class: type[Command] | None = None,
     **kwargs: Any,
 ) -> None:
     """Register system health, feature-flag, license, logging, and CRUD endpoints.
@@ -51,8 +51,9 @@ def create_system_endpoints(
         handle_exception: Exception adapter used by endpoint handlers.
         delete_all_operational_data_command_class: Command class used to delete
           operational data. Must be provided if the corresponding feature flag is enabled.
-        delete_all_operational_data_result_class: Result class returned after deleting
-          operational data. Must be provided if the corresponding feature flag is enabled.
+        delete_all_ref_data_command_class: Command class used to delete reference data.
+          Defaults to the shared command for commondb and must be provided by an
+          application domain that defines a concrete reference-data command.
         **kwargs: Unused router composition options.
     """
     assert handle_exception
@@ -168,26 +169,49 @@ def create_system_endpoints(
     if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA):
         assert (
             delete_all_operational_data_command_class is not None
-        ), "delete_all_command_class must be provided"
-        assert (
-            delete_all_operational_data_result_class is not None
-        ), "delete_all_result_class must be provided"
+        ), "delete_all_operational_data_command_class must be provided"
 
         @router.delete(
             "/operational_data",
             operation_id="operational_data__delete",
             name="Delete all operational data",
             description=delete_all_operational_data_command_class.__doc__,
+            status_code=200,
         )
         async def operational_data__delete(
             user: registered_user_dependency,  # type: ignore[valid-type]
-        ) -> delete_all_operational_data_result_class:  # type: ignore[valid-type]
+        ) -> model.DeleteAllOperationalDataResult:
             """Delete operational data using the authenticated command lifecycle."""
-            retval: delete_all_operational_data_result_class = exc.handle_command(  # type: ignore[valid-type]
+            retval: model.DeleteAllOperationalDataResult = exc.handle_command(
                 app=app,
                 user=user,
                 exception_code="12b97ab6",
                 input_command=delete_all_operational_data_command_class(user=user),
+                input_handle_exception=handle_exception,
+            )
+            return retval
+
+    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_ALL_REF_DATA):
+        assert (
+            delete_all_ref_data_command_class is not None
+        ), "delete_all_ref_data_command_class must be provided"
+
+        @router.delete(
+            "/ref_data",
+            operation_id="ref_data__delete",
+            name="Delete all reference data",
+            description=delete_all_ref_data_command_class.__doc__,
+            status_code=200,
+        )
+        async def ref_data__delete(
+            user: registered_user_dependency,  # type: ignore[valid-type]
+        ) -> model.DeleteAllRefDataResult:
+            """Delete application reference data after operational data is reset."""
+            retval: model.DeleteAllRefDataResult = exc.handle_command(
+                app=app,
+                user=user,
+                exception_code="f852ea1d",
+                input_command=delete_all_ref_data_command_class(user=user),
                 input_handle_exception=handle_exception,
             )
             return retval

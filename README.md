@@ -222,6 +222,24 @@ The domain models are explained in depth here:
 
 ---
 
+### Authenticated client
+
+`pip install gen-epix-api` is enough to talk to a running CASEDB, SEQDB, OMOPDB or COMMONDB service.
+`create_client` reads its settings from `<APP>_*` environment variables (or a `.env` file) and
+authenticates with the OAuth2 client-credentials flow of a functional user:
+
+```python
+from gen_epix import AppType, create_client, seqdb_command
+from gen_epix.fastapp import CrudOperation
+
+client = create_client(AppType.SEQDB)  # or "seqdb"
+loci = client.handle(seqdb_command.LocusCrudCommand(operation=CrudOperation.READ_ALL))
+```
+
+The full guide — all settings, how tokens are fetched and renewed, using your own token, retry
+policies and troubleshooting — is the documentation of the `gen_epix.commondb.client_factory` module:
+`python -c "import gen_epix.commondb.client_factory as m; help(m)"`.
+
 ## Dependencies
 
 Gen-EpiX relies on several Python packages to provide its functionality:

@@ -4,7 +4,7 @@ Shared exports include FastApp, filtering, utility, ETL, configuration,
 exception, literal, and common-domain APIs: ``etl``, ``etl_model``, ``fastapp``,
 ``filter``, ``util``, ``AppCfg``, ``AppComposer``, ``COMMONDB_DOMAIN``,
 ``CommondbClient``, ``commondb_command``, ``commondb_enum``, ``commondb_model``,
-``exc``, ``literal``, and ``NULL_ID``.
+``exc``, ``literal``, ``NULL_ID``, ``AppType``, and ``create_client``.
 
 CASEDB exports include ``CASEDB_DOMAIN``, ``CasedbAppComposer``, ``CasedbClient``,
 ``casedb_command``, ``casedb_enum``, ``casedb_model``, ``casedb_policy``,
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from gen_epix.casedb.domain import service as casedb_service
     from gen_epix.casedb.env import AppComposer as CasedbAppComposer
     from gen_epix.casedb.services.client import CasedbClient as CasedbClient
+    from gen_epix.commondb.client_factory import create_client as create_client
     from gen_epix.commondb.config import AppCfg
     from gen_epix.commondb.domain import DOMAIN as COMMONDB_DOMAIN
     from gen_epix.commondb.domain import command as commondb_command
@@ -43,6 +44,7 @@ if TYPE_CHECKING:
     from gen_epix.commondb.domain import exc as exc
     from gen_epix.commondb.domain import literal as literal
     from gen_epix.commondb.domain import model as commondb_model
+    from gen_epix.commondb.domain.enum import AppType as AppType
     from gen_epix.commondb.domain.enum import DevIdpConfig as DevIdpConfig
     from gen_epix.commondb.domain.enum import DevRepositoryConfig as DevRepositoryConfig
     from gen_epix.commondb.domain.literal import NULL_ID as NULL_ID
@@ -87,6 +89,7 @@ _EXPORTS: dict[str, LazyExport] = {
     "CasedbAppComposer": ("gen_epix.casedb.env", "AppComposer"),
     "CasedbClient": ("gen_epix.casedb.services.client", "CasedbClient"),
     "AppCfg": ("gen_epix.commondb.config", "AppCfg"),
+    "create_client": ("gen_epix.commondb.client_factory", "create_client"),
     "COMMONDB_DOMAIN": ("gen_epix.commondb.domain", "DOMAIN"),
     "commondb_command": "gen_epix.commondb.domain.command",
     "commondb_enum": "gen_epix.commondb.domain.enum",
@@ -94,7 +97,10 @@ _EXPORTS: dict[str, LazyExport] = {
     "literal": "gen_epix.commondb.domain.literal",
     "commondb_model": "gen_epix.commondb.domain.model",
     **exports_from(
-        "gen_epix.commondb.domain.enum", "DevIdpConfig", "DevRepositoryConfig"
+        "gen_epix.commondb.domain.enum",
+        "AppType",
+        "DevIdpConfig",
+        "DevRepositoryConfig",
     ),
     "NULL_ID": ("gen_epix.commondb.domain.literal", "NULL_ID"),
     **exports_from(
@@ -136,6 +142,8 @@ __all__ = [
     "literal",
     "NULL_ID",
     "AppCfg",
+    "AppType",
+    "create_client",
     "AppComposer",
     "COMMONDB_DOMAIN",
     "CommondbClient",

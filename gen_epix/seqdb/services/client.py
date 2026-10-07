@@ -21,12 +21,14 @@ class SeqdbClient(CommondbClient):
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
     ROUTE_MAP: dict[type[Command], str] = {
+        command.DeleteAllRefDataCommand: "/ref_data",
         command.CalculatePhylogeneticTreeCommand: "/calculate/phylogenetic_tree",
         command.ConvertSeqFormatCommand: "/convert/seq_format",
         command.RetrieveBestSeqPerSampleCommand: "/retrieve/best_seq_per_sample",
         command.RetrieveBestSeqProfilePerSampleCommand: "/retrieve/best_seq_profile_per_sample",
         command.RetrieveBestSeqClassificationPerSampleCommand: "/retrieve/best_seq_classification_per_sample",
         command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
+        command.RetrieveSeqDistancesBySeqProfilesCommand: "/retrieve/seq_distances_by_seq_profiles",
         command.CreateFileCommand: "/create/file",
         command.RetrieveSimilarProfilesCommand: "/retrieve/similar_profiles",
         command.UpdateSeqDistancesCommand: "/update/seq_distances",
@@ -41,6 +43,7 @@ class SeqdbClient(CommondbClient):
 
     DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {
         command.DeleteAllOperationalDataCommand: 300.0,
+        command.DeleteAllRefDataCommand: 300.0,
         command.UploadSamplesCommand: 45.0,
         command.UpdateSeqDistancesCommand: 300.0,
         command.RetrieveSampleIdentifiersByIdCommand: 45.0,
@@ -51,6 +54,7 @@ class SeqdbClient(CommondbClient):
         command.RetrieveBestSeqProfilePerSampleCommand: 15.0,
         command.RetrieveBestSeqClassificationPerSampleCommand: 15.0,
         command.CalculatePhylogeneticTreeCommand: 45.0,
+        command.RetrieveSeqDistancesBySeqProfilesCommand: 45.0,
         command.RetrieveSimilarProfilesCommand: 45.0,
     }
 
@@ -88,6 +92,10 @@ class SeqdbClient(CommondbClient):
         self.register_handler(
             command.RetrieveSimilarProfilesCommand,
             self.retrieve_similar_profiles,
+        )
+        self.register_handler(
+            command.RetrieveSeqDistancesBySeqProfilesCommand,
+            self.retrieve_seq_distances_by_seq_profiles,
         )
         self.register_handler(
             command.UpdateSeqDistancesCommand,
@@ -174,6 +182,20 @@ class SeqdbClient(CommondbClient):
             cmd, HttpMethod.POST, json_body=request_body
         )
         return UUID(response_body)
+
+    def retrieve_seq_distances_by_seq_profiles(
+        self,
+        cmd: command.RetrieveSeqDistancesBySeqProfilesCommand,
+    ) -> list[model.SeqDistance]:
+        """Retrieve sequence distances from the remote Seqdb service."""
+        request_body = api.RetrieveSeqDistancesBySeqProfilesRequestBody(
+            seq_profile_ids=cmd.seq_profile_ids,
+            protocol_id=cmd.protocol_id,
+        )
+        response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
+            cmd, HttpMethod.POST, model=request_body
+        )
+        return [model.SeqDistance(**x) for x in response_body]
 
     def retrieve_similar_profiles(
         self,
