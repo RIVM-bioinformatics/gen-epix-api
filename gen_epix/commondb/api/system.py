@@ -72,7 +72,7 @@ def _is_feature_flag_enabled(app: App, feature_flag: enum.FeatureFlag) -> bool:
     enum key and the legacy operational-data configuration key.
     """
     keys = [feature_flag.value, feature_flag.value.lower()]
-    if feature_flag is enum.FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA:
+    if feature_flag is enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA:
         keys.append("allow_delete_all_operational_data")
     return any(app.get_feature_flag(key) for key in keys)
 
@@ -213,7 +213,7 @@ def create_system_endpoints(
         return retval
 
     # Optional endpoints depending on feature flags
-    if _is_feature_flag_enabled(app, enum.FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA):
+    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA):
         assert (
             delete_all_operational_data_command_class is not None
         ), "delete_all_command_class must be provided"

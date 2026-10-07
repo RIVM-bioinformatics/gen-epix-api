@@ -205,10 +205,9 @@ def _emit_log_level_resolution_payloads_for_both_modes() -> dict[str, list[JSOND
         import os
         import sys
 
-        from gen_epix.commondb.config import AppCfg
         from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
         from gen_epix.commondb.domain.util import set_env_variables
-        from gen_epix.omopdb.domain import enum
+        from gen_epix.omopdb.config import OmopdbAppCfg
 
         def run_probe(use_env_override: bool) -> list[dict[str, object]]:
             set_env_variables(
@@ -221,12 +220,7 @@ def _emit_log_level_resolution_payloads_for_both_modes() -> dict[str, list[JSOND
             else:
                 os.environ.pop("OMOPDB_LOG_LEVEL", None)
 
-            app_cfg = AppCfg(
-                "OMOPDB",
-                enum.ServiceType,
-                enum.RepositoryType,
-                log_setup=True,
-            )
+            app_cfg = OmopdbAppCfg(log_setup=True)
             app_cfg.setup_logger.info("PROBE_SETUP_INFO")
             uvicorn_error_logger = logging.getLogger("uvicorn.error")
             uvicorn_error_logger.info("PROBE_UVICORN_INFO")

@@ -885,6 +885,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.casedb.unit.services.seqdb",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/services/seqdb"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.commondb",
         "type": "debugpy",
         "request": "launch",
@@ -1029,18 +1041,6 @@
         "justMyCode": true
 },
 {
-        "name": "test.commondb.unit.client",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "run.py",
-        "args": [
-                "run_test",
-                "test/commondb/unit/client"
-        ],
-        "console": "integratedTerminal",
-        "justMyCode": true
-},
-{
         "name": "test.commondb.unit.repositories",
         "type": "debugpy",
         "request": "launch",
@@ -1120,6 +1120,30 @@
         "args": [
                 "run_test",
                 "test/end_to_end/client_credential_flow/apps"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.end_to_end.remote_client.test_remote_client_live",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/end_to_end/remote_client/test_remote_client_live.py"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.end_to_end.remote_client.test_remote_client_local",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/end_to_end/remote_client/test_remote_client_local.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true

@@ -506,6 +506,36 @@ class TestCreateLocalOrClient(BaseCommondbClientTestCase):
             )
             mock_local.assert_called_once()
 
+    def test_none_app_setup_returns_app_without_user(self) -> None:
+        """NONE setup returns the no-client application and no user."""
+        app = Mock()
+        with patch.object(
+            CommondbClient, "_create_no_client", return_value=app
+        ) as mock_no_client:
+            result_app, user = CommondbClient.create_local_or_remote(
+                app_type=Mock(),
+                app_setup_type="NONE",
+                no_client_props={},
+                app_composer_class=Mock,
+                user_class=Mock,
+                service_type_enum=Mock,
+                repository_type_enum=Mock,
+            )
+
+        assert result_app is app
+        assert user is None
+        mock_no_client.assert_called_once()
+
+    def test_none_app_setup_requires_configuration(self) -> None:
+        """Raise an initialization error when NONE setup is incomplete."""
+        with pytest.raises(exc.InitializationServiceError) as exc_info:
+            CommondbClient.create_local_or_remote(
+                app_type=Mock(),
+                app_setup_type="NONE",
+            )
+
+        assert "no_client_props" in str(exc_info.value)
+
 
 # ============================================================================
 # HTTP Timeout Configuration Tests

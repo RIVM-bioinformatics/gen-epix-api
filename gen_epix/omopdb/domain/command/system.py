@@ -12,6 +12,8 @@ from gen_epix.omopdb.domain import model
 
 
 class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
+    """Represents a request to delete all OMOP operational data."""
+
     SORTED_OPERATIONAL_DATA_MODEL_CLASSES: ClassVar = [
         model.Cohort,
         model.ConditionEra,

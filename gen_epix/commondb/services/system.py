@@ -6,7 +6,7 @@ import json
 import re
 import string
 import tomllib
-from collections.abc import Hashable
+from enum import Enum
 from typing import Any, ClassVar, cast
 
 from cachetools import TTLCache, cached
@@ -90,7 +90,7 @@ class SystemService(BaseSystemService):
 
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand
-    ) -> dict[Hashable, bool]:
+    ) -> dict[Enum, bool]:
         """Retrieve feature flags currently configured on the application.
 
         Args:

@@ -1212,6 +1212,7 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
     ) -> None:
         """
         A retried derived-specimen chain (e.g. a repeat culture attempt) that
+
         carries the same lab identifier as the specimen it supersedes must
         produce a clear, readable, correctly attributed error at every level
         (identifier, specimen, person, batch) - and identically so whether

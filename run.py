@@ -197,6 +197,7 @@ class Run:
             + (["test/end_to_end"] if include_e2e else [])
             + [
                 "test/util",
+                "test/test_client/oauth",
                 # Not normally included, uncomment if needed
                 # "test/casedb/performance",
                 # "test/seqdb/performance",
@@ -274,6 +275,7 @@ class Run:
                 "test/commondb/unit",
                 "test/casedb/unit",
                 "test/omopdb/unit",
+                "test/test_client/oauth",
             ]
         )
 

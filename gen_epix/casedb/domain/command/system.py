@@ -10,6 +10,8 @@ from gen_epix.commondb.domain.command.system import (
 
 
 class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
+    """Represents a request to delete all CASEDB operational data."""
+
     SORTED_OPERATIONAL_DATA_MODEL_CLASSES = [
         model.CaseSetDataCollectionLink,
         model.CaseDataCollectionLink,

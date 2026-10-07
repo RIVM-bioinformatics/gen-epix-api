@@ -27,31 +27,32 @@ dependencies = [
     # "fastapi[standard]==0.141.1",
     "fastapi[standard]>=0.129.0,<0.137.0", 
     "gunicorn==26.2.*",
-    "starlette==1.6.*",
+    "starlette==1.7.*",
     "httpx==0.28.1",
-    "pyjwt==2.14.0",
-    "oauthlib==3.3.1",
-    "urllib3==2.7.0",
-    "sqlalchemy==2.0.52",
+    "pyjwt==2.15.1",
+    "urllib3==2.8.0",
+    "sqlalchemy==2.0.54",
     "sqlalchemy_utils==0.42.1",
     "alembic==1.20.0",
     "pydantic==2.13.5",
     "ulid-py==1.1.0",
     "fire==0.7.1",
     "dynaconf==3.3.3",
+    "tomli-w==1.2.0",
     "PyYAML==6.0.3",
     "scipy==1.18.1",
     "numpy==2.5.3",
     "biopython==1.88",
-    "cachetools==7.1.8",
+    "cachetools==7.2.0",
     "slowapi==0.1.10",
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
     "types-setuptools==84.0.*",
-    "cryptography==50.0.1",
-    "oauthlib==3.3.1",
+    "cryptography==50.0.2",
     "python-multipart==0.0.32",
     "pyinstrument==5.1.*",
+    "tenacity==9.1.*",
+    "pydantic-settings==2.*",
 ]
 
 [project.urls]
@@ -70,6 +71,7 @@ markers = [
     "integration: Marker for integration tests.",
     "performance: Marker for performance/scale tests (skipped by default; use -m performance).",
     "e2e: Marker for end-to-end tests requiring live servers.",
+    "live: Marker for tests calling real deployed services with real credentials (skipped by default; use -m live).",
 ]
 addopts = "-v -s"
 filterwarnings = ["ignore:.*shadows an attribute in parent.*"]
@@ -91,6 +93,7 @@ line-length = 88
 target-version = "py314"
 
 [tool.ruff.lint]
+extend-select = ["D205"]
 ignore = [
     # The repository uses the PEP 257-compatible form where multi-line docstring
     # summaries start on the second line after the opening quotes.

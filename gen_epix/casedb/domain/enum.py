@@ -435,7 +435,7 @@ class ColConceptSetType(Enum):
 
 # !FIXME: make sure the data reflects these definitions or these definitions are changed accordingly
 class DimColTypeSet(Enum):
-    """Map each dimension type to its compatible column types."""
+    """Group compatible column types by dimension."""
 
     TEXT = frozenset(
         ColTypeSet.LANGUAGE.value.union(
@@ -475,10 +475,9 @@ class ColTypeOrder(Enum):
 
 
 class FeatureFlag(Enum):
-    """Identify feature flags that alter casedb command behavior."""
+    """Encapsulates feature-flag keys specific to casedb."""
 
-    UPDATE_OWN_ORGANIZATION = "UPDATE_OWN_ORGANIZATION"
-    DISABLE_UPLOAD = "UPLOAD_ENABLED"
+    DISABLE_UPLOAD = "disable_upload"
 
 
 class Unit(StrEnum):

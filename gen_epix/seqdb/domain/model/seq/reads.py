@@ -23,9 +23,11 @@ from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
 class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
-    """Represents a set of sequencing reads, either single-end or paired-end, that is the result
-    of sequencing a sample using a protocol. The reads data itself are
-    not included in this model, but are referenced via either URIs or file links.
+    """Represents reads produced by sequencing a sample.
+
+    Reads may be single-end or paired-end and are generated using a protocol.
+    The reads data itself are not included in this model, but are referenced via
+    URIs or file links.
 
     The actual reads data need not be referenced on creation of this instance, to allow
     for deferred upload of the reads data. The is_available property can be used
