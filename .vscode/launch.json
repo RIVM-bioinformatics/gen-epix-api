@@ -1305,6 +1305,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.fastapp.unit.cache.backend",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/cache/backend"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.fastapp.unit.domain",
         "type": "debugpy",
         "request": "launch",

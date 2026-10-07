@@ -56,6 +56,30 @@ def test_exists_match() -> None:
     assert list(filter_obj.match_rows(model_rows, is_model=True)) == [True, False]
 
 
+@pytest.mark.parametrize(
+    ("invert", "expected"),
+    [(True, True), (0, False), ("0", False)],
+)
+def test_exists_invert_coercion(invert: bool | int | str, expected: bool) -> None:
+    """Coerce supported boolean representations for the inherited invert field."""
+    assert ExistsFilter(invert=invert).invert is expected
+
+
+def test_exists_map_function_does_not_change_na_matching() -> None:
+    """Classify NA values before the compatibility map function is applied."""
+    filter_obj = ExistsFilter(key="a")
+    rows = [{"a": value} for value in [None, np.nan, "", "null"]]
+    map_fn = lambda value: None if value in {np.nan} else value
+
+    util.validate_filter_behavior(
+        filter_obj,
+        rows,
+        [False, True, True, True],
+        na_values={None},
+        map_fn=map_fn,
+    )
+
+
 @pytest.mark.parametrize(("invert", "expected"), [(False, False), (True, True)])
 def test_exists_model_match_treats_non_string_key_as_absent(
     invert: bool, expected: bool

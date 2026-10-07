@@ -12,12 +12,15 @@ Fix index:
 """
 
 import json
+import logging
 import uuid
+from test.util.mock_compat import Mock
 from typing import ClassVar, List
 from uuid import UUID
 
 import pytest
 
+from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command, User
@@ -30,6 +33,14 @@ from gen_epix.fastapp.model import Command, User
 class _LargeListCommand(Command):
     NAME: ClassVar[str | None] = "test_large_list"
     case_ids: List[UUID]
+
+
+class _CacheCommand(Command):
+    NAME: ClassVar[str] = "test_cache_command"
+
+
+class _OtherCacheCommand(Command):
+    NAME: ClassVar[str] = "other_cache_command"
 
 
 def _make_user() -> User:
@@ -303,3 +314,99 @@ def test_create_log_message_with_large_command_stays_under_16384_bytes() -> None
     assert (
         len(log_message) < 16_384
     ), f"Log message exceeds 16 384 bytes: {len(log_message)}"
+
+
+def test_app_starts_with_empty_cache_registries() -> None:
+    app = App(logger=None)
+
+    assert app._cache_invalidator_map == {}
+    assert app._auto_invalidate_cache_set == set()
+
+
+def test_register_cache_invalidator_allows_multiple_and_rejects_duplicates() -> None:
+    app = App(logger=None)
+    first = Mock()
+    second = Mock()
+
+    app.register_cache_invalidator(_CacheCommand, first)
+    app.register_cache_invalidator(_CacheCommand, second)
+
+    assert app._cache_invalidator_map[_CacheCommand] == [first, second]
+    with pytest.raises(exc.InitializationServiceError):
+        app.register_cache_invalidator(_CacheCommand, first)
+
+
+def test_register_cache_invalidator_logs_at_debug_level() -> None:
+    logger = Mock()
+    logger.level = logging.DEBUG
+    app = App(logger=logger)
+
+    app.register_cache_invalidator(_CacheCommand, Mock())
+
+    assert "REGISTERING_CACHE_INVALIDATOR" in logger.debug.call_args.args[0]
+
+
+def test_invalidate_cache_uses_exact_command_type_and_propagates_errors() -> None:
+    app = App(logger=None)
+    invalidator = Mock()
+    app.register_cache_invalidator(_CacheCommand, invalidator)
+
+    app.invalidate_cache(_CacheCommand())
+    app.invalidate_cache(_OtherCacheCommand())
+
+    invalidator.assert_called_once()
+    failing_invalidator = Mock(side_effect=RuntimeError("cache failure"))
+    app.register_cache_invalidator(_OtherCacheCommand, failing_invalidator)
+    with pytest.raises(RuntimeError, match="cache failure"):
+        app.invalidate_cache(_OtherCacheCommand())
+
+
+def test_set_auto_invalidate_cache_toggles_without_removing_registrations() -> None:
+    app = App(logger=None)
+    invalidator = Mock()
+    app.register_cache_invalidator(_CacheCommand, invalidator)
+
+    app.set_auto_invalidate_cache(_CacheCommand, True)
+    assert _CacheCommand in app._auto_invalidate_cache_set
+    app.set_auto_invalidate_cache(_CacheCommand, False)
+    app.set_auto_invalidate_cache(_OtherCacheCommand, False)
+
+    assert _CacheCommand not in app._auto_invalidate_cache_set
+    assert app._cache_invalidator_map[_CacheCommand] == [invalidator]
+
+
+def test_auto_invalidation_runs_after_success_only() -> None:
+    app = App(logger=None)
+    invalidator = Mock()
+    app.register_handler(_CacheCommand, lambda cmd: "done")
+    app.register_cache_invalidator(_CacheCommand, invalidator)
+    app.set_auto_invalidate_cache(_CacheCommand, True)
+
+    assert app.handle(_CacheCommand()) == "done"
+    invalidator.assert_called_once()
+
+    invalidator.reset_mock()
+    app.register_handler(
+        _OtherCacheCommand, lambda cmd: (_ for _ in ()).throw(RuntimeError())
+    )
+    app.register_cache_invalidator(_OtherCacheCommand, invalidator)
+    app.set_auto_invalidate_cache(_OtherCacheCommand, True)
+    with pytest.raises(RuntimeError):
+        app.handle(_OtherCacheCommand())
+    invalidator.assert_not_called()
+
+
+def test_auto_invalidation_runs_for_nested_commands() -> None:
+    app = App(logger=None)
+    invalidator = Mock()
+    app.register_handler(_OtherCacheCommand, lambda cmd: "inner")
+
+    def handle_outer(_cmd: Command) -> str:
+        return app.handle(_OtherCacheCommand())
+
+    app.register_handler(_CacheCommand, handle_outer)
+    app.register_cache_invalidator(_OtherCacheCommand, invalidator)
+    app.set_auto_invalidate_cache(_OtherCacheCommand, True)
+
+    assert app.handle(_CacheCommand()) == "inner"
+    invalidator.assert_called_once()

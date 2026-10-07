@@ -84,12 +84,14 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS
         )
         self._client_credential_flow_max_retries = (
-            client_credential_flow_max_retries
-            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES
+            self.DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES
+            if client_credential_flow_max_retries is None
+            else client_credential_flow_max_retries
         )
         self._client_credential_flow_base_delay = (
-            client_credential_flow_base_delay
-            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY
+            self.DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY
+            if client_credential_flow_base_delay is None
+            else client_credential_flow_base_delay
         )
         self._allowed_signing_algorithms = (
             self.server_cfg.id_token_signing_alg_values_supported
@@ -448,8 +450,10 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         """Return an OAuth access token and its advertised lifetime in seconds."""
         # Parse input
         headers = dict(headers or self._client_credential_flow_request_headers)
-        max_retries = max_retries or self._client_credential_flow_max_retries
-        base_delay = base_delay or self._client_credential_flow_base_delay
+        if max_retries is None:
+            max_retries = self._client_credential_flow_max_retries
+        if base_delay is None:
+            base_delay = self._client_credential_flow_base_delay
         # Add basic auth header
         self._set_authorization_header(headers)
         # Get token endpoint URL

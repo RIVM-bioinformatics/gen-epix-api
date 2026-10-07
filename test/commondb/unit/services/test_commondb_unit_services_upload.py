@@ -91,6 +91,7 @@ combinations thereof:
 """
 
 from test.commondb.unit.upload.model import (
+    Child1,
     Child1ForUpload,
     Child2,
     Child2ForUpload,
@@ -121,6 +122,7 @@ from gen_epix.commondb.domain.model.organization import (
 from gen_epix.commondb.domain.model.upload import ParentUploadResult, UploadResult
 from gen_epix.etl.enum import EtlStatus, EtlStatusSet
 from gen_epix.fastapp.app import App
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
@@ -2687,3 +2689,44 @@ class TestVerificationAttributionAndDryRun(BaseUploadTestCase):
 
         assert batch_result.status == EtlStatus.FAILED
         assert batch_result.has_log_code("1f8d4c65")
+
+
+class TestChildOrderCreateOrdering(BaseUploadTestCase):
+    """Children linked by foreign keys are created in dependency order."""
+
+    def test_children_are_created_in_child_order(self) -> None:
+        existing_ref1 = self.create_ref1(self.ref1_id, "test_ref1_code")
+        existing_ref2 = self.create_ref2(self.ref2_id, "test_ref2_code")
+        child1_for_upload = self.create_child1_for_upload(ref1_code=existing_ref1.code)
+        child2_for_upload = self.create_child2_for_upload(ref2_code=existing_ref2.code)
+        parent_for_upload = self.create_parent_for_upload(
+            children1=[child1_for_upload], children2=[child2_for_upload]
+        )
+
+        created_parent_id = self.random_ids[0]
+        created_child1_id = self.random_ids[1]
+        created_child2_id = self.random_ids[2]
+        self.service.generate_id.side_effect = [
+            created_parent_id,
+            created_child1_id,
+            created_child2_id,
+        ]
+        self.service.repository.crud.side_effect = [
+            [created_parent_id],
+            [created_child1_id],
+            [created_child2_id],
+        ]
+        self.service.repository.read_fields.side_effect = [
+            [(existing_ref1.id, existing_ref1.code)],
+        ]
+        self.service.app.handle.side_effect = [[existing_ref2]]
+
+        batch_result = self.upload_batch(parent_for_upload)
+        self.expectBatchProcessed(batch_result)
+
+        created_model_classes = [
+            call.args[2]
+            for call in self.service.repository.crud.call_args_list
+            if len(call.args) > 3 and call.args[3] == CrudOperation.CREATE_SOME
+        ]
+        assert created_model_classes.index(Child1) < created_model_classes.index(Child2)

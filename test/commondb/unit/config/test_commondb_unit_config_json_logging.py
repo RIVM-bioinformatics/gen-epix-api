@@ -1,14 +1,41 @@
+import importlib
 import json
 import logging
 import sys
 from io import StringIO
+from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from gen_epix.commondb.config.json_logging import JsonFormatter, UvicornAccessLogFilter
 
 _TRUNCATED_SUFFIX = "\u2026[truncated]"
+_REPO_ROOT = Path(__file__).parents[4]
+_PRODUCTION_YAML_PATHS = [
+    _REPO_ROOT / "gen_epix" / app / "config" / "logging.yaml"
+    for app in ("casedb", "seqdb", "omopdb", "commondb")
+]
+_DEBUG_YAML_PATHS = [
+    _REPO_ROOT / "gen_epix" / app / "config" / "logging.debug.yaml"
+    for app in ("casedb", "seqdb", "omopdb", "commondb")
+]
+_E2E_YAML_PATHS = [
+    _REPO_ROOT / "test" / "end_to_end" / "casedb_seqdb_connection" / "logging.yaml"
+]
+_ALL_YAML_PATHS = _PRODUCTION_YAML_PATHS + _DEBUG_YAML_PATHS + _E2E_YAML_PATHS
+_THIRD_PARTY_LOGGERS: dict[str, str] = {
+    "sqlalchemy.engine": "WARNING",
+    "sqlalchemy.pool": "WARNING",
+    "httpx": "INFO",
+    "asyncio": "WARNING",
+}
+
+
+def _load_class(path: str) -> object:
+    module_name, class_name = path.rsplit(".", 1)
+    return getattr(importlib.import_module(module_name), class_name)
 
 
 def _make_record(
@@ -855,3 +882,91 @@ def test_short_exception_message_passes_through_and_none_disables_truncation() -
     assert payload_b["exception"]["message"] == msg
     assert _TRUNCATED_SUFFIX not in payload_a["exception"]["message"]
     assert _TRUNCATED_SUFFIX not in payload_b["exception"]["message"]
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+@pytest.mark.parametrize(
+    "yaml_path", _PRODUCTION_YAML_PATHS, ids=lambda path: path.parent.parent.name
+)
+def test_root_logger_uses_console_handler(yaml_path: Path) -> None:
+    config = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+
+    assert "console" in config["root"].get("handlers", [])
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+@pytest.mark.parametrize(
+    "yaml_path", _PRODUCTION_YAML_PATHS, ids=lambda path: path.parent.parent.name
+)
+def test_third_party_loggers_have_explicit_levels_and_console_handler(
+    yaml_path: Path,
+) -> None:
+    config = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+    loggers = config.get("loggers", {})
+
+    for name, expected_level in _THIRD_PARTY_LOGGERS.items():
+        entry = loggers[name]
+        assert entry.get("propagate") is False
+        assert entry.get("level") == expected_level
+        assert "console" in entry.get("handlers", [])
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+@pytest.mark.parametrize(
+    "yaml_path", _PRODUCTION_YAML_PATHS, ids=lambda path: path.parent.parent.name
+)
+def test_uvicorn_access_yaml_wires_structured_filter(yaml_path: Path) -> None:
+    config = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+
+    assert config["filters"]["uvicorn_access_structured"]["()"] == (
+        "gen_epix.commondb.config.json_logging.UvicornAccessLogFilter"
+    )
+    assert config["loggers"]["uvicorn.access"]["filters"] == [
+        "uvicorn_access_structured"
+    ]
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+@pytest.mark.parametrize(
+    "yaml_path", _PRODUCTION_YAML_PATHS, ids=lambda path: path.parent.parent.name
+)
+def test_console_yaml_wires_json_formatter_and_redaction(yaml_path: Path) -> None:
+    config = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+    formatter = config["formatters"]["json"]
+
+    assert config["handlers"]["console"]["formatter"] == "json"
+    assert formatter["()"] == "gen_epix.commondb.config.json_logging.JsonFormatter"
+    assert formatter["redacted_value"] == "[REDACTED]"
+    assert isinstance(formatter["sensitive_keys"], list)
+    assert "client_secret" in formatter["sensitive_keys"]
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+@pytest.mark.parametrize(
+    "yaml_path", _DEBUG_YAML_PATHS, ids=lambda path: path.parent.parent.name
+)
+def test_debug_yaml_uses_json_formatter_for_console_and_file(yaml_path: Path) -> None:
+    config = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+    formatter = config["formatters"]["json"]
+
+    assert config["handlers"]["console"]["formatter"] == "json"
+    assert config["handlers"]["file"]["formatter"] == "json"
+    assert formatter["()"] == "gen_epix.commondb.config.json_logging.JsonFormatter"
+
+
+@pytest.mark.scenario_ids("TC-LOG-01-01")
+@pytest.mark.parametrize(
+    "yaml_path", _ALL_YAML_PATHS, ids=lambda path: path.parent.parent.name
+)
+def test_yaml_formatter_and_filter_paths_are_importable(yaml_path: Path) -> None:
+    config = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+
+    for formatter_cfg in config.get("formatters", {}).values():
+        class_path = formatter_cfg.get("()")
+        if class_path:
+            assert _load_class(class_path) is not None
+
+    for filter_cfg in config.get("filters", {}).values():
+        class_path = filter_cfg.get("()")
+        if class_path:
+            assert _load_class(class_path) is not None

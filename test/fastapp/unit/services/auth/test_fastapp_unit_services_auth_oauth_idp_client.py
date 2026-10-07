@@ -1,11 +1,14 @@
 import asyncio
+import base64
 import json
 import logging
 import time
+from test.fastapp.auth_test_client import AuthTestClient
 from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any
 from uuid import UUID
 
+import httpx
 import jwt
 import pytest
 
@@ -66,6 +69,8 @@ class BaseOauthIdpClientTestCase:
         discovery_doc: dict[str, Any] | None = None,
         discovery_url: str | None = None,
         enable_introspection: bool = False,
+        client_credential_flow_max_retries: int | None = None,
+        client_credential_flow_base_delay: float | None = None,
     ) -> OauthIdpClient:
         """Create client with provided overrides."""
         cfg_copy: OidcServerCfg = (cfg or self.server_cfg).model_copy()
@@ -89,6 +94,8 @@ class BaseOauthIdpClientTestCase:
                 logger=self.logger,
                 discovery_doc=doc_to_apply,
                 discovery_url=discovery_url,
+                client_credential_flow_max_retries=client_credential_flow_max_retries,
+                client_credential_flow_base_delay=client_credential_flow_base_delay,
             )
         if doc_to_apply:
             for key, value in doc_to_apply.items():
@@ -561,75 +568,204 @@ class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
         tim_mock.introspect_token.assert_called_once()
 
 
-@pytest.mark.scenario_ids("TC-SEC-28-05")
-class TestTokenIntrospection(BaseOauthIdpClientTestCase):
-    def test_introspect_token_skips_when_cached_recent_and_active(self) -> None:
-        # 1. Input
-        client: OauthIdpClient = self.create_client(enable_introspection=True)
-        # Prepare cache
-        client.token_introspection_manager._introspection_cache = {  # type: ignore[attr-defined]
-            "tok": {
-                "active": True,
-                "last_checked": self.now(),
-                "exp": self.now() + 60,
-            }
-        }
+@pytest.mark.scenario_ids(
+    "TC-SEC-25-01", "TC-SEC-25-02", "TC-SEC-28-01", "TC-OWA-07-07"
+)
+class TestOauthIdpClientIntrospection:
+    CLIENT: OauthIdpClient
+    TOKEN: str
 
-        # 2. Mocks
-        with patch.object(
-            TokenIntrospectionManager, "_introspect_token_with_server"
-        ) as introspect:
-            introspect.return_value = True
+    @classmethod
+    def setup_class(cls) -> None:
+        env = AuthTestClient.get_test_client()
+        for idp in env.auth_service.idp_clients:
+            if isinstance(idp, OauthIdpClient):
+                cls.CLIENT = idp
+                break
+        else:
+            pytest.skip("No OidcClient available")
 
-            # 3. Execute
-            client.token_introspection_manager.introspect_token(
-                "tok", {"exp": self.now() + 60}
+        cls.TOKEN = env.MOCK_JWK_TOKEN.token
+        cls._enable_introspection()
+
+    @classmethod
+    def _enable_introspection(cls) -> None:
+        cls.CLIENT.server_cfg.enable_introspection = True
+        if not hasattr(cls.CLIENT, "token_introspection_manger") or (
+            getattr(cls.CLIENT, "token_introspection_manger") is None
+        ):
+            cls.CLIENT.token_introspection_manager = TokenIntrospectionManager(
+                server_cfg=cls.CLIENT.server_cfg,
+                discovery_url=(
+                    cls.CLIENT.server_cfg.discovery_url
+                    or "https://discovery.local/.well-known/openid-configuration"
+                ),
+                ssl_context=cls.CLIENT.ssl_context,
+                introspect_token_request_headers=None,
+                introspection_auth_method=cls.CLIENT.server_cfg.introspection_auth_method,
+                introspection_timeout_seconds=cls.CLIENT.server_cfg.introspection_timeout_seconds,
+                introspection_interval_seconds=cls.CLIENT.server_cfg.introspection_interval_seconds,
+                log_item_class=cls.CLIENT._log_item_class,
+                logger=cls.CLIENT.logger,
+            )
+            setattr(
+                cls.CLIENT.token_introspection_manager,
+                "_get_cached_introspection_endpoint",
+                lambda: "https://introspect.local/token",
             )
 
-        # 4. Verify
-        introspect.assert_not_called()
+    def _cache(self) -> dict[str, dict[str, Any]]:
+        return getattr(self.CLIENT.token_introspection_manager, "_introspection_cache")
 
-    def test_introspect_token_cached_inactive_denies(self) -> None:
-        # 1. Input
-        client: OauthIdpClient = self.create_client(enable_introspection=True)
-        client.token_introspection_manager._introspection_cache = {  # type: ignore[attr-defined]
-            "tok": {"active": False, "last_checked": 0, "exp": self.now() + 60}
+    def _now(self) -> int:
+        return getattr(self.CLIENT.token_introspection_manager, "_now")()
+
+    def test_introspection_populates_cache(self) -> None:
+        counter: dict[str, int] = {"n": 0}
+
+        def fake_introspect(_token: str) -> bool:
+            counter["n"] += 1
+            return True
+
+        setattr(
+            self.CLIENT.token_introspection_manager,
+            "_introspect_token_with_server",
+            fake_introspect,
+        )
+
+        claims = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        assert claims is not None
+        assert counter["n"] == 1
+
+        claims2 = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        assert claims2 is not None
+        assert counter["n"] == 1
+
+    def test_introspection_inactive_denies(self) -> None:
+        now = self._now()
+        self._cache()[self.TOKEN] = {
+            "active": False,
+            "last_checked": now,
+            "exp": now + 600,
         }
 
-        # 2. Execute / 3. Verify
         with pytest.raises(exc.CredentialsAuthError):
-            client.token_introspection_manager.introspect_token(
-                "tok", {"exp": self.now() + 60}
-            )
+            asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
 
-    def test_introspect_token_recheck_paths(self) -> None:
-        # 1. Input
-        client: OauthIdpClient = self.create_client(enable_introspection=True)
-        client.token_introspection_manager._introspection_cache = {}  # type: ignore[attr-defined]
+    def test_recheck_to_inactive_then_denies(self) -> None:
+        now = self._now()
+        interval = (
+            self.CLIENT.token_introspection_manager._introspection_interval_seconds
+        )
+        self._cache()[self.TOKEN] = {
+            "active": True,
+            "last_checked": now - (interval + 1),
+            "exp": now + 600,
+        }
 
-        # 2. Mocks: exercise None, True, False branches
-        with patch.object(
-            TokenIntrospectionManager, "_introspect_token_with_server"
-        ) as introspect:
-            # (a) None -> raises
-            introspect.return_value = None
-            with pytest.raises(exc.CredentialsAuthError):
-                client.token_introspection_manager.introspect_token(
-                    "A", {"exp": self.now() + 60}
-                )
+        setattr(
+            self.CLIENT.token_introspection_manager,
+            "_introspect_token_with_server",
+            lambda _: False,
+        )
 
-            # (b) True -> ok
-            introspect.return_value = True
-            client.token_introspection_manager.introspect_token(
-                "B", {"exp": self.now() + 60}
-            )
+        with pytest.raises(exc.CredentialsAuthError):
+            asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
 
-            # (c) False -> raises
-            introspect.return_value = False
-            with pytest.raises(exc.CredentialsAuthError):
-                client.token_introspection_manager.introspect_token(
-                    "C", {"exp": self.now() + 60}
-                )
+    def test_introspection_failure(self) -> None:
+        self._cache().pop(self.TOKEN, None)
+        counter: dict[str, int] = {"n": 0}
+
+        def fake_introspect(_token: str) -> None:
+            counter["n"] += 1
+            return None
+
+        setattr(
+            self.CLIENT.token_introspection_manager,
+            "_introspect_token_with_server",
+            fake_introspect,
+        )
+
+        with pytest.raises(exc.CredentialsAuthError):
+            asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        assert counter["n"] == 1
+
+    def test_cache_expiry_prunes_and_triggers_recheck(self) -> None:
+        now = self._now()
+        self._cache()[self.TOKEN] = {
+            "active": True,
+            "last_checked": now - 10,
+            "exp": now - 1,
+        }
+        counter: dict[str, int] = {"n": 0}
+
+        def fake_introspect(_token: str) -> bool:
+            counter["n"] += 1
+            return True
+
+        setattr(
+            self.CLIENT.token_introspection_manager,
+            "_introspect_token_with_server",
+            fake_introspect,
+        )
+
+        claims = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        assert claims is not None
+        assert counter["n"] == 1
+
+        claims2 = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        assert claims2 is not None
+        assert counter["n"] == 1
+
+    def test_cached_active_within_interval_skips_recheck(self) -> None:
+        now = self._now()
+        self._cache()[self.TOKEN] = {
+            "active": True,
+            "last_checked": now,
+            "exp": now + 600,
+        }
+
+        def fail_if_called(_token: str) -> None:
+            raise AssertionError("introspection should not be called within interval")
+
+        setattr(
+            self.CLIENT.token_introspection_manager,
+            "_introspect_token_with_server",
+            fail_if_called,
+        )
+
+        claims = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        assert claims is not None
+
+    def test_interval_elapsed_triggers_single_recheck(self) -> None:
+        now = self._now()
+        interval = (
+            self.CLIENT.token_introspection_manager._introspection_interval_seconds
+        )
+        self._cache()[self.TOKEN] = {
+            "active": True,
+            "last_checked": now - (interval + 1),
+            "exp": now + 600,
+        }
+        counter: dict[str, int] = {"n": 0}
+
+        def fake_introspect(_token: str) -> bool:
+            counter["n"] += 1
+            return True
+
+        setattr(
+            self.CLIENT.token_introspection_manager,
+            "_introspect_token_with_server",
+            fake_introspect,
+        )
+
+        claims = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        assert claims is not None
+        assert counter["n"] == 1
+
+        claims2 = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        assert claims2 is not None
+        assert counter["n"] == 1
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
@@ -656,7 +792,36 @@ class TestClientCredentialsFlow(BaseOauthIdpClientTestCase):
         assert token == "TKN"
         args, kwargs = http_client.post.call_args
         assert "Authorization" in kwargs["headers"]
+        assert (
+            base64.b64decode(kwargs["headers"]["Authorization"][6:]).decode()
+            == "client-id:client-secret"
+        )
+        assert kwargs["headers"]["Content-Type"] == "application/x-www-form-urlencoded"
         assert kwargs["data"].startswith("grant_type=client_credentials")
+
+    def test_client_credentials_custom_headers_and_scope(self) -> None:
+        client: OauthIdpClient = self.create_client()
+        p, http_client = self.patch_httpx_client()
+        response_mock: Mock = Mock()
+        response_mock.json.return_value = {"access_token": "TKN"}
+        response_mock.raise_for_status.return_value = None
+        http_client.post.return_value = response_mock
+
+        p.start()  # type: ignore[attr-defined]
+        try:
+            token = client.retrieve_jwt_with_client_credentials_flow(
+                "custom_scope",
+                headers={"Custom-Header": "test-value"},
+                max_retries=5,
+                base_delay=2.0,
+            )
+        finally:
+            p.stop()  # type: ignore[attr-defined]
+
+        assert token == "TKN"
+        args, kwargs = http_client.post.call_args
+        assert kwargs["headers"]["Custom-Header"] == "test-value"
+        assert "scope=custom_scope" in kwargs["data"]
 
     def test_client_credentials_returns_advertised_expiry(self) -> None:
         client: OauthIdpClient = self.create_client()
@@ -715,7 +880,9 @@ class TestClientCredentialsFlow(BaseOauthIdpClientTestCase):
             client.server_cfg.token_endpoint = None
 
             # 3. Execute / 4. Verify
-            with pytest.raises(exc.ServiceUnavailableError):
+            with pytest.raises(
+                exc.ServiceUnavailableError, match="Token endpoint URL is not set"
+            ):
                 client.retrieve_jwt_with_client_credentials_flow("s")
             assert upd.called is True
 
@@ -741,11 +908,103 @@ class TestClientCredentialsFlow(BaseOauthIdpClientTestCase):
                     client.retrieve_jwt_with_client_credentials_flow(
                         "scope", max_retries=2, base_delay=0.0
                     )
-                # Backoff sleeps called for each retry (2 times)
-                assert sleep_mock.call_count == 2
+                assert sleep_mock.call_args_list == [((0.0,),), ((0.0,),)]
         finally:
             p.stop()  # type: ignore[attr-defined]
         assert self.logger.error.called is True
+
+    def test_client_credentials_retries_http_status_errors(self) -> None:
+        client: OauthIdpClient = self.create_client()
+        p, http_client = self.patch_httpx_client()
+        response_mock: Mock = Mock()
+        response_mock.status_code = 500
+        response_mock.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Server Error", request=Mock(), response=response_mock
+        )
+        http_client.post.return_value = response_mock
+
+        p.start()  # type: ignore[attr-defined]
+        try:
+            with patch(
+                "gen_epix.fastapp.services.auth.oauth_idp_client.time.sleep"
+            ) as sleep_mock:
+                with pytest.raises(exc.ServiceUnavailableError):
+                    client.retrieve_jwt_with_client_credentials_flow(
+                        "scope", max_retries=2, base_delay=0.0
+                    )
+                assert http_client.post.call_count == 3
+                assert sleep_mock.call_count == 2
+        finally:
+            p.stop()  # type: ignore[attr-defined]
+
+    def test_client_credentials_retries_network_errors(self) -> None:
+        client: OauthIdpClient = self.create_client()
+        p, http_client = self.patch_httpx_client()
+        http_client.post.side_effect = httpx.ConnectError("Connection failed")
+
+        p.start()  # type: ignore[attr-defined]
+        try:
+            with patch(
+                "gen_epix.fastapp.services.auth.oauth_idp_client.time.sleep"
+            ) as sleep_mock:
+                with pytest.raises(exc.ServiceUnavailableError):
+                    client.retrieve_jwt_with_client_credentials_flow(
+                        "scope", max_retries=1, base_delay=0.0
+                    )
+                assert http_client.post.call_count == 2
+                assert sleep_mock.call_count == 1
+        finally:
+            p.stop()  # type: ignore[attr-defined]
+
+    def test_client_credentials_missing_access_token_raises(self) -> None:
+        client: OauthIdpClient = self.create_client()
+        p, http_client = self.patch_httpx_client()
+        response_mock: Mock = Mock()
+        response_mock.json.return_value = {"error": "invalid_request"}
+        response_mock.raise_for_status.return_value = None
+        http_client.post.return_value = response_mock
+
+        p.start()  # type: ignore[attr-defined]
+        try:
+            with patch(
+                "gen_epix.fastapp.services.auth.oauth_idp_client.time.sleep"
+            ) as sleep_mock:
+                with pytest.raises(exc.ServiceUnavailableError):
+                    client.retrieve_jwt_with_client_credentials_flow(
+                        "scope", max_retries=0, base_delay=0.0
+                    )
+                assert http_client.post.call_count == 1
+                sleep_mock.assert_not_called()
+        finally:
+            p.stop()  # type: ignore[attr-defined]
+
+    def test_zero_retries_makes_one_attempt_without_backoff(self) -> None:
+        client: OauthIdpClient = self.create_client()
+        p, http_client = self.patch_httpx_client()
+        http_client.post.side_effect = RuntimeError("unavailable")
+
+        p.start()  # type: ignore[attr-defined]
+        try:
+            with patch(
+                "gen_epix.fastapp.services.auth.oauth_idp_client.time.sleep"
+            ) as sleep_mock:
+                with pytest.raises(exc.ServiceUnavailableError):
+                    client.retrieve_jwt_with_client_credentials_flow(
+                        "scope", max_retries=0, base_delay=0.0
+                    )
+                assert http_client.post.call_count == 1
+                sleep_mock.assert_not_called()
+        finally:
+            p.stop()  # type: ignore[attr-defined]
+
+    def test_zero_retry_and_delay_defaults_are_preserved(self) -> None:
+        client: OauthIdpClient = self.create_client(
+            client_credential_flow_max_retries=0,
+            client_credential_flow_base_delay=0.0,
+        )
+
+        assert client._client_credential_flow_max_retries == 0
+        assert client._client_credential_flow_base_delay == 0.0
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")

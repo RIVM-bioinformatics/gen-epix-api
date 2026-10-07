@@ -1,13 +1,17 @@
 """Unit tests for CompositeFilter."""
 
+import datetime
 from test.filter.unit import util
 
 import pytest
 from pydantic import BaseModel
 
 from gen_epix.filter.composite import CompositeFilter
+from gen_epix.filter.date_range import DateRangeFilter
+from gen_epix.filter.exists import ExistsFilter
 from gen_epix.filter.number_range import NumberRangeFilter
 from gen_epix.filter.partial_date_range import PartialDateRangeFilter
+from gen_epix.filter.regex import RegexFilter
 from gen_epix.filter.string_set import StringSetFilter
 
 
@@ -127,3 +131,63 @@ def test_composite_filter_pydantic_and_plain_python_class() -> None:
     assert [(row.x, row.y) for row in plain_filtered_or] == data
     assert pydantic_filtered_or == pydantic_rows
     assert plain_filtered_or == plain_rows
+
+
+def test_composite_map_function() -> None:
+    """Apply per-key mapping functions before evaluating child filters."""
+    date_value = datetime.date.fromisoformat("2022-02-01")
+    rows = [
+        {"a": "2022-04-01", "b": "", "c": 10, "d": None},
+        {"a": "2022-04-01", "b": "", "c": "20", "d": None},
+        {"a": "2022-04-01", "b": "B", "c": 10, "d": None},
+        {"a": "2022-04-01", "b": "B", "c": "20", "d": None},
+        {"a": date_value, "b": "", "c": 10, "d": None},
+        {"a": date_value, "b": "", "c": "20", "d": None},
+        {"a": date_value, "b": "B", "c": 10, "d": None},
+        {"a": date_value, "b": "B", "c": "20", "d": None},
+    ]
+    filters = [
+        StringSetFilter(members={"a", "b", "c"}, key="b"),
+        DateRangeFilter(
+            lower_bound=datetime.date.fromisoformat("2022-01-01"),
+            upper_bound=datetime.date.fromisoformat("2022-03-01"),
+            key="a",
+        ),
+        NumberRangeFilter(lower_bound=15, upper_bound=25, key="c"),
+    ]
+    map_fn = {
+        "a": lambda value: (
+            datetime.date.fromisoformat(value) if isinstance(value, str) else value
+        ),
+        "b": lambda value: value.lower() if isinstance(value, str) else value,
+        "c": lambda value: float(value) if isinstance(value, str) else value,
+    }
+
+    and_filter = CompositeFilter(filters=filters, operator="AND")
+    util.validate_filter_behavior(
+        and_filter,
+        rows,
+        [False, False, False, False, False, False, False, True],
+        map_fn=map_fn,
+    )
+
+    or_filter = CompositeFilter(filters=filters, operator="OR")
+    util.validate_filter_behavior(
+        or_filter,
+        rows,
+        [False, True, True, True, True, True, True, True],
+        map_fn=map_fn,
+    )
+
+
+def test_composite_construction_retains_child_filters() -> None:
+    """Retain child filters in the order supplied during construction."""
+    child_filters = [
+        ExistsFilter(),
+        NumberRangeFilter(lower_bound=10, upper_bound=20),
+        RegexFilter(pattern="^[A-Za-z]+$"),
+    ]
+
+    composite_filter = CompositeFilter(filters=child_filters)
+
+    assert composite_filter.filters == child_filters

@@ -200,6 +200,76 @@ class TestEtlResult:
                 COMPLETED_MESSAGE: ClassVar[str] = "dup done"
 
 
+class _ConcreteLogResult(Result):
+    status: EtlStatus = EtlStatus.PENDING
+
+    def set_failed(self) -> None:
+        self.status = EtlStatus.FAILED
+
+
+class TestResultLogHelpers:
+    def setup_method(self) -> None:
+        self.result = _ConcreteLogResult()
+
+    def test_log_item_has_required_fields_and_timestamp(self) -> None:
+        item = LogItem(code="E001", message="Something broke", severity=LogLevel.ERROR)
+        assert item.code == "E001"
+        assert item.message == "Something broke"
+        assert item.severity is LogLevel.ERROR
+        assert item.timestamp is not None
+
+    def test_add_error_appends_log_and_marks_failed(self) -> None:
+        self.result.add_error("E001", "an error")
+        assert self.result.logs[0].severity is LogLevel.ERROR
+        assert self.result.logs[0].code == "E001"
+        assert self.result.logs[0].message == "an error"
+        assert self.result.status is EtlStatus.FAILED
+
+    def test_add_warning_appends_log_without_changing_status(self) -> None:
+        self.result.add_warning("W001", "a warning")
+        assert self.result.logs[0].severity is LogLevel.WARN
+        assert self.result.status is EtlStatus.PENDING
+
+    def test_add_info_appends_log_without_changing_status(self) -> None:
+        self.result.add_info("I001", "some info")
+        assert self.result.logs[0].severity is LogLevel.INFO
+        assert self.result.status is EtlStatus.PENDING
+
+    @pytest.mark.parametrize(
+        ("method", "code", "expected"),
+        [
+            ("has_errors", "E001", True),
+            ("has_warnings", "W001", True),
+            ("has_infos", "I001", True),
+            ("has_errors", "W001", False),
+            ("has_warnings", "E001", False),
+        ],
+    )
+    def test_severity_predicates(self, method: str, code: str, expected: bool) -> None:
+        if code.startswith("E"):
+            self.result.add_error(code, "message")
+        elif code.startswith("W"):
+            self.result.add_warning(code, "message")
+        else:
+            self.result.add_info(code, "message")
+        assert getattr(self.result, method)() is expected
+
+    def test_log_code_query_matches_any_severity(self) -> None:
+        self.result.add_warning("SHARED_CODE", "warning")
+        self.result.add_info("SHARED_CODE", "info")
+        assert self.result.has_log_code("SHARED_CODE")
+        assert not self.result.has_log_code("OTHER_CODE")
+
+    def test_multiple_severities_accumulate(self) -> None:
+        self.result.add_info("I001", "info")
+        self.result.add_warning("W001", "warn")
+        self.result.add_error("E001", "error")
+        assert len(self.result.logs) == 3
+        assert self.result.has_errors()
+        assert self.result.has_warnings()
+        assert self.result.has_infos()
+
+
 @pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestBatchEtlResult:
     @pytest.mark.parametrize(

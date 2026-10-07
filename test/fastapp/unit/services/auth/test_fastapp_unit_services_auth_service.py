@@ -1,6 +1,18 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
+from math import floor
+from test.commondb.unit.services.auth_test_support import (
+    DEFAULT_USER_EMAIL,
+    GUEST_ROLE,
+    MOCK_USER_ID,
+    OLD_IAT_MINUTES,
+    ROOT_ROLE,
+    AuthEnv,
+    make_cdb_user,
+)
+from test.fastapp.auth_test_client import AuthTestClient
 from test.util.mock_compat import AsyncMock, MagicMock, Mock, patch
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -9,6 +21,7 @@ from gen_epix.fastapp import App, exc, model
 from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, IDPUser
+from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 from gen_epix.fastapp.services.auth.service import AuthService
 
 
@@ -586,3 +599,292 @@ class TestInitializationValidation(BaseAuthServiceTestCase):
             )
         # Verify
         assert len(svc._pending_idp_client_cfgs) == 1
+
+
+class TestRetryPendingIdpClients(BaseAuthServiceTestCase):
+    def create_idp_config(self, name: str, label: str) -> dict[str, str | list]:
+        return cast(
+            dict[str, str | list],
+            {
+                "name": name,
+                "label": label,
+                "protocol": "OIDC",
+                "issuer": "https://late-idp.org/",
+                "client_id": "late-client",
+                "client_secret": "late-secret",
+                "claim_map": {"__key__": "email"},
+                "scope": "openid",
+                "authorization_endpoint": "https://late-idp.org/auth",
+                "token_endpoint": "https://late-idp.org/token",
+                "jwks_uri": "https://late-idp.org/certs",
+                "userinfo_endpoint": "https://late-idp.org/userinfo",
+                "response_types_supported": ["code"],
+                "subject_types_supported": ["public"],
+                "id_token_signing_alg_values_supported": ["RS256"],
+            },
+        )
+
+    def test_retry_adds_late_idp_without_replacing_existing_clients(self) -> None:
+        existing_client = self.make_idp_client(self.idp1_id)
+        self.service._idp_clients = [existing_client]
+        self.service._idp_client_by_name = {"existing": existing_client}
+        self.service._idp_client_by_id = {self.idp1_id: existing_client}
+        pending_cfg = self.create_idp_config("late_idp", "Late IDP")
+        self.service._pending_idp_client_cfgs = [pending_cfg]
+
+        self.service._retry_pending_idp_clients()
+
+        assert len(self.service._idp_clients) == 2
+        assert self.service._idp_clients[0] is existing_client
+        new_client = self.service._idp_client_by_name["late_idp"]
+        assert new_client in self.service._idp_clients
+        assert self.service._idp_client_by_id[new_client.id] is new_client
+        assert self.service._pending_idp_client_cfgs == []
+
+    def test_retry_discards_pending_duplicate_name(self) -> None:
+        existing_client = self.make_idp_client(self.idp1_id)
+        self.service._idp_clients = [existing_client]
+        self.service._idp_client_by_name = {"idp1": existing_client}
+        pending_cfg = self.create_idp_config("idp1", "Duplicate IDP")
+        self.service._pending_idp_client_cfgs = [pending_cfg]
+
+        with patch.object(self.service, "_init_idp_client") as initialize:
+            self.service._retry_pending_idp_clients()
+
+        initialize.assert_not_called()
+        assert self.service._idp_clients == [existing_client]
+        assert self.service._pending_idp_client_cfgs == []
+
+
+@pytest.fixture
+def auth_test_client() -> AuthTestClient:
+    return AuthTestClient()
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-01")
+class TestAuthHttpFlow:
+    NON_SECURE_ENDPOINT = "/non_secure"
+    CURRENT_USER_ENDPOINT = "/secure/current_user"
+
+    NOW = datetime.now(timezone.utc)
+    INVALID_CLAIMS: dict[str, Any] = {
+        "aud": "wrong_aud",
+        "iss": "http://localhost:5003",
+        "nbf": floor((NOW + timedelta(seconds=1000)).timestamp()),
+        "exp": floor((NOW - timedelta(seconds=1000)).timestamp()),
+        "iat": floor((NOW + timedelta(seconds=1000)).timestamp()),
+    }
+    INVALID_JWK: dict[str, str] = {"alg": "RS384", "kid": "wrong_key_id"}
+
+    def test_non_secure_happy_flow(self, auth_test_client: AuthTestClient) -> None:
+        response = auth_test_client.test_client.get(self.NON_SECURE_ENDPOINT)
+        assert response.status_code == 200
+
+    def test_valid_jwt_token_happy_flow(self, auth_test_client: AuthTestClient) -> None:
+        response = auth_test_client.test_client.get(
+            self.CURRENT_USER_ENDPOINT,
+            headers=auth_test_client.mock_create_token_header(
+                auth_test_client.MOCK_JWK_TOKEN.token
+            ),
+        )
+        assert response.status_code == 200
+
+    def test_secure_no_token(self, auth_test_client: AuthTestClient) -> None:
+        response = auth_test_client.test_client.get(self.CURRENT_USER_ENDPOINT)
+        assert response.status_code == 401
+
+    def test_invalid_jwt_token(self, auth_test_client: AuthTestClient) -> None:
+        response = auth_test_client.test_client.get(
+            self.CURRENT_USER_ENDPOINT,
+            headers=auth_test_client.mock_create_token_header(
+                auth_test_client.MOCK_JWK_TOKEN.token + "invalid_token"
+            ),
+        )
+        assert response.status_code == 401
+
+    @pytest.mark.parametrize(
+        "key,value", INVALID_CLAIMS.items(), ids=INVALID_CLAIMS.keys()
+    )
+    def test_invalid_claims(
+        self, auth_test_client: AuthTestClient, key: str, value: Any
+    ) -> None:
+        edited_token = auth_test_client.MOCK_JWK_TOKEN.edit_claim(key, value)
+        response = auth_test_client.test_client.get(
+            self.CURRENT_USER_ENDPOINT,
+            headers=auth_test_client.mock_create_token_header(edited_token),
+        )
+        assert response.status_code in (401, 403)
+
+    @pytest.mark.parametrize("key,value", INVALID_JWK.items(), ids=INVALID_JWK.keys())
+    def test_invalid_jwk(
+        self, auth_test_client: AuthTestClient, key: str, value: str
+    ) -> None:
+        for idp_client in auth_test_client.auth_service.idp_clients:
+            if isinstance(idp_client, OauthIdpClient):
+                idp_client._load_keys = MagicMock(return_value=None)
+            else:
+                raise NotImplementedError
+        edited_token = auth_test_client.MOCK_JWK_TOKEN.edit_jwk(key, value)
+        response = auth_test_client.test_client.get(
+            self.CURRENT_USER_ENDPOINT,
+            headers=auth_test_client.mock_create_token_header(edited_token),
+        )
+        assert response.status_code in (401, 403)
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-02")
+class TestAutoCreateUserHttpFlow:
+    def test_unknown_user_rejected_when_auto_create_disabled(self) -> None:
+        env = AuthEnv(auto_create_new_users=False)
+        token = env.mock_jwk_token.edit_claim("email", "unknown@other.org")
+        assert env.get_secure(token).status_code == 401
+
+    def test_known_user_allowed_when_auto_create_disabled(self) -> None:
+        user = make_cdb_user(user_id=MOCK_USER_ID)
+        env = AuthEnv(auto_create_new_users=False, initial_users=[user])
+        assert env.get_secure(env.token).status_code == 200
+
+    def test_unknown_user_auto_created_when_enabled(self) -> None:
+        env = AuthEnv(auto_create_new_users=True)
+        token = env.mock_jwk_token.edit_claim("email", "unknown@other.org")
+        assert env.get_secure(token).status_code == 200
+        assert env.repo.user_exists_by_key("unknown@other.org")
+
+    def test_auto_create_enabled_does_not_duplicate_existing_user(self) -> None:
+        user = make_cdb_user(user_id=MOCK_USER_ID)
+        env = AuthEnv(auto_create_new_users=True, initial_users=[user])
+        assert env.get_secure(env.token).status_code == 200
+        assert env.repo.get_user_by_key("user1@org1.org") is user
+
+    def test_auto_create_calls_user_manager_method(self) -> None:
+        env = AuthEnv(auto_create_new_users=True)
+        auto_created = make_cdb_user(email="unknown@other.org")
+        token = env.mock_jwk_token.edit_claim("email", "unknown@other.org")
+        with patch.object(
+            env.user_manager, "auto_create_new_user", return_value=auto_created
+        ) as auto_create:
+            response = env.get_secure(token)
+        assert response.status_code == 200
+        auto_create.assert_called_once()
+
+    def test_auto_create_disabled_does_not_call_auto_create_method(self) -> None:
+        env = AuthEnv(auto_create_new_users=False)
+        token = env.mock_jwk_token.edit_claim("email", "unknown@other.org")
+        with patch.object(env.user_manager, "auto_create_new_user") as auto_create:
+            env.get_secure(token)
+        auto_create.assert_not_called()
+
+    def test_auto_created_user_has_configured_role(self) -> None:
+        env = AuthEnv(auto_create_new_users=True)
+        token = env.mock_jwk_token.edit_claim("email", "unknown@other.org")
+        env.get_secure(token)
+        user = env.repo.get_user_by_key("unknown@other.org")
+        assert user is not None
+        assert GUEST_ROLE in user.roles
+
+    def test_auto_created_user_key_matches_email_claim(self) -> None:
+        env = AuthEnv(auto_create_new_users=True)
+        token = env.mock_jwk_token.edit_claim("email", "unknown@other.org")
+        env.get_secure(token)
+        user = env.repo.get_user_by_key("unknown@other.org")
+        assert user is not None
+        assert user.key == "unknown@other.org"
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class TestRootTokenTtlHttpFlow:
+    TTL_SECONDS = 1
+
+    def make_root_env(
+        self,
+        token_iat_minutes_ago: int = 0,
+        root_token_time_to_live: int | None = TTL_SECONDS,
+    ) -> AuthEnv:
+        root_user = make_cdb_user(user_id=MOCK_USER_ID, roles={ROOT_ROLE})
+        return AuthEnv(
+            root_token_time_to_live=root_token_time_to_live,
+            token_iat_minutes_ago=token_iat_minutes_ago,
+            initial_users=[root_user],
+        )
+
+    def test_fresh_root_token_within_ttl_is_accepted(self) -> None:
+        env = self.make_root_env()
+        assert env.get_secure(env.token).status_code == 200
+
+    def test_old_root_token_exceeding_ttl_is_rejected(self) -> None:
+        env = self.make_root_env(token_iat_minutes_ago=OLD_IAT_MINUTES)
+        assert env.get_secure(env.token).status_code == 401
+
+    def test_ttl_disabled_allows_old_root_token(self) -> None:
+        env = self.make_root_env(
+            token_iat_minutes_ago=OLD_IAT_MINUTES,
+            root_token_time_to_live=0,
+        )
+        assert env.get_secure(env.token).status_code == 200
+
+    def test_ttl_none_uses_default_ttl(self) -> None:
+        root_user = make_cdb_user(user_id=MOCK_USER_ID, roles={ROOT_ROLE})
+        env = AuthEnv(root_token_time_to_live=None, initial_users=[root_user])
+        assert (
+            env.auth_service._root_token_time_to_live
+            == AuthService.DEFAULT_ROOT_TOKEN_TIME_TO_LIVE
+        )
+
+    def test_ttl_zero_disables_expiry(self) -> None:
+        root_user = make_cdb_user(user_id=MOCK_USER_ID, roles={ROOT_ROLE})
+        env = AuthEnv(root_token_time_to_live=0, initial_users=[root_user])
+        assert env.auth_service._root_token_time_to_live == 0
+
+    def test_non_root_user_not_affected_by_ttl(self) -> None:
+        regular_user = make_cdb_user(user_id=MOCK_USER_ID, roles={GUEST_ROLE})
+        env = AuthEnv(
+            root_token_time_to_live=self.TTL_SECONDS,
+            token_iat_minutes_ago=OLD_IAT_MINUTES,
+            initial_users=[regular_user],
+        )
+        assert env.get_secure(env.token).status_code == 200
+
+    def test_verify_root_ttl_directly_accepts_fresh_token(self) -> None:
+        env = self.make_root_env(root_token_time_to_live=2)
+        root_user = make_cdb_user(user_id=MOCK_USER_ID, roles={ROOT_ROLE})
+        env.auth_service._verify_root_user_for_token_time_to_live(
+            env.make_claims(), root_user
+        )
+
+    def test_verify_root_ttl_directly_rejects_old_token(self) -> None:
+        env = self.make_root_env(
+            token_iat_minutes_ago=OLD_IAT_MINUTES,
+            root_token_time_to_live=self.TTL_SECONDS,
+        )
+        root_user = make_cdb_user(user_id=MOCK_USER_ID, roles={ROOT_ROLE})
+        with pytest.raises(exc.UnauthorizedAuthError):
+            env.auth_service._verify_root_user_for_token_time_to_live(
+                env.make_claims(), root_user
+            )
+
+
+class TestCommonDbRootLoginFlow:
+    def test_first_root_login_over_http_creates_root_user(self) -> None:
+        env = AuthEnv()
+        assert not env.repo.user_exists_by_key(DEFAULT_USER_EMAIL)
+        response = env.get_secure(env.token)
+        user = env.repo.get_user_by_key(DEFAULT_USER_EMAIL)
+        assert response.status_code == 200
+        assert user is not None
+        assert user.key == DEFAULT_USER_EMAIL
+        assert ROOT_ROLE in user.roles
+        assert env.user_manager.is_root_user(user)
+
+    def test_existing_root_user_can_login_over_http(self) -> None:
+        root_user = make_cdb_user(user_id=MOCK_USER_ID, roles={ROOT_ROLE})
+        env = AuthEnv(initial_users=[root_user])
+        assert env.get_secure(env.token).status_code == 200
+
+    def test_first_root_login_creates_configured_root_user(self) -> None:
+        env = AuthEnv(with_http=False)
+        claims = env.make_claims()
+        user = asyncio.run(env.auth_service.get_existing_user_from_claims(claims))
+        assert user is not None
+        assert user.key == DEFAULT_USER_EMAIL
+        assert GUEST_ROLE not in user.roles
+        assert ROOT_ROLE in user.roles

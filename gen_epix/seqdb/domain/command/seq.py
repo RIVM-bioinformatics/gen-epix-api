@@ -280,9 +280,10 @@ class RetrieveSeqFastaCommand(Command):
     seq_ids: list[UUID] = Field(
         description="List of sequence IDs to retrieve in FASTA format.",
     )
-    wrap: int | None = Field(
+    wrap: int = Field(
         default=80,
-        description="Number of characters to wrap the sequence lines.",
+        ge=0,
+        description="The line length to wrap sequences at, or 0 for no wrapping.",
     )
 
 

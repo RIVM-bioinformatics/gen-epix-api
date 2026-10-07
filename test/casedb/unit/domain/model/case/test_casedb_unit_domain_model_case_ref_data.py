@@ -186,6 +186,58 @@ class TestModelCaseRefData:
         with pytest.raises(ValueError):
             CaseType.model_validate({"name": "ct-d", "props": 123})
 
+    def test_case_type_props_defaults_and_explicit_values(self) -> None:
+        default_props = CaseTypeProps()
+        assert default_props.create_max_n_cases == 0
+        assert default_props.read_max_n_cases == 0
+        assert default_props.read_max_tree_size == 0
+        assert default_props.update_max_n_cases == 0
+        assert default_props.delete_max_n_cases == 0
+
+        props = CaseTypeProps(
+            create_max_n_cases=10,
+            read_max_n_cases=20,
+            read_max_tree_size=30,
+            update_max_n_cases=40,
+            delete_max_n_cases=50,
+        )
+        assert props.create_max_n_cases == 10
+        assert props.read_max_n_cases == 20
+        assert props.read_max_tree_size == 30
+        assert props.update_max_n_cases == 40
+        assert props.delete_max_n_cases == 50
+
+    @pytest.mark.parametrize(
+        "field",
+        [
+            "create_max_n_cases",
+            "read_max_n_cases",
+            "read_max_tree_size",
+            "update_max_n_cases",
+            "delete_max_n_cases",
+        ],
+    )
+    def test_case_type_props_reject_negative_values(self, field: str) -> None:
+        with pytest.raises(ValueError):
+            CaseTypeProps(**{field: -1})
+
+    def test_case_type_defaults_props_when_omitted(self) -> None:
+        case_type = CaseType(name="ct-default")
+        assert case_type.props == CaseTypeProps()
+
+    def test_case_type_props_round_trip_via_json(self) -> None:
+        original = CaseTypeProps(
+            create_max_n_cases=1,
+            read_max_n_cases=2,
+            read_max_tree_size=3,
+            update_max_n_cases=4,
+            delete_max_n_cases=5,
+        )
+
+        restored = CaseTypeProps.model_validate_json(original.model_dump_json())
+
+        assert restored == original
+
     def test_case_type_set_category_purpose_serializer(self) -> None:
         category = CaseTypeSetCategory(name="security", rank=1)
         dumped = category.model_dump()
@@ -243,3 +295,47 @@ class TestModelCaseRefData:
         assert Col.validate_tree_algorithm_codes([enum.TreeAlgorithmType.NJ]) == {
             enum.TreeAlgorithmType.NJ
         }
+
+    @pytest.mark.parametrize(
+        ("overrides", "field_name"),
+        [
+            (
+                {"col_type": enum.ColType.GEO_REGION, "region_set_id": uuid4()},
+                "region_set_id",
+            ),
+            (
+                {
+                    "col_type": enum.ColType.GENETIC_DISTANCE,
+                    "genetic_distance_protocol_id": uuid4(),
+                },
+                "genetic_distance_protocol_id",
+            ),
+            (
+                {"col_type": enum.ColType.REGULAR_LANGUAGE, "regex": r"^[A-Z]+$"},
+                "regex",
+            ),
+            (
+                {
+                    "col_type": enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
+                    "schema_definition": "{}",
+                },
+                "schema_definition",
+            ),
+            (
+                {
+                    "col_type": enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
+                    "schema_uri": "https://example.org/schema",
+                },
+                "schema_uri",
+            ),
+        ],
+    )
+    def test_ref_col_accepts_type_specific_values(
+        self, overrides: dict[str, Any], field_name: str
+    ) -> None:
+        kwargs = _valid_ref_col_kwargs()
+        kwargs.update(overrides)
+
+        ref_col = RefCol(**kwargs)
+
+        assert getattr(ref_col, field_name) == overrides[field_name]

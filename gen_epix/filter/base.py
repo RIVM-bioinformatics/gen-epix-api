@@ -93,7 +93,9 @@ class Filter(BaseModel):
                 yield (value is not None and self._match(map_fn(value))) ^ self.invert
         else:
             for value in values:
-                yield (value not in na_values) ^ self.invert
+                yield (
+                    value not in na_values and self._match(map_fn(value))
+                ) ^ self.invert
 
     def filter_column(
         self,
@@ -110,7 +112,9 @@ class Filter(BaseModel):
                     yield value
         else:
             for value in values:
-                if (value not in na_values) ^ self.invert:
+                if (
+                    value not in na_values and self._match(map_fn(value))
+                ) ^ self.invert:
                     yield value
 
     def match_row(

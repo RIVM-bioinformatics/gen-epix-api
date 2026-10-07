@@ -355,27 +355,12 @@ class TestGetHeaders(BaseCommondbClientTestCase):
             )
             assert call_count2 == call_count1
 
-    def test_get_headers_refreshes_expired_token(self) -> None:
-        """get_headers refreshes token past refresh margin."""
+    def test_get_headers_refreshes_token_within_refresh_margin(self) -> None:
+        """Refresh a token whose lifetime is shorter than the refresh margin."""
         mock_idp_client = Mock()
-
-        # Create JWT token that expired in the recent past (within refresh margin)
-        # This token should trigger a refresh
-        now_ts = int(datetime.now(timezone.utc).timestamp())
-        exp_time1 = now_ts - 100  # Expired 100 seconds ago
-        jwt_token1 = jwt.encode(
-            {"exp": exp_time1}, _JWT_TEST_HS256_SECRET, algorithm="HS256"
-        )
-
-        # Create different JWT token to return after token refresh
-        exp_time2 = now_ts + 3600
-        jwt_token2 = jwt.encode(
-            {"exp": exp_time2}, _JWT_TEST_HS256_SECRET, algorithm="HS256"
-        )
-
         mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.side_effect = [
-            (jwt_token1, 0.0),
-            (jwt_token2, 3600.0),
+            ("short-lived-token", 10.0),
+            ("long-lived-token", 3600.0),
         ]
 
         with patch(
@@ -397,21 +382,18 @@ class TestGetHeaders(BaseCommondbClientTestCase):
 
             cmd = DummyCommand()
 
-            # First call retrieves token (expired 100 seconds ago)
+            # The short-lived token is returned, but is not reusable within
+            # the configured refresh margin.
             headers1 = app.get_headers(cmd)
-            assert "Authorization" in headers1
-            # Margin is 50 seconds, token expired 100 seconds ago, so it was
-            # refreshed immediately on first call (not cached)
-            call_count_after_first = (
-                mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.call_count
-            )
+            assert headers1["Authorization"] == "Bearer short-lived-token"
 
-            # Second call should also refresh since first token was expired
+            # The next call refreshes it and the long-lived token is cached.
             headers2 = app.get_headers(cmd)
-            assert "Authorization" in headers2
+            assert headers2["Authorization"] == "Bearer long-lived-token"
+            assert app.get_headers(cmd) == headers2
             assert (
                 mock_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry.call_count
-                > call_count_after_first
+                == 2
             )
 
     def test_get_headers_handles_token_without_expiration(self) -> None:

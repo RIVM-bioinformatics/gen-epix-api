@@ -2,7 +2,7 @@
 
 from test.casedb.unit.services.case.base import BaseCrudTestCase
 from test.util.mock_compat import Mock, patch
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 from uuid import UUID, uuid4
 
 import pytest
@@ -266,89 +266,3 @@ class TestRefColCreateAndUpdate(BaseRefColTestCase):
 
         assert retval == expected
         self.service.crud.assert_called_once_with(cmd)
-
-
-class TestRefColStateValidation:
-    """Test type-specific linked-resource and schema requirements."""
-
-    ref_dim_id = UUID("550e8400-e29b-41d4-a716-446655440001")
-
-    @pytest.mark.parametrize(
-        ("col_type", "field"),
-        [
-            (enum.ColType.NOMINAL, "concept_set_id"),
-            (enum.ColType.GEO_REGION, "region_set_id"),
-            (enum.ColType.GENETIC_DISTANCE, "genetic_distance_protocol_id"),
-        ],
-    )
-    def test_required_linked_id_is_enforced(
-        self, col_type: enum.ColType, field: str
-    ) -> None:
-        with pytest.raises(exc.InvalidArgumentsError):
-            model.RefCol(
-                ref_dim_id=self.ref_dim_id,
-                code="test.code",
-                col_type=col_type,
-            )
-
-        valid = model.RefCol.model_validate(
-            {
-                "ref_dim_id": self.ref_dim_id,
-                "code": "test.code",
-                "col_type": col_type,
-                **cast(dict[str, Any], {field: uuid4()}),
-            }
-        )
-        assert valid.col_type is col_type
-
-    def test_regex_requires_regex_value(self) -> None:
-        with pytest.raises(exc.InvalidArgumentsError, match="requires regex"):
-            model.RefCol(
-                ref_dim_id=self.ref_dim_id,
-                code="test.code",
-                col_type=enum.ColType.REGULAR_LANGUAGE,
-            )
-
-        valid = model.RefCol(
-            ref_dim_id=self.ref_dim_id,
-            code="test.code",
-            col_type=enum.ColType.REGULAR_LANGUAGE,
-            regex=r"^[A-Z]+$",
-        )
-        assert valid.regex == r"^[A-Z]+$"
-
-    @pytest.mark.parametrize(
-        "col_type",
-        [
-            enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
-            enum.ColType.CONTEXT_FREE_GRAMMAR_XML,
-        ],
-    )
-    def test_schema_type_requires_one_schema_source(
-        self, col_type: enum.ColType
-    ) -> None:
-        with pytest.raises(exc.InvalidArgumentsError, match="requires schema"):
-            model.RefCol(
-                ref_dim_id=self.ref_dim_id,
-                code="test.code",
-                col_type=col_type,
-            )
-
-        with pytest.raises(
-            exc.InvalidArgumentsError, match="only one of schema_definition"
-        ):
-            model.RefCol(
-                ref_dim_id=self.ref_dim_id,
-                code="test.code",
-                col_type=col_type,
-                schema_definition="schema",
-                schema_uri="https://example.test/schema",
-            )
-
-        valid = model.RefCol(
-            ref_dim_id=self.ref_dim_id,
-            code="test.code",
-            col_type=col_type,
-            schema_uri="https://example.test/schema",
-        )
-        assert valid.schema_uri == "https://example.test/schema"

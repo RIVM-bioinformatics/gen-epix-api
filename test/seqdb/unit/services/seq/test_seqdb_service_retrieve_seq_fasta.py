@@ -54,3 +54,27 @@ def test_retrieve_seq_fasta_separates_wrapped_records() -> None:
         f">{seq_id_two}:{contig_id_two}\n"
         "tgca\n"
     )
+
+
+def test_retrieve_seq_fasta_wrap_zero_yields_unwrapped_records() -> None:
+    seq_id, first_contig, second_contig = uuid4(), uuid4(), uuid4()
+    service = _ServiceStub(
+        [(seq_id, [(first_contig, "acgtac"), (second_contig, "tgcata")])]
+    )
+    cmd = command.RetrieveSeqFastaCommand(seq_ids=[seq_id], wrap=0)
+
+    result = "".join(SeqService.retrieve_seq_fasta(cast(SeqService, service), cmd))
+
+    assert result == (
+        f">{seq_id}:{first_contig}\nacgtac\n" f">{seq_id}:{second_contig}\ntgcata\n"
+    )
+
+
+def test_retrieve_seq_fasta_wrap_splits_sequence_lines() -> None:
+    seq_id, contig_id = uuid4(), uuid4()
+    service = _ServiceStub([(seq_id, [(contig_id, "acgtac")])])
+    cmd = command.RetrieveSeqFastaCommand(seq_ids=[seq_id], wrap=2)
+
+    result = "".join(SeqService.retrieve_seq_fasta(cast(SeqService, service), cmd))
+
+    assert result == f">{seq_id}:{contig_id}\nac\ngt\nac\n"
