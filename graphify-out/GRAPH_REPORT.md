@@ -734,26 +734,26 @@
   run.py → gen_epix/commondb/domain/enum.py
 
 ## Import Cycles
-- 3-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/commondb/domain/command/system.py -> gen_epix/commondb/domain/__init__.py`
-- 3-file cycle: `gen_epix/omopdb/domain/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/omopdb/domain/command/system.py -> gen_epix/omopdb/domain/__init__.py`
 - 3-file cycle: `gen_epix/omopdb/domain/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/omopdb/domain/command/omop.py -> gen_epix/omopdb/domain/__init__.py`
-- 3-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 3-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/services/client.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 3-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/env.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/env.py -> gen_epix/commondb/domain/policy/permission.py -> gen_epix/__init__.py`
-- 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/services/client.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
 - 3-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/policy/__init__.py -> gen_epix/casedb/domain/policy/abac.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/policy/__init__.py -> gen_epix/casedb/domain/policy/permission.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/policy/__init__.py -> gen_epix/commondb/domain/policy/__init__.py -> gen_epix/commondb/domain/policy/permission.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/model/__init__.py -> gen_epix/seqdb/domain/model/seq/__init__.py -> gen_epix/seqdb/domain/model/seq/seq.py -> gen_epix/seqdb/domain/__init__.py`
-- 4-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/commondb/domain/command/system.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/omopdb/domain/command/system.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/seqdb/domain/policy/__init__.py -> gen_epix/commondb/domain/policy/__init__.py -> gen_epix/commondb/domain/policy/permission.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/model/__init__.py -> gen_epix/seqdb/domain/model/seq/__init__.py -> gen_epix/seqdb/domain/model/seq/taxon.py -> gen_epix/seqdb/domain/__init__.py`
+- 3-file cycle: `gen_epix/omopdb/domain/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/omopdb/domain/command/system.py -> gen_epix/omopdb/domain/__init__.py`
+- 3-file cycle: `gen_epix/__init__.py -> gen_epix/seqdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 3-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/command/__init__.py -> gen_epix/seqdb/domain/command/system.py -> gen_epix/seqdb/domain/__init__.py`
+- 3-file cycle: `gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/model/__init__.py -> gen_epix/casedb/domain/model/ontology.py -> gen_epix/casedb/domain/__init__.py`
+- 3-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/services/client.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/model/__init__.py -> gen_epix/casedb/domain/model/case/complete_case_type.py -> gen_epix/casedb/domain/model/ontology.py -> gen_epix/casedb/domain/__init__.py`
 - 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/omopdb/domain/command/omop.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/env.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/services/client.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/omopdb/domain/command/system.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/service/__init__.py -> gen_epix/casedb/domain/service/geo.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/env.py -> gen_epix/commondb/services/organization.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/seqdb/env.py -> gen_epix/seqdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/seqdb/services/client.py -> gen_epix/seqdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/seqdb/domain/command/__init__.py -> gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
 
 ## Hyperedges (group relationships)
 - **Gen-EpiX code quality and test toolchain** — dev_requirements_pytest, dev_requirements_isort, dev_requirements_black, dev_requirements_pylint, dev_requirements_mypy, dev_requirements_coverage [EXTRACTED 0.90]
