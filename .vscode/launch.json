@@ -1569,6 +1569,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.omopdb.unit.domain.command",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/domain/command"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.omopdb.unit.repositories",
         "type": "debugpy",
         "request": "launch",
