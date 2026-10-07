@@ -138,6 +138,26 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     )
 
 
+class RetrieveSeqDistancesByCasesRequestBody(PydanticBaseModel):
+    """Docstring assigned automatically"""  # noqa: D415
+
+    __doc__ = command.RetrieveSeqDistancesByCasesCommand.__doc__
+    case_type_id: UUID = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand, "case_type_id"
+    )
+    genetic_distance_col_id: UUID = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand, "genetic_distance_col_id"
+    )
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand,
+        "case_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    filter_other_cases: bool = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand, "filter_other_cases"
+    )
+
+
 class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
     """Docstring assigned automatically"""  # noqa: D415
 
@@ -614,6 +634,34 @@ def create_case_endpoints(
                     genetic_distance_col_id=request_body.genetic_distance_col_id,
                     tree_algorithm=request_body.tree_algorithm_code,
                     case_ids=request_body.case_ids,
+                ),
+            ),
+        )
+
+    @router.post(
+        "/retrieve/seq_distances_by_cases",
+        operation_id="retrieve__seq_distances_by_cases",
+        name="Retrieve sequence distances",
+        description=command.RetrieveSeqDistancesByCasesCommand.__doc__,
+    )
+    async def retrieve__seq_distances_by_cases(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: RetrieveSeqDistancesByCasesRequestBody,
+    ) -> list[seqdb_model.SeqDistance]:
+        """See router description."""
+        return cast(
+            list[seqdb_model.SeqDistance],
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="b983141b",
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveSeqDistancesByCasesCommand(
+                    user=user,
+                    case_type_id=request_body.case_type_id,
+                    case_ids=request_body.case_ids,
+                    genetic_distance_col_id=request_body.genetic_distance_col_id,
+                    filter_other_cases=request_body.filter_other_cases,
                 ),
             ),
         )
