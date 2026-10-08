@@ -162,21 +162,19 @@ services:
       CASEDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
       CASEDB_REPOSITORY__DEFAULTS__PROPS__UID: sa
       CASEDB_REPOSITORY__DEFAULTS__PROPS__PWD: Your_password123
-      # casedb's embedded LOCAL seqdb loads its config under the SEQDB_ prefix,
-      # so the server/credential overrides must be set here too.
-      SEQDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
-      SEQDB_REPOSITORY__DEFAULTS__PROPS__UID: sa
-      SEQDB_REPOSITORY__DEFAULTS__PROPS__PWD: Your_password123
+      # casedb calls the seqdb service over HTTP (REMOTE mode) instead of
+      # running an embedded copy.
+      CASEDB_SERVICE__SEQDB__PROPS__SEQDB_CLIENT_TYPE: REMOTE
+      CASEDB_SERVICE__SEQDB__PROPS__REMOTE_CLIENT__PROTOCOL: HTTP
+      CASEDB_SERVICE__SEQDB__PROPS__REMOTE_CLIENT__HOST: seqdb
+      CASEDB_SERVICE__SEQDB__PROPS__REMOTE_CLIENT__AUTH_PROTOCOL: NONE
     ports:
       - "8000:8000"
     depends_on:
       migrate-casedb:
         condition: service_completed_successfully
-      # seqdb must be healthy before casedb starts: both the standalone seqdb
-      # service and casedb's embedded LOCAL seqdb share the same seqdb database.
-      # Ordering ensures seqdb creates the root user first so that casedb's
-      # embedded seqdb finds it already present (user_manager handles this
-      # idempotently, but ordering eliminates any residual race condition).
+      # seqdb must be healthy before casedb starts: casedb's seqdb-backed
+      # endpoints call it over HTTP.
       seqdb:
         condition: service_healthy
     healthcheck:
