@@ -246,7 +246,7 @@ class Command(PydanticBaseModel):
         """Get the permission type for this command, allowing to create a permission
         as a tuple[type[Command], PermissionType]. For this base command, the permission
         type is always EXECUTE, but subclasses may override this to return a different
-        permission type depending on the specific command subclass as well as the 
+        permission type depending on the specific command subclass as well as the
         content of the command instance.
         """
         return PermissionType.EXECUTE
@@ -422,7 +422,9 @@ class CrudCommand(Command):
         elif self.operation in CrudOperationSet.DELETE.value:
             permission_type = PermissionType.DELETE
         else:
-            raise NotImplementedError(f"Unsupported operation for permission type: {self.operation}")
+            raise NotImplementedError(
+                f"Unsupported operation for permission type: {self.operation}"
+            )
         return permission_type
 
     def is_create(self) -> bool:
