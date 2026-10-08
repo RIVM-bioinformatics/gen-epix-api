@@ -70,11 +70,13 @@ def case_service_create_file_for_read_set_or_seq(
             ["data_collection_id"],
             filter=EqualsUuidFilter(key="case_id", value=cast(UUID, case.id)),
         )
+        # Membership includes created_in_data_collection_id.
         data_collection_ids = frozenset(
             {case.created_in_data_collection_id}
             | {x[0] for x in data_collection_id_tuples}
         )
 
+        # Retrieve Col and RefCol data for the case type.
         complete_case_type = self.retrieve_complete_case_type(
             command.RetrieveCompleteCaseTypeCommand(
                 user=cmd.user, case_type_id=case.case_type_id
@@ -82,6 +84,7 @@ def case_service_create_file_for_read_set_or_seq(
         )
         # @ABAC: Require write access to the column through a collection of the case.
         pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        # Retrieve case ABAC.
         case_abac = pdp.get_case_abac(cmd)
         if (
             not case_abac.is_full_access

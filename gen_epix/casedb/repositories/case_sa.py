@@ -82,12 +82,14 @@ def _build_case_stats_query(
         sa_model.Case.created_in_data_collection_id,
         sa_model.CaseDataCollectionLink.data_collection_id,
     ]
+    # Prepare CASE arguments for time-unit resolution and private-collection membership.
     case_statement_args: list[list[list[tuple]]] = [[[], []], [[], []]]
     case_statement_args[1][0].append((fields[1].is_(None), last_index))
     case_statement_args[1][1].append((fields[1].is_(None), 0))
     if not has_abac:
         for field_args in case_statement_args:
             field_args[0].append((true(), 0))
+    # Go over each time unit and add conditions for data collection IDs.
     for index, col_type in enumerate(enum.ColTypeOrder.TIME_RESOLUTION_DESC.value):
         if col_type not in data_collections_by_time_unit:
             continue
@@ -96,6 +98,7 @@ def _build_case_stats_query(
             case_statement_args[field_index][0].append(
                 (field.in_(data_collection_ids), index)
             )
+    # Add conditions for private data collection IDs.
     for field_index, field in enumerate(fields):
         case_statement_args[field_index][1].append(
             (field.in_(private_data_collection_ids), 1)
@@ -143,14 +146,15 @@ def _build_case_stats_query(
         .group_by(sa_model.Case.timed_at, sa_model.Case.id)
         .where(sa_model.Case.case_type_id == case_type_id)
     )
+    # Combine both queries and group by case date and ID to get the minimum time-unit index.
     combined_query = union_all(
         cast(Select, query1.statement), cast(Select, query2.statement)
     ).alias()
     query = (
         session.query(
-            combined_query.c[0],
+            combined_query.c[0],  # case_id
             func.max(combined_query.c[1]).label("count"),
-            combined_query.c[2],
+            combined_query.c[2],  # timed_at
             func.min(combined_query.c[3]).label("data_collection_time_unit_index"),
             func.max(combined_query.c[4]).label("is_in_private_data_collection"),
         )

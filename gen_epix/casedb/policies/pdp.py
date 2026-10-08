@@ -57,7 +57,7 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
     ) -> bool:
         """Check whether each requested column is readable in a supplied collection."""
         return self._are_columns_accessible_for_data_collections(
-            complete_case_type, data_collection_ids, col_ids, "read_col_ids"
+            complete_case_type, data_collection_ids, col_ids, enum.CaseRight.READ_CASE
         )
 
     def is_writable_columns_for_data_collections(
@@ -68,7 +68,7 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
     ) -> bool:
         """Check whether each requested column is writable in a supplied collection."""
         return self._are_columns_accessible_for_data_collections(
-            complete_case_type, data_collection_ids, col_ids, "write_col_ids"
+            complete_case_type, data_collection_ids, col_ids, enum.CaseRight.WRITE_CASE
         )
 
     @staticmethod
@@ -76,9 +76,14 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
         complete_case_type: model.CompleteCaseType,
         data_collection_ids: frozenset[UUID],
         col_ids: frozenset[UUID],
-        access_attr: Literal["read_col_ids", "write_col_ids"],
+        access_right: Literal[enum.CaseRight.READ_CASE, enum.CaseRight.WRITE_CASE],
     ) -> bool:
         """Check that each requested column is allowed by a supplied collection."""
+        access_attr = {
+            enum.CaseRight.READ_CASE: "read_col_ids",
+            enum.CaseRight.WRITE_CASE: "write_col_ids",
+        }[access_right]
+
         # Special case: no data collection IDs provided, content is not readable
         if not data_collection_ids:
             return False

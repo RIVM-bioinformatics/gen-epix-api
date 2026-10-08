@@ -99,15 +99,26 @@ def test_column_access_empty_inputs(
 
 
 @pytest.mark.parametrize(
-    ("method_name", "access_attr"),
+    ("method_name", "access_right", "access_attr"),
     [
-        ("is_readable_columns_for_data_collections", "read_col_ids"),
-        ("is_writable_columns_for_data_collections", "write_col_ids"),
+        (
+            "is_readable_columns_for_data_collections",
+            enum.CaseRight.READ_CASE,
+            "read_col_ids",
+        ),
+        (
+            "is_writable_columns_for_data_collections",
+            enum.CaseRight.WRITE_CASE,
+            "write_col_ids",
+        ),
     ],
     ids=["read", "write"],
 )
 def test_column_access_uses_union_of_collection_rights(
-    pdp: PolicyDecisionPoint, method_name: str, access_attr: str
+    pdp: PolicyDecisionPoint,
+    method_name: str,
+    access_right: enum.CaseRight,
+    access_attr: str,
 ) -> None:
     first_collection_id = uuid4()
     second_collection_id = uuid4()
@@ -133,6 +144,12 @@ def test_column_access_uses_union_of_collection_rights(
         complete_case_type,
         frozenset({first_collection_id}),
         frozenset({first_col_id, second_col_id}),
+    )
+    assert PolicyDecisionPoint._are_columns_accessible_for_data_collections(
+        complete_case_type,
+        frozenset({first_collection_id, second_collection_id}),
+        frozenset({first_col_id, second_col_id}),
+        access_right,
     )
 
 

@@ -5,11 +5,11 @@ Tests follow the style and conventions of test_retrieve_case.py,
 using typed variables, explicit mocking, and the 1-2-3-4 section structure.
 """
 
+from test.util.mock_compat import Mock
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from test.util.mock_compat import Mock
 
 from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.model.abac.rights import CaseTypeAccessAbac
@@ -25,11 +25,9 @@ class _FakeCaseAbacPolicy(BaseCaseAbacPolicy):
     """Lightweight policy to inject a case ABAC object into commands."""
 
     def __init__(self, abac: Any):
-        super().__init__(abac_service=Mock(), abac=abac)
-        self._abac = abac
-
-    def get_content(self, cmd: Any) -> Any:  # noqa: ARG002
-        return self._abac
+        abac_service = Mock()
+        abac_service.get_case_abac.return_value = abac
+        super().__init__(abac_service=abac_service)
 
 
 class BaseIsOwnCasesTestCase:

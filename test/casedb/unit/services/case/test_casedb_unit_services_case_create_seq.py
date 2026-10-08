@@ -170,6 +170,7 @@ def test_service_rejects_upload_without_write_access(
     _configure_column_type(
         complete_case_type, cmd.col_id, enum.ColType.GENETIC_SEQUENCE
     )
+    # Deny the column-level WRITE_CASE check for this non-full-access user.
     service.app.pdp.is_writable_columns_for_data_collections.return_value = False
 
     with pytest.raises(exc.UnauthorizedAuthError, match="no WRITE_CASE access"):
@@ -183,6 +184,7 @@ def test_service_rejects_wrong_genetic_column_type(
 ) -> None:
     service, _, _, complete_case_type, _ = service_context
     cmd = _make_command(command.CreateFileForReadSetCommand, user)
+    # Wrong type for ReadSets.
     _configure_column_type(complete_case_type, cmd.col_id, enum.ColType.TEXT)
 
     with pytest.raises(exc.InvalidArgumentsError, match="Column type mismatch"):
@@ -194,6 +196,7 @@ def test_service_rejects_missing_case_content(
 ) -> None:
     service, _, _, complete_case_type, _ = service_context
     cmd = _make_command(command.CreateFileForReadSetCommand, user)
+    # Missing the required col_id from case content.
     _configure_column_type(complete_case_type, cmd.col_id, enum.ColType.GENETIC_READS)
 
     with pytest.raises(exc.InvalidArgumentsError, match="No ReadSet linked"):
@@ -228,6 +231,7 @@ def test_read_set_identical_reupload_is_idempotent(user: Mock) -> None:
     cmd = _make_command(command.CreateFileForReadSetCommand, user)
     existing_file_id = uuid4()
     read_set = Mock(spec=seqdb_model.ReadSet)
+    # Already has a forward file with the uploaded content's hash.
     read_set.fwd_file_id = existing_file_id
     read_set.fwd_reads_hash = UUID(hashlib.sha256(_FILE_CONTENT).digest()[:16].hex())
     service.app.handle.return_value = read_set
@@ -243,6 +247,7 @@ def test_seq_rejects_different_content_for_existing_file(user: Mock) -> None:
     service.app = Mock()
     cmd = _make_command(command.CreateFileForSeqCommand, user)
     seq = Mock(spec=seqdb_model.Seq)
+    # Already has a file with a different content hash.
     seq.file_id = uuid4()
     seq.file_hash = UUID(hashlib.sha256(b"different content").digest()[:16].hex())
     service.app.handle.return_value = seq
@@ -270,6 +275,7 @@ def test_hash_uses_uncompressed_content(
     compression: seqdb_enum.FileCompression,
     uncompressed: bytes,
 ) -> None:
+    # Gzip input is decompressed before calculating the hash.
     result = create_seq._get_hash_uuid(content, compression)
 
     assert result == UUID(hashlib.sha256(uncompressed).digest()[:16].hex())
