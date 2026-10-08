@@ -54,8 +54,8 @@ For a source module `gen_epix/<package>/<subfolders>/<module_name>.py`:
 
 - Place its test in `test/<package>/unit/<subfolders>/`. Preserve every source
   subfolder in the same order; do not introduce feature-specific grouping folders.
-- Define `path_with_underscores` as all source parent path components below
-  `gen_epix`, joined with `_`, including `<package>` but excluding `gen_epix`.
+- Define `path_with_underscores` as the mirrored test parent components below
+  `test`, joined with `_`, including `<package>`, `unit`, and every subfolder.
 - The filename MUST be
   `f"test_{path_with_underscores}_{module_name}.py"`, using the source filename
   stem as `module_name` without shortening, duplicating, or adding scenario names.

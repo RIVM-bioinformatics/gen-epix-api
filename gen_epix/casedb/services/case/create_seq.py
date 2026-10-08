@@ -70,7 +70,10 @@ def case_service_create_file_for_read_set_or_seq(
             ["data_collection_id"],
             filter=EqualsUuidFilter(key="case_id", value=cast(UUID, case.id)),
         )
-        data_collection_ids = frozenset(x[0] for x in data_collection_id_tuples)
+        data_collection_ids = frozenset(
+            {case.created_in_data_collection_id}
+            | {x[0] for x in data_collection_id_tuples}
+        )
 
         # @ABAC: Check if Col is readable
         complete_case_type = self.retrieve_complete_case_type(

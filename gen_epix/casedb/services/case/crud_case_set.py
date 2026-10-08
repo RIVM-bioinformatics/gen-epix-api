@@ -16,6 +16,7 @@ from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.enum import CrudOperationSet, OnException
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.base import Filter
+from gen_epix.filter.uuid_set import UuidSetFilter
 
 
 def case_service_crud_case_set(
@@ -166,8 +167,8 @@ def _retrieve_case_sets_with_content_right(
         uow,
         user_id,
         model.CaseSet,
-        obj_ids=case_set_ids,
-        field_names=["case_type_id"],
+        ["case_type_id"],
+        filter=UuidSetFilter(key="id", members=frozenset(case_set_ids)),
     )
     case_set_case_type_ids: dict[UUID, UUID] = dict(zip(case_set_ids, case_type_ids))
 

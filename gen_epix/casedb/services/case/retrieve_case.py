@@ -235,6 +235,7 @@ def _verify_case_set_access(
     case_sets = self._retrieve_case_sets_with_content_right(
         uow,
         user.id,  # type: ignore[arg-type]
+        self.app.pdp,  # type: ignore[arg-type]
         case_abac,
         # user_case_access
         enum.CaseRight.READ_CASE_SET,
@@ -242,6 +243,7 @@ def _verify_case_set_access(
     ) + self._retrieve_case_sets_with_content_right(
         uow,
         user.id,  # type: ignore[arg-type]
+        self.app.pdp,  # type: ignore[arg-type]
         case_abac,
         # user_case_access
         enum.CaseRight.WRITE_CASE_SET,

@@ -27,7 +27,7 @@ def case_service_crud_case(
         if pdp.is_exempted(cmd):
             return _crud_case_without_abac(self, uow, cmd)
         raise AssertionError("CRUD Case with ABAC not expected to be allowed")
-        return _crud_case_with_abac(self, uow, cmd)
+        # return _crud_case_with_abac(self, uow, cmd)
 
 
 def _crud_case_without_abac(

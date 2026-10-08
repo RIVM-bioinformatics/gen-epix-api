@@ -171,8 +171,7 @@ class TestCaseServiceCreateFileForReadSetOrSeq:
 
             # Configure mocks
             mock_service.repository.crud.return_value = mock_case
-            data_collection_id = uuid4()
-            mock_service.repository.read_fields.return_value = [(data_collection_id,)]
+            mock_service.repository.read_fields.return_value = []
             mock_service.retrieve_complete_case_type.return_value = (
                 mock_complete_case_type
             )
@@ -201,6 +200,11 @@ class TestCaseServiceCreateFileForReadSetOrSeq:
             assert result == created_file.id  # type: ignore[attr-defined]
             assert mock_read_set.fwd_file_id == created_file.id  # type: ignore[attr-defined]
             assert mock_read_set.fwd_reads_hash == expected_fwd_reads_hash
+            mock_service.app.pdp.is_readable_columns_for_data_collections.assert_called_once_with(
+                mock_complete_case_type,
+                frozenset({mock_case.created_in_data_collection_id}),
+                frozenset({cmd.col_id}),
+            )
 
     def test_create_file_for_read_set_success_gzip_content(
         self, mock_service: Mock, mock_user: Mock
@@ -365,6 +369,13 @@ class TestCaseServiceCreateFileForReadSetOrSeq:
             assert result == created_file.id  # type: ignore[attr-defined]
             assert mock_seq.file_id == created_file.id  # type: ignore[attr-defined]
             assert mock_seq.file_hash == expected_file_hash
+            mock_service.app.pdp.is_readable_columns_for_data_collections.assert_called_once_with(
+                mock_complete_case_type,
+                frozenset(
+                    {mock_case.created_in_data_collection_id, data_collection_id}
+                ),
+                frozenset({cmd.col_id}),
+            )
 
     def test_create_file_for_seq_success_gzip_content(
         self, mock_service: Mock, mock_user: Mock
