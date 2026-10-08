@@ -1,5 +1,8 @@
+"""Define Casedb's base policy decision point and ABAC filter helpers."""
+
 from abc import abstractmethod
-from typing import Any, Iterable, Literal
+from collections.abc import Iterable
+from typing import Any, Literal
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
@@ -37,6 +40,9 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
 
         Returns:
             bool: True if the case content is readable for the specified data collections and columns, False otherwise.
+
+        Raises:
+            NotImplementedError: If a concrete PDP does not implement the check.
         """
         raise NotImplementedError()
 
@@ -61,14 +67,17 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
 
         Raises:
             UnauthorizedAuthError: If on_filtered is set to RAISE and a case set is not accessible with the given right.
+            NotImplementedError: If a concrete PDP does not implement the filter.
         """
         raise NotImplementedError()
 
     def get_case_type_id_filter(
         self, cmd: command.Command, case_type_id_field_name: str = "case_type_id"
     ) -> Filter | None:
-        """Retrieve a Filter on CaseType that will keep only CaseTypes that the user
-        has access to. If None is returned, the user can access all CaseTypes.
+        """Retrieve an access filter for CaseTypes.
+
+        The filter keeps only CaseTypes the user can access. If None is returned,
+        the user can access all CaseTypes.
         """
         if self.is_exempted(cmd):
             return None
@@ -79,8 +88,10 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
     def get_col_id_filter(
         self, cmd: command.Command, col_id_field_name: str = "col_id"
     ) -> Filter | None:
-        """Retrieve a Filter on Col that will keep only Cols that the user
-        has access to. If None is returned, the user can access all Cols.
+        """Retrieve an access filter for columns.
+
+        The filter keeps only columns the user can access. If None is returned, the
+        user can access all columns.
         """
         if self.is_exempted(cmd):
             return None
@@ -91,8 +102,10 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
     def get_col_set_id_filter(
         self, cmd: command.Command, col_set_id_field_name: str = "col_set_id"
     ) -> Filter | None:
-        """Retrieve a Filter on ColSet that will keep only ColSets that the user
-        has access to. If None is returned, the user can access all ColSets.
+        """Retrieve an access filter for column sets.
+
+        The filter keeps only column sets the user can access. If None is returned,
+        the user can access all column sets.
         """
         if self.is_exempted(cmd):
             return None
@@ -103,8 +116,10 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
     def get_dim_id_filter(
         self, cmd: command.Command, dim_id_field_name: str = "dim_id"
     ) -> Filter | None:
-        """Retrieve a Filter on Dim that will keep only Dims that the user
-        has access to. If None is returned, the user can access all Dims.
+        """Retrieve an access filter for dimensions.
+
+        The filter keeps only dimensions the user can access. If None is returned,
+        the user can access all dimensions.
         """
         if self.is_exempted(cmd):
             return None
@@ -115,8 +130,10 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
     def get_ref_col_id_filter(
         self, cmd: command.Command, ref_col_id_field_name: str = "ref_col_id"
     ) -> Filter | None:
-        """Retrieve a Filter on RefCol that will keep only RefCols that the user
-        has access to. If None is returned, the user can access all RefCols.
+        """Retrieve an access filter for reference columns.
+
+        The filter keeps only reference columns the user can access. If None is
+        returned, the user can access all reference columns.
         """
         if self.is_exempted(cmd):
             return None
@@ -127,8 +144,10 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
     def get_ref_dim_id_filter(
         self, cmd: command.Command, ref_dim_id_field_name: str = "ref_dim_id"
     ) -> Filter | None:
-        """Retrieve a Filter on RefDim that will keep only RefDims that the user
-        has access to. If None is returned, the user can access all RefDims.
+        """Retrieve an access filter for reference dimensions.
+
+        The filter keeps only reference dimensions the user can access. If None is
+        returned, the user can access all reference dimensions.
         """
         if self.is_exempted(cmd):
             return None

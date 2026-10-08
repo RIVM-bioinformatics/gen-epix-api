@@ -121,7 +121,12 @@ with a reason and explicitly disclose any remaining coverage gaps.
   infrastructure: plain assertions, `pytest.raises`, `pytest.warns`,
   `pytest.approx`, parametrization, fixtures, and registered markers.
 - Inspect existing fixtures, `conftest.py` files, test utilities, and pytest
-  configuration before adding new setup. Reuse them whenever suitable.
+  configuration before adding new setup. Reuse them whenever suitable. Update
+  `conftest.py` files only to move shared fixtures and setup that are genuinely
+  reusable across multiple test modules. When doing so, also update and test the
+  other test modules that rely on those shared fixtures to ensure consistency.
+- Avoid using `with patch("<hard-coded module path>.symbol")` statements. Instead,
+  use `with patch(f"{module.__name__}.symbol")`.
 - Do not repeatedly declare variables with the same hard-coded content in
   individual tests. Define shared immutable example data once; use fixtures or
   factory fixtures to supply fresh mutable objects and per-case overrides.

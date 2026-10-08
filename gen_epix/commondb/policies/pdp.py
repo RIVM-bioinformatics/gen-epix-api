@@ -1,3 +1,5 @@
+"""Provide the commondb policy decision point implementation."""
+
 from gen_epix.commondb.domain import command
 from gen_epix.commondb.domain.policy.pdp import BasePolicyDecisionPoint
 

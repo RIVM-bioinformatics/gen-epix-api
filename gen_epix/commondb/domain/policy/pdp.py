@@ -1,4 +1,6 @@
-from abc import abstractmethod
+"""Define the base policy decision point interface for commondb."""
+
+from abc import ABC, abstractmethod
 from typing import Any
 from uuid import UUID
 
@@ -7,7 +9,7 @@ from gen_epix.commondb.domain.service.abac import BaseAbacService
 from gen_epix.fastapp.pdp import PolicyDecisionPoint as FastappPolicyDecisionPoint
 
 
-class BasePolicyDecisionPoint(FastappPolicyDecisionPoint):
+class BasePolicyDecisionPoint(FastappPolicyDecisionPoint, ABC):
     """Encapsulates Policy Decision Point (PDP) logic including for ABAC policies.
 
     In addition to the regular PDP logic, this centralizes the decision-making logic

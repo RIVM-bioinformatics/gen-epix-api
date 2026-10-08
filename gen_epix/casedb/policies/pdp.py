@@ -1,4 +1,7 @@
-from typing import Iterable, Literal
+"""Implement Casedb policy decisions and case-level ABAC checks."""
+
+from collections.abc import Iterable
+from typing import Literal
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
@@ -8,8 +11,9 @@ from gen_epix.fastapp.enum import OnException
 
 
 class PolicyDecisionPoint(BasePolicyDecisionPoint):
-    """Encapsulates a concrete implementation of a Policy Decision Point (PDP)
-    for Casedb ABAC policies.
+    """Encapsulate the concrete Casedb Policy Decision Point (PDP).
+
+    This implementation evaluates Casedb-specific ABAC policies.
     """
 
     def is_allowed(self, cmd: command.Command) -> bool:
@@ -20,6 +24,9 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
 
         Returns:
             bool: True if the command is allowed, False otherwise.
+
+        Raises:
+            NotImplementedError: If allowance is requested for an unsupported command.
         """
         user = cmd.user
         if user is None:
@@ -48,11 +55,7 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
         data_collection_ids: frozenset[UUID],
         col_ids: frozenset[UUID],
     ) -> bool:
-        """See parent class."""
-        __doc__ = (
-            BasePolicyDecisionPoint.is_readable_columns_for_data_collections.__doc__
-        )
-
+        """Check whether each requested column is readable in a supplied collection."""
         # Special case: no data collection IDs provided, content is not readable
         if not data_collection_ids:
             return False
@@ -81,9 +84,12 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
         right: enum.CaseRight,
         on_filtered: Literal[OnException.SKIP, OnException.RAISE] = OnException.RAISE,
     ) -> Iterable[UUID]:
-        """See parent class."""
-        __doc__ = BasePolicyDecisionPoint.filter_case_set_ids.__doc__
+        """Yield case-set IDs accessible with the requested right.
 
+        Raises:
+            UnauthorizedAuthError: If an inaccessible case set is encountered and
+                `on_filtered` is `OnException.RAISE`.
+        """
         # Parse input
         if right not in enum.CaseRightSet.CASE_SET.value:
             raise ValueError(f"Invalid case right for case set: {right}")
@@ -108,24 +114,25 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
                 # Not cached
                 # Determine if the case set is accessible from at least one of the data collections
                 cache[(case_type_id, data_collection_ids)] = False
-                if case_type_id not in case_abac.case_type_access_abacs:
-                    continue
-                case_abac_for_case_type = case_abac.case_type_access_abacs[case_type_id]
                 is_accessible = False
-                for data_collection_id in data_collection_ids:
-                    if data_collection_id not in case_abac_for_case_type:
-                        continue
-                    is_accessible = case_abac_for_case_type[
-                        data_collection_id
-                    ].is_allowed(right)
-                    if is_accessible:
-                        cache[(case_type_id, data_collection_ids)] = is_accessible
-                        break
+                if case_type_id in case_abac.case_type_access_abacs:
+                    case_abac_for_case_type = case_abac.case_type_access_abacs[
+                        case_type_id
+                    ]
+                    for data_collection_id in data_collection_ids:
+                        if data_collection_id not in case_abac_for_case_type:
+                            continue
+                        is_accessible = case_abac_for_case_type[
+                            data_collection_id
+                        ].is_allowed(right)
+                        if is_accessible:
+                            cache[(case_type_id, data_collection_ids)] = is_accessible
+                            break
             # If the case set is not accessible, handle according to the on_filtered policy
             if not is_accessible:
                 if on_filtered == OnException.SKIP:
                     continue
-                elif on_filtered == OnException.RAISE:
+                if on_filtered == OnException.RAISE:
                     user_id = self.get_command_user_id(cmd)
                     raise exc.UnauthorizedAuthError(
                         "dad1bec1",

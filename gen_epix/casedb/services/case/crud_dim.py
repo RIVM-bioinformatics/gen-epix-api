@@ -15,6 +15,11 @@ from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
+def _get_command_user_id(cmd: command.DimCrudCommand) -> UUID:
+    assert cmd.user is not None and cmd.user.id is not None
+    return cmd.user.id
+
+
 def case_service_crud_dim(
     self: BaseCaseService, cmd: command.DimCrudCommand
 ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
@@ -24,6 +29,7 @@ def case_service_crud_dim(
         pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
         if pdp.is_exempted(cmd):
             return _crud_dim_without_abac(self, uow, cmd)
+        assert cmd.user is not None and cmd.user.id is not None
         return _crud_dim_with_abac(self, uow, cmd)
 
 
@@ -113,7 +119,7 @@ def _verify_one_case_date_dim(
     """
     other_time_dims: list[model.Dim] = self.repository.crud(
         uow,
-        cmd.user.id,
+        _get_command_user_id(cmd),
         model.Dim,
         CrudOperation.READ_ALL,
         filter=self._compose_id_filter(("case_type_id", {dim.case_type_id})),
@@ -126,7 +132,7 @@ def _verify_one_case_date_dim(
             other.is_case_date_dim = False
             self.repository.crud(
                 uow,
-                cmd.user.id,
+                _get_command_user_id(cmd),
                 model.Dim,
                 CrudOperation.UPDATE_ONE,
                 objs=other,
@@ -154,7 +160,7 @@ def _validate_case_date_dim(
     ref_dim: model.RefDim | None = None
     ref_dim_list: list[model.RefDim] = self.repository.crud(
         uow,
-        cmd.user.id,
+        _get_command_user_id(cmd),
         model.RefDim,
         CrudOperation.READ_SOME,
         obj_ids=[dim.ref_dim_id],
@@ -234,7 +240,7 @@ def _load_existing_dims(
     """
     existing_dims: list[model.Dim] = self.repository.crud(
         uow,
-        cmd.user.id,
+        _get_command_user_id(cmd),
         model.Dim,
         CrudOperation.READ_ALL,
         filter=self._compose_id_filter(
@@ -339,7 +345,7 @@ def _get_existing_dim(
     """
     existing_list: list[model.Dim] = self.repository.crud(
         uow,
-        cmd.user.id,
+        _get_command_user_id(cmd),
         model.Dim,
         CrudOperation.READ_SOME,
         obj_ids=[updated.id],

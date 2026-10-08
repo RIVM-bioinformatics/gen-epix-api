@@ -3,12 +3,9 @@
 This is a simple metadata entity with no ABAC restrictions.
 """
 
-from typing import cast
 from uuid import UUID
 
-import gen_epix.casedb.domain.command as command
-import gen_epix.casedb.domain.model as model
-from gen_epix.casedb.domain import enum
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.policies.pdp import PolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
@@ -22,8 +19,22 @@ from gen_epix.filter.uuid_set import UuidSetFilter
 def case_service_crud_ref_dim(
     self: BaseCaseService, cmd: command.RefDimCrudCommand
 ) -> list[model.RefDim] | model.RefDim | list[UUID] | UUID | list[bool] | bool | None:
-    """Handle CRUD operations for RefDim entities."""
+    """Handle CRUD operations for reference-dimension entities.
 
+    Update operations ensure each dependent reference column remains compatible
+    with the dimension type.
+
+    Args:
+        self: Case service used for CRUD and repository operations.
+        cmd: Reference-dimension CRUD command to execute.
+
+    Returns:
+        The result produced by the requested CRUD operation.
+
+    Raises:
+        InvalidArgumentsError: If the operation is unsupported or an update would
+            make a dependent reference column incompatible.
+    """
     if cmd.is_read():
         pdp: PolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
         if pdp.is_exempted(cmd):
@@ -44,9 +55,9 @@ def case_service_crud_ref_dim(
     # Perform some validation on UPDATE
     if cmd.is_update():
         ref_dims: list[model.RefDim] = cmd.get_objs()  # type: ignore[assignment]
-        ref_dim_ids = [cast(UUID, x.id) for x in ref_dims if x.id is not None]
+        ref_dim_ids = [x.id for x in ref_dims if x.id is not None]
         ref_dim_map: dict[UUID, model.RefDim] = {
-            cast(UUID, x.id): x for x in ref_dims
+            x.id: x for x in ref_dims if x.id is not None
         }  # type: ignore[assignment]
         with self.repository.uow() as uow:
             # Get RefCols
@@ -69,7 +80,7 @@ def case_service_crud_ref_dim(
                     invalid_ref_dims.append(ref_dim)
             if invalid_ref_dims:
                 invalid_ref_dim_ids = list(
-                    {cast(UUID, x.id) for x in invalid_ref_dims if x.id is not None}
+                    {x.id for x in invalid_ref_dims if x.id is not None}
                 )
                 raise exc.InvalidArgumentsError(
                     "7ad7a294",
