@@ -16,7 +16,7 @@ sqlalchemy_utils==0.42.1
 alembic==1.20.0
 
 # Data models/handling
-pydantic==2.13.5
+pydantic==2.14.0
 ulid-py==1.1.0
 
 # configuration handling
