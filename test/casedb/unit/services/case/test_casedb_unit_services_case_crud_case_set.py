@@ -275,16 +275,13 @@ class TestDeleteAllOperation(BaseCrudTestCase):
 class TestDeleteSomeOperation(BaseCrudTestCase):
     """Tests for delete-some operation with ABAC policy."""
 
-    @pytest.mark.skip(reason="Requires fixing")
     def test_delete_some_allowed_calls_crud(self) -> None:
-        # 1. Input
-        ids: list[UUID] = [uuid4(), uuid4()]
-        cmd: Mock = self.create_crud_command(
-            operation=CrudOperation.DELETE_SOME, ids=ids, set_user_none=True
-        )
-
-        # 2. Mocks
         case_sets: list[Mock] = self.create_case_sets(2)
+        ids = [case_set.id for case_set in case_sets]
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.DELETE_SOME, ids=ids
+        )
+        cmd.is_delete_all = Mock(return_value=False)
         self.service.repository.crud.return_value = case_sets  # type: ignore[attr-defined]
         dc_map: dict[UUID, set[UUID]] = {
             case_sets[0].id: {uuid4()},
@@ -293,7 +290,7 @@ class TestDeleteSomeOperation(BaseCrudTestCase):
         self.service._retrieve_case_set_data_collections_map.return_value = dc_map  # type: ignore[attr-defined]
         case_abac: Mock = self.create_case_abac(allowed=True)
         expected_result: bool = True
-        self.service.repository.crud.return_value = expected_result  # type: ignore[attr-defined]
+        self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
         self.service.app.pdp.is_exempted.return_value = False  # ABAC path
         with (
             patch(
@@ -310,20 +307,18 @@ class TestDeleteSomeOperation(BaseCrudTestCase):
 
             # 4. Verify
             assert retval is expected_result
-            # repository read to get case sets
-            self.service.repository.crud.assert_called_once()  # type: ignore[attr-defined]
-            args, kwargs = self.service.repository.crud.call_args  # type: ignore[attr-defined]
-            assert args[0] is self.uow
-            assert args[1] == None
-            assert args[2] is casedb_model.CaseSet
-            assert args[3] is None
-            assert (
-                kwargs.get("obj_ids") == ids or args[4] == ids
-            )  # support positional/keyword in mock
-            assert args[-1] == CrudOperation.READ_SOME
-            # data collections map retrieval
-            self.service._retrieve_case_set_data_collections_map.assert_called_once()  # type: ignore[attr-defined]
+            self.service.repository.crud.assert_called_once_with(  # type: ignore[attr-defined]
+                self.uow,
+                cmd.user.id,
+                casedb_model.CaseSet,
+                CrudOperation.READ_SOME,
+                obj_ids=ids,
+            )
+            self.service._retrieve_case_set_data_collections_map.assert_called_once_with(  # type: ignore[attr-defined]
+                self.uow, cmd.user.id, case_set_ids=ids
+            )
             self.service.crud.assert_called_once_with(cmd)  # type: ignore[attr-defined]
+            assert case_abac.is_allowed.call_count == 2
 
     def test_delete_some_unauthorized_raises(self) -> None:
         # 1. Input

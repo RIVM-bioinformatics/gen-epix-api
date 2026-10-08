@@ -25,6 +25,14 @@ class _ConcretePolicyDecisionPoint(BasePolicyDecisionPoint):
     ) -> bool:
         return True
 
+    def is_writable_columns_for_data_collections(
+        self,
+        complete_case_type: model.CompleteCaseType,
+        data_collection_ids: frozenset[UUID],
+        col_ids: frozenset[UUID],
+    ) -> bool:
+        return True
+
     def filter_case_set_ids(
         self,
         cmd: command.CaseSetCrudCommand,

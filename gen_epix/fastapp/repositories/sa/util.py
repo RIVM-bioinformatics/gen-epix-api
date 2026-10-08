@@ -199,68 +199,83 @@ def create_sa_type_from_field_info(
         type_ = get_type_from_annotation(annotation)
     else:
         type_ = field_info.return_type
-    if isinstance(type_, TypeVar):  # type: ignore[unreachable]
-        type_ = cast(type, type_.__bound__)  # type: ignore[unreachable]
-        if type_ is IntEnum:
-            type_ = int
-        elif type_ is Enum:
-            type_ = str
-        else:
-            raise NotImplementedError(f"Unsupported TypeVar bound for field: {type_}")
-
-    def _create_sa_type(sa_type_class: type[TypeEngine]) -> TypeEngine:
-        # Get column kwargs for this type, overridden by kwargs
-        """Create sa type."""
-        new_kwargs = (
-            get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
-        )
-        # Special case: String without length becomes Text
-        if sa_type_class is sa.String and "length" not in new_kwargs:
-            sa_type_class = sa.Text
-            new_kwargs = (
-                get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
-            )
-        # Special case: Unicode without length becomes UnicodeText
-        if sa_type_class is sa.Unicode and "length" not in new_kwargs:
-            sa_type_class = sa.UnicodeText
-            new_kwargs = (
-                get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
-            )
-        # Special case: Unicode/String longer than the maximum allowed column length becomes an unbounded text type.
-        if (
-            sa_type_class is sa.Unicode
-            and cast(int, new_kwargs["length"]) > max_unicode_column_length
-        ):
-            sa_type_class = sa.UnicodeText
-            override_kwargs = dict(kwargs)
-            override_kwargs.pop("length", None)
-            new_kwargs = (
-                get_sa_type_kwargs_from_field_info(sa_type_class, field_info)
-                | override_kwargs
-            )
-        if (
-            sa_type_class is sa.String
-            and cast(int, new_kwargs["length"]) > max_ascii_column_length
-        ):
-            sa_type_class = sa.Text
-            override_kwargs = dict(kwargs)
-            override_kwargs.pop("length", None)
-            new_kwargs = (
-                get_sa_type_kwargs_from_field_info(sa_type_class, field_info)
-                | override_kwargs
-            )
-        return sa_type_class(**new_kwargs)
+    type_ = _resolve_field_typevar(type_)
 
     if issubclass(type_, Enum):
         # Special case: construct from type itself
         return sa.Enum(type_)
     if type_ in PYTHON_SQL_TYPE_MAP:
-        return _create_sa_type(PYTHON_SQL_TYPE_MAP[type_])
+        return _create_sa_type(
+            PYTHON_SQL_TYPE_MAP[type_],
+            field_info,
+            max_unicode_column_length,
+            max_ascii_column_length,
+            kwargs,
+        )
     if issubclass(type_, BaseModel):
         # Special case: pydantic models as JSON
-        return _create_sa_type(sa.JSON)
+        return _create_sa_type(
+            sa.JSON,
+            field_info,
+            max_unicode_column_length,
+            max_ascii_column_length,
+            kwargs,
+        )
 
     raise NotImplementedError(f"Unsupported field type: {type_}")
+
+
+def _resolve_field_typevar(type_: Any) -> Any:
+    """Resolve supported TypeVar bounds into their SQL type equivalents."""
+    if not isinstance(type_, TypeVar):  # type: ignore[unreachable]
+        return type_
+    type_ = cast(type, type_.__bound__)  # type: ignore[unreachable]
+    if type_ is IntEnum:
+        return int
+    if type_ is Enum:
+        return str
+    raise NotImplementedError(f"Unsupported TypeVar bound for field: {type_}")
+
+
+def _create_sa_type(
+    sa_type_class: type[TypeEngine],
+    field_info: FieldInfo | ComputedFieldInfo,
+    max_unicode_column_length: int,
+    max_ascii_column_length: int,
+    kwargs: dict[str, Any],
+) -> TypeEngine:
+    """Construct a SQLAlchemy type with field metadata and length fallbacks."""
+    new_kwargs = get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
+    if sa_type_class is sa.String and "length" not in new_kwargs:
+        return sa.Text(
+            **(get_sa_type_kwargs_from_field_info(sa.Text, field_info) | kwargs)
+        )
+    if sa_type_class is sa.Unicode and "length" not in new_kwargs:
+        return sa.UnicodeText(
+            **(get_sa_type_kwargs_from_field_info(sa.UnicodeText, field_info) | kwargs)
+        )
+    if (
+        sa_type_class is sa.Unicode
+        and cast(int, new_kwargs["length"]) > max_unicode_column_length
+    ):
+        override_kwargs = dict(kwargs)
+        override_kwargs.pop("length", None)
+        unicode_text_kwargs = (
+            get_sa_type_kwargs_from_field_info(sa.UnicodeText, field_info)
+            | override_kwargs
+        )
+        return sa.UnicodeText(**unicode_text_kwargs)
+    if (
+        sa_type_class is sa.String
+        and cast(int, new_kwargs["length"]) > max_ascii_column_length
+    ):
+        override_kwargs = dict(kwargs)
+        override_kwargs.pop("length", None)
+        text_kwargs = (
+            get_sa_type_kwargs_from_field_info(sa.Text, field_info) | override_kwargs
+        )
+        return sa.Text(**text_kwargs)
+    return sa_type_class(**new_kwargs)
 
 
 def get_sa_type_kwargs_from_field_info(

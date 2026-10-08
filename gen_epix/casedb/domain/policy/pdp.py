@@ -47,6 +47,26 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
         raise NotImplementedError()
 
     @abstractmethod
+    def is_writable_columns_for_data_collections(
+        self,
+        complete_case_type: model.CompleteCaseType,
+        data_collection_ids: frozenset[UUID],
+        col_ids: frozenset[UUID],
+    ) -> bool:
+        """Check if the specified columns are writable for the data collections.
+
+        Args:
+            complete_case_type: The complete case type associated with the case.
+            data_collection_ids: The data collections associated with the case.
+            col_ids: The column IDs to check for write access.
+
+        Returns:
+            True if every requested column is writable in at least one supplied
+            data collection, or if no columns were requested and collections exist.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def filter_case_set_ids(
         self,
         cmd: command.CaseSetCrudCommand,

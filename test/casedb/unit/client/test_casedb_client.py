@@ -9,6 +9,7 @@ guards against route/model drift between the API and the Client handler.
 from __future__ import annotations
 
 import base64
+import datetime
 import json
 from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any
@@ -18,6 +19,7 @@ import pytest
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.services.client import CasedbClient
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
@@ -213,6 +215,33 @@ class TestNonCrudHandlers:
             "datetime_range_filter": None,
         }
         assert result == [model.CaseStats(**data[0])]
+
+    def test_retrieve_case_stats_by_case_set_forwards_datetime_filter(
+        self, app: CasedbClient, mock_client: Any
+    ) -> None:
+        case_set_id = uuid4()
+        datetime_range_filter = DatetimeRangeFilter(
+            lower_bound=datetime.datetime(2024, 1, 1, tzinfo=datetime.UTC),
+            upper_bound=datetime.datetime(2024, 2, 1, tzinfo=datetime.UTC),
+        )
+        cmd = command.RetrieveCaseSetStatsCommand(
+            user=None,
+            case_set_ids={case_set_id},
+            datetime_range_filter=datetime_range_filter,
+        )
+        data: list[dict[str, str]] = []
+        mock_client.request.return_value = _mock_response(data)
+
+        result = app.retrieve_case_set_stats(cmd)
+
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert json_body == {
+            "case_set_ids": [str(case_set_id)],
+            "datetime_range_filter": json.loads(
+                datetime_range_filter.model_dump_json()
+            ),
+        }
+        assert result == []
 
     def test_retrieve_cases_by_id(self, app: CasedbClient, mock_client: Any) -> None:
         case_type_id = uuid4()

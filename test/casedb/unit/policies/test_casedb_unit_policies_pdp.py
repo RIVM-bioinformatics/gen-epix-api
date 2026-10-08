@@ -61,51 +61,95 @@ def test_is_allowed_rejects_unsupported_command(pdp: PolicyDecisionPoint) -> Non
 
 
 @pytest.mark.parametrize(
-    ("data_collection_ids", "col_ids", "expected"),
+    ("method_name", "data_collection_ids", "col_ids", "expected"),
     [
-        (frozenset(), frozenset(), False),
-        (frozenset({uuid4()}), frozenset(), True),
+        ("is_readable_columns_for_data_collections", frozenset(), frozenset(), False),
+        (
+            "is_readable_columns_for_data_collections",
+            frozenset({uuid4()}),
+            frozenset(),
+            True,
+        ),
+        ("is_writable_columns_for_data_collections", frozenset(), frozenset(), False),
+        (
+            "is_writable_columns_for_data_collections",
+            frozenset({uuid4()}),
+            frozenset(),
+            True,
+        ),
     ],
-    ids=["no-data-collections", "no-columns"],
+    ids=[
+        "read-no-data-collections",
+        "read-no-columns",
+        "write-no-data-collections",
+        "write-no-columns",
+    ],
 )
-def test_is_readable_columns_empty_inputs(
+def test_column_access_empty_inputs(
     pdp: PolicyDecisionPoint,
+    method_name: str,
     data_collection_ids: frozenset,
     col_ids: frozenset,
     expected: bool,
 ) -> None:
     complete_case_type = Mock()
 
-    assert (
-        pdp.is_readable_columns_for_data_collections(
-            complete_case_type, data_collection_ids, col_ids
-        )
-        is expected
-    )
+    method = getattr(pdp, method_name)
+    assert method(complete_case_type, data_collection_ids, col_ids) is expected
 
 
-def test_is_readable_columns_uses_union_of_collection_rights(
+@pytest.mark.parametrize(
+    ("method_name", "access_right", "access_attr"),
+    [
+        (
+            "is_readable_columns_for_data_collections",
+            enum.CaseRight.READ_CASE,
+            "read_col_ids",
+        ),
+        (
+            "is_writable_columns_for_data_collections",
+            enum.CaseRight.WRITE_CASE,
+            "write_col_ids",
+        ),
+    ],
+    ids=["read", "write"],
+)
+def test_column_access_uses_union_of_collection_rights(
     pdp: PolicyDecisionPoint,
+    method_name: str,
+    access_right: enum.CaseRight,
+    access_attr: str,
 ) -> None:
     first_collection_id = uuid4()
     second_collection_id = uuid4()
     first_col_id = uuid4()
     second_col_id = uuid4()
     complete_case_type = Mock()
+    first_access = Mock()
+    setattr(first_access, access_attr, {first_col_id})
+    second_access = Mock()
+    setattr(second_access, access_attr, {second_col_id})
     complete_case_type.case_type_access_abacs = {
-        first_collection_id: Mock(read_col_ids={first_col_id}),
-        second_collection_id: Mock(read_col_ids={second_col_id}),
+        first_collection_id: first_access,
+        second_collection_id: second_access,
     }
+    method = getattr(pdp, method_name)
 
-    assert pdp.is_readable_columns_for_data_collections(
+    assert method(
         complete_case_type,
         frozenset({first_collection_id, second_collection_id}),
         frozenset({first_col_id, second_col_id}),
     )
-    assert not pdp.is_readable_columns_for_data_collections(
+    assert not method(
         complete_case_type,
         frozenset({first_collection_id}),
         frozenset({first_col_id, second_col_id}),
+    )
+    assert PolicyDecisionPoint._are_columns_accessible_for_data_collections(
+        complete_case_type,
+        frozenset({first_collection_id, second_collection_id}),
+        frozenset({first_col_id, second_col_id}),
+        access_right,
     )
 
 

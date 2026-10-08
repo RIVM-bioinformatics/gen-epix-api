@@ -223,42 +223,53 @@ def add_parent_class_docs(
     elif not isinstance(exclude, set):
         exclude = set(x for x in exclude)
     exclude.add(object)
-    # Handle list of classes: collect all bases and create directed acyclic graph of
-    # inheritance. Then update docstrings in DAG order.
     if isinstance(cls, set):
-        # Collect all parent classes
-        class_bases_map: dict[type, set[type]] = {}
-        for curr_class in cls:
-            classes_to_process = [curr_class]
-            while classes_to_process:
-                curr_class = classes_to_process.pop()
-                if curr_class in class_bases_map:
-                    continue
-                parent_classes = tuple(
-                    x for x in curr_class.__bases__ if x not in exclude
-                )
-                class_bases_map[curr_class] = set(parent_classes)
-                classes_to_process.extend(parent_classes)
-        # Create DAG order
-        dag_order: list[type] = []
-        processed_classes: set[type] = set()
-        while len(processed_classes) < len(class_bases_map):
-            for curr_class, parents in class_bases_map.items():
-                if curr_class in processed_classes:
-                    continue
-                if all(x in processed_classes for x in parents):
-                    dag_order.append(curr_class)
-                    processed_classes.add(curr_class)
-        # Update docstrings in DAG order
+        class_bases_map = _collect_class_bases(cls, exclude)
+        dag_order = _order_classes_by_parent(class_bases_map)
         for curr_class in dag_order:
             if len(class_bases_map[curr_class]) == 0:
                 continue
             add_parent_class_docs(curr_class, exclude=exclude)
         return None
-    # Single class
+
+    return _add_single_class_parent_docs(cls, exclude)
+
+
+def _collect_class_bases(cls: set[type], exclude: set[type]) -> dict[type, set[type]]:
+    """Collect each included class and its included direct parents."""
+    class_bases_map: dict[type, set[type]] = {}
+    for root_class in cls:
+        classes_to_process = [root_class]
+        while classes_to_process:
+            current_class = classes_to_process.pop()
+            if current_class in class_bases_map:
+                continue
+            parent_classes = tuple(
+                parent for parent in current_class.__bases__ if parent not in exclude
+            )
+            class_bases_map[current_class] = set(parent_classes)
+            classes_to_process.extend(parent_classes)
+    return class_bases_map
+
+
+def _order_classes_by_parent(class_bases_map: dict[type, set[type]]) -> list[type]:
+    """Return classes in an order where each included parent precedes its child."""
+    dag_order: list[type] = []
+    processed_classes: set[type] = set()
+    while len(processed_classes) < len(class_bases_map):
+        for current_class, parents in class_bases_map.items():
+            if current_class in processed_classes:
+                continue
+            if all(parent in processed_classes for parent in parents):
+                dag_order.append(current_class)
+                processed_classes.add(current_class)
+    return dag_order
+
+
+def _add_single_class_parent_docs(cls: type, exclude: set[type]) -> str | None:
+    """Append eligible direct-parent documentation to one class."""
     doc = cls.__doc__
-    parent_classes = cls.__bases__
-    parent_classes = tuple(x for x in parent_classes if x not in exclude)
+    parent_classes = tuple(parent for parent in cls.__bases__ if parent not in exclude)
     parent_docs = []
     for parent_class in parent_classes:
         parent_doc = parent_class.__doc__

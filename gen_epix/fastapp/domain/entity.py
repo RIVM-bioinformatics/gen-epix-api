@@ -2,7 +2,7 @@
 
 import re
 import uuid
-from collections.abc import Callable, Hashable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from enum import Enum
 from functools import partial
 from typing import Any, ClassVar, Self, cast
@@ -791,6 +791,24 @@ class Entity(BaseModel):
         return cls.CAMEL_TO_SNAKE_CASE_PATTERN.sub("_", value).lower()
 
     @classmethod
+    def _add_dependency_edges(
+        cls,
+        entity: Self,
+        links: Iterable[Link | MultiLink],
+        entity_set: set[Self],
+        adjacency: dict[Self, list[Self]],
+        in_degree: dict[Self, int],
+    ) -> None:
+        """Add edges from linked entities that are part of the sort input."""
+        for link in links:
+            linked_entity = link.link_model_class.ENTITY
+            if linked_entity in entity_set:
+                # entity depends on linked_entity,
+                # so linked_entity should come first
+                adjacency[linked_entity].append(entity)
+                in_degree[entity] += 1
+
+    @classmethod
     def topological_sort(
         cls, entities: list[Self], on_cycle: OnException
     ) -> list[Self]:
@@ -809,22 +827,14 @@ class Entity(BaseModel):
         for entity in entities:
             # For each link in the entity, add dependency if the linked
             # entity is in the filtered set
-            for link in entity.links.values():
-                linked_entity = link.link_model_class.ENTITY
-                if linked_entity in entity_set:
-                    # entity depends on linked_entity,
-                    # so linked_entity should come first
-                    adjacency[linked_entity].append(entity)
-                    in_degree[entity] += 1
+            cls._add_dependency_edges(
+                entity, entity.links.values(), entity_set, adjacency, in_degree
+            )
             # For each multi-link in the entity, add dependency if the linked
             # entity is in the filtered set
-            for multi_link in entity.multi_links:
-                linked_entity = multi_link.link_model_class.ENTITY
-                if linked_entity in entity_set:
-                    # entity depends on linked_entity,
-                    # so linked_entity should come first
-                    adjacency[linked_entity].append(entity)
-                    in_degree[entity] += 1
+            cls._add_dependency_edges(
+                entity, entity.multi_links, entity_set, adjacency, in_degree
+            )
 
         # Kahn's algorithm for topological sort
         queue = [x for x in entities if in_degree[x] == 0]

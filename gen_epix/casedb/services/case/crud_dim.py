@@ -75,11 +75,11 @@ def _crud_create_dim(
 ) -> None:
     """Validate dimensions and assign deterministic occurrences for creation.
 
-    - Check if other Dims for the same CaseType and RefDim exist
-    - Check if is_time_stats_dim or is_geo_stats_dim is True
-        and that the linked RefDim is of correct type
-    - Check if another Dim for the same CaseType has
-        is_time_stats_dim or is_geo_stats_dim set to True
+    - Assign occurrences after the highest existing occurrence for each
+        CaseType and RefDim pair
+    - Require case-date Dims to link to a RefDim of type TIME
+    - Ensure each CaseType has at most one case-date Dim, unsetting any
+        existing case-date Dim when necessary
 
     Occurrence assignment is O(n log n): dims are pre-grouped by
     (case_type_id, ref_dim_id), existing dims are loaded once per group,

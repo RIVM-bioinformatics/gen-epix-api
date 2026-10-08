@@ -27,7 +27,7 @@ from gen_epix.util import copy_model_field
 
 
 class CaseTypeSetCaseTypeUpdateAssociationRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.CaseTypeSetCaseTypeUpdateAssociationCommand.__doc__
     case_type_set_members: list[model.CaseTypeSetMember] = copy_model_field(
@@ -38,7 +38,7 @@ class CaseTypeSetCaseTypeUpdateAssociationRequestBody(PydanticBaseModel):
 
 
 class ColSetColUpdateAssociationRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.ColSetColUpdateAssociationCommand.__doc__
     col_set_members: list[model.ColSetMember] = copy_model_field(
@@ -49,7 +49,7 @@ class ColSetColUpdateAssociationRequestBody(PydanticBaseModel):
 
 
 class CreateCaseSetRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.CreateCaseSetCommand.__doc__
     case_set: model.CaseSet = copy_model_field(command.CreateCaseSetCommand, "case_set")
@@ -66,7 +66,7 @@ class CreateCaseSetRequestBody(PydanticBaseModel):
 
 
 class UpdateCaseCreatedInDataCollectionRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.UpdateCaseCreatedInDataCollectionCommand.__doc__
     case_ids: list[UUID] = copy_model_field(
@@ -81,7 +81,7 @@ class UpdateCaseCreatedInDataCollectionRequestBody(PydanticBaseModel):
 
 
 class RetrieveCaseRightsRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveCaseRightsCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -95,7 +95,7 @@ class RetrieveCaseRightsRequestBody(PydanticBaseModel):
 
 
 class RetrieveCasesByIdRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveCasesByIdCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -109,7 +109,7 @@ class RetrieveCasesByIdRequestBody(PydanticBaseModel):
 
 
 class RetrieveCaseCohortLinksByCaseTypeRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveCaseCohortLinksByCaseTypeCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -118,7 +118,7 @@ class RetrieveCaseCohortLinksByCaseTypeRequestBody(PydanticBaseModel):
 
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrievePhylogeneticTreeByCasesCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -139,7 +139,7 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveSeqDistancesByCasesRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveSeqDistancesByCasesCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -159,7 +159,7 @@ class RetrieveSeqDistancesByCasesRequestBody(PydanticBaseModel):
 
 
 class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveSimilarCasesCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -179,13 +179,13 @@ class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
 
 
 class RetrieveSimilarCasesResponseBody(command.RetrieveSimilarCasesReturnValue):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveSimilarCasesReturnValue.__doc__
 
 
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveCaseTypeStatsCommand.__doc__
     case_type_ids: set[UUID] | None = copy_model_field(
@@ -199,7 +199,7 @@ class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
 
 
 class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveCaseSetStatsCommand.__doc__
     case_set_ids: set[UUID] | None = copy_model_field(
@@ -213,7 +213,7 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
 
 
 class CreateFileForReadSetRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.CreateFileForReadSetCommand.__doc__
     file_content: str = Field(
@@ -232,7 +232,7 @@ class CreateFileForReadSetRequestBody(PydanticBaseModel):
 
 
 class CreateFileForSeqRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.CreateFileForSeqCommand.__doc__
     file_content: str = Field(

@@ -171,7 +171,7 @@ class TestClientCredentialsEndToEnd:
                     "body": request.content.decode(),
                 }
             )
-            return httpx.Response(200, json={"access_token": token})
+            return httpx.Response(200, json={"access_token": token, "expires_in": 3600})
 
         def factory(**kwargs: Any) -> httpx.Client:
             records.append({"client_kwargs": kwargs})

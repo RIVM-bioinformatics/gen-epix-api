@@ -24,6 +24,8 @@ from gen_epix.omopdb.domain.model.omop.base import (
 from gen_epix.omopdb.domain.model.omop.clinical_data import Person
 from gen_epix.omopdb.domain.model.omop.ontology import Concept
 
+_NO_OMOP_GUIDANCE_DESCRIPTION = "User guidance:\nNone\nETL conventions:\nNone"
+
 
 class ConditionEra(Model, DataLineageMixin):
     """A Condition Era is defined as a span of time when the Person is assumed to
@@ -57,9 +59,9 @@ class ConditionEra(Model, DataLineageMixin):
         ),
     )
     condition_era_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
-    person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    person_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     condition_concept_id: UUID = Field(
         description="User guidance:\nThe Concept Id representing the Condition.\nETL conventions:\nNone"
     )
@@ -103,9 +105,9 @@ class DrugEra(Model, DataLineageMixin):
         ),
     )
     drug_era_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
-    person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    person_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     drug_concept_id: UUID = Field(
         description="User guidance:\nThe drug_concept_id should conform to the concept class 'ingredient' as the drug_era is an era of time where a person is exposed to a particular drug ingredient.\nETL conventions:\nNone"
     )
@@ -161,9 +163,9 @@ class DoseEra(Model, DataLineageMixin):
         ),
     )
     dose_era_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
-    person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    person_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     drug_concept_id: UUID = Field(
         description="User guidance:\nThe Concept Id representing the specific drug ingredient.\nETL conventions:\nNone"
     )
@@ -264,16 +266,10 @@ class Cohort(Model):
             }
         ),
     )
-    cohort_definition_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    subject_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
-    cohort_start_date: date = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    cohort_end_date: date = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
+    cohort_definition_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    subject_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    cohort_start_date: date = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    cohort_end_date: date = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     cohort_id: UUID | None = Field(
         default=None,
         description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",

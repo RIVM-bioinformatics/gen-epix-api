@@ -23,6 +23,8 @@ from gen_epix.omopdb.domain.model.omop.base import (
 from gen_epix.omopdb.domain.model.omop.clinical_data import Person
 from gen_epix.omopdb.domain.model.omop.ontology import Concept, Domain
 
+_NO_OMOP_GUIDANCE_DESCRIPTION = "User guidance:\nNone\nETL conventions:\nNone"
+
 
 class PayerPlanPeriod(Model, DataLineageMixin):
     """The PAYER_PLAN_PERIOD table captures details of the period of time that a Person is continuously enrolled under a specific health Plan benefit structure from a given Payer. Each Person receiving healthcare is typically covered by a health benefit plan, which pays for (fully or partially), or directly provides, the care. These benefit plans are provided by payers, such as health insurances or state or government agencies. In each plan the details of the health benefits are defined for the Person or her family, and the health benefit Plan might change over time typically with increasing utilization (reaching certain cost thresholds such as deductibles), plan availability and purchasing choices of the Person. The unique combinations of Payer organizations, health benefit Plans and time periods in which they are valid for a Person are recorded in this table."""
@@ -160,61 +162,55 @@ class Cost(Model, DataLineageMixin):
         ),
     )
     cost_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
-    cost_event_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    cost_domain_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    cost_type_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
+    cost_event_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    cost_domain_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    cost_type_concept_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     currency_concept_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     total_charge: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     total_cost: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     total_paid: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     paid_by_payer: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     paid_by_patient: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     paid_patient_copay: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     paid_patient_coinsurance: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     paid_patient_deductible: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     paid_by_primary: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     paid_ingredient_cost: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     paid_dispensing_fee: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     payer_plan_period_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     amount_allowed: float | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     revenue_code_concept_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     revenue_code_source_value: str | None = Field(
         default=None,
@@ -222,7 +218,7 @@ class Cost(Model, DataLineageMixin):
         max_length=50,
     )
     drg_concept_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     drg_source_value: str | None = Field(
         default=None,

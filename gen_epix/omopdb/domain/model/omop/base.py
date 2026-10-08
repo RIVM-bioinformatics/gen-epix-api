@@ -86,6 +86,8 @@ def validate_int_key_args(data: Any, uuid_field_name: str, int_field_name: str) 
         raise ValueError("Input is not a dict")
     uuid_id = data.get(uuid_field_name)
     int_id = data.get(int_field_name)
+    if isinstance(uuid_id, bool) or isinstance(int_id, bool):
+        raise ValueError("Boolean values are not valid integer identifiers")
     if isinstance(uuid_id, int) and int_id is None:
         # int_id provided as uuid_id -> switch
         int_id = uuid_id
@@ -128,6 +130,10 @@ def validate_int_for_uuid_field(value: Any | None) -> UUID | None:
         return None
     if isinstance(value, UUID):
         return value
+    if isinstance(value, bool):
+        raise ValueError(
+            f"Value must be a UUID, integer or a string: {value} (class {type(value)})"
+        )
     if isinstance(value, int):
         return int_to_uuid(value)
     if isinstance(value, str):

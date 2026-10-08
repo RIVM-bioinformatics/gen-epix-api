@@ -64,6 +64,36 @@ class LicensesResponseBody(PydanticBaseModel):
     packages: list[PackageMetadata]
 
 
+def _handle_system_command(
+    app: App,
+    handle_exception: Callable[[str, Any, Exception], NoReturn],
+    error_code: str,
+    cmd: Command,
+    user: Any = None,
+) -> Any:
+    """Dispatch a system command and forward failures to the API adapter."""
+    try:
+        return app.handle(cmd)
+    except Exception as exception:
+        handle_exception(error_code, user, exception)
+
+
+def _log_external_items(app: App, user: Any, request_body: LogRequestBody) -> None:
+    """Normalize and emit externally submitted log items."""
+    user_id = str(user.id)
+    for log_item in request_body.log_items:
+        if isinstance(log_item.detail, str):
+            log_item.detail = json.loads(log_item.detail)
+        content_str = app.create_log_message(
+            log_item.command_id,
+            None,
+            add_debug_info=False,
+            user_id=user_id,
+            **log_item.model_dump(exclude_none=True, exclude={"level", "command_id"}),
+        )
+        external_logger_fmap[log_item.level](content_str)
+
+
 def create_system_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -117,15 +147,16 @@ def create_system_endpoints(
     )
     async def retrieve__feature_flags() -> FeatureFlagsResponseBody:
         """Return the application's feature flags."""
-        try:
-            cmd = command.RetrieveFeatureFlagsCommand(user=None)
-            feature_flags: dict[Hashable, bool] = app.handle(cmd)
-            retval = {
-                str(x.value) if isinstance(x, Enum) else str(x): y
-                for x, y in feature_flags.items()
-            }
-        except Exception as exception:
-            handle_exception("f8e8c5e6", None, exception)
+        feature_flags: dict[Hashable, bool] = _handle_system_command(
+            app,
+            handle_exception,
+            "f8e8c5e6",
+            command.RetrieveFeatureFlagsCommand(user=None),
+        )
+        retval = {
+            str(x.value) if isinstance(x, Enum) else str(x): y
+            for x, y in feature_flags.items()
+        }
         return FeatureFlagsResponseBody(feature_flags=retval)
 
     # Licenses endpoint
@@ -149,11 +180,12 @@ def create_system_endpoints(
         Raises:
             HTTPException: If license retrieval raises an application exception.
         """
-        try:
-            cmd = command.RetrieveLicensesCommand(user=None)
-            retval: list[model.PackageMetadata] = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("6ba2c4ca", None, exception)
+        retval: list[model.PackageMetadata] = _handle_system_command(
+            app,
+            handle_exception,
+            "6ba2c4ca",
+            command.RetrieveLicensesCommand(user=None),
+        )
         return retval
 
     # Log
@@ -161,20 +193,7 @@ def create_system_endpoints(
     async def log(user: registered_user_dependency, request_body: LogRequestBody) -> None:  # type: ignore
         """Log the provided log items."""
         try:
-            user_id = str(user.id)  # type: ignore[attr-defined]
-            for log_item in request_body.log_items:
-                if isinstance(log_item.detail, str):
-                    log_item.detail = json.loads(log_item.detail)
-                content_str = app.create_log_message(
-                    log_item.command_id,
-                    None,
-                    add_debug_info=False,
-                    user_id=user_id,
-                    **log_item.model_dump(
-                        exclude_none=True, exclude={"level", "command_id"}
-                    ),
-                )
-                external_logger_fmap[log_item.level](content_str)
+            _log_external_items(app, user, request_body)
         except Exception as exception:
             handle_exception("09c8e2cd", user, exception)
 
@@ -189,11 +208,12 @@ def create_system_endpoints(
         idp_user: idp_user_dependency,  # type: ignore
     ) -> list[model.Outage]:
         """Retrieve configured system outage records."""
-        try:
-            cmd = command.RetrieveOutagesCommand(user=None)
-            retval: list[model.Outage] = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("6b47b8b6", None, exception)
+        retval: list[model.Outage] = _handle_system_command(
+            app,
+            handle_exception,
+            "6b47b8b6",
+            command.RetrieveOutagesCommand(user=None),
+        )
         return retval
 
     # Optional endpoints depending on feature flags

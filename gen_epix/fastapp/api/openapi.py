@@ -81,14 +81,18 @@ def fix_schema_nullable_and_single_element(schema: dict) -> None:
     for key in keys:
         if key in {"anyOf"}:
             # Search for presence of type: null in list
-            for i, value in enumerate(schema[key]):
-                has_null = value == {"type": "null"}
-                if has_null:
-                    break
-            if not has_null:
+            null_index = next(
+                (
+                    index
+                    for index, value in enumerate(schema[key])
+                    if value == {"type": "null"}
+                ),
+                None,
+            )
+            if null_index is None:
                 continue
             # Remove type: null from list
-            del schema[key][i]  # pylint: disable=undefined-loop-variable
+            del schema[key][null_index]
 
             # In case only 1 remaining item in list,
             # move it one level higher and remove anyOf key

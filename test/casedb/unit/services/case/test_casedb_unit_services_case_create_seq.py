@@ -1,25 +1,7 @@
-"""Unit tests for gen_epix.casedb.services.case.create_seq module.
-
-Comprehensive test suite for the create_seq.py module in gen_epix.casedb.services.case.
-Tests cover the following key functions:
-1. case_service_create_file_for_read_set_or_seq - Creates files for ReadSets or Seqs
-2. _get_cases_for_create_file_for_read_sets_or_seqs - Helper function for validation and ABAC
-
-Test Categories:
-- Success scenarios for creating ReadSets and Seqs
-- File creation for both forward and reverse reads
-- Error handling for invalid inputs and authorization failures
-- ABAC (Attribute-Based Access Control) validation
-- Edge cases with empty inputs and mismatched types
-- Integration scenarios with multiple objects
-
-Coverage: 100% line coverage with 21 test cases
-"""
-
 import gzip
 import hashlib
-from test.util.mock_compat import Mock, patch
-from typing import Any
+from contextlib import nullcontext
+from test.util.mock_compat import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -31,683 +13,274 @@ import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.enum as seqdb_enum
 import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import exc
+from gen_epix.casedb.services.case import create_seq
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.casedb.services.case.create_seq import (
-    case_service_create_file_for_read_set_or_seq,
-)
 from gen_epix.fastapp import CrudOperation
 
+_FILE_CONTENT = b"test file content"
+
+
+def _make_command(
+    command_type: type,
+    user: Mock,
+    content: bytes = _FILE_CONTENT,
+    compression: seqdb_enum.FileCompression = seqdb_enum.FileCompression.NONE,
+    is_fwd: bool = True,
+) -> Mock:
+    cmd = Mock(spec=command_type)
+    cmd.user = user
+    cmd.case_id = uuid4()
+    cmd.col_id = uuid4()
+    cmd.file_content = content
+    cmd.file_compression = compression
+    cmd.file_format = (
+        seqdb_enum.ReadsFileFormat.FASTQ
+        if command_type is command.CreateFileForReadSetCommand
+        else seqdb_enum.SeqFileFormat.FASTA
+    )
+    if command_type is command.CreateFileForReadSetCommand:
+        cmd.is_fwd = is_fwd
+    return cmd
+
 
 @pytest.fixture
-def mock_user() -> Mock:
-    """Create a mock user for testing."""
-    user = Mock(spec=model.User)
-    user.id = uuid4()
-    return user
+def user() -> Mock:
+    result = Mock(spec=model.User)
+    result.id = uuid4()
+    return result
 
 
 @pytest.fixture
-def mock_repository() -> Mock:
-    """Create a mock repository for testing."""
-    repository = Mock()
-    repository.uow.return_value.__enter__ = Mock()
-    repository.uow.return_value.__exit__ = Mock(return_value=False)
-    repository.crud = Mock()
-    return repository
-
-
-@pytest.fixture
-def mock_service(mock_user: Mock, mock_repository: Mock) -> Mock:
-    """Create a mock BaseCaseService for testing."""
+def service_context(user: Mock) -> tuple[Mock, Mock, Mock, Mock, UUID]:
     service = Mock(spec=BaseCaseService)
-    service._get_user_and_repository.return_value = (mock_user, mock_repository)
+    repository = Mock()
+    service._get_user_and_repository.return_value = (user, repository)
+    service.repository = repository
     service.app = Mock()
-    service.app.handle = Mock()
-    service.app.pdp = Mock()
-    service.app.pdp.is_readable_columns_for_data_collections = Mock(return_value=True)
-    service.repository = mock_repository
-    service.repository.read_fields = Mock(return_value=[])
-    service.retrieve_complete_case_type = Mock()
-    service._retrieve_case_data_collections_map = Mock()
-    service._logger = Mock()
-    return service
+    unit_of_work = object()
+    repository.uow.return_value = nullcontext(unit_of_work)
+
+    data_collection_id = uuid4()
+    case = Mock(spec=model.Case)
+    case.id = uuid4()
+    case.case_type_id = uuid4()
+    case.created_in_data_collection_id = data_collection_id
+    case.content = {}
+    repository.crud.return_value = case
+    repository.read_fields.return_value = []
+
+    service.app.pdp.is_writable_columns_for_data_collections.return_value = True
+    service.app.pdp.get_case_abac.return_value.is_full_access = False
+
+    complete_case_type = Mock(spec=model.CompleteCaseType)
+    service.retrieve_complete_case_type.return_value = complete_case_type
+    return service, repository, case, complete_case_type, data_collection_id
 
 
-@pytest.fixture
-def mock_case_abac() -> Mock:
-    """Create a mock CaseAbac for testing."""
-    case_abac = Mock(spec=model.CaseAbac)
-    case_abac.is_full_access = True
-    case_abac.get_data_collections_with_access_right_for_col = Mock()
-    return case_abac
+def _configure_column_type(
+    complete_case_type: Mock, col_id: UUID, col_type: enum.ColType
+) -> None:
+    ref_col_id = uuid4()
+    col = Mock(spec=model.Col)
+    col.ref_col_id = ref_col_id
+    ref_col = Mock(spec=model.RefCol)
+    ref_col.col_type = col_type
+    complete_case_type.cols = {col_id: col}
+    complete_case_type.ref_cols = {ref_col_id: ref_col}
 
 
-@pytest.fixture
-def sample_case_read_sets() -> list[Mock]:
-    """Create sample CaseReadSet objects for testing."""
-    case_id = uuid4()
-    col_id = uuid4()
-    read_set = Mock(spec=model.ReadSetForUpload)
-    read_set.id = uuid4()
+@pytest.mark.parametrize(
+    ("command_type", "expected_col_type", "crud_command_type"),
+    [
+        (
+            command.CreateFileForReadSetCommand,
+            enum.ColType.GENETIC_READS,
+            seqdb_command.ReadSetCrudCommand,
+        ),
+        (
+            command.CreateFileForSeqCommand,
+            enum.ColType.GENETIC_SEQUENCE,
+            seqdb_command.SeqCrudCommand,
+        ),
+    ],
+    ids=["read-set", "sequence"],
+)
+@pytest.mark.parametrize("is_full_access", [False, True])
+def test_service_creates_file_for_authorized_genetic_column(
+    service_context: tuple[Mock, Mock, Mock, Mock, UUID],
+    user: Mock,
+    command_type: type,
+    expected_col_type: enum.ColType,
+    crud_command_type: type,
+    is_full_access: bool,
+) -> None:
+    service, repository, case, complete_case_type, data_collection_id = service_context
+    service.app.pdp.get_case_abac.return_value.is_full_access = is_full_access
+    cmd = _make_command(command_type, user)
+    linked_entity_id = uuid4()
+    case.content = {cmd.col_id: str(linked_entity_id)}
+    _configure_column_type(complete_case_type, cmd.col_id, expected_col_type)
+    linked_entity = (
+        Mock(spec=seqdb_model.ReadSet)
+        if command_type is command.CreateFileForReadSetCommand
+        else Mock(spec=seqdb_model.Seq)
+    )
+    if command_type is command.CreateFileForReadSetCommand:
+        linked_entity.fwd_file_id = None
+        linked_entity.fwd_reads_hash = None
+        linked_entity.rev_file_id = None
+        linked_entity.rev_reads_hash = None
+    else:
+        linked_entity.file_id = None
+        linked_entity.file_hash = None
+    created_file_id = uuid4()
 
-    case_read_set = Mock(spec=model.ReadSetForUpload)
-    case_read_set.case_id = case_id
-    case_read_set.col_id = col_id
-    case_read_set.read_set = read_set
+    def handle_side_effect(seqdb_cmd: object) -> UUID | Mock:
+        if isinstance(seqdb_cmd, seqdb_command.CreateFileCommand):
+            return created_file_id
+        if isinstance(seqdb_cmd, crud_command_type):
+            return linked_entity
+        raise AssertionError(f"Unexpected command: {seqdb_cmd}")
 
-    return [case_read_set]
+    service.app.handle.side_effect = handle_side_effect
 
+    result = create_seq.case_service_create_file_for_read_set_or_seq(service, cmd)
 
-@pytest.fixture
-def sample_case_seqs() -> list[Mock]:
-    """Create sample CaseSeq objects for testing."""
-    case_id = uuid4()
-    col_id = uuid4()
-    seq = Mock(spec=model.SeqForUpload)
-    seq.id = uuid4()
-
-    case_seq = Mock(spec=model.SeqForUpload)
-    case_seq.case_id = case_id
-    case_seq.col_id = col_id
-    case_seq.seq = seq
-
-    return [case_seq]
-
-
-@pytest.mark.scenario_ids("TC-SEC-29-02")
-class TestCaseServiceCreateFileForReadSetOrSeq:
-    """Test case_service_create_file_for_read_set_or_seq function."""
-
-    def test_create_file_for_read_set_success(
-        self, mock_service: Mock, mock_user: Mock
-    ) -> None:
-        """Test successful creation of file for ReadSet."""
-        # Setup command
-        cmd = Mock(spec=command.CreateFileForReadSetCommand)
-        cmd.user = mock_user
-        cmd.case_id = uuid4()
-        cmd.col_id = uuid4()
-        cmd.file_content = b"test content"
-        cmd.is_fwd = True
-        cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
-        cmd.file_compression = seqdb_enum.FileCompression.NONE
-        cmd._policies = []
-
-        expected_fwd_reads_hash = UUID(
-            hashlib.sha256(cmd.file_content).digest()[:16].hex()
+    assert result == created_file_id
+    crud_call = repository.crud.call_args
+    assert crud_call.args[1:] == (user.id, model.Case, CrudOperation.READ_ONE)
+    assert crud_call.kwargs == {"obj_ids": cmd.case_id}
+    if is_full_access:
+        service.app.pdp.is_writable_columns_for_data_collections.assert_not_called()
+    else:
+        service.app.pdp.is_writable_columns_for_data_collections.assert_called_once_with(
+            complete_case_type,
+            frozenset({data_collection_id}),
+            frozenset({cmd.col_id}),
         )
-
-        # Setup case mock with proper ID
-        mock_case = Mock(spec=model.Case)
-        mock_case.id = uuid4()
-        mock_case.case_type_id = uuid4()
-        mock_case.created_in_data_collection_id = uuid4()
-        mock_case.content = {cmd.col_id: str(uuid4())}
-
-        # Setup ref_col mock
-        ref_col_id = uuid4()
-        mock_col = Mock()
-        mock_col.ref_col_id = ref_col_id
-        mock_ref_col = Mock()
-        mock_ref_col.col_type = enum.ColType.GENETIC_READS
-
-        # Setup complete case type mock
-        mock_complete_case_type = Mock()
-        mock_complete_case_type.cols = {cmd.col_id: mock_col}
-        mock_complete_case_type.ref_cols = {ref_col_id: mock_ref_col}
-
-        mock_read_set = Mock(spec=model.ReadSetForUpload)
-        mock_read_set.fwd_file_id = None
-        mock_read_set.rev_file_id = None
-
-        created_file = Mock(spec=seqdb_model.File)
-        created_file.id = uuid4()
-
-        with patch(
-            "gen_epix.casedb.domain.policy.BaseCaseAbacPolicy.get_case_abac_from_command"
-        ) as mock_get_abac:
-            mock_abac = Mock()
-            mock_get_abac.return_value = mock_abac
-
-            # Configure mocks
-            mock_service.repository.crud.return_value = mock_case
-            mock_service.repository.read_fields.return_value = []
-            mock_service.retrieve_complete_case_type.return_value = (
-                mock_complete_case_type
-            )
-            mock_service.app.pdp.is_readable_columns_for_data_collections.return_value = (
-                True
-            )
-
-            # Configure app.handle to return different objects based on call
-            def handle_side_effect(*args: Any, **kwargs: Any) -> Any:
-                cmd_arg = args[0]
-                if isinstance(cmd_arg, seqdb_command.ReadSetCrudCommand):
-                    if cmd_arg.operation == CrudOperation.READ_ONE:
-                        return mock_read_set
-                    else:  # UPDATE_ONE
-                        return mock_read_set
-                elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
-                    return created_file.id
-                return Mock()
-
-            mock_service.app.handle.side_effect = handle_side_effect
-
-            # Execute function
-            result = case_service_create_file_for_read_set_or_seq(mock_service, cmd)
-
-            # Verify results
-            assert result == created_file.id  # type: ignore[attr-defined]
-            assert mock_read_set.fwd_file_id == created_file.id  # type: ignore[attr-defined]
-            assert mock_read_set.fwd_reads_hash == expected_fwd_reads_hash
-            mock_service.app.pdp.is_readable_columns_for_data_collections.assert_called_once_with(
-                mock_complete_case_type,
-                frozenset({mock_case.created_in_data_collection_id}),
-                frozenset({cmd.col_id}),
-            )
-
-    def test_create_file_for_read_set_success_gzip_content(
-        self, mock_service: Mock, mock_user: Mock
-    ) -> None:
-        """Test successful creation of file for ReadSet with gzip compression."""
-        # Setup command
-        cmd = Mock(spec=command.CreateFileForReadSetCommand)
-        cmd.user = mock_user
-        cmd.case_id = uuid4()
-        cmd.col_id = uuid4()
-        cmd.file_content = gzip.compress(b"test content")
-        cmd.is_fwd = True
-        cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
-        cmd.file_compression = seqdb_enum.FileCompression.GZIP
-        cmd._policies = []
-
-        expected_fwd_reads_hash = UUID(
-            hashlib.sha256(gzip.decompress(cmd.file_content)).digest()[:16].hex()
-        )
-
-        # Setup case mock with proper ID
-        mock_case = Mock(spec=model.Case)
-        mock_case.id = uuid4()
-        mock_case.case_type_id = uuid4()
-        mock_case.created_in_data_collection_id = uuid4()
-        mock_case.content = {cmd.col_id: str(uuid4())}
-
-        # Setup ref_col mock
-        ref_col_id = uuid4()
-        mock_col = Mock()
-        mock_col.ref_col_id = ref_col_id
-        mock_ref_col = Mock()
-        mock_ref_col.col_type = enum.ColType.GENETIC_READS
-
-        # Setup complete case type mock
-        mock_complete_case_type = Mock()
-        mock_complete_case_type.cols = {cmd.col_id: mock_col}
-        mock_complete_case_type.ref_cols = {ref_col_id: mock_ref_col}
-
-        mock_read_set = Mock(spec=model.ReadSetForUpload)
-        mock_read_set.fwd_file_id = None
-        mock_read_set.rev_file_id = None
-
-        created_file = Mock(spec=seqdb_model.File)
-        created_file.id = uuid4()
-
-        with patch(
-            "gen_epix.casedb.domain.policy.BaseCaseAbacPolicy.get_case_abac_from_command"
-        ) as mock_get_abac:
-            mock_abac = Mock()
-            mock_get_abac.return_value = mock_abac
-
-            # Configure mocks
-            mock_service.repository.crud.return_value = mock_case
-            data_collection_id = uuid4()
-            mock_service.repository.read_fields.return_value = [(data_collection_id,)]
-            mock_service.retrieve_complete_case_type.return_value = (
-                mock_complete_case_type
-            )
-            mock_service.app.pdp.is_readable_columns_for_data_collections.return_value = (
-                True
-            )
-
-            # Configure app.handle to return different objects based on call
-            def handle_side_effect(*args: Any, **kwargs: Any) -> Any:
-                cmd_arg = args[0]
-                if isinstance(cmd_arg, seqdb_command.ReadSetCrudCommand):
-                    if cmd_arg.operation == CrudOperation.READ_ONE:
-                        return mock_read_set
-                    else:  # UPDATE_ONE
-                        return mock_read_set
-                elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
-                    return created_file.id
-                return Mock()
-
-            mock_service.app.handle.side_effect = handle_side_effect
-
-            # Execute function
-            result = case_service_create_file_for_read_set_or_seq(mock_service, cmd)
-
-            # Verify results
-            assert result == created_file.id  # type: ignore[attr-defined]
-            assert mock_read_set.fwd_file_id == created_file.id  # type: ignore[attr-defined]
-            assert mock_read_set.fwd_reads_hash == expected_fwd_reads_hash
-
-    def test_create_file_for_seq_success(
-        self, mock_service: Mock, mock_user: Mock
-    ) -> None:
-        """Test successful creation of file for Seq."""
-        # Setup command
-        cmd = Mock(spec=command.CreateFileForSeqCommand)
-        cmd.user = mock_user
-        cmd.case_id = uuid4()
-        cmd.col_id = uuid4()
-        cmd.file_content = b"test content"
-        cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
-        cmd.file_compression = seqdb_enum.FileCompression.NONE
-        cmd._policies = []
-
-        expected_file_hash = UUID(hashlib.sha256(cmd.file_content).digest()[:16].hex())
-
-        # Setup case mock with proper ID
-        mock_case = Mock(spec=model.Case)
-        mock_case.id = uuid4()
-        mock_case.case_type_id = uuid4()
-        mock_case.created_in_data_collection_id = uuid4()
-        mock_case.content = {cmd.col_id: str(uuid4())}
-
-        # Setup ref_col mock
-        ref_col_id = uuid4()
-        mock_col = Mock()
-        mock_col.ref_col_id = ref_col_id
-        mock_ref_col = Mock()
-        mock_ref_col.col_type = enum.ColType.GENETIC_SEQUENCE
-
-        # Setup complete case type mock
-        mock_complete_case_type = Mock()
-        mock_complete_case_type.cols = {cmd.col_id: mock_col}
-        mock_complete_case_type.ref_cols = {ref_col_id: mock_ref_col}
-
-        mock_seq = Mock(spec=model.SeqForUpload)
-        mock_seq.file_id = None
-
-        created_file = Mock(spec=seqdb_model.File)
-        created_file.id = uuid4()
-
-        with patch(
-            "gen_epix.casedb.domain.policy.BaseCaseAbacPolicy.get_case_abac_from_command"
-        ) as mock_get_abac:
-            mock_abac = Mock()
-            mock_get_abac.return_value = mock_abac
-
-            # Configure mocks
-            mock_service.repository.crud.return_value = mock_case
-            data_collection_id = uuid4()
-            mock_service.repository.read_fields.return_value = [(data_collection_id,)]
-            mock_service.retrieve_complete_case_type.return_value = (
-                mock_complete_case_type
-            )
-            mock_service.app.pdp.is_readable_columns_for_data_collections.return_value = (
-                True
-            )
-
-            # Configure app.handle to return different objects based on call
-            def handle_side_effect(*args: Any, **kwargs: Any) -> Any:
-                cmd_arg = args[0]
-                if isinstance(cmd_arg, seqdb_command.SeqCrudCommand):
-                    if cmd_arg.operation == CrudOperation.READ_ONE:
-                        return mock_seq
-                    else:  # UPDATE_ONE
-                        return mock_seq
-                elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
-                    return created_file.id
-                return Mock()
-
-            mock_service.app.handle.side_effect = handle_side_effect
-
-            # Execute function
-            result = case_service_create_file_for_read_set_or_seq(mock_service, cmd)
-
-            # Verify results
-            assert result == created_file.id  # type: ignore[attr-defined]
-            assert mock_seq.file_id == created_file.id  # type: ignore[attr-defined]
-            assert mock_seq.file_hash == expected_file_hash
-            mock_service.app.pdp.is_readable_columns_for_data_collections.assert_called_once_with(
-                mock_complete_case_type,
-                frozenset(
-                    {mock_case.created_in_data_collection_id, data_collection_id}
-                ),
-                frozenset({cmd.col_id}),
-            )
-
-    def test_create_file_for_seq_success_gzip_content(
-        self, mock_service: Mock, mock_user: Mock
-    ) -> None:
-        """Test successful creation of file for Seq with gzip compression."""
-        # Setup command
-        cmd = Mock(spec=command.CreateFileForSeqCommand)
-        cmd.user = mock_user
-        cmd.case_id = uuid4()
-        cmd.col_id = uuid4()
-        cmd.file_content = gzip.compress(b"test content")
-        cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
-        cmd.file_compression = seqdb_enum.FileCompression.GZIP
-        cmd._policies = []
-
-        expected_file_hash = UUID(
-            hashlib.sha256(gzip.decompress(cmd.file_content)).digest()[:16].hex()
-        )
-
-        # Setup case mock with proper ID
-        mock_case = Mock(spec=model.Case)
-        mock_case.id = uuid4()
-        mock_case.case_type_id = uuid4()
-        mock_case.created_in_data_collection_id = uuid4()
-        mock_case.content = {cmd.col_id: str(uuid4())}
-
-        # Setup ref_col mock
-        ref_col_id = uuid4()
-        mock_col = Mock()
-        mock_col.ref_col_id = ref_col_id
-        mock_ref_col = Mock()
-        mock_ref_col.col_type = enum.ColType.GENETIC_SEQUENCE
-
-        # Setup complete case type mock
-        mock_complete_case_type = Mock()
-        mock_complete_case_type.cols = {cmd.col_id: mock_col}
-        mock_complete_case_type.ref_cols = {ref_col_id: mock_ref_col}
-
-        mock_seq = Mock(spec=model.SeqForUpload)
-        mock_seq.file_id = None
-
-        created_file = Mock(spec=seqdb_model.File)
-        created_file.id = uuid4()
-
-        with patch(
-            "gen_epix.casedb.domain.policy.BaseCaseAbacPolicy.get_case_abac_from_command"
-        ) as mock_get_abac:
-            mock_abac = Mock()
-            mock_get_abac.return_value = mock_abac
-
-            # Configure mocks
-            mock_service.repository.crud.return_value = mock_case
-            data_collection_id = uuid4()
-            mock_service.repository.read_fields.return_value = [(data_collection_id,)]
-            mock_service.retrieve_complete_case_type.return_value = (
-                mock_complete_case_type
-            )
-            mock_service.app.pdp.is_readable_columns_for_data_collections.return_value = (
-                True
-            )
-
-            # Configure app.handle to return different objects based on call
-            def handle_side_effect(*args: Any, **kwargs: Any) -> Any:
-                cmd_arg = args[0]
-                if isinstance(cmd_arg, seqdb_command.SeqCrudCommand):
-                    if cmd_arg.operation == CrudOperation.READ_ONE:
-                        return mock_seq
-                    else:  # UPDATE_ONE
-                        return mock_seq
-                elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
-                    return created_file.id
-                return Mock()
-
-            mock_service.app.handle.side_effect = handle_side_effect
-
-            # Execute function
-            result = case_service_create_file_for_read_set_or_seq(mock_service, cmd)
-
-            # Verify results
-            assert result == created_file.id  # type: ignore[attr-defined]
-            assert mock_seq.file_id == created_file.id  # type: ignore[attr-defined]
-            assert mock_seq.file_hash == expected_file_hash
-
-    def test_missing_case_content_raises_error(
-        self, mock_service: Mock, mock_user: Mock
-    ) -> None:
-        """Test that missing case content raises InvalidArgumentsError."""
-        cmd = Mock(spec=command.CreateFileForReadSetCommand)
-        cmd.user = mock_user
-        cmd.case_id = uuid4()
-        cmd.col_id = uuid4()
-        cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
-        cmd.file_compression = seqdb_enum.FileCompression.NONE
-        cmd._policies = []
-
-        mock_case = Mock(spec=model.Case)
-        mock_case.id = uuid4()
-        mock_case.case_type_id = uuid4()
-        mock_case.created_in_data_collection_id = uuid4()
-        mock_case.content = {}  # Missing the required col_id
-
-        # Setup ref_col mock
-        ref_col_id = uuid4()
-        mock_col = Mock()
-        mock_col.ref_col_id = ref_col_id
-        mock_ref_col = Mock()
-        mock_ref_col.col_type = enum.ColType.GENETIC_READS
-
-        # Setup complete case type mock
-        mock_complete_case_type = Mock()
-        mock_complete_case_type.cols = {cmd.col_id: mock_col}
-        mock_complete_case_type.ref_cols = {ref_col_id: mock_ref_col}
-
-        with patch(
-            "gen_epix.casedb.domain.policy.BaseCaseAbacPolicy.get_case_abac_from_command"
-        ):
-            mock_service.repository.crud.return_value = mock_case
-            data_collection_id = uuid4()
-            mock_service.repository.read_fields.return_value = [(data_collection_id,)]
-            mock_service.retrieve_complete_case_type.return_value = (
-                mock_complete_case_type
-            )
-            mock_service.app.pdp.is_readable_columns_for_data_collections.return_value = (
-                True
-            )
-
-            with pytest.raises(
-                exc.InvalidArgumentsError,
-                match="No ReadSet linked to case for Col",
-            ):
-                case_service_create_file_for_read_set_or_seq(mock_service, cmd)
-
-    def test_read_set_already_has_forward_file(
-        self, mock_service: Mock, mock_user: Mock
-    ) -> None:
-        """Test error when ReadSet already has forward file with different content."""
-        cmd = Mock(spec=command.CreateFileForReadSetCommand)
-        cmd.user = mock_user
-        cmd.case_id = uuid4()
-        cmd.col_id = uuid4()
-        cmd.is_fwd = True
-        cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
-        cmd.file_compression = seqdb_enum.FileCompression.NONE
-        cmd.file_content = b"test content"
-        cmd._policies = []
-
-        mock_case = Mock(spec=model.Case)
-        mock_case.id = uuid4()
-        mock_case.case_type_id = uuid4()
-        mock_case.created_in_data_collection_id = uuid4()
-        mock_case.content = {cmd.col_id: str(uuid4())}
-
-        # Setup ref_col mock
-        ref_col_id = uuid4()
-        mock_col = Mock()
-        mock_col.ref_col_id = ref_col_id
-        mock_ref_col = Mock()
-        mock_ref_col.col_type = enum.ColType.GENETIC_READS
-
-        # Setup complete case type mock
-        mock_complete_case_type = Mock()
-        mock_complete_case_type.cols = {cmd.col_id: mock_col}
-        mock_complete_case_type.ref_cols = {ref_col_id: mock_ref_col}
-
-        mock_read_set = Mock(spec=model.ReadSetForUpload)
-        mock_read_set.fwd_file_id = uuid4()  # Already has file
-        mock_read_set.fwd_reads_hash = UUID(
-            hashlib.sha256(b"other content1").digest()[:16].hex()
-        )
-
-        with patch(
-            "gen_epix.casedb.domain.policy.BaseCaseAbacPolicy.get_case_abac_from_command"
-        ):
-            mock_service.repository.crud.return_value = mock_case
-            data_collection_id = uuid4()
-            mock_service.repository.read_fields.return_value = [(data_collection_id,)]
-            mock_service.retrieve_complete_case_type.return_value = (
-                mock_complete_case_type
-            )
-            mock_service.app.pdp.is_readable_columns_for_data_collections.return_value = (
-                True
-            )
-
-            def handle_side_effect(*args: Any, **kwargs: Any) -> Any:
-                cmd_arg = args[0]
-                if isinstance(cmd_arg, seqdb_command.ReadSetCrudCommand):
-                    if cmd_arg.operation == CrudOperation.READ_ONE:
-                        return mock_read_set
-                return Mock()
-
-            mock_service.app.handle.side_effect = handle_side_effect
-
-            with pytest.raises(
-                exc.InvalidArgumentsError,
-                match="already has a forward file linked",
-            ):
-                case_service_create_file_for_read_set_or_seq(mock_service, cmd)
-
-    def test_seq_already_has_file(self, mock_service: Mock, mock_user: Mock) -> None:
-        """Test error when Seq already has file with different content."""
-        cmd = Mock(spec=command.CreateFileForSeqCommand)
-        cmd.user = mock_user
-        cmd.case_id = uuid4()
-        cmd.col_id = uuid4()
-        cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
-        cmd.file_compression = seqdb_enum.FileCompression.NONE
-        cmd.file_content = b"test content"
-        cmd._policies = []
-
-        mock_case = Mock(spec=model.Case)
-        mock_case.id = uuid4()
-        mock_case.case_type_id = uuid4()
-        mock_case.created_in_data_collection_id = uuid4()
-        mock_case.content = {cmd.col_id: str(uuid4())}
-
-        # Setup ref_col mock
-        ref_col_id = uuid4()
-        mock_col = Mock()
-        mock_col.ref_col_id = ref_col_id
-        mock_ref_col = Mock()
-        mock_ref_col.col_type = enum.ColType.GENETIC_SEQUENCE
-
-        # Setup complete case type mock
-        mock_complete_case_type = Mock()
-        mock_complete_case_type.cols = {cmd.col_id: mock_col}
-        mock_complete_case_type.ref_cols = {ref_col_id: mock_ref_col}
-
-        mock_seq = Mock(spec=model.SeqForUpload)
-        mock_seq.file_id = uuid4()  # Already has file
-        mock_seq.file_hash = UUID(hashlib.sha256(b"other content1").digest()[:16].hex())
-
-        with patch(
-            "gen_epix.casedb.domain.policy.BaseCaseAbacPolicy.get_case_abac_from_command"
-        ):
-            mock_service.repository.crud.return_value = mock_case
-            data_collection_id = uuid4()
-            mock_service.repository.read_fields.return_value = [(data_collection_id,)]
-            mock_service.retrieve_complete_case_type.return_value = (
-                mock_complete_case_type
-            )
-            mock_service.app.pdp.is_readable_columns_for_data_collections.return_value = (
-                True
-            )
-
-            def handle_side_effect(*args: Any, **kwargs: Any) -> Any:
-                cmd_arg = args[0]
-                if isinstance(cmd_arg, seqdb_command.SeqCrudCommand):
-                    if cmd_arg.operation == CrudOperation.READ_ONE:
-                        return mock_seq
-                return Mock()
-
-            mock_service.app.handle.side_effect = handle_side_effect
-
-            with pytest.raises(
-                exc.InvalidArgumentsError, match="already has a file linked"
-            ):
-                case_service_create_file_for_read_set_or_seq(mock_service, cmd)
-
-    def test_seq_reuploading_same_content_returns_existing_file(
-        self, mock_service: Mock, mock_user: Mock
-    ) -> None:
-        """Test that an identical Seq upload is handled idempotently."""
-        cmd = Mock(spec=command.CreateFileForSeqCommand)
-        cmd.user = mock_user
-        cmd.case_id = uuid4()
-        cmd.col_id = uuid4()
-        cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
-        cmd.file_compression = seqdb_enum.FileCompression.NONE
-        cmd.file_content = b"same sequence content"
-        cmd._policies = []
-
-        file_hash = UUID(hashlib.sha256(cmd.file_content).digest()[:16].hex())
-
-        mock_case = Mock(spec=model.Case)
-        mock_case.id = uuid4()
-        mock_case.case_type_id = uuid4()
-        mock_case.created_in_data_collection_id = uuid4()
-        mock_case.content = {cmd.col_id: str(uuid4())}
-
-        # Setup ref_col mock
-        ref_col_id = uuid4()
-        mock_col = Mock()
-        mock_col.ref_col_id = ref_col_id
-        mock_ref_col = Mock()
-        mock_ref_col.col_type = enum.ColType.GENETIC_SEQUENCE
-
-        # Setup complete case type mock
-        mock_complete_case_type = Mock()
-        mock_complete_case_type.cols = {cmd.col_id: mock_col}
-        mock_complete_case_type.ref_cols = {ref_col_id: mock_ref_col}
-
-        existing_file_id = uuid4()
-        mock_seq = Mock(spec=model.SeqForUpload)
-        mock_seq.file_id = existing_file_id
-        mock_seq.file_hash = file_hash
-
-        with patch(
-            "gen_epix.casedb.domain.policy.BaseCaseAbacPolicy.get_case_abac_from_command"
-        ):
-            mock_service.repository.crud.return_value = mock_case
-            data_collection_id = uuid4()
-            mock_service.repository.read_fields.return_value = [(data_collection_id,)]
-            mock_service.retrieve_complete_case_type.return_value = (
-                mock_complete_case_type
-            )
-            mock_service.app.pdp.is_readable_columns_for_data_collections.return_value = (
-                True
-            )
-
-            def handle_side_effect(*args: Any, **kwargs: Any) -> Any:
-                cmd_arg = args[0]
-                if isinstance(cmd_arg, seqdb_command.SeqCrudCommand):
-                    if cmd_arg.operation == CrudOperation.READ_ONE:
-                        return mock_seq
-                return Mock()
-
-            mock_service.app.handle.side_effect = handle_side_effect
-
-            result = case_service_create_file_for_read_set_or_seq(mock_service, cmd)
-
-            assert result == existing_file_id
-            # Verify that SeqCrudCommand READ_ONE was called
-            calls = [
-                c
-                for c in mock_service.app.handle.call_args_list
-                if isinstance(c[0][0], seqdb_command.SeqCrudCommand)
-            ]
-            assert any(c[0][0].operation == CrudOperation.READ_ONE for c in calls)
-
-    def test_invalid_command_type_raises_error(self, mock_service: Mock) -> None:
-        """Test that invalid command type raises InvalidArgumentsError."""
-        cmd = Mock()  # Not a valid command type
-
-        with pytest.raises(exc.InvalidArgumentsError, match="Invalid command type"):
-            case_service_create_file_for_read_set_or_seq(mock_service, cmd)
+    assert service.app.handle.call_count == 3
+
+
+def test_service_rejects_upload_without_write_access(
+    service_context: tuple[Mock, Mock, Mock, Mock, UUID], user: Mock
+) -> None:
+    service, _, case, complete_case_type, _ = service_context
+    cmd = _make_command(command.CreateFileForSeqCommand, user)
+    case.content = {cmd.col_id: str(uuid4())}
+    _configure_column_type(
+        complete_case_type, cmd.col_id, enum.ColType.GENETIC_SEQUENCE
+    )
+    # Deny the column-level WRITE_CASE check for this non-full-access user.
+    service.app.pdp.is_writable_columns_for_data_collections.return_value = False
+
+    with pytest.raises(exc.UnauthorizedAuthError, match="no WRITE_CASE access"):
+        create_seq.case_service_create_file_for_read_set_or_seq(service, cmd)
+
+    service.app.handle.assert_not_called()
+
+
+def test_service_rejects_wrong_genetic_column_type(
+    service_context: tuple[Mock, Mock, Mock, Mock, UUID], user: Mock
+) -> None:
+    service, _, _, complete_case_type, _ = service_context
+    cmd = _make_command(command.CreateFileForReadSetCommand, user)
+    # Wrong type for ReadSets.
+    _configure_column_type(complete_case_type, cmd.col_id, enum.ColType.TEXT)
+
+    with pytest.raises(exc.InvalidArgumentsError, match="Column type mismatch"):
+        create_seq.case_service_create_file_for_read_set_or_seq(service, cmd)
+
+
+def test_service_rejects_missing_case_content(
+    service_context: tuple[Mock, Mock, Mock, Mock, UUID], user: Mock
+) -> None:
+    service, _, _, complete_case_type, _ = service_context
+    cmd = _make_command(command.CreateFileForReadSetCommand, user)
+    # Missing the required col_id from case content.
+    _configure_column_type(complete_case_type, cmd.col_id, enum.ColType.GENETIC_READS)
+
+    with pytest.raises(exc.InvalidArgumentsError, match="No ReadSet linked"):
+        create_seq.case_service_create_file_for_read_set_or_seq(service, cmd)
+
+
+def test_read_set_file_creation_updates_selected_direction(user: Mock) -> None:
+    service = Mock(spec=BaseCaseService)
+    service.app = Mock()
+    cmd = _make_command(command.CreateFileForReadSetCommand, user, is_fwd=False)
+    read_set = Mock(spec=seqdb_model.ReadSet)
+    read_set.rev_file_id = None
+    read_set.rev_reads_hash = None
+    read_set.fwd_file_id = None
+    read_set.fwd_reads_hash = None
+    created_file_id = uuid4()
+    service.app.handle.side_effect = [read_set, created_file_id, read_set]
+
+    result = create_seq._update_read_set_with_file(service, cmd, uuid4())
+
+    expected_hash = UUID(hashlib.sha256(_FILE_CONTENT).digest()[:16].hex())
+    assert result == created_file_id
+    assert read_set.rev_file_id == created_file_id
+    assert read_set.rev_reads_hash == expected_hash
+    assert read_set.fwd_file_id is None
+    assert read_set.file_format == cmd.file_format
+
+
+def test_read_set_identical_reupload_is_idempotent(user: Mock) -> None:
+    service = Mock(spec=BaseCaseService)
+    service.app = Mock()
+    cmd = _make_command(command.CreateFileForReadSetCommand, user)
+    existing_file_id = uuid4()
+    read_set = Mock(spec=seqdb_model.ReadSet)
+    # Already has a forward file with the uploaded content's hash.
+    read_set.fwd_file_id = existing_file_id
+    read_set.fwd_reads_hash = UUID(hashlib.sha256(_FILE_CONTENT).digest()[:16].hex())
+    service.app.handle.return_value = read_set
+
+    assert (
+        create_seq._update_read_set_with_file(service, cmd, uuid4()) == existing_file_id
+    )
+    service.app.handle.assert_called_once()
+
+
+def test_seq_rejects_different_content_for_existing_file(user: Mock) -> None:
+    service = Mock(spec=BaseCaseService)
+    service.app = Mock()
+    cmd = _make_command(command.CreateFileForSeqCommand, user)
+    seq = Mock(spec=seqdb_model.Seq)
+    # Already has a file with a different content hash.
+    seq.file_id = uuid4()
+    seq.file_hash = UUID(hashlib.sha256(b"different content").digest()[:16].hex())
+    service.app.handle.return_value = seq
+
+    with pytest.raises(exc.InvalidArgumentsError, match="different content"):
+        create_seq._update_seq_with_file(service, cmd, uuid4())
+
+    service.app.handle.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("content", "compression", "uncompressed"),
+    [
+        (_FILE_CONTENT, seqdb_enum.FileCompression.NONE, _FILE_CONTENT),
+        (
+            gzip.compress(_FILE_CONTENT),
+            seqdb_enum.FileCompression.GZIP,
+            _FILE_CONTENT,
+        ),
+    ],
+    ids=["uncompressed", "gzip"],
+)
+def test_hash_uses_uncompressed_content(
+    content: bytes,
+    compression: seqdb_enum.FileCompression,
+    uncompressed: bytes,
+) -> None:
+    # Gzip input is decompressed before calculating the hash.
+    result = create_seq._get_hash_uuid(content, compression)
+
+    assert result == UUID(hashlib.sha256(uncompressed).digest()[:16].hex())
+
+
+def test_hash_rejects_unsupported_compression() -> None:
+    with pytest.raises(ValueError, match="Unsupported compression"):
+        create_seq._get_hash_uuid(_FILE_CONTENT, None)  # type: ignore[arg-type]

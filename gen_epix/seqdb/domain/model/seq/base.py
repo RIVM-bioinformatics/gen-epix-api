@@ -42,6 +42,8 @@ def decode_ascii_from_gzip_base64(value: str) -> str:
     """Decode a gzip-compressed base64 string."""
     try:
         compressed = base64.b64decode(value.encode("ascii"), validate=True)
+        if not compressed:
+            raise ValueError("Value is not a valid base64-encoded gzip archive")
         return gzip.decompress(compressed).decode("ascii")
     except (
         UnicodeEncodeError,
@@ -247,94 +249,97 @@ class BaseSeq(Model):
         if possible. The sequence hash is stored in the id field that must be present in
         the class making use of the mixin.
         """
-        # Initialize some
         seq_hash = self.id
         orig_seq = self.seq
-
-        # Verify sequence hash, seq and length depending on seq_format
         if self.seq_format in enum.SeqFormatSet.DNA_AS_STR.value:
-            alphabet = (
-                enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP
-                if self.seq_format in enum.SeqFormatSet.GAP.value
-                else enum.SeqAlphabet.DNA_INCL_AMBIGUOUS
+            computed_length, computed_seq_hash = self._get_dna_sequence_metadata(
+                orig_seq
             )
-            if self.seq_format in enum.SeqFormatSet.DNA_AS_STR_GZB64.value:
-                # Decode the sequence from gzip base64 if it is in a compressed format
-                # The sequence may have been provided in non-compressed format as well, in which case is will be converted into that format
-                compress_seq = False
-                try:
-                    uncompressed_seq = decode_ascii_from_gzip_base64(orig_seq)
-                except ValueError:
-                    uncompressed_seq = self.seq
-                    compress_seq = True
-                seq = uncompressed_seq.lower()
-                if not compress_seq and seq != uncompressed_seq:
-                    # Provided compressed sequence was not in lowercase, need to compress it again
-                    compress_seq = True
-                invalid_chars = set(seq) - alphabet.value
-                if invalid_chars:
-                    raise ValueError(
-                        f"Sequence contains invalid characters for {self.seq_format.value} format: {"".join(sorted(invalid_chars))}"
-                    )
-                computed_length = len(seq)
-                computed_seq_hash = self.get_seq_hash(seq)
-                if compress_seq:
-                    # Compress (again) only when needed for performance
-                    self.seq = encode_ascii_as_gzip_base64(seq)
-            elif self.seq_format in enum.SeqFormatSet.DNA_AS_STR.value:
-                seq = orig_seq.lower()
-                invalid_chars = set(seq) - alphabet.value
-                if invalid_chars:
-                    raise ValueError(
-                        f"Sequence contains invalid characters for {self.seq_format.value} format: {"".join(sorted(invalid_chars))}"
-                    )
-                computed_length = len(seq)
-                computed_seq_hash = self.get_seq_hash(seq)
-                self.seq = seq
-            else:
-                raise ValueError(
-                    f"Unsupported sequence format: {self.seq_format.value}"
-                )
-            if self.length == 0:
-                # Set the length if it hasn't been set yet
-                self.length = computed_length
         elif self.seq_format == enum.SeqFormat.NEXTCLADE:
-            # Parse compact NextClade notation for a single sequence
-            nextclade_seq: dict[str, Any] = json.loads(self.seq)
-            # Validate required fields
-            missing_keys = [
-                x for x in REQUIRED_NEXTCLADE_SEQ_KEYS if x not in nextclade_seq
-            ]
-            if missing_keys:
-                raise ValueError(
-                    f"Missing required NextClade sequence fields: {missing_keys}"
-                )
-            # Derive alignment length from the reported alignment bounds
-            computed_length = (
-                nextclade_seq["alignment_end"] - nextclade_seq["alignment_start"] + 1
+            computed_length, computed_seq_hash = self._get_nextclade_sequence_metadata(
+                orig_seq, seq_hash
             )
-            if computed_length <= 0:
-                raise ValueError(
-                    "alignment_end must be greater than or equal to alignment_start"
-                )
-            # seq_hash cannot be computed at this stage, since it requires the reference sequence, it can only be verified that a value is provided
-            if seq_hash is None:
-                raise ValueError(
-                    f"Unable to calculate sequence hash for seq_format {self.seq_format.value}"
-                )
-            computed_seq_hash = seq_hash
         elif self.seq_format == enum.SeqFormat.HASH_ONLY:
-            if seq_hash is None:
-                raise ValueError(
-                    f"Unable to calculate sequence hash for seq_format {self.seq_format.value}"
-                )
-            computed_seq_hash = seq_hash
-            computed_length = self.length
+            computed_length, computed_seq_hash = self._get_hash_only_metadata(seq_hash)
         else:
             raise NotImplementedError(
                 f"Sequence format {self.seq_format.value} is not supported for length and hash computation"
             )
-        # Set or verify length
+
+        self._set_or_verify_length(computed_length)
+        self._set_or_verify_hash(seq_hash, computed_seq_hash)
+        return self
+
+    def _get_dna_sequence_metadata(self, orig_seq: str) -> tuple[int, UUID]:
+        """Normalize, validate, and hash a plain or compressed DNA sequence."""
+        alphabet = (
+            enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP
+            if self.seq_format in enum.SeqFormatSet.GAP.value
+            else enum.SeqAlphabet.DNA_INCL_AMBIGUOUS
+        )
+        if self.seq_format in enum.SeqFormatSet.DNA_AS_STR_GZB64.value:
+            # Decode compressed sequence when possible; plain input is compressed below.
+            compress_seq = False
+            try:
+                uncompressed_seq = decode_ascii_from_gzip_base64(orig_seq)
+            except ValueError:
+                uncompressed_seq = self.seq
+                compress_seq = True
+            seq = uncompressed_seq.lower()
+            if not compress_seq and seq != uncompressed_seq:
+                compress_seq = True
+        elif self.seq_format in enum.SeqFormatSet.DNA_AS_STR.value:
+            seq = orig_seq.lower()
+            compress_seq = False
+        else:
+            raise ValueError(f"Unsupported sequence format: {self.seq_format.value}")
+        invalid_chars = set(seq) - alphabet.value
+        if invalid_chars:
+            raise ValueError(
+                f"Sequence contains invalid characters for {self.seq_format.value} format: {''.join(sorted(invalid_chars))}"
+            )
+        if compress_seq:
+            # Compress (again) only when needed for performance.
+            self.seq = encode_ascii_as_gzip_base64(seq)
+        elif self.seq_format not in enum.SeqFormatSet.DNA_AS_STR_GZB64.value:
+            self.seq = seq
+        return len(seq), self.get_seq_hash(seq)
+
+    def _get_nextclade_sequence_metadata(
+        self, orig_seq: str, seq_hash: UUID | None
+    ) -> tuple[int, UUID]:
+        """Validate compact NextClade metadata and retain its supplied hash."""
+        nextclade_seq: dict[str, Any] = json.loads(orig_seq)
+        missing_keys = [
+            key for key in REQUIRED_NEXTCLADE_SEQ_KEYS if key not in nextclade_seq
+        ]
+        if missing_keys:
+            raise ValueError(
+                f"Missing required NextClade sequence fields: {missing_keys}"
+            )
+        computed_length = (
+            nextclade_seq["alignment_end"] - nextclade_seq["alignment_start"] + 1
+        )
+        if computed_length <= 0:
+            raise ValueError(
+                "alignment_end must be greater than or equal to alignment_start"
+            )
+        if seq_hash is None:
+            raise ValueError(
+                f"Unable to calculate sequence hash for seq_format {self.seq_format.value}"
+            )
+        return computed_length, seq_hash
+
+    def _get_hash_only_metadata(self, seq_hash: UUID | None) -> tuple[int, UUID]:
+        """Require an existing hash for sequence records without sequence data."""
+        if seq_hash is None:
+            raise ValueError(
+                f"Unable to calculate sequence hash for seq_format {self.seq_format.value}"
+            )
+        return self.length, seq_hash
+
+    def _set_or_verify_length(self, computed_length: int) -> None:
+        """Set an omitted length or reject a mismatch with the computed length."""
         if self.length == 0:
             if computed_length == 0:
                 raise ValueError("Unable to calculate sequence length")
@@ -343,14 +348,17 @@ class BaseSeq(Model):
             raise ValueError(
                 f"Provided length does not match computed length: {self.length} != {computed_length}"
             )
-        # Set or verify seq_hash
+
+    def _set_or_verify_hash(
+        self, seq_hash: UUID | None, computed_seq_hash: UUID
+    ) -> None:
+        """Set an omitted sequence hash or reject a mismatch."""
         if seq_hash is None:
             self.id = computed_seq_hash
         elif seq_hash != computed_seq_hash:
             raise ValueError(
                 f"Provided sequence hash, i.e. the id, does not match computed sequence hash for seq_format {self.seq_format.value}: {seq_hash} != {computed_seq_hash}"
             )
-        return self
 
     @field_serializer("seq_format")
     def _serialize_seq_format(self, value: enum.SeqFormat) -> int:

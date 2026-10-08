@@ -18,6 +18,8 @@ revision = "b9c5e10bf42c"
 down_revision = None
 branch_labels = None
 depends_on = None
+_DEFAULT_UTC_TIMESTAMP_SQL = "GETUTCDATE()"
+_ORGANIZATION_ID_FK_TARGET = "organization.organization.id"
 
 
 def _create_schemas() -> None:
@@ -46,13 +48,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
@@ -72,13 +74,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
@@ -94,13 +96,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
@@ -117,13 +119,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
@@ -140,13 +142,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
@@ -163,13 +165,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
@@ -191,13 +193,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
@@ -233,13 +235,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
@@ -250,7 +252,7 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(
             ["organization_id"],
-            ["organization.organization.id"],
+            [_ORGANIZATION_ID_FK_TARGET],
             name="fk_organization_identifier_issuer_link_organization_id",
         ),
         sa.PrimaryKeyConstraint("id"),
@@ -275,19 +277,19 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
         sa.ForeignKeyConstraint(
             ["organization_id"],
-            ["organization.organization.id"],
+            [_ORGANIZATION_ID_FK_TARGET],
             name="fk_organization_set_member_organization_id",
         ),
         sa.ForeignKeyConstraint(
@@ -313,19 +315,19 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
         sa.ForeignKeyConstraint(
             ["organization_id"],
-            ["organization.organization.id"],
+            [_ORGANIZATION_ID_FK_TARGET],
             name="fk_site_organization_id",
         ),
         sa.PrimaryKeyConstraint("id"),
@@ -349,19 +351,19 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
         sa.ForeignKeyConstraint(
             ["organization_id"],
-            ["organization.organization.id"],
+            [_ORGANIZATION_ID_FK_TARGET],
             name="fk_user_organization_id",
         ),
         sa.PrimaryKeyConstraint("id"),
@@ -378,13 +380,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
@@ -414,13 +416,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
@@ -431,7 +433,7 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(
             ["organization_id"],
-            ["organization.organization.id"],
+            [_ORGANIZATION_ID_FK_TARGET],
             name="fk_user_invitation_organization_id",
         ),
         sa.PrimaryKeyConstraint("id"),
@@ -453,13 +455,13 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column(
             "modified_at",
             gen_epix.fastapp.repositories.sa.util.UTCDateTime(),
-            server_default=sa.text("GETUTCDATE()"),
+            server_default=sa.text(_DEFAULT_UTC_TIMESTAMP_SQL),
             nullable=False,
         ),
         sa.Column("modified_by", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),

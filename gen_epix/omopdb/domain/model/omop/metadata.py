@@ -20,6 +20,8 @@ from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.omopdb.domain.model.omop.base import validate_int_for_uuid_field
 from gen_epix.omopdb.domain.model.omop.ontology import Concept
 
+_NO_OMOP_GUIDANCE_DESCRIPTION = "User guidance:\nNone\nETL conventions:\nNone"
+
 
 class CdmSource(Model):
     """The CDM_SOURCE table contains detail about the source database and the process used to transform the data into the OMOP Common Data Model."""
@@ -106,32 +108,26 @@ class Metadata(Model):
         default=None,
         description="User guidance:\nThe unique key given to a Metadata record.\nETL conventions:\nAttribute value is auto-generated",
     )
-    metadata_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    metadata_type_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    name: str = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone", max_length=250
-    )
+    metadata_concept_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    metadata_type_concept_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    name: str = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION, max_length=250)
     value_as_string: str | None = Field(
         default=None,
-        description="User guidance:\nNone\nETL conventions:\nNone",
+        description=_NO_OMOP_GUIDANCE_DESCRIPTION,
         max_length=250,
     )
     value_as_concept_id: UUID | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     value_as_number: float | None = Field(
         default=None,
         description="User guidance:\nThis is the numerical value of the result of the Metadata, if applicable and available. It is not expected that all Metadata will have numeric results, rather, this field is here to house values should they exist.\nETL conventions:\nNone",
     )
     metadata_date: date | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
     metadata_datetime: datetime | None = Field(
-        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+        default=None, description=_NO_OMOP_GUIDANCE_DESCRIPTION
     )
 
     @field_validator(

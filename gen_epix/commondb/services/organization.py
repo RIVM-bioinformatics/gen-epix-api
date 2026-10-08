@@ -253,6 +253,27 @@ class OrganizationService(BaseOrganizationService):
             roles=roles,
         )
 
+    @staticmethod
+    def _classify_invitation_for_registration(
+        invitation: model.UserInvitation,
+        user_key: str,
+        token: str,
+        now: datetime,
+    ) -> tuple[bool, bool]:
+        """Return whether an invitation is a candidate and should be deleted."""
+        expires_at = invitation.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= now:
+            return False, True
+        if invitation.token == token:
+            if invitation.key is None or invitation.key == user_key:
+                return True, False
+            return False, True
+        if invitation.key is not None and invitation.key == user_key:
+            return False, True
+        return False, False
+
     def register_invited_user(
         self, cmd: command.RegisterInvitedUserCommand
     ) -> model.User:
@@ -293,38 +314,19 @@ class OrganizationService(BaseOrganizationService):
             selected_user_invitation: model.UserInvitation | None = None
             for user_invitation in user_invitations:
                 assert user_invitation.id is not None
-                # convert x.expires_at to aware datetime if it is naive
-                expires_at = user_invitation.expires_at
-                if user_invitation.expires_at.tzinfo is None:
-                    expires_at = user_invitation.expires_at.replace(tzinfo=timezone.utc)
-
-                if expires_at > now:
-                    # Invitation is not expired
-                    if user_invitation.token == cmd.token:
-                        if selected_user_invitation:
-                            # Should not happen: multiple open invites with same token
-                            raise exc.ServiceException(
-                                "c6348285",
-                                f"Multiple open invitations found for token {cmd.token}",
-                            )
-                        # Token matches, so this is a candidate invitation
-                        if user_invitation.key is None:
-                            # No key means open invite, so accept
-                            selected_user_invitation = user_invitation
-                        elif user_invitation.key == new_user.key:
-                            # Key provided and matches user key, so accept
-                            selected_user_invitation = user_invitation
-                        else:
-                            # Key provided but does not match user key, so reject and delete
-                            to_delete_user_invitation_ids.append(user_invitation.id)
-                    elif (
-                        user_invitation.key is not None
-                        and user_invitation.key == new_user.key
-                    ):
-                        # Additional invitation for same user with matching key but non-matching token, delete it
-                        to_delete_user_invitation_ids.append(user_invitation.id)
-                else:
-                    # Expired invitation, delete it (functions as cleanup of expired invites rather than relying on separate cleanup process)
+                is_candidate, should_delete = (
+                    self._classify_invitation_for_registration(
+                        user_invitation, new_user.key, cmd.token, now
+                    )
+                )
+                if is_candidate:
+                    if selected_user_invitation:
+                        raise exc.ServiceException(
+                            "c6348285",
+                            f"Multiple open invitations found for token {cmd.token}",
+                        )
+                    selected_user_invitation = user_invitation
+                elif should_delete:
                     to_delete_user_invitation_ids.append(user_invitation.id)
 
             # Handle case where no valid invitation is found

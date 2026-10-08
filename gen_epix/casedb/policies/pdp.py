@@ -56,26 +56,54 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
         col_ids: frozenset[UUID],
     ) -> bool:
         """Check whether each requested column is readable in a supplied collection."""
+        return self._are_columns_accessible_for_data_collections(
+            complete_case_type, data_collection_ids, col_ids, enum.CaseRight.READ_CASE
+        )
+
+    def is_writable_columns_for_data_collections(
+        self,
+        complete_case_type: model.CompleteCaseType,
+        data_collection_ids: frozenset[UUID],
+        col_ids: frozenset[UUID],
+    ) -> bool:
+        """Check whether each requested column is writable in a supplied collection."""
+        return self._are_columns_accessible_for_data_collections(
+            complete_case_type, data_collection_ids, col_ids, enum.CaseRight.WRITE_CASE
+        )
+
+    @staticmethod
+    def _are_columns_accessible_for_data_collections(
+        complete_case_type: model.CompleteCaseType,
+        data_collection_ids: frozenset[UUID],
+        col_ids: frozenset[UUID],
+        access_right: Literal[enum.CaseRight.READ_CASE, enum.CaseRight.WRITE_CASE],
+    ) -> bool:
+        """Check that each requested column is allowed by a supplied collection."""
+        access_attr = {
+            enum.CaseRight.READ_CASE: "read_col_ids",
+            enum.CaseRight.WRITE_CASE: "write_col_ids",
+        }[access_right]
+
         # Special case: no data collection IDs provided, content is not readable
         if not data_collection_ids:
             return False
 
-        # Special case: no column IDs provided, content is readable
+        # Special case: no column IDs provided, content is accessible
         if not col_ids:
             return True
 
-        # Check readability for each column in the context of the provided data collections
-        is_readable: dict[UUID, bool] = {col_id: False for col_id in col_ids}
+        is_accessible: dict[UUID, bool] = {col_id: False for col_id in col_ids}
         for data_collection_id in data_collection_ids:
             case_type_access_abac = complete_case_type.case_type_access_abacs.get(
                 data_collection_id
             )
             if case_type_access_abac is None:
                 continue
-            for col_id in col_ids & case_type_access_abac.read_col_ids:
-                is_readable[col_id] = True
+            accessible_col_ids = getattr(case_type_access_abac, access_attr)
+            for col_id in col_ids & accessible_col_ids:
+                is_accessible[col_id] = True
 
-        return all(is_readable.values())
+        return all(is_accessible.values())
 
     def filter_case_set_ids(
         self,

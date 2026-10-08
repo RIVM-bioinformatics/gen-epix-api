@@ -70,23 +70,31 @@ def case_service_create_file_for_read_set_or_seq(
             ["data_collection_id"],
             filter=EqualsUuidFilter(key="case_id", value=cast(UUID, case.id)),
         )
+        # Membership includes created_in_data_collection_id.
         data_collection_ids = frozenset(
             {case.created_in_data_collection_id}
             | {x[0] for x in data_collection_id_tuples}
         )
 
-        # @ABAC: Check if Col is readable
+        # Retrieve Col and RefCol data for the case type.
         complete_case_type = self.retrieve_complete_case_type(
             command.RetrieveCompleteCaseTypeCommand(
                 user=cmd.user, case_type_id=case.case_type_id
             )
         )
+        # @ABAC: Require write access to the column through a collection of the case.
         pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
-        if not pdp.is_readable_columns_for_data_collections(
-            complete_case_type, data_collection_ids, frozenset([cmd.col_id])
+        # Retrieve case ABAC.
+        case_abac = pdp.get_case_abac(cmd)
+        if (
+            not case_abac.is_full_access
+            and not pdp.is_writable_columns_for_data_collections(
+                complete_case_type, data_collection_ids, frozenset({cmd.col_id})
+            )
         ):
             raise exc.UnauthorizedAuthError(
-                "c06dfc2e", "Column is not readable for the specified data collections"
+                "844705db",
+                "User has no WRITE_CASE access to the specified column in any data collection of the case",
             )
 
         # Verify column type

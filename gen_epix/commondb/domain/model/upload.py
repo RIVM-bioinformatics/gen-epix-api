@@ -68,36 +68,53 @@ class IdentifiersMixin:
         if len(identifiers) == 1:
             # Nothing to check
             return identifiers
-        identifier_issuer_code_id_map = {}
-        seen_ids = set()
-        seen_codes = set()
+        identifier_issuer_code_id_map: dict[str, UUID] = {}
+        seen_ids: set[UUID] = set()
+        seen_codes: set[str] = set()
         for identifier in identifiers:
-            identifier_issuer_id = identifier.identifier_issuer_id
-            identifier_issuer_code = identifier.identifier_issuer_code
-            if identifier_issuer_id is not None:
-                if identifier_issuer_id in seen_ids:
-                    raise ValueError(
-                        f"Duplicate identifier issuer ID found: {identifier_issuer_id}"
-                    )
-                if identifier_issuer_code is not None:
-                    if (
-                        identifier_issuer_code in identifier_issuer_code_id_map
-                        and identifier_issuer_code_id_map[identifier_issuer_code]
-                        != identifier_issuer_id
-                    ):
-                        raise ValueError(
-                            f"Inconsistent identifier issuer ID for code {identifier_issuer_code}: expected {identifier_issuer_code_id_map[identifier_issuer_code]}, got {identifier_issuer_id}."
-                        )
-                    identifier_issuer_code_id_map[identifier_issuer_code] = (
-                        identifier_issuer_id
-                    )
-            if identifier_issuer_code is not None:
-                if identifier_issuer_code in seen_codes:
-                    raise ValueError(
-                        f"Duplicate identifier issuer code found: {identifier_issuer_code}"
-                    )
-                seen_codes.add(identifier_issuer_code)
+            cls._validate_identifier(
+                identifier,
+                identifier_issuer_code_id_map,
+                seen_ids,
+                seen_codes,
+            )
         return identifiers
+
+    @staticmethod
+    def _validate_identifier(
+        identifier: IdentifierForUpload,
+        identifier_issuer_code_id_map: dict[str, UUID],
+        seen_ids: set[UUID],
+        seen_codes: set[str],
+    ) -> None:
+        identifier_issuer_id = identifier.identifier_issuer_id
+        identifier_issuer_code = identifier.identifier_issuer_code
+        if identifier_issuer_id is not None:
+            if identifier_issuer_id in seen_ids:
+                raise ValueError(
+                    f"Duplicate identifier issuer ID found: {identifier_issuer_id}"
+                )
+            seen_ids.add(identifier_issuer_id)
+            if identifier_issuer_code is not None:
+                existing_issuer_id = identifier_issuer_code_id_map.get(
+                    identifier_issuer_code
+                )
+                if (
+                    existing_issuer_id is not None
+                    and existing_issuer_id != identifier_issuer_id
+                ):
+                    raise ValueError(
+                        f"Inconsistent identifier issuer ID for code {identifier_issuer_code}: expected {existing_issuer_id}, got {identifier_issuer_id}."
+                    )
+                identifier_issuer_code_id_map[identifier_issuer_code] = (
+                    identifier_issuer_id
+                )
+        if identifier_issuer_code is not None:
+            if identifier_issuer_code in seen_codes:
+                raise ValueError(
+                    f"Duplicate identifier issuer code found: {identifier_issuer_code}"
+                )
+            seen_codes.add(identifier_issuer_code)
 
 
 class DataIssue(PydanticBaseModel):
@@ -124,7 +141,7 @@ class UploadResult(LoadResult, Model):
     - If the status is failed, there must be at least one error log item.
     """
 
-    ID: ClassVar[str] = "c4f1a9e2"
+    RESULT_ID: ClassVar[str] = "c4f1a9e2"
     ENTITY: ClassVar = Entity(persistable=False)
 
     id: UUID | None = Field(
@@ -164,7 +181,7 @@ class UploadResultWithIdentifiers(UploadResult):
     It mirrors a for-upload class that has identifiers.
     """
 
-    ID: ClassVar[str] = "06e14d51"
+    RESULT_ID: ClassVar[str] = "06e14d51"
     ENTITY: ClassVar = UploadResult.model_entity().clone()
     NAME: ClassVar = "UploadResultWithIdentifiers"
 
@@ -286,6 +303,9 @@ class ParentForUpload(Model, IdentifiersMixin):
         processing children in this order never touches a foreign key pointing at
         a not-yet-created row. Derived from the children's ``Entity.links`` and
         ``CHILD_INTRA_PARENT_LINKS_MAP``, cached on ``CHILD_ORDER``.
+
+        Raises:
+            ValueError: If ``CHILD_ORDER`` is not a permutation of the child models.
         """
         if not cls.CHILDREN_FIELD_NAME_MAP:
             return []
@@ -421,52 +441,110 @@ class ParentForUpload(Model, IdentifiersMixin):
             child_model_class,
             children_field_name,
         ) in self.CHILDREN_FIELD_NAME_MAP.items():
-            child_id_field_name = self.CHILD_FOR_UPLOAD_CLASS_MAP[
-                child_model_class
-            ].ENTITY.get_id_field_name()
-            parent_id_field_name = self.CHILD_PARENT_ID_FIELD_NAME_MAP[
-                child_model_class
-            ]
             children: list[Model] | None = getattr(self, children_field_name, None)
             if children is None:
                 continue
-            seen_child_ids = set()
-            has_identifiers = issubclass(child_model_class, IdentifiersMixin)
-            seen_child_identifiers = set()
-            for i, child in enumerate(children):
-                # Check for duplicate child IDs
-                child_id = getattr(child, child_id_field_name)
-                if child_id and child_id != NULL_ID:
-                    if child_id in seen_child_ids:
-                        raise ValueError(
-                            f"Duplicate ID {child_id_field_name}={child_id} found in {children_field_name}."
-                        )
-                    seen_child_ids.add(child_id)
-                # Check child parent ID consistency
-                if has_id:
-                    child_parent_id = getattr(child, parent_id_field_name)
-                    if child_parent_id is None or child_parent_id == NULL_ID:
-                        pass
-                    elif child_parent_id != self.id:
-                        raise ValueError(
-                            f"{children_field_name}[{i}].{parent_id_field_name}={child_parent_id} does not match parent.id={self.id}."
-                        )
-                # Check for duplicate child identifiers
-                if has_identifiers:
-                    assert isinstance(child, IdentifiersMixin)
-                    if not child.identifiers:
-                        continue
-                    if len(child.identifiers) != len(set(child.identifiers)):
-                        raise ValueError(
-                            f"Duplicate identifiers found in {children_field_name}[{i}]."
-                        )
-                    for identifier in child.identifiers:
-                        if identifier in seen_child_identifiers:
-                            raise ValueError(
-                                f"Duplicate identifier {identifier} found in {children_field_name}."
-                            )
-                        seen_child_identifiers.add(identifier)
+            self._validate_children_for_parent(
+                child_model_class,
+                children_field_name,
+                children,
+                has_id,
+            )
         return self
+
+    def _validate_children_for_parent(
+        self,
+        child_model_class: type[Model],
+        children_field_name: str,
+        children: list[Model],
+        has_parent_id: bool,
+    ) -> None:
+        child_id_field_name = self.CHILD_FOR_UPLOAD_CLASS_MAP[
+            child_model_class
+        ].ENTITY.get_id_field_name()
+        parent_id_field_name = self.CHILD_PARENT_ID_FIELD_NAME_MAP[child_model_class]
+        seen_child_ids: set[UUID] = set()
+        seen_child_identifiers: set[IdentifierForUpload] = set()
+        has_identifiers = issubclass(child_model_class, IdentifiersMixin)
+        for child_index, child in enumerate(children):
+            # Check for duplicate child IDs
+            self._validate_child_id(
+                child,
+                child_id_field_name,
+                children_field_name,
+                seen_child_ids,
+            )
+            # Check child parent ID consistency
+            self._validate_child_parent_link(
+                child,
+                parent_id_field_name,
+                children_field_name,
+                child_index,
+                has_parent_id,
+            )
+            if has_identifiers:
+                # Check for duplicate child identifiers
+                self._validate_child_identifiers(
+                    child,
+                    children_field_name,
+                    seen_child_identifiers,
+                    child_index,
+                )
+
+    @staticmethod
+    def _validate_child_id(
+        child: Model,
+        child_id_field_name: str,
+        children_field_name: str,
+        seen_child_ids: set[UUID],
+    ) -> None:
+        child_id = getattr(child, child_id_field_name)
+        if not child_id or child_id == NULL_ID:
+            return
+        if child_id in seen_child_ids:
+            raise ValueError(
+                f"Duplicate ID {child_id_field_name}={child_id} found in {children_field_name}."
+            )
+        seen_child_ids.add(child_id)
+
+    def _validate_child_parent_link(
+        self,
+        child: Model,
+        parent_id_field_name: str,
+        children_field_name: str,
+        child_index: int,
+        has_parent_id: bool,
+    ) -> None:
+        if not has_parent_id:
+            return
+        child_parent_id = getattr(child, parent_id_field_name)
+        if child_parent_id is None or child_parent_id == NULL_ID:
+            return
+        if child_parent_id != self.id:
+            raise ValueError(
+                f"{children_field_name}[{child_index}].{parent_id_field_name}={child_parent_id} does not match parent.id={self.id}."
+            )
+
+    @staticmethod
+    def _validate_child_identifiers(
+        child: Model,
+        children_field_name: str,
+        seen_child_identifiers: set[IdentifierForUpload],
+        child_index: int,
+    ) -> None:
+        assert isinstance(child, IdentifiersMixin)
+        if not child.identifiers:
+            return
+        if len(child.identifiers) != len(set(child.identifiers)):
+            raise ValueError(
+                f"Duplicate identifiers found in {children_field_name}[{child_index}]."
+            )
+        for identifier in child.identifiers:
+            if identifier in seen_child_identifiers:
+                raise ValueError(
+                    f"Duplicate identifier {identifier} found in {children_field_name}."
+                )
+            seen_child_identifiers.add(identifier)
 
     def get_parent(self) -> Model | None:
         """Get the actual model contained in this for-upload model, if set."""
@@ -498,6 +576,11 @@ class ParentForUpload(Model, IdentifiersMixin):
         old_id = getattr(child_for_upload, child_model_class.ENTITY.get_id_field_name())
         setattr(child_for_upload, child_model_class.ENTITY.get_id_field_name(), new_id)
         # Replace any references to the child ID in intra-parent links
+        self._replace_child_references(target_child_classes, old_id, new_id)
+
+    def _replace_child_references(
+        self, target_child_classes: set[type[Model]], old_id: UUID, new_id: UUID
+    ) -> None:
         for (
             from_child_model_class,
             intra_parent_links,
@@ -524,7 +607,7 @@ class ParentUploadResult(UploadResultWithIdentifiers):
     Subclasses correspond to their ParentForUpload payload type.
     """
 
-    ID: ClassVar[str] = "f354e913"
+    RESULT_ID: ClassVar[str] = "f354e913"
     ENTITY: ClassVar = UploadResultWithIdentifiers.model_entity().clone()
     NAME: ClassVar = "ParentUploadResult"
 
@@ -592,13 +675,8 @@ class ParentUploadResult(UploadResultWithIdentifiers):
 
         Corresponding log items are added.
         """
-        data_issues = self.data_issues
         # Errors
-        error_codes = {
-            x.code
-            for x in data_issues
-            if x.data_issue_type in DataIssueTypeSet.ERROR.value
-        }
+        error_codes = self._get_data_issue_codes(DataIssueTypeSet.ERROR.value)
         if error_codes:
             error_codes_str = ", ".join(sorted(error_codes))
             self.add_error(
@@ -606,11 +684,7 @@ class ParentUploadResult(UploadResultWithIdentifiers):
                 f"Data has errors: {error_codes_str}",
             )
         # Warnings
-        warning_codes = {
-            x.code
-            for x in data_issues
-            if x.data_issue_type in DataIssueTypeSet.WARNING.value
-        }
+        warning_codes = self._get_data_issue_codes(DataIssueTypeSet.WARNING.value)
         if warning_codes:
             warning_codes_str = ", ".join(sorted(warning_codes))
             self.add_warning(
@@ -618,17 +692,22 @@ class ParentUploadResult(UploadResultWithIdentifiers):
                 f"Data has warnings: {warning_codes_str}",
             )
         # Info
-        info_codes = {
-            x.code
-            for x in data_issues
-            if x.data_issue_type in DataIssueTypeSet.INFO.value
-        }
+        info_codes = self._get_data_issue_codes(DataIssueTypeSet.INFO.value)
         if info_codes:
             info_codes_str = ", ".join(sorted(info_codes))
             self.add_info(
                 "c5d7e8f9",
                 f"Data has info: {info_codes_str}",
             )
+
+    def _get_data_issue_codes(
+        self, data_issue_types: frozenset[enum.DataIssueType]
+    ) -> set[str]:
+        return {
+            issue.code
+            for issue in self.data_issues
+            if issue.data_issue_type in data_issue_types
+        }
 
     def convert_status(self, from_status: EtlStatus, to_status: EtlStatus) -> None:
         """Replace one status with another across this result and nested results.
@@ -712,8 +791,16 @@ class BaseBatchForUpload(Model):
     @model_validator(mode="after")
     def _validate_parent_ids(self) -> Self:
         """Validate unique parent IDs and external identifiers."""
-        # Verify duplicate parent IDs
         parents_for_upload = self.get_parents_for_upload()
+        self._validate_unique_parent_ids(parents_for_upload)
+        self._validate_unique_parent_identifiers(parents_for_upload)
+        return self
+
+    @staticmethod
+    def _validate_unique_parent_ids(
+        parents_for_upload: list[ParentForUpload],
+    ) -> None:
+        """Reject duplicate non-null parent IDs in one upload batch."""
         parent_ids = [
             x.id for x in parents_for_upload if x.id is not None and x.id != NULL_ID
         ]
@@ -725,6 +812,12 @@ class BaseBatchForUpload(Model):
             raise ValueError(
                 f"Duplicate parent IDs found in batch: {duplicate_ids_str}"
             )
+
+    @staticmethod
+    def _validate_unique_parent_identifiers(
+        parents_for_upload: list[ParentForUpload],
+    ) -> None:
+        """Reject parent identifiers repeated across upload items."""
         # Verify duplicate parent identifiers
         seen_parent_identifiers: set[IdentifierForUpload] = set()
         for parent_for_upload in parents_for_upload:
@@ -735,7 +828,6 @@ class BaseBatchForUpload(Model):
                 seen_parent_identifiers.update(parent_identifiers)
             else:
                 raise ValueError("Duplicate parent identifiers found in batch.")
-        return self
 
     @model_validator(mode="after")
     def _validate_child_ids(self) -> Self:
@@ -746,108 +838,162 @@ class BaseBatchForUpload(Model):
             child_model_class,
             children_field_name,
         ) in self.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP.items():
-            # Get all children
-            child_id_field_name = child_model_class.ENTITY.get_id_field_name()
-            children_for_upload: list[Model] = [
-                y
-                for x in self.get_parents_for_upload()
-                for y in (getattr(x, children_field_name) or [])
-            ]
-            # Add all IDs and identifiers
-            seen_child_identifiers: set[IdentifierForUpload] = set()
-            has_identifiers = issubclass(child_model_class, IdentifiersMixin)
-            for child_for_upload in children_for_upload:
-                child_id = getattr(child_for_upload, child_id_field_name)
-                if child_id is not None and child_id != NULL_ID:
-                    if child_id in seen_child_ids:
-                        raise ValueError(
-                            f"Duplicate child ID {child_id} found in batch in field {children_field_name}."
-                        )
-                    seen_child_ids.add(child_id)
-                if not has_identifiers:
-                    continue
-                assert isinstance(child_for_upload, IdentifiersMixin)
-                if not child_for_upload.identifiers:
-                    continue
-                child_identifiers = set(child_for_upload.identifiers or [])
-                if child_identifiers.isdisjoint(seen_child_identifiers):
-                    seen_child_identifiers.update(child_identifiers)
-                else:
-                    duplicate_identifiers = child_identifiers.intersection(
-                        seen_child_identifiers
-                    )
-                    duplicate_identifiers_str = ", ".join(
-                        str(x) for x in duplicate_identifiers
-                    )
-                    raise ValueError(
-                        f"Duplicate child identifiers found in batch in field {children_field_name}: {duplicate_identifiers_str}"
-                    )
+            self._validate_child_ids_for_type(
+                child_model_class,
+                children_field_name,
+                seen_child_ids,
+            )
         return self
+
+    def _validate_child_ids_for_type(
+        self,
+        child_model_class: type[Model],
+        children_field_name: str,
+        seen_child_ids: set[UUID],
+    ) -> None:
+        child_id_field_name = child_model_class.ENTITY.get_id_field_name()
+        # Get all children
+        children_for_upload: list[Model] = [
+            child
+            for parent in self.get_parents_for_upload()
+            for child in (getattr(parent, children_field_name) or [])
+        ]
+        self._validate_unique_child_ids(
+            children_for_upload,
+            child_id_field_name,
+            children_field_name,
+            seen_child_ids,
+        )
+        if issubclass(child_model_class, IdentifiersMixin):
+            self._validate_unique_child_identifiers(
+                children_for_upload, children_field_name
+            )
+
+    @staticmethod
+    def _validate_unique_child_ids(
+        children_for_upload: list[Model],
+        child_id_field_name: str,
+        children_field_name: str,
+        seen_child_ids: set[UUID],
+    ) -> None:
+        """Reject duplicate non-null child IDs across all child model types."""
+        for child_for_upload in children_for_upload:
+            child_id = getattr(child_for_upload, child_id_field_name)
+            if child_id is None or child_id == NULL_ID:
+                continue
+            if child_id in seen_child_ids:
+                raise ValueError(
+                    f"Duplicate child ID {child_id} found in batch in field {children_field_name}."
+                )
+            seen_child_ids.add(child_id)
+
+    @staticmethod
+    def _validate_unique_child_identifiers(
+        children_for_upload: list[Model], children_field_name: str
+    ) -> None:
+        """Reject duplicate external identifiers among children of one type."""
+        seen_child_identifiers: set[IdentifierForUpload] = set()
+        for child_for_upload in children_for_upload:
+            assert isinstance(child_for_upload, IdentifiersMixin)
+            if not child_for_upload.identifiers:
+                continue
+            child_identifiers = set(child_for_upload.identifiers or [])
+            if child_identifiers.isdisjoint(seen_child_identifiers):
+                seen_child_identifiers.update(child_identifiers)
+                continue
+            duplicate_identifiers = child_identifiers.intersection(
+                seen_child_identifiers
+            )
+            duplicate_identifiers_str = ", ".join(
+                str(identifier) for identifier in duplicate_identifiers
+            )
+            raise ValueError(
+                f"Duplicate child identifiers found in batch in field {children_field_name}: {duplicate_identifiers_str}"
+            )
 
     @model_validator(mode="after")
     def _validate_intra_parent_links(self) -> Self:
         """Validate that all links between children are within the same parent."""
-        children_for_upload: list[Model]
         # Get all child model classes that have intra-parent links to them
         to_child_model_classes: set[type[Model]] = set()
         for (
             intra_parent_links
         ) in self.PARENT_FOR_UPLOAD_CLASS.CHILD_INTRA_PARENT_LINKS_MAP.values():
             to_child_model_classes.update(x[1] for x in intra_parent_links)
+        parents_for_upload = self.get_parents_for_upload()
+        parent_map = self._get_child_parent_index_map(
+            to_child_model_classes, parents_for_upload
+        )
+        # Verify that all intra-parent links are indeed within the same parent
+        for (
+            child_model_class,
+            intra_parent_links,
+        ) in self.PARENT_FOR_UPLOAD_CLASS.CHILD_INTRA_PARENT_LINKS_MAP.items():
+            self._validate_child_intra_parent_links(
+                child_model_class,
+                intra_parent_links,
+                parents_for_upload,
+                parent_map,
+            )
+        return self
 
+    def _get_child_parent_index_map(
+        self,
+        child_model_classes: set[type[Model]],
+        parents_for_upload: list[ParentForUpload],
+    ) -> dict[type[Model], dict[UUID, int]]:
         # Get a dict[to_child_model_class, dict[child_id, parent_index]]] for all to child model classes, where parent_index is the index of the parent in the parents_for_upload list that the child belongs to.
         parent_map: dict[type[Model], dict[UUID, int]] = {}
-        parents_for_upload = self.get_parents_for_upload()
-        for to_child_model_class in to_child_model_classes:
-            parent_map[to_child_model_class] = {}
+        for child_model_class in child_model_classes:
+            parent_map[child_model_class] = {}
             child_id_field_name = (
                 self.PARENT_FOR_UPLOAD_CLASS.CHILD_FOR_UPLOAD_CLASS_MAP[
-                    to_child_model_class
+                    child_model_class
                 ].ENTITY.get_id_field_name()
             )
             children_field_name = self.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP[
-                to_child_model_class
+                child_model_class
             ]
-            for i, parent_for_upload in enumerate(parents_for_upload):
-                children_for_upload = [
-                    x for x in (getattr(parent_for_upload, children_field_name) or [])
-                ]
+            for parent_index, parent_for_upload in enumerate(parents_for_upload):
+                children_for_upload = (
+                    getattr(parent_for_upload, children_field_name) or []
+                )
                 for child_for_upload in children_for_upload:
                     child_id: UUID | None = getattr(
                         child_for_upload, child_id_field_name
                     )
                     if child_id is None or child_id == NULL_ID:
                         continue
-                    parent_map[to_child_model_class][child_id] = i
+                    parent_map[child_model_class][child_id] = parent_index
+        return parent_map
 
-        # Verify that all intra-parent links are indeed within the same parent
-        for (
-            child_model_class,
-            intra_parent_links,
-        ) in self.PARENT_FOR_UPLOAD_CLASS.CHILD_INTRA_PARENT_LINKS_MAP.items():
-            children_field_name = self.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP[
-                child_model_class
-            ]
-            for i, parent_for_upload in enumerate(parents_for_upload):
-                children_for_upload = [
-                    x for x in (getattr(parent_for_upload, children_field_name) or [])
-                ]
-                for child_for_upload in children_for_upload:
-                    for from_field_name, to_child_model_class in intra_parent_links:
-                        linked_child_id = getattr(child_for_upload, from_field_name)
-                        if linked_child_id is None or linked_child_id == NULL_ID:
-                            continue
-                        if linked_child_id not in parent_map[to_child_model_class]:
-                            # Linked child not found, assumed to be to an already existing child rather than one in the batch -> nothing to do
-                            continue
-                        linked_child_parent_index = parent_map[to_child_model_class][
-                            linked_child_id
-                        ]
-                        if linked_child_parent_index != i:
-                            raise ValueError(
-                                f"Inconsistent intra-parent link in batch: {child_model_class.__name__}.{from_field_name}={linked_child_id} in parent index {i} links to a {to_child_model_class.__name__} in parent {linked_child_parent_index}."
-                            )
-        return self
+    def _validate_child_intra_parent_links(
+        self,
+        child_model_class: type[Model],
+        intra_parent_links: list[tuple[str, type[Model]]],
+        parents_for_upload: list[ParentForUpload],
+        parent_map: dict[type[Model], dict[UUID, int]],
+    ) -> None:
+        children_field_name = self.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP[
+            child_model_class
+        ]
+        for parent_index, parent_for_upload in enumerate(parents_for_upload):
+            children_for_upload = getattr(parent_for_upload, children_field_name) or []
+            for child_for_upload in children_for_upload:
+                for from_field_name, to_child_model_class in intra_parent_links:
+                    linked_child_id = getattr(child_for_upload, from_field_name)
+                    if linked_child_id is None or linked_child_id == NULL_ID:
+                        continue
+                    if linked_child_id not in parent_map[to_child_model_class]:
+                        # Linked child not found, assumed to be to an already existing child rather than one in the batch -> nothing to do
+                        continue
+                    linked_child_parent_index = parent_map[to_child_model_class][
+                        linked_child_id
+                    ]
+                    if linked_child_parent_index != parent_index:
+                        raise ValueError(
+                            f"Inconsistent intra-parent link in batch: {child_model_class.__name__}.{from_field_name}={linked_child_id} in parent index {parent_index} links to a {to_child_model_class.__name__} in parent {linked_child_parent_index}."
+                        )
 
     def get_parents_for_upload(self) -> list[ParentForUpload]:
         """Get the list of objects to be uploaded in this batch."""
@@ -998,12 +1144,12 @@ class BaseBatchUploadResult(UploadResult):
     """Represents the result for an atomic batch upload.
 
     Subclasses use field names that match their BaseBatchForUpload payload.
+
+    Model validation: ``result_type`` is populated from the concrete class name
+    when it is empty.
     """
 
-    ID: ClassVar[str] = "6d64fbc3"
-    ENTITY: ClassVar = UploadResult.model_entity().clone()
-    NAME: ClassVar = "BaseBatchUploadResult"
-
+    RESULT_ID: ClassVar[str] = "6d64fbc3"
     # Must be overridden in child class
     # The BaseBatchForUpload child class corresponding to this result class
     BATCH_FOR_UPLOAD_CLASS: ClassVar[type[BaseBatchForUpload]] = None  # type: ignore[assignment]

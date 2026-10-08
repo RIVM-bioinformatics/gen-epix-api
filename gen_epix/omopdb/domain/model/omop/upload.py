@@ -169,7 +169,7 @@ class PersonDataIssue(DataIssue):
 class PersonUploadResult(ParentUploadResult):
     """Represents the result of uploading a single person."""
 
-    ID: ClassVar[str] = "c6dd271e"
+    RESULT_ID: ClassVar[str] = "c6dd271e"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "PersonUploadResult"
 
@@ -317,7 +317,7 @@ class PersonBatchForUpload(BaseBatchForUpload):
 class PersonBatchUploadResult(BaseBatchUploadResult):
     """Represents the result of uploading a batch of persons."""
 
-    ID: ClassVar[str] = "3d81faf1"
+    RESULT_ID: ClassVar[str] = "3d81faf1"
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone()
     NAME: ClassVar = "PersonBatchUploadResult"
 

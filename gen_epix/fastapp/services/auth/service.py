@@ -166,6 +166,20 @@ class AuthService(BaseAuthService):
         # No valid user found for any of the IDP clients
         raise exc.UnauthorizedAuthError("665ae487")
 
+    async def _resolve_claims_from_dependencies(
+        self,
+        request: Request,
+        claims_by_provider: tuple[Claims | None, ...],
+        claim_handler: Callable[[Claims], Any],
+        unauthorized_error_code: str,
+    ) -> Any:
+        """Resolve the first provider claim or raise the dependency's auth error."""
+        for claims in claims_by_provider:
+            if claims:
+                return await claim_handler(claims)
+        self._warn_too_many_idps(request)
+        raise exc.UnauthorizedAuthError(unauthorized_error_code)
+
     def create_user_dependencies(
         self,
     ) -> tuple[model.User, model.User, IDPUser]:
@@ -216,10 +230,9 @@ class AuthService(BaseAuthService):
             claims_0: Claims = Depends(idp_client_list[0]),
         ) -> model.User:
             """Return current user1."""
-            if claims_0:
-                return await self.get_existing_user_from_claims(claims_0)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("93e20d00")
+            return await self._resolve_claims_from_dependencies(
+                request, (claims_0,), self.get_existing_user_from_claims, "93e20d00"
+            )
 
         async def get_new_user1(
             request: Request,
@@ -227,10 +240,9 @@ class AuthService(BaseAuthService):
             claims_0: Claims = Depends(idp_client_list[0]),
         ) -> model.User:
             """Return new user1."""
-            if claims_0:
-                return await self.get_new_user_from_claims(claims_0)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("0bc81b09")
+            return await self._resolve_claims_from_dependencies(
+                request, (claims_0,), self.get_new_user_from_claims, "0bc81b09"
+            )
 
         async def get_idp_user1(
             request: Request,
@@ -238,10 +250,9 @@ class AuthService(BaseAuthService):
             claims_0: Claims = Depends(idp_client_list[0]),
         ) -> IDPUser:
             """Return idp user1."""
-            if claims_0:
-                return await self.get_idp_user_from_claims(claims_0)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("94254114")
+            return await self._resolve_claims_from_dependencies(
+                request, (claims_0,), self.get_idp_user_from_claims, "94254114"
+            )
 
         async def get_current_user2(
             request: Request,
@@ -250,12 +261,12 @@ class AuthService(BaseAuthService):
             claims_1: Claims = Depends(idp_client_list[1]),
         ) -> model.User:
             """Return current user2."""
-            if claims_0:
-                return await self.get_existing_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_existing_user_from_claims(claims_1)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("45a21268")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1),
+                self.get_existing_user_from_claims,
+                "45a21268",
+            )
 
         async def get_new_user2(
             request: Request,
@@ -264,12 +275,12 @@ class AuthService(BaseAuthService):
             claims_1: Claims = Depends(idp_client_list[1]),
         ) -> model.User:
             """Return new user2."""
-            if claims_0:
-                return await self.get_new_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_new_user_from_claims(claims_1)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("55fcd25b")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1),
+                self.get_new_user_from_claims,
+                "55fcd25b",
+            )
 
         async def get_idp_user2(
             request: Request,
@@ -278,12 +289,12 @@ class AuthService(BaseAuthService):
             claims_1: Claims = Depends(idp_client_list[1]),
         ) -> IDPUser:
             """Return idp user2."""
-            if claims_0:
-                return await self.get_idp_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_idp_user_from_claims(claims_1)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("6f9e825f")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1),
+                self.get_idp_user_from_claims,
+                "6f9e825f",
+            )
 
         async def get_current_user3(
             request: Request,
@@ -293,14 +304,12 @@ class AuthService(BaseAuthService):
             claims_2: Claims = Depends(idp_client_list[2]),
         ) -> model.User:
             """Return current user3."""
-            if claims_0:
-                return await self.get_existing_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_existing_user_from_claims(claims_1)
-            if claims_2:
-                return await self.get_existing_user_from_claims(claims_2)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("5c471bf9")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1, claims_2),
+                self.get_existing_user_from_claims,
+                "5c471bf9",
+            )
 
         async def get_new_user3(
             request: Request,
@@ -310,14 +319,12 @@ class AuthService(BaseAuthService):
             claims_2: Claims = Depends(idp_client_list[2]),
         ) -> model.User:
             """Return new user3."""
-            if claims_0:
-                return await self.get_new_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_new_user_from_claims(claims_1)
-            if claims_2:
-                return await self.get_new_user_from_claims(claims_2)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("2cc43625")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1, claims_2),
+                self.get_new_user_from_claims,
+                "2cc43625",
+            )
 
         async def get_idp_user3(
             request: Request,
@@ -327,14 +334,12 @@ class AuthService(BaseAuthService):
             claims_2: Claims = Depends(idp_client_list[2]),
         ) -> IDPUser:
             """Return idp user3."""
-            if claims_0:
-                return await self.get_idp_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_idp_user_from_claims(claims_1)
-            if claims_2:
-                return await self.get_idp_user_from_claims(claims_2)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("5b18f27e")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1, claims_2),
+                self.get_idp_user_from_claims,
+                "5b18f27e",
+            )
 
         async def get_current_user4(
             request: Request,
@@ -345,16 +350,12 @@ class AuthService(BaseAuthService):
             claims_3: Claims = Depends(idp_client_list[3]),
         ) -> model.User:
             """Return current user4."""
-            if claims_0:
-                return await self.get_existing_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_existing_user_from_claims(claims_1)
-            if claims_2:
-                return await self.get_existing_user_from_claims(claims_2)
-            if claims_3:
-                return await self.get_existing_user_from_claims(claims_3)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("ee9803d2")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1, claims_2, claims_3),
+                self.get_existing_user_from_claims,
+                "ee9803d2",
+            )
 
         async def get_new_user4(
             request: Request,
@@ -365,16 +366,12 @@ class AuthService(BaseAuthService):
             claims_3: Claims = Depends(idp_client_list[3]),
         ) -> model.User:
             """Return new user4."""
-            if claims_0:
-                return await self.get_new_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_new_user_from_claims(claims_1)
-            if claims_2:
-                return await self.get_new_user_from_claims(claims_2)
-            if claims_3:
-                return await self.get_new_user_from_claims(claims_3)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("8bcef011")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1, claims_2, claims_3),
+                self.get_new_user_from_claims,
+                "8bcef011",
+            )
 
         async def get_idp_user4(
             request: Request,
@@ -385,16 +382,12 @@ class AuthService(BaseAuthService):
             claims_3: Claims = Depends(idp_client_list[3]),
         ) -> IDPUser:
             """Return idp user4."""
-            if claims_0:
-                return await self.get_idp_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_idp_user_from_claims(claims_1)
-            if claims_2:
-                return await self.get_idp_user_from_claims(claims_2)
-            if claims_3:
-                return await self.get_idp_user_from_claims(claims_3)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("4c7b18ec")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1, claims_2, claims_3),
+                self.get_idp_user_from_claims,
+                "4c7b18ec",
+            )
 
         async def get_current_user5(
             request: Request,
@@ -406,18 +399,12 @@ class AuthService(BaseAuthService):
             claims_4: Claims = Depends(idp_client_list[4]),
         ) -> model.User:
             """Return current user5."""
-            if claims_0:
-                return await self.get_existing_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_existing_user_from_claims(claims_1)
-            if claims_2:
-                return await self.get_existing_user_from_claims(claims_2)
-            if claims_3:
-                return await self.get_existing_user_from_claims(claims_3)
-            if claims_4:
-                return await self.get_existing_user_from_claims(claims_4)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("af2370e8")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1, claims_2, claims_3, claims_4),
+                self.get_existing_user_from_claims,
+                "af2370e8",
+            )
 
         async def get_new_user5(
             request: Request,
@@ -429,18 +416,12 @@ class AuthService(BaseAuthService):
             claims_4: Claims = Depends(idp_client_list[4]),
         ) -> model.User:
             """Return new user5."""
-            if claims_0:
-                return await self.get_new_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_new_user_from_claims(claims_1)
-            if claims_2:
-                return await self.get_new_user_from_claims(claims_2)
-            if claims_3:
-                return await self.get_new_user_from_claims(claims_3)
-            if claims_4:
-                return await self.get_new_user_from_claims(claims_4)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("d4a829df")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1, claims_2, claims_3, claims_4),
+                self.get_new_user_from_claims,
+                "d4a829df",
+            )
 
         async def get_idp_user5(
             request: Request,
@@ -452,18 +433,12 @@ class AuthService(BaseAuthService):
             claims_4: Claims = Depends(idp_client_list[4]),
         ) -> IDPUser:
             """Return idp user5."""
-            if claims_0:
-                return await self.get_idp_user_from_claims(claims_0)
-            if claims_1:
-                return await self.get_idp_user_from_claims(claims_1)
-            if claims_2:
-                return await self.get_idp_user_from_claims(claims_2)
-            if claims_3:
-                return await self.get_idp_user_from_claims(claims_3)
-            if claims_4:
-                return await self.get_idp_user_from_claims(claims_4)
-            self._warn_too_many_idps(request)
-            raise exc.UnauthorizedAuthError("be1b8ad7")
+            return await self._resolve_claims_from_dependencies(
+                request,
+                (claims_0, claims_1, claims_2, claims_3, claims_4),
+                self.get_idp_user_from_claims,
+                "be1b8ad7",
+            )
 
         get_idp_user_functions = [
             get_idp_user1,

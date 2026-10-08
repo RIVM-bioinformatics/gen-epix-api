@@ -6,11 +6,10 @@ using typed variables, explicit mocking, and the 1-2-3-4 section structure.
 """
 
 from typing import Any
-from unittest import TestCase
-from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
+from test.util.mock_compat import Mock
 
 from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.model.abac.rights import CaseTypeAccessAbac
@@ -37,10 +36,10 @@ class _FakeCaseAbacPolicy(BaseCaseAbacPolicy):
         return self._abac
 
 
-class BaseIsOwnCasesTestCase(TestCase):
+class BaseIsOwnCasesTestCase:
     """Base test case with common fixtures and utilities."""
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         # Test user
         self.user: model.User = model.User(
             id=uuid4(),
