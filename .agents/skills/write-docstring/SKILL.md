@@ -103,11 +103,13 @@ for rules not covered here.
       Python docstring. A concise one-line docstring is sufficient when the
       decorator already supplies the complete caller-facing description.
    d. Programmatically overridden docstrings: if the body of the function, method,
-      class or module contains a statement that assigns a value to __doc__
+      class or module contains a statement that assigns a value to `__doc__`
       (typically the first statement of the body), then there is technically no
       need for a docstring. However, for clarity and to avoid linting false 
       positives put in place the literal docstring
-      `"""Docstring assigned automatically"""`.
+      `"""Docstring assigned programmatically."""`. During a reassessment of the docstring,
+      do not replace this it again with a complete docstring if you notice that it is
+      automatically assigned to `__doc__` in the code.
 11. Public module docstrings must state the module's responsibility and summarize
    its principal public types, functions, and collaboration boundary. Package
    docstrings in `__init__.py` must additionally summarize each group of

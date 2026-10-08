@@ -22,7 +22,7 @@ from gen_epix.util import copy_model_field
 
 
 class UploadSamplesRequestBody(command.UploadSamplesCommand):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.UploadSamplesCommand.__doc__
 
@@ -47,7 +47,7 @@ class UploadSamplesRequestBody(command.UploadSamplesCommand):
 
 
 class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.CalculatePhylogeneticTreeCommand.__doc__
 
@@ -70,7 +70,7 @@ class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveSimilarProfilesCommand.__doc__
 
@@ -88,7 +88,7 @@ class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
 
 
 class UpdateSeqDistancesRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.UpdateSeqDistancesCommand.__doc__
     protocol_id: UUID = copy_model_field(
@@ -116,7 +116,7 @@ class UpdateSeqDistancesRequestBody(PydanticBaseModel):
 
 
 class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveSamplesByIdCommand.__doc__
     sample_ids: list[UUID] = copy_model_field(
@@ -127,7 +127,7 @@ class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveSampleIdentifiersByIdCommand.__doc__
     sample_ids: list[UUID] = copy_model_field(
@@ -138,7 +138,7 @@ class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrieveSeqDistancesBySeqProfilesRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveSeqDistancesBySeqProfilesCommand.__doc__
 
@@ -153,7 +153,7 @@ class RetrieveSeqDistancesBySeqProfilesRequestBody(PydanticBaseModel):
 
 
 class RetrieveSeqFastaRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveSeqFastaCommand.__doc__
 
@@ -162,6 +162,7 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
         "seq_ids",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
+    wrap: int = copy_model_field(command.RetrieveSeqFastaCommand, "wrap")
     file_name: str = Field(
         description="The desired filename for the FASTA download.",
         max_length=MAX_CODE_FIELD_LENGTH,
@@ -169,7 +170,7 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
 
 
 class ConvertSeqFormatRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.ConvertSeqFormatCommand.__doc__
 
@@ -187,7 +188,7 @@ class ConvertSeqFormatRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveBestSeqPerSampleCommand.__doc__
 
@@ -204,7 +205,7 @@ class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveBestSeqProfilePerSampleCommand.__doc__
 
@@ -221,7 +222,7 @@ class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqClassificationPerSampleRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveBestSeqClassificationPerSampleCommand.__doc__
 
@@ -441,6 +442,7 @@ def create_seq_endpoints(
             command.RetrieveSeqFastaCommand(
                 user=user,
                 seq_ids=request_body.seq_ids,
+                wrap=request_body.wrap,
             ),
         )
 

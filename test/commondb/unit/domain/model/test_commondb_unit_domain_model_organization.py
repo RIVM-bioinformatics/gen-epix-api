@@ -1,25 +1,16 @@
 """Validate organization foreign-key descriptions in CommonDB schemas."""
 
-import base64
-import gzip
-import hashlib
-import json
-from pathlib import Path
-from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
-from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import (
-    IdentifierForUpload,
     OrganizationIdentifierIssuerLink,
     OrganizationSetMember,
     Site,
 )
 from gen_epix.seqdb.domain import model
-from gen_epix.seqdb.domain.model.seq.base import encode_ascii_as_gzip_base64
 
 ORGANIZATION_ID_DESCRIPTION = "The ID of the organization. FOREIGN KEY"
 
@@ -33,7 +24,7 @@ ORGANIZATION_ID_DESCRIPTION = "The ID of the organization. FOREIGN KEY"
     ],
 )
 def test_organization_foreign_key_schema_description(
-    model_class: type, field_name: str
+    model_class: type[BaseModel], field_name: str
 ) -> None:
     """Keep organization links described as foreign keys in the schema."""
     assert (
@@ -41,16 +32,9 @@ def test_organization_foreign_key_schema_description(
     )
 
 
-"""
-Unit tests for IDSDB ETL model classes.
-
-Tests the Identifier, AlleleForUpload, AlleleProfileForUpload,
-and SampleBatchForUpload models with various validation scenarios.
-"""
-
-
 @pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestModelIdentifier:
+    """Validate upload identifiers and their issuer and length constraints."""
 
     def test_valid_with_identifier_issuer_code(self) -> None:
         """Test valid Identifier with identifier_issuer_code."""
@@ -100,6 +84,7 @@ class TestModelIdentifier:
             model.IdentifierForUpload(
                 identifier_issuer_code="A" * 256, external_id="B" * 255
             )
+        with pytest.raises(ValidationError):
             model.IdentifierForUpload(
                 identifier_issuer_code="A" * 255, external_id="B" * 256
             )
