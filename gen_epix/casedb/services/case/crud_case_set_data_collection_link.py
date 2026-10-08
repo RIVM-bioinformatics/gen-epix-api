@@ -8,11 +8,10 @@ from uuid import UUID
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
+from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
-    get_case_abac_from_command,
-    is_app_admin_or_above,
 )
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
@@ -31,7 +30,8 @@ def case_service_crud_case_set_data_collection_link(
     """Handle CRUD operations for CaseSetDataCollectionLink entities."""
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
-        if cmd.user is None or is_app_admin_or_above(self, cmd.user):
+        pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
             return _crud_case_set_data_collection_link_without_abac(self, uow, cmd)
         return _crud_case_set_data_collection_link_with_abac(self, uow, cmd)
 
@@ -85,11 +85,6 @@ def _crud_case_set_data_collection_link_with_abac(
         UnauthorizedAuthError: If a restricted user requests an unsupported bulk
             read, update, or delete operation.
     """
-    case_abac = get_case_abac_from_command(cmd)
-
-    if case_abac is None:
-        return self.crud(cmd)  # type: ignore[return-value]
-
     # Read all without filter and delete all not allowed due to potential large
     # number of case set data collection links
     if (

@@ -109,7 +109,13 @@ files. Run affected unit tests after any executable change; disclose documentati
 audit limitations or unresolved findings. Reinspect the final diff against HEAD,
 including new files, to confirm all changes still belong to the chunk.
 
-## 5. Draft the Commit Message
+## 5. Format code and sort imports
+
+Ensure that all changed files adheres to the project's formatting standards and 
+that imports are properly sorted. This helps maintain consistency and readability
+across the codebase.
+
+## 6. Draft the Commit Message
 
 Use the message conventions in [commit](../commit/SKILL.md), but do not execute
 its staging or commit steps. Inspect the final intended diff, branch name, and

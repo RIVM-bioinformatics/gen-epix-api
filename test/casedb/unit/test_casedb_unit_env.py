@@ -23,6 +23,7 @@ def _assert_composer_forwards_configuration(
         model_class_map=env.model.COMMON_MODEL_MAP,
         command_class_map=env.command.COMMON_COMMAND_MAP,
         policy_class_map=env.COMMON_POLICY_MAP,
+        pdp_class=env.PolicyDecisionPoint,
         role_generator_class=env.RoleGenerator,
         rbac_service_class=env.RbacService,
         feature_flag_enum_classes=(env.CommonFeatureFlag, env.enum.FeatureFlag),
