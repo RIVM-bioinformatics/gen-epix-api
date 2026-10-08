@@ -175,6 +175,11 @@ class App:
             )
         return self._pdp
 
+    @pdp.setter
+    def pdp(self, pdp: PolicyDecisionPoint) -> None:
+        """Policy decision point."""
+        self._pdp = pdp
+
     @property
     def user_manager(self) -> BaseUserManager:
         """Return the user manager used by authorization policies.

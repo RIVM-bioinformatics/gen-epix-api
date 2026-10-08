@@ -9,8 +9,7 @@ argument-hint: "<Python source module or existing unit test path>"
 ## Scope and Prerequisites
 
 - Test exactly one Python source module per invocation. If the request names
-  several modules, ask which one to handle first unless an orchestration skill
-  supplies an ordered worklist; then handle each module separately. If only a test is supplied,
+  several modules, ask which one to handle first. If only a test is supplied,
   identify its source module before proceeding; ask when the target is ambiguous.
 - Inspect existing tests by both filename and imports of the target module.
   An existing test usually means the user wants it updated to match the current
@@ -86,38 +85,6 @@ in the test paths and filenames.
 Record which destination directories did not exist before creating them; this
 determines the launch configurations required in step 4.
 
-### Missing and Unmatched Test Inventory
-
-Run the bundled [mapping checker](./scripts/list_missing_or_unmatched_tests.py)
-from the repository root:
-
-```powershell
-python .agents/skills/create-unit-test/scripts/list_missing_or_unmatched_tests.py
-```
-
-It scans Python modules under `gen_epix` and `test_*.py` modules under
-`test/unit` and `test/<package>/unit`, matching exact canonical paths and names
-from this section. It never imports source modules. Findings use these formats:
-
-```text
-MISSING_TEST: gen_epix/<package>/<module>.py
-UNMATCHED_TEST: test/<package>/unit/<test_module>.py
-```
-
-Paths are checkout-relative and sorted, with missing modules listed first.
-`__init__.py` modules and their matching tests are excluded by default; use
-`--include-init` only when the user requests them. Fixture modules, helpers whose
-names do not start with `test_`, and non-unit test trees are excluded. Use
-`--root <checkout>` to inspect another checkout. A missing test directory means
-all eligible modules lack tests; a missing `gen_epix` directory is an error.
-Findings exit successfully; invalid input exits with a nonzero status.
-
-A missing file means missing canonical mapping, not necessarily missing coverage.
-Inspect unmatched filenames and imports for legacy coverage of the target module.
-After the mandatory logic review, move a single-module test in its entirety with
-`git mv`, or isolate its relevant coverage in the canonical test while preserving
-unrelated coverage. A correctly named file alone does not demonstrate coverage.
-
 ## 3. Design and Implement Input Coverage
 
 Build a compact coverage matrix for every function and method defined by the
@@ -154,7 +121,12 @@ with a reason and explicitly disclose any remaining coverage gaps.
   infrastructure: plain assertions, `pytest.raises`, `pytest.warns`,
   `pytest.approx`, parametrization, fixtures, and registered markers.
 - Inspect existing fixtures, `conftest.py` files, test utilities, and pytest
-  configuration before adding new setup. Reuse them whenever suitable.
+  configuration before adding new setup. Reuse them whenever suitable. Update
+  `conftest.py` files only to move shared fixtures and setup that are genuinely
+  reusable across multiple test modules. When doing so, also update and test the
+  other test modules that rely on those shared fixtures to ensure consistency.
+- Avoid using `with patch("<hard-coded module path>.symbol")` statements. Instead,
+  use `with patch(f"{module.__name__}.symbol")`.
 - Do not repeatedly declare variables with the same hard-coded content in
   individual tests. Define shared immutable example data once; use fixtures or
   factory fixtures to supply fresh mutable objects and per-case overrides.

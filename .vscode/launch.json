@@ -765,6 +765,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.casedb.unit.domain.policy",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/domain/policy"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.casedb.unit.domain.model",
         "type": "debugpy",
         "request": "launch",
@@ -796,6 +808,18 @@
         "args": [
                 "run_test",
                 "test/casedb/unit/domain/model/case"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.policies",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/policies"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1048,6 +1072,18 @@
         "args": [
                 "run_test",
                 "test/commondb/unit/domain/model"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.domain.policy",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/domain/policy"
         ],
         "console": "integratedTerminal",
         "justMyCode": true

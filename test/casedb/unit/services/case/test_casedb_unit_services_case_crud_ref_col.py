@@ -38,33 +38,30 @@ class BaseRefColTestCase(BaseCrudTestCase):
 class TestRefColReadAndDelete(BaseRefColTestCase):
     """Test read access handling and delete passthrough."""
 
-    def test_read_without_policy_returns_crud_result(self) -> None:
+    def test_read_with_unrestricted_pdp_uses_access_filter(self) -> None:
         cmd = self.create_crud_command(CrudOperation.READ_ALL)
         expected = [object()]
-        self.service.crud.return_value = expected
+        self.service.app.pdp.get_ref_col_id_filter.return_value = None
 
         with patch(
-            "gen_epix.casedb.services.case.crud_ref_col.get_ref_data_access_from_command",
-            return_value=None,
-        ):
+            "gen_epix.casedb.services.case.crud_ref_col.crud_with_access_filter",
+            return_value=expected,
+        ) as crud_with_filter:
             retval = case_service_crud_ref_col(self.service, cmd)
 
         assert retval == expected
-        self.service.crud.assert_called_once_with(cmd)
+        self.service.app.pdp.get_ref_col_id_filter.assert_called_once_with(
+            cmd, ref_col_id_field_name="id"
+        )
+        crud_with_filter.assert_called_once_with(self.service, self.uow, cmd, None)
 
     def test_read_with_restricted_policy_uses_access_filter(self) -> None:
         cmd = self.create_crud_command(CrudOperation.READ_ALL)
         expected = [object()]
         access_filter = object()
-        ref_data_access = self.service.repository
-        ref_data_access.is_full_access = False
-        ref_data_access.get_ref_col_filter.return_value = access_filter
+        self.service.app.pdp.get_ref_col_id_filter.return_value = access_filter
 
         with (
-            patch(
-                "gen_epix.casedb.services.case.crud_ref_col.get_ref_data_access_from_command",
-                return_value=ref_data_access,
-            ),
             patch(
                 "gen_epix.casedb.services.case.crud_ref_col.crud_with_access_filter",
                 return_value=expected,
@@ -73,7 +70,9 @@ class TestRefColReadAndDelete(BaseRefColTestCase):
             retval = case_service_crud_ref_col(self.service, cmd)
 
         assert retval == expected
-        ref_data_access.get_ref_col_filter.assert_called_once_with("id")
+        self.service.app.pdp.get_ref_col_id_filter.assert_called_once_with(
+            cmd, ref_col_id_field_name="id"
+        )
         crud_with_filter.assert_called_once_with(
             self.service, self.uow, cmd, access_filter
         )
@@ -127,13 +126,7 @@ class TestRefColCreateAndUpdate(BaseRefColTestCase):
         cmd = self.create_crud_command(CrudOperation.CREATE_ONE, objs=[ref_col])
         self.service.repository.crud.return_value = [ref_dim]
 
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_ref_col.get_ref_data_access_from_command",
-                return_value=None,
-            ),
-            pytest.raises(exc.InvalidArgumentsError),
-        ):
+        with pytest.raises(exc.InvalidArgumentsError):
             case_service_crud_ref_col(self.service, cmd)
 
         self.service.crud.assert_not_called()
@@ -253,18 +246,105 @@ class TestRefColCreateAndUpdate(BaseRefColTestCase):
 
         self.service.crud.assert_not_called()
 
-    def test_exists_operation_returns_crud_result(self) -> None:
+    def test_exists_with_unrestricted_pdp_uses_access_filter(self) -> None:
         cmd = self.create_crud_command(CrudOperation.EXISTS_ONE)
         expected = [True]
-        self.service.crud.return_value = expected
+        self.service.app.pdp.get_ref_col_id_filter.return_value = None
 
         with patch(
-            "gen_epix.casedb.services.case.crud_ref_col.get_ref_data_access_from_command",
-            return_value=None,
-        ):
+            "gen_epix.casedb.services.case.crud_ref_col.crud_with_access_filter",
+            return_value=expected,
+        ) as crud_with_filter:
             retval = case_service_crud_ref_col(self.service, cmd)
 
         assert retval == expected
-        self.service.crud.assert_called_once_with(cmd)
+        self.service.app.pdp.get_ref_col_id_filter.assert_called_once_with(
+            cmd, ref_col_id_field_name="id"
+        )
+        crud_with_filter.assert_called_once_with(self.service, self.uow, cmd, None)
 
 
+class TestRefColStateValidation:
+    """Test type-specific linked-resource and schema requirements."""
+
+    ref_dim_id = UUID("550e8400-e29b-41d4-a716-446655440001")
+
+    @pytest.mark.parametrize(
+        ("col_type", "field"),
+        [
+            (enum.ColType.NOMINAL, "concept_set_id"),
+            (enum.ColType.GEO_REGION, "region_set_id"),
+            (enum.ColType.GENETIC_DISTANCE, "genetic_distance_protocol_id"),
+        ],
+    )
+    def test_required_linked_id_is_enforced(
+        self, col_type: enum.ColType, field: str
+    ) -> None:
+        with pytest.raises(exc.InvalidArgumentsError):
+            model.RefCol(
+                ref_dim_id=self.ref_dim_id,
+                code="test.code",
+                col_type=col_type,
+            )
+
+        valid = model.RefCol.model_validate(
+            {
+                "ref_dim_id": self.ref_dim_id,
+                "code": "test.code",
+                "col_type": col_type,
+                **cast(dict[str, Any], {field: uuid4()}),
+            }
+        )
+        assert valid.col_type is col_type
+
+    def test_regex_requires_regex_value(self) -> None:
+        with pytest.raises(exc.InvalidArgumentsError, match="requires regex"):
+            model.RefCol(
+                ref_dim_id=self.ref_dim_id,
+                code="test.code",
+                col_type=enum.ColType.REGULAR_LANGUAGE,
+            )
+
+        valid = model.RefCol(
+            ref_dim_id=self.ref_dim_id,
+            code="test.code",
+            col_type=enum.ColType.REGULAR_LANGUAGE,
+            regex=r"^[A-Z]+$",
+        )
+        assert valid.regex == r"^[A-Z]+$"
+
+    @pytest.mark.parametrize(
+        "col_type",
+        [
+            enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
+            enum.ColType.CONTEXT_FREE_GRAMMAR_XML,
+        ],
+    )
+    def test_schema_type_requires_one_schema_source(
+        self, col_type: enum.ColType
+    ) -> None:
+        with pytest.raises(exc.InvalidArgumentsError, match="requires schema"):
+            model.RefCol(
+                ref_dim_id=self.ref_dim_id,
+                code="test.code",
+                col_type=col_type,
+            )
+
+        with pytest.raises(
+            exc.InvalidArgumentsError, match="only one of schema_definition"
+        ):
+            model.RefCol(
+                ref_dim_id=self.ref_dim_id,
+                code="test.code",
+                col_type=col_type,
+                schema_definition="schema",
+                schema_uri="https://example.test/schema",
+            )
+
+        valid = model.RefCol(
+            ref_dim_id=self.ref_dim_id,
+            code="test.code",
+            col_type=col_type,
+            schema_uri="https://example.test/schema",
+        )
+        assert valid.schema_uri == "https://example.test/schema"

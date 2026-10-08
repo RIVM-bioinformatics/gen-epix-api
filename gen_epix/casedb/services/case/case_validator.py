@@ -284,6 +284,7 @@ class CaseValidator:
             if content is None:
                 continue
             assert data_issues is not None
+            # @ABAC: use CompleteCaseType to determine allowed Cols
             invalid_col_ids = set(content.keys()) - set(
                 self.complete_case_type.cols.keys()
             )
@@ -321,6 +322,7 @@ class CaseValidator:
                 unexpectedly produces ``None`` from a non-``None`` value.
         """
         msg_template = "{orig_value}"
+        # @ABAC: use CompleteCaseType to loop over allowed Cols
         for col in self.complete_case_type.cols.values():
             col_id = col.id
             assert col_id is not None
@@ -484,7 +486,7 @@ class CaseValidator:
         Raises:
             NotImplementedError: If a numeric unit pair has no conversion multiplier.
         """
-        # Go over each Dim
+        # @ABAC: use CompleteCaseType to go over allowed Dims and Cols
         for dim in self.complete_case_type.dims.values():
             assert dim.id is not None
             dim_type = self.complete_case_type.ref_dims[dim.ref_dim_id]
@@ -555,10 +557,12 @@ class CaseValidator:
         """
         # Determine Cols from which the case date needs to be derived
         # Calculate case date where possible
+        # @ABAC: use CompleteCaseType to determine Dim, if any, for case date
         case_date_dim_id = self.complete_case_type.case_date_dim_id
         if case_date_dim_id is None:
             case_date_col_mappers = {}
         else:
+            # @ABAC: use CompleteCaseType to determine Cols for case date Dim
             cols = [
                 self.complete_case_type.cols[x]
                 for x in self.complete_case_type.ordered_col_ids_by_dim[
@@ -1064,6 +1068,7 @@ class CaseValidator:
         self.interval_concept_set_ids = set()
         self.region_set_ids = set()
         # Get unique concept and region sets across the complete CaseType
+        # @ABAC: use CompleteCaseType to determine RefCols
         for ref_col in self.complete_case_type.ref_cols.values():
             if ref_col.col_type in ColTypeSet.HAS_CONCEPT_SET.value:
                 assert ref_col.concept_set_id
@@ -1077,6 +1082,7 @@ class CaseValidator:
     def _init_regex_metadata(self) -> None:
         """Compile regular-language patterns by reference-column identifier."""
         self.regex_patterns = {}
+        # @ABAC: use CompleteCaseType to determine RefCols
         for ref_col in self.complete_case_type.ref_cols.values():
             if ref_col.col_type != ColType.REGULAR_LANGUAGE:
                 continue

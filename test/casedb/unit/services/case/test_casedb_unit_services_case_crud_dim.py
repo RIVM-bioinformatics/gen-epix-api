@@ -100,16 +100,11 @@ class TestAdminCreate(BaseDimTestCase):
         self.service.repository.crud.side_effect = repo_crud_side_effect
         expected_retval: List[Any] = [object()]
         self.service.crud.return_value = expected_retval
+        self.service.app.pdp.is_exempted.return_value = True  # Admin path
 
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.is_refdata_admin_or_above",
-                return_value=True,
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"
-            ) as cascade_delete,
-        ):
+        with patch(
+            "gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"
+        ) as cascade_delete:
             from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
 
             # 3. Execute
@@ -169,14 +164,9 @@ class TestAdminCreate(BaseDimTestCase):
 
         self.service.repository.crud.side_effect = repo_crud_side_effect
         self.service.crud.return_value = [object()]
+        self.service.app.pdp.is_exempted.return_value = True  # Admin path
 
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.is_refdata_admin_or_above",
-                return_value=True,
-            ),
-            patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"),
-        ):
+        with patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"):
             from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
 
             # 3. Execute
@@ -221,14 +211,9 @@ class TestAdminCreate(BaseDimTestCase):
             return []
 
         self.service.repository.crud.side_effect = repo_crud_side_effect
+        self.service.app.pdp.is_exempted.return_value = True  # Admin path
 
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.is_refdata_admin_or_above",
-                return_value=True,
-            ),
-            patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"),
-        ):
+        with patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"):
             from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
 
             # 3. Execute + 4. Verify
@@ -257,14 +242,9 @@ class TestAdminCreate(BaseDimTestCase):
             return []
 
         self.service.repository.crud.side_effect = repo_crud_side_effect
+        self.service.app.pdp.is_exempted.return_value = True  # Admin path
 
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.is_refdata_admin_or_above",
-                return_value=True,
-            ),
-            patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"),
-        ):
+        with patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"):
             from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
 
             # 3. Execute + 4. Verify
@@ -299,14 +279,9 @@ class TestAdminUpdate(BaseDimTestCase):
             return []
 
         self.service.repository.crud.side_effect = repo_crud_side_effect
+        self.service.app.pdp.is_exempted.return_value = True  # Admin path
 
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.is_refdata_admin_or_above",
-                return_value=True,
-            ),
-            patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"),
-        ):
+        with patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"):
             from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
 
             # 3. Execute + 4. Verify
@@ -348,14 +323,9 @@ class TestAdminUpdate(BaseDimTestCase):
             return []
 
         self.service.repository.crud.side_effect = repo_crud_side_effect
+        self.service.app.pdp.is_exempted.return_value = True  # Admin path
 
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.is_refdata_admin_or_above",
-                return_value=True,
-            ),
-            patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"),
-        ):
+        with patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"):
             from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
 
             # 3. Execute
@@ -376,24 +346,18 @@ class TestAdminUpdate(BaseDimTestCase):
 # ABAC path tests
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestAbacReadAndWrite(BaseDimTestCase):
-    def test_abac_none_policy_returns_service_crud(self) -> None:
+    def test_abac_read_with_unrestricted_pdp_uses_access_filter(self) -> None:
         # 1. Input
         cmd = self.create_crud_command(CrudOperation.READ_ALL, user_id=self.user_id)
         expected: List[Any] = [object()]
 
         # 2. Mocks
-        self.service.crud.return_value = expected
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.get_ref_data_access_from_command",
-                return_value=None,
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.is_refdata_admin_or_above",
-                return_value=False,
-            ),
-            patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"),
-        ):
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        self.service.app.pdp.get_dim_id_filter.return_value = None
+        with patch(
+            "gen_epix.casedb.services.case.crud_dim.crud_with_access_filter",
+            return_value=expected,
+        ) as caf:
             from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
 
             # 3. Execute
@@ -401,26 +365,18 @@ class TestAbacReadAndWrite(BaseDimTestCase):
 
             # 4. Verify
             assert retval == expected
-            self.service.crud.assert_called_once_with(cmd)
+            self.service.app.pdp.get_dim_id_filter.assert_called_once_with(
+                cmd, dim_id_field_name="id"
+            )
+            caf.assert_called_once_with(self.service, self.uow, cmd, None)
 
     def test_abac_non_read_operation_raises_assertion(self) -> None:
         # 1. Input
         cmd = self.create_crud_command(CrudOperation.UPDATE_ONE, user_id=self.user_id)
 
         # 2. Mocks
-        ref_data_access = Mock()
-        ref_data_access.is_full_access = False
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.get_ref_data_access_from_command",
-                return_value=ref_data_access,
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.is_refdata_admin_or_above",
-                return_value=False,
-            ),
-            patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"),
-        ):
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        with patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"):
             from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
 
             # 3. Execute + 4. Verify
@@ -434,20 +390,10 @@ class TestAbacReadAndWrite(BaseDimTestCase):
         access_filter = Mock()
 
         # 2. Mocks
-        ref_data_access = Mock()
-        ref_data_access.is_full_access = False
-        ref_data_access.get_dim_filter.return_value = access_filter
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        self.service.app.pdp.get_dim_id_filter.return_value = access_filter
 
         with (
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.get_ref_data_access_from_command",
-                return_value=ref_data_access,
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_dim.is_refdata_admin_or_above",
-                return_value=False,
-            ),
-            patch("gen_epix.casedb.services.case.crud_dim._crud_cascade_delete"),
             patch(
                 "gen_epix.casedb.services.case.crud_dim.crud_with_access_filter",
                 return_value=expected,
@@ -460,7 +406,9 @@ class TestAbacReadAndWrite(BaseDimTestCase):
 
             # 4. Verify
             assert retval == expected
-            ref_data_access.get_dim_filter.assert_called_once_with("id")
+            self.service.app.pdp.get_dim_id_filter.assert_called_once_with(
+                cmd, dim_id_field_name="id"
+            )
             caf.assert_called_once()
             called_args = caf.call_args[0]
             assert called_args[0] is self.service
