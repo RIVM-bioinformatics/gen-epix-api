@@ -5,7 +5,6 @@ exports define role-permission mappings and prevent privilege escalation.
 System exports apply outage restrictions during command handling.
 """
 
-# pylint: disable=useless-import-alias
 from gen_epix.commondb.domain.policy.abac import (
     BaseIsOrganizationAdminPolicy as BaseIsOrganizationAdminPolicy,
 )
@@ -20,6 +19,12 @@ from gen_epix.commondb.domain.policy.abac import (
 )
 from gen_epix.commondb.domain.policy.abac import (
     BaseUpdateUserPolicy as BaseUpdateUserPolicy,
+)
+
+# pylint: disable=useless-import-alias
+from gen_epix.commondb.domain.policy.pdp import BasePolicyDecisionPoint
+from gen_epix.commondb.domain.policy.pdp import (
+    BasePolicyDecisionPoint as BasePolicyDecisionPoint,
 )
 from gen_epix.commondb.domain.policy.permission import (
     NO_RBAC_PERMISSIONS as NO_RBAC_PERMISSIONS,

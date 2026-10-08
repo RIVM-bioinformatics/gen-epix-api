@@ -55,15 +55,18 @@ for rules not covered here.
    `Yields:`, and `Raises:` sections. Treat command dispatch, authorization,
    persistence, generated interfaces, stateful orchestration, and multi-branch
    workflows as complex. Do not narrate internal statements; explain phases,
-   guarantees, mutations, and delegation that affect callers.
-8. Document exceptions in `Raises:` when they are relevant to the caller-facing
-   contract, including propagated exceptions when applicable. Do not document
-   exceptions raised only because a caller violated the documented API. Include
-   `Args:`, `Returns:`, and `Yields:` only when they add meaning beyond names and
-   annotations. Use a consistent hanging indent of two or four spaces. Put a
-   blank line between Google-style sections (for example, between `Args:` and
-   `Returns:`), but not between a section heading and its entries. Do not leave a
-   blank line between a function or method docstring and its first statement.
+   guarantees, mutations, and delegation that affect callers. Do not add type
+   information in the docstring that is not already captured in the type hints
+   of the signature.
+8. Any method that explicitly raises an exception must use a complete docstring.
+   Describe relevant arguments and return values. Document exceptions in `Raises:`
+   when they are relevant to the caller-facing contract, including propagated
+   exceptions when applicable. Do not document exceptions raised only because a
+   caller violated the documented API. Include `Args:`, `Returns:`, and `Yields:`
+   only when they add meaning beyond names and annotations. Do not restate
+   obvious types. Use a consistent hanging indent of two or four spaces within
+   the file. This rule does not apply to some specific cases that are documented
+   further down in Step 10.
 9. For public classes with multiple responsibilities or lifecycle behavior, use
    a summary followed by paragraphs explaining their role, collaboration
    boundaries, lifecycle, side effects, and security or trust implications where

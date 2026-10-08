@@ -9,7 +9,7 @@ from gen_epix.commondb.env import NoAppComposer as CommonNoAppComposer
 from gen_epix.omopdb.domain import DOMAIN, command, enum, model
 from gen_epix.omopdb.domain.policy import RoleGenerator
 from gen_epix.omopdb.policies import COMMON_POLICY_MAP
-from gen_epix.omopdb.services import RbacService
+from gen_epix.omopdb.services.rbac import RbacService
 
 _KWARGS = {
     "domain": DOMAIN,
