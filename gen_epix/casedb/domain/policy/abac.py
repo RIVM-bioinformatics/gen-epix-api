@@ -52,7 +52,7 @@ class BaseCaseAbacPolicy(Policy):
                 continue
             if case_abac:
                 raise exc.InitializationServiceError(
-                    "3a0dbaf4", f"Multiple policies registered to retrieve CaseAbac"
+                    "3a0dbaf4", "Multiple policies registered to retrieve CaseAbac"
                 )
             case_abac = cast(BaseCaseAbacPolicy, policy).abac_service.get_case_abac(cmd)
 

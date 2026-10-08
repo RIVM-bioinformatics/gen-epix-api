@@ -77,7 +77,7 @@ class ConceptSet(Model):
             raise ValueError(
                 f"ConceptSet {self.code}: unit must be provided for quantitative concept sets."
             )
-        elif (
+        if (
             self.unit is not None
             and self.type not in enum.ConceptSetTypeSet.HAS_UNIT.value
         ):
@@ -129,7 +129,7 @@ class Concept(Model):
             "string, or None. The lb and ub values must be numeric and are "
             "normalized to floats; lb_in and ub_in must be booleans or integers "
             "and are normalized to booleans. The mapping is serialized as a JSON "
-            "object string, while None is preserved."
+            "object string, while None is preserved. Input mappings are not modified."
         ),
     )
 
@@ -152,7 +152,7 @@ class Concept(Model):
             # Assume json
             props = json.loads(props_value)
         else:
-            props = props_value
+            props = props_value.copy()
         for key in ("lb", "ub"):
             if key not in props:
                 continue
