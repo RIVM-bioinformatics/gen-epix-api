@@ -4,6 +4,7 @@ pandas==3.0.6
 polars==2.0.0
 xlsxwriter==3.2.9
 pytest
+pytest-asyncio
 pytest-gremlins==1.11.2
 pytest-xdist
 pytest-mock==3.16.*
