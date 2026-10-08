@@ -730,81 +730,105 @@ class SARepository(BaseRepository):
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         # Retrieve rows and generate objs
         mapper = self.get_mapper(model_class)
-        row_class = mapper.row_class
         obj_filter: Filter | None = kwargs.get("obj_filter", None)
         limit = limit or -1
         offset = offset or 0
+        return self._execute_sa(
+            session,
+            lambda current_session: self._execute_read_all(
+                current_session,
+                model_class,
+                mapper,
+                filter,
+                obj_filter,
+                return_id,
+                limit,
+                offset,
+            ),
+            kwargs,
+        )
 
-        def _add_sql_limit_offset(stmt: sa.Select) -> sa.Select:
-            """Add sql limit offset."""
-            if limit > 0:
-                stmt = stmt.limit(limit)
-            if offset > 0:
-                stmt = stmt.offset(offset)
-            return stmt
+    @staticmethod
+    def _add_read_all_sql_pagination(
+        stmt: sa.Select, limit: int, offset: int
+    ) -> sa.Select:
+        """Apply SQL pagination when filtering is entirely database-side."""
+        if limit > 0:
+            stmt = stmt.limit(limit)
+        if offset > 0:
+            stmt = stmt.offset(offset)
+        return stmt
 
-        def _apply_obj_limit_offset(objs: list[Model]) -> list[Model]:
-            """Apply obj limit offset."""
-            if limit > 0:
-                if offset > len(objs):
-                    return []
-                elif offset + limit > len(objs):
-                    return objs[offset:]
-                else:
-                    return objs[offset : offset + limit]
+    @staticmethod
+    def _apply_read_all_obj_pagination(
+        objs: list[Model], limit: int, offset: int
+    ) -> list[Model]:
+        """Apply pagination after Python-side object filtering."""
+        if limit <= 0:
             return objs
+        if offset > len(objs):
+            return []
+        if offset + limit > len(objs):
+            return objs[offset:]
+        return objs[offset : offset + limit]
 
-        def _execute(session: Session) -> list[Model] | list[Hashable]:
-            # Get either rows or row_ids
-            """Execute the requested value."""
-            if return_id:
-                # Select only row_ids
-                stmt = select(mapper.get_row_id_column())
-                if not obj_filter:
-                    # Only apply limit and offset if obj_filter is not used. If obj_filter is used, first all objects need to be filter by that (as well) and then limit and offset can be applied.
-                    stmt = _add_sql_limit_offset(stmt)
-            else:
-                # Select entire row
-                stmt = select(row_class)
-                if not obj_filter:
-                    # Only apply limit and offset if obj_filter is not used. If obj_filter is used, first all objects need to be filter by that (as well) and then limit and offset can be applied.
-                    stmt = _add_sql_limit_offset(stmt)
-            if filter:
-                # Convert filter to where clause and add to statement
-                stmt = stmt.where(
-                    self.get_where_clause_from_filter(row_class, mapper, filter)
-                )
-            if return_id:
-                row_ids = [x[0] for x in session.execute(stmt).all()]
-                if obj_filter:
-                    # Retrieve entire rows and filter them with obj_filter, then get
-                    # remaining IDs
-                    stmt2: sa.Select = select(row_class).where(
-                        mapper.get_row_id_column().in_(row_ids)
-                    )
-                    rows = [x[0] for x in session.execute(stmt2).all()]
-                    objs = cast(list[Model], self.from_sql(model_class, rows))
-                    objs = cast(
-                        list[Model],
-                        list(obj_filter.filter_rows(objs, is_model=True)),
-                    )
-                    objs = _apply_obj_limit_offset(objs)
-                    if len(objs) < len(row_ids):
-                        row_ids = [mapper.get_id(x) for x in objs]
-                objs = row_ids
-            else:
-                rows = [x[0] for x in session.execute(stmt).all()]
-                objs = cast(list[Model], self.from_sql(model_class, rows))
-                if obj_filter:
-                    objs = cast(
-                        list[Model],
-                        list(obj_filter.filter_rows(objs, is_model=True)),
-                    )
-                    objs = _apply_obj_limit_offset(objs)
-            return objs
-
-        objs: list[Model] | list[Hashable] = self._execute_sa(session, _execute, kwargs)
+    def _execute_read_all(
+        self,
+        session: Session,
+        model_class: type[Model],
+        mapper: BaseSAMapper,
+        filter: Filter | None,
+        obj_filter: Filter | None,
+        return_id: bool,
+        limit: int,
+        offset: int,
+    ) -> list[Model] | list[Hashable]:
+        """Execute a read_all query and apply any Python-side filter."""
+        row_class = mapper.row_class
+        selected_column = mapper.get_row_id_column() if return_id else row_class
+        stmt = select(selected_column)
+        if not obj_filter:
+            # Apply SQL pagination only when Python-side filtering is not needed.
+            stmt = self._add_read_all_sql_pagination(stmt, limit, offset)
+        if filter:
+            stmt = stmt.where(
+                self.get_where_clause_from_filter(row_class, mapper, filter)
+            )
+        if return_id:
+            return self._read_all_ids(
+                session, model_class, mapper, stmt, obj_filter, limit, offset
+            )
+        rows = [row[0] for row in session.execute(stmt).all()]
+        objs = cast(list[Model], self.from_sql(model_class, rows))
+        if obj_filter:
+            objs = cast(list[Model], list(obj_filter.filter_rows(objs, is_model=True)))
+            objs = self._apply_read_all_obj_pagination(objs, limit, offset)
         return objs
+
+    def _read_all_ids(
+        self,
+        session: Session,
+        model_class: type[Model],
+        mapper: BaseSAMapper,
+        stmt: sa.Select,
+        obj_filter: Filter | None,
+        limit: int,
+        offset: int,
+    ) -> list[Hashable]:
+        """Return IDs, applying object filters through the corresponding domain rows."""
+        row_ids: list[Hashable] = [row[0] for row in session.execute(stmt).all()]
+        if not obj_filter:
+            return row_ids
+        # Retrieve entire rows and filter them with obj_filter, then get remaining IDs.
+        row_class = mapper.row_class
+        stmt = select(row_class).where(mapper.get_row_id_column().in_(row_ids))
+        rows = [row[0] for row in session.execute(stmt).all()]
+        objs = cast(list[Model], self.from_sql(model_class, rows))
+        objs = cast(list[Model], list(obj_filter.filter_rows(objs, is_model=True)))
+        objs = self._apply_read_all_obj_pagination(objs, limit, offset)
+        if len(objs) < len(row_ids):
+            return [mapper.get_id(obj) for obj in objs]
+        return row_ids
 
     def update_one(
         self, model_class: type[Model], user_id: Hashable, obj: Model, **kwargs: Any
@@ -908,58 +932,25 @@ class SARepository(BaseRepository):
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             """Execute the requested value."""
             obj_ids = [mapper.get_id(x) for x in objs]
-
-            # Chunk the existence check to avoid SQL Server's 2100-parameter limit.
             row_id_col = mapper.get_row_id_column()
-            existing_ids: set[Hashable] = set()
-            for chunk_start in range(0, len(obj_ids), max_batch_size):
-                chunk = obj_ids[chunk_start : chunk_start + max_batch_size]
-                chunk_rows = session.execute(
-                    select(row_id_col).where(row_id_col.in_(chunk))
-                ).all()
-                existing_ids.update(x[0] for x in chunk_rows)
+            existing_ids = self._get_existing_upsert_ids(
+                session, obj_ids, row_id_col, max_batch_size
+            )
 
             new_objs = [o for o, oid in zip(objs, obj_ids) if oid not in existing_ids]
             existing_objs = [o for o, oid in zip(objs, obj_ids) if oid in existing_ids]
 
-            # Insert new objects in batches.
             new_rows: list[Any] = self.to_sql(user_id, model_class, new_objs)
-            n_rows = len(new_rows)
-            n_batches = max(1, -(-n_rows // max_batch_size))  # ceiling division
-            for i in range(n_batches):
-                slice_ = slice(
-                    i * max_batch_size, min((i + 1) * max_batch_size, n_rows)
-                )
-                session.add_all(new_rows[slice_])
-                if flush:
-                    session.flush()
-
-            # Update existing objects in chunks to avoid SQL Server's 2100-parameter limit.
-            updated_rows: list[Any] = []
-            if existing_objs:
-                existing_obj_ids = [mapper.get_id(o) for o in existing_objs]
-                all_rows: list[Any] = []
-                all_row_ids: list[Hashable] = []
-                for chunk_start in range(0, len(existing_obj_ids), max_batch_size):
-                    chunk_ids = existing_obj_ids[
-                        chunk_start : chunk_start + max_batch_size
-                    ]
-                    chunk_rows, chunk_row_ids = SARepository._in_session_read_some(
-                        mapper,
-                        session,
-                        chunk_ids,
-                        optimize_parameter_handling=optimize_parameter_handling,
-                        max_ids_in_clause=self._max_parameters_in_clause,
-                    )
-                    all_rows.extend(chunk_rows)
-                    all_row_ids.extend(chunk_row_ids)
-                map_rows = dict(zip(all_row_ids, all_rows))
-                for obj in existing_objs:
-                    row = map_rows[mapper.get_id(obj)]
-                    mapper.update(user_id, obj, row)
-                updated_rows = all_rows
-                if flush:
-                    session.flush()
+            self._insert_upsert_rows(session, new_rows, max_batch_size, flush)
+            updated_rows = self._update_upsert_rows(
+                session,
+                mapper,
+                user_id,
+                existing_objs,
+                max_batch_size,
+                optimize_parameter_handling,
+                flush,
+            )
 
             row_by_id = {mapper.get_row_id(row): row for row in new_rows + updated_rows}
             all_rows = [row_by_id[obj_id] for obj_id in obj_ids]
@@ -971,6 +962,76 @@ class SARepository(BaseRepository):
             session, _execute, kwargs
         )
         return retval
+
+    @staticmethod
+    def _get_existing_upsert_ids(
+        session: Session,
+        obj_ids: list[Hashable],
+        row_id_column: Any,
+        max_batch_size: int,
+    ) -> set[Hashable]:
+        """Query existing IDs in chunks within database parameter limits."""
+        # Chunk the existence check to avoid SQL Server's 2100-parameter limit.
+        existing_ids: set[Hashable] = set()
+        for chunk_start in range(0, len(obj_ids), max_batch_size):
+            chunk = obj_ids[chunk_start : chunk_start + max_batch_size]
+            chunk_rows = session.execute(
+                select(row_id_column).where(row_id_column.in_(chunk))
+            ).all()
+            existing_ids.update(row[0] for row in chunk_rows)
+        return existing_ids
+
+    @staticmethod
+    def _insert_upsert_rows(
+        session: Session, new_rows: list[Any], max_batch_size: int, flush: bool
+    ) -> None:
+        """Insert new SQL rows in batches."""
+        n_rows = len(new_rows)
+        n_batches = max(1, -(-n_rows // max_batch_size))  # ceiling division
+        for batch_index in range(n_batches):
+            row_slice = slice(
+                batch_index * max_batch_size,
+                min((batch_index + 1) * max_batch_size, n_rows),
+            )
+            session.add_all(new_rows[row_slice])
+            if flush:
+                session.flush()
+
+    def _update_upsert_rows(
+        self,
+        session: Session,
+        mapper: BaseSAMapper,
+        user_id: Hashable,
+        existing_objs: list[Model],
+        max_batch_size: int,
+        optimize_parameter_handling: bool,
+        flush: bool,
+    ) -> list[Any]:
+        """Update existing SQL rows in parameter-safe chunks."""
+        if not existing_objs:
+            return []
+        existing_obj_ids = [mapper.get_id(obj) for obj in existing_objs]
+        all_rows: list[Any] = []
+        all_row_ids: list[Hashable] = []
+        # Update existing objects in chunks to avoid SQL Server's 2100-parameter limit.
+        for chunk_start in range(0, len(existing_obj_ids), max_batch_size):
+            chunk_ids = existing_obj_ids[chunk_start : chunk_start + max_batch_size]
+            chunk_rows, chunk_row_ids = SARepository._in_session_read_some(
+                mapper,
+                session,
+                chunk_ids,
+                optimize_parameter_handling=optimize_parameter_handling,
+                max_ids_in_clause=self._max_parameters_in_clause,
+            )
+            all_rows.extend(chunk_rows)
+            all_row_ids.extend(chunk_row_ids)
+        map_rows = dict(zip(all_row_ids, all_rows))
+        for obj in existing_objs:
+            row = map_rows[mapper.get_id(obj)]
+            mapper.update(user_id, obj, row)
+        if flush:
+            session.flush()
+        return all_rows
 
     def delete_one(
         self,
@@ -1177,28 +1238,67 @@ class SARepository(BaseRepository):
     ) -> Any:
         """Recursively convert a Filter tree to a SQLAlchemy where-clause."""
         column_function_map = column_function_map or {}
-        invert = filter.invert
         if isinstance(filter, CompositeFilter):
-            args = []
-            for sub_filter in filter.filters:
-                args.append(
-                    self.get_where_clause_from_filter(row_class, mapper, sub_filter)
-                )
-            if filter.operator == LogicalOperator.AND:
-                return sa.and_(*args) if not invert else sa.not_(sa.and_(*args))
-            if filter.operator == LogicalOperator.OR:
-                return sa.or_(*args) if not invert else sa.not_(sa.or_(*args))
+            return self._get_composite_where_clause(row_class, mapper, filter)
+        result_column = self._get_filter_column(
+            row_class, mapper, filter, column_function_map
+        )
+        invert = filter.invert
+        if (
+            isinstance(filter, StringSetFilter)
+            or isinstance(filter, NumberSetFilter)
+            or isinstance(filter, UuidSetFilter)
+        ):
+            return self._get_set_where_clause(filter, result_column, invert)
+        if isinstance(filter, ExistsFilter):
+            return result_column != None if not invert else result_column == None
+        if isinstance(filter, EqualsFilter):
+            return (
+                result_column == filter.value
+                if not invert
+                else result_column != filter.value
+            )
+        if isinstance(filter, RangeFilter):
+            return self._get_range_where_clause(filter, result_column, invert)
+        raise exc.InvalidArgumentsError(
+            "880a6446", f"Unsupported filter type: {filter.__class__.__name__}"
+        )
+
+    def _get_composite_where_clause(
+        self,
+        row_class: type,
+        mapper: BaseSAMapper | None,
+        filter: CompositeFilter,
+    ) -> Any:
+        """Convert a composite filter and apply its inversion."""
+        args = [
+            self.get_where_clause_from_filter(row_class, mapper, sub_filter)
+            for sub_filter in filter.filters
+        ]
+        if filter.operator == LogicalOperator.AND:
+            clause = sa.and_(*args)
+        elif filter.operator == LogicalOperator.OR:
+            clause = sa.or_(*args)
+        else:
             raise exc.InvalidArgumentsError(
                 "8f411a53", f"Unsupported filter operator: {filter.operator.value}"
             )
+        return sa.not_(clause) if filter.invert else clause
 
-        # Get row field name
+    @staticmethod
+    def _get_filter_column(
+        row_class: type,
+        mapper: BaseSAMapper | None,
+        filter: Filter,
+        column_function_map: dict[str, Callable],
+    ) -> Any:
+        """Resolve a domain filter key to its SQLAlchemy column or expression."""
         filter_key = str(filter.get_key())
         if mapper is None:
             # Row field name assumed as filter key
             row_field_name = filter_key
         else:
-            row_field_name = mapper.get_mapped_field_name(str(filter.get_key()))  # type: ignore[assignment]
+            row_field_name = mapper.get_mapped_field_name(filter_key)
         if row_field_name is None:
             raise exc.InvalidArgumentsError(
                 "320f2bf7",
@@ -1206,50 +1306,41 @@ class SARepository(BaseRepository):
             )
         column = getattr(row_class, row_field_name)
         column_function = column_function_map.get(row_field_name)
-        result_column = column_function(column) if column_function else column
-        if (
-            isinstance(filter, StringSetFilter)
-            or isinstance(filter, NumberSetFilter)
-            or isinstance(filter, UuidSetFilter)
-        ):
-            members = filter.members
+        return column_function(column) if column_function else column
 
-            # Handle Enum types by converting the members to the corresponding Enum values
-            enum_class = getattr(column.type, "enum_class", None)
-            if enum_class is not None:
-                members = frozenset(enum_class(value) for value in members)
+    @staticmethod
+    def _get_set_where_clause(
+        filter: StringSetFilter | NumberSetFilter | UuidSetFilter,
+        column: Any,
+        invert: bool,
+    ) -> Any:
+        """Build an IN predicate, converting Enum members when needed."""
+        members = filter.members
+        # Handle Enum types by converting the members to the corresponding Enum values
+        enum_class = getattr(column.type, "enum_class", None)
+        if enum_class is not None:
+            members = frozenset(enum_class(value) for value in members)
+        clause = column.in_(members)
+        return sa.not_(clause) if invert else clause
 
-            return (
-                result_column.in_(members)
-                if not invert
-                else sa.not_(result_column.in_(members))
-            )
-        elif isinstance(filter, ExistsFilter):
-            return result_column != None if not invert else result_column == None
-        elif isinstance(filter, EqualsFilter):
-            return (
-                result_column == filter.value
-                if not invert
-                else result_column != filter.value
-            )
-        elif isinstance(filter, RangeFilter):
-            args = []
-            if filter.lower_bound is not None:
-                if filter.lower_bound_censor == ComparisonOperator.GT:
-                    args.append(result_column > filter.lower_bound)
-                elif filter.lower_bound_censor == ComparisonOperator.GTE:
-                    args.append(result_column >= filter.lower_bound)
-            if filter.upper_bound is not None:
-                if filter.upper_bound_censor == ComparisonOperator.ST:
-                    args.append(result_column < filter.upper_bound)
-                elif filter.upper_bound_censor == ComparisonOperator.STE:
-                    args.append(result_column <= filter.upper_bound)
-            if len(args) == 1:
-                return args[0] if not invert else sa.not_(args[0])
-            return sa.and_(*args) if not invert else sa.not_(sa.and_(*args))
-        raise exc.InvalidArgumentsError(
-            "880a6446", f"Unsupported filter type: {filter.__class__.__name__}"
-        )
+    @staticmethod
+    def _get_range_where_clause(filter: RangeFilter, column: Any, invert: bool) -> Any:
+        """Build lower and upper range predicates, including inversion."""
+        args = []
+        if filter.lower_bound is not None:
+            if filter.lower_bound_censor == ComparisonOperator.GT:
+                args.append(column > filter.lower_bound)
+            elif filter.lower_bound_censor == ComparisonOperator.GTE:
+                args.append(column >= filter.lower_bound)
+        if filter.upper_bound is not None:
+            if filter.upper_bound_censor == ComparisonOperator.ST:
+                args.append(column < filter.upper_bound)
+            elif filter.upper_bound_censor == ComparisonOperator.STE:
+                args.append(column <= filter.upper_bound)
+        if len(args) == 1:
+            return sa.not_(args[0]) if invert else args[0]
+        clause = sa.and_(*args)
+        return sa.not_(clause) if invert else clause
 
     def _split_filter_recursion(
         self, field_name_map: dict[str, str], filter: Filter
@@ -1259,7 +1350,20 @@ class SARepository(BaseRepository):
         a remainder to be evaluated in Python.
 
         """
-        map_key_only_classes = [
+        if not isinstance(filter, CompositeFilter):
+            return self._split_leaf_filter(field_name_map, filter)
+        if filter.operator == LogicalOperator.OR:
+            return self._split_or_filter(field_name_map, filter)
+        if filter.operator == LogicalOperator.AND:
+            return self._split_and_filter(field_name_map, filter)
+        # Filter cannot be converted due to unsupported operator
+        return None, filter
+
+    def _split_leaf_filter(
+        self, field_name_map: dict[str, str], filter: Filter
+    ) -> tuple[Filter | None, Filter | None]:
+        """Map a supported leaf filter to its SQL model field."""
+        map_key_only_classes = (
             ExistsFilter,
             EqualsBooleanFilter,
             EqualsNumberFilter,
@@ -1271,62 +1375,7 @@ class SARepository(BaseRepository):
             DateRangeFilter,
             DatetimeRangeFilter,
             NumberRangeFilter,
-        ]
-        # Convert composite filter if possible
-        if isinstance(filter, CompositeFilter):
-            where_clause_filters: list[Filter] = []
-            remainder_filters: list[Filter] = []
-            if filter.operator == LogicalOperator.OR:
-                # Split only when all sub-filters can fully be converted into a where
-                # clause
-                for sub_filter in filter.filters:
-                    where_clause_filter, remainder_filter = (
-                        self._split_filter_recursion(field_name_map, sub_filter)
-                    )
-                    if remainder_filter is not None:
-                        # Subfilter could not be converted completely -> filter cannot
-                        # be converted
-                        return None, filter
-                    if where_clause_filter is None:
-                        return None, filter
-                    where_clause_filters.append(where_clause_filter)
-                return (
-                    CompositeFilter(
-                        filters=where_clause_filters, operator=LogicalOperator.OR
-                    ),
-                    None,
-                )
-            if filter.operator == LogicalOperator.AND:
-                # Split all sub-filters
-                for sub_filter in filter.filters:
-                    where_clause_filter, remainder_filter = (
-                        self._split_filter_recursion(field_name_map, sub_filter)
-                    )
-                    if where_clause_filter:
-                        where_clause_filters.append(where_clause_filter)
-                    if remainder_filter:
-                        remainder_filters.append(remainder_filter)
-                # Combine where clause and remainder filters each into a single filter
-                if len(where_clause_filters) == 0:
-                    where_clause_filter = None
-                elif len(where_clause_filters) == 1:
-                    where_clause_filter = where_clause_filters[0]
-                else:
-                    where_clause_filter = CompositeFilter(
-                        filters=where_clause_filters, operator=LogicalOperator.AND
-                    )
-                if len(remainder_filters) == 0:
-                    remainder_filter = None
-                elif len(remainder_filters) == 1:
-                    remainder_filter = remainder_filters[0]
-                else:
-                    remainder_filter = CompositeFilter(
-                        filters=remainder_filters, operator=LogicalOperator.AND
-                    )
-                return where_clause_filter, remainder_filter
-            # Filter cannot be converted due to unsupported operator
-            return None, filter
-        # Convert non-composite filter if possible
+        )
         mapped_key = field_name_map.get(str(filter.get_key()))
         if not mapped_key:
             # Field name cannot be mapped
@@ -1338,6 +1387,51 @@ class SARepository(BaseRepository):
                 return filter_class(**values), None
         # Filter cannot be converted
         return None, filter
+
+    def _split_or_filter(
+        self, field_name_map: dict[str, str], filter: CompositeFilter
+    ) -> tuple[Filter | None, Filter | None]:
+        """Push an OR filter to SQL only when every branch is translatable."""
+        where_clause_filters: list[Filter] = []
+        for sub_filter in filter.filters:
+            where_clause_filter, remainder_filter = self._split_filter_recursion(
+                field_name_map, sub_filter
+            )
+            if remainder_filter is not None or where_clause_filter is None:
+                return None, filter
+            where_clause_filters.append(where_clause_filter)
+        return (
+            CompositeFilter(filters=where_clause_filters, operator=LogicalOperator.OR),
+            None,
+        )
+
+    def _split_and_filter(
+        self, field_name_map: dict[str, str], filter: CompositeFilter
+    ) -> tuple[Filter | None, Filter | None]:
+        """Split SQL-compatible and Python-only branches of an AND filter."""
+        where_clause_filters: list[Filter] = []
+        remainder_filters: list[Filter] = []
+        for sub_filter in filter.filters:
+            where_clause_filter, remainder_filter = self._split_filter_recursion(
+                field_name_map, sub_filter
+            )
+            if where_clause_filter:
+                where_clause_filters.append(where_clause_filter)
+            if remainder_filter:
+                remainder_filters.append(remainder_filter)
+        return (
+            self._combine_and_filters(where_clause_filters),
+            self._combine_and_filters(remainder_filters),
+        )
+
+    @staticmethod
+    def _combine_and_filters(filters: list[Filter]) -> Filter | None:
+        """Return no filter, the sole filter, or an AND composite as appropriate."""
+        if not filters:
+            return None
+        if len(filters) == 1:
+            return filters[0]
+        return CompositeFilter(filters=filters, operator=LogicalOperator.AND)
 
     def print_db_content(self, model_class: type[Model], **kwargs: Any) -> None:
         """Helper method for debugging."""
@@ -1632,134 +1726,24 @@ class SARepository(BaseRepository):
         create_database_objects = kwargs.pop("create_database_objects", is_sqlite)
         schema_names = {x.schema_name for x in entities if x.persistable}
         if is_sqlite:
-            sqlite_target = (
-                None
-                if connection_string is None
-                else re.sub(".*sqlite:///", "", connection_string, flags=re.IGNORECASE)
+            engine = cls._create_sqlite_engine(
+                connection_string, schema_names, echo, recreate_sqlite_file
             )
-            if sqlite_target:
-                sqlite_target_lower = sqlite_target.lower()
-                is_memory_target = sqlite_target_lower == ":memory:" or (
-                    sqlite_target_lower.startswith("file:")
-                    and "mode=memory" in sqlite_target_lower
-                )
-            else:
-                is_memory_target = True
-                # Create random connection string for shared in-memory sqlite database,
-                # so that multiple SARepository instances created in this way will not
-                # share the same database. This is important e.g. for testing, where
-                # multiple tests may create their own SARepository instances.
-                sqlite_target = f"file:{uuid.uuid4()}?mode=memory&cache=shared&uri=true"
-                sqlite_target_lower = sqlite_target.lower()
-                connection_string = f"sqlite:///{sqlite_target}"
-
-            engine_kwargs: dict[str, Any] = {"echo": echo}
-            sqlite_file: Path | None = None
-            if is_memory_target:
-                if sqlite_target_lower.startswith("file:"):
-                    # SQLAlchemy forwards URI parameters from the URL to sqlite3.
-                    if "uri=" not in sqlite_target_lower:
-                        sqlite_target = f"{sqlite_target}&uri=true"
-                        connection_string = f"sqlite:///{sqlite_target}"
-            else:
-                sqlite_file = Path(sqlite_target)
-                if recreate_sqlite_file:
-                    # Remove existing file
-                    if sqlite_file.is_file():
-                        sqlite_file.unlink()
-                elif not sqlite_file.is_file():
-                    raise ValueError(
-                        "Unable to derive file from connection string or file does not exist"
-                    )
-
-            # Filter some warnings
-            warnings.filterwarnings(
-                "ignore",
-                r"^Dialect sqlite\+pysqlite does not support updated rowcount.*",
-                SAWarning,
-            )
-
-            # Create engine, using URI mode when targeting shared in-memory dbs.
-            assert connection_string is not None
-            engine = sa.create_engine(connection_string, **engine_kwargs)
-
-            # Make sure foreign key constraints are enforced,
-            # which is not the default for sqlite
-            @event.listens_for(engine, "connect")
-            def set_sqlite_pragma(
-                dbapi_connection: Any, connection_record: Any
-            ) -> None:
-                """Set sqlite pragma."""
-                cursor = dbapi_connection.cursor()
-                cursor.execute("PRAGMA foreign_keys=ON")
-                cursor.close()
-
-            # Add each schema as a separate attached database, since sqlite does not
-            # support schemas. Unique per repository instance, so schemas of the same
-            # name from different SARepository instances don't collide on sqlite's
-            # process-wide shared cache (which is keyed by URI).
-            memory_schema_namespace = uuid.uuid4().hex
-            with engine.connect() as conn:
-                for schema_name in schema_names:
-                    if not schema_name:
-                        continue
-                    if schema_name == "main":
-                        continue
-                    if is_memory_target:
-                        # For in-memory sqlite, give each schema its own shared-memory db.
-                        attach_target = (
-                            f"file:{schema_name}_{memory_schema_namespace}"
-                            "?mode=memory&cache=shared&uri=true"
-                        )
-                    else:
-                        if len(schema_names) > 1:
-                            valid_schema_names = [
-                                x for x in schema_names if x is not None
-                            ]
-                            raise NotImplementedError(
-                                "Multiple schemas: "
-                                + ", ".join(sorted(valid_schema_names))
-                            )
-                        assert sqlite_file is not None
-                        attach_target = sqlite_file.as_posix()
-                    conn.execute(
-                        sa.text(
-                            f"attach database '{attach_target}' as '{schema_name}';"
-                        )
-                    )
-
         else:
             if connection_string is None:
                 raise ValueError(
                     "connection_string must be provided for non-sqlite databases"
                 )
             connect_args = kwargs.pop("connect_args", None)
-            engine = EngineFactory.create_engine(
-                connection_string, echo, connect_args=connect_args
+            engine = cls._create_non_sqlite_engine(
+                connection_string,
+                schema_names,
+                echo,
+                create_database_objects,
+                connect_args,
             )
 
-            # Create any non-existing schemas if allowed
-            if create_database_objects:
-                for schema_name in schema_names:
-                    if not schema_name:
-                        continue
-                    with engine.connect() as conn:
-                        if not conn.dialect.has_schema(conn, schema_name):
-                            conn.execute(sa.schema.CreateSchema(schema_name))
-                            conn.commit()
-
-        # Get all metadata instances
-        metadata_set: set[sa.MetaData] = set()
-        for entity in entities:
-            # Retrieve metadata
-            if not entity.persistable:
-                continue
-            db_model_class = entity.db_model_class
-            if not db_model_class:
-                raise ValueError(
-                    f"Entity {entity.name} is persistable but does not have a db_model_class"
-                )
-            metadata_set.add(cast(sa.MetaData, getattr(db_model_class, "metadata")))
+        metadata_set = cls._get_repository_metadata(entities)
 
         # Create any non-existing database objects except schemas (done earlier), if allowed
         if create_database_objects:
@@ -1773,12 +1757,140 @@ class SARepository(BaseRepository):
 
         return repository
 
+    @staticmethod
+    def _create_sqlite_engine(
+        connection_string: str | None,
+        schema_names: set[str | None],
+        echo: bool,
+        recreate_sqlite_file: bool,
+    ) -> Engine:
+        """Create a SQLite engine and attach its configured schemas."""
+        sqlite_target = (
+            None
+            if connection_string is None
+            else re.sub(".*sqlite:///", "", connection_string, flags=re.IGNORECASE)
+        )
+        if sqlite_target:
+            sqlite_target_lower = sqlite_target.lower()
+            is_memory_target = sqlite_target_lower == ":memory:" or (
+                sqlite_target_lower.startswith("file:")
+                and "mode=memory" in sqlite_target_lower
+            )
+        else:
+            is_memory_target = True
+            # Create random connection string for shared in-memory sqlite database,
+            # so that multiple SARepository instances created in this way will not
+            # share the same database. This is important e.g. for testing, where
+            # multiple tests may create their own SARepository instances.
+            sqlite_target = f"file:{uuid.uuid4()}?mode=memory&cache=shared&uri=true"
+            sqlite_target_lower = sqlite_target.lower()
+            connection_string = f"sqlite:///{sqlite_target}"
+
+        sqlite_file: Path | None = None
+        if is_memory_target:
+            if sqlite_target_lower.startswith("file:"):
+                # SQLAlchemy forwards URI parameters from the URL to sqlite3.
+                if "uri=" not in sqlite_target_lower:
+                    sqlite_target = f"{sqlite_target}&uri=true"
+                    connection_string = f"sqlite:///{sqlite_target}"
+        else:
+            sqlite_file = Path(sqlite_target)
+            if recreate_sqlite_file:
+                # Remove existing file
+                if sqlite_file.is_file():
+                    sqlite_file.unlink()
+            elif not sqlite_file.is_file():
+                raise ValueError(
+                    "Unable to derive file from connection string or file does not exist"
+                )
+
+        warnings.filterwarnings(
+            "ignore",
+            r"^Dialect sqlite\+pysqlite does not support updated rowcount.*",
+            SAWarning,
+        )
+        assert connection_string is not None
+        engine = sa.create_engine(connection_string, echo=echo)
+
+        # Make sure foreign key constraints are enforced, which is not the default.
+        @event.listens_for(engine, "connect")
+        def set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
+            """Set sqlite pragma."""
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
+        # Unique per repository so schemas in separate repositories do not collide
+        # in SQLite's process-wide shared cache.
+        memory_schema_namespace = uuid.uuid4().hex
+        with engine.connect() as conn:
+            for schema_name in schema_names:
+                if not schema_name or schema_name == "main":
+                    continue
+                if is_memory_target:
+                    attach_target = (
+                        f"file:{schema_name}_{memory_schema_namespace}"
+                        "?mode=memory&cache=shared&uri=true"
+                    )
+                else:
+                    if len(schema_names) > 1:
+                        valid_schema_names = [
+                            name for name in schema_names if name is not None
+                        ]
+                        raise NotImplementedError(
+                            "Multiple schemas: " + ", ".join(sorted(valid_schema_names))
+                        )
+                    assert sqlite_file is not None
+                    attach_target = sqlite_file.as_posix()
+                conn.execute(
+                    sa.text(f"attach database '{attach_target}' as '{schema_name}';")
+                )
+        return engine
+
+    @staticmethod
+    def _create_non_sqlite_engine(
+        connection_string: str,
+        schema_names: set[str | None],
+        echo: bool,
+        create_database_objects: bool,
+        connect_args: dict[str, Any] | None,
+    ) -> Engine:
+        """Create a non-SQLite engine and any requested database schemas."""
+        engine = EngineFactory.create_engine(
+            connection_string, echo, connect_args=connect_args
+        )
+        if create_database_objects:
+            for schema_name in schema_names:
+                if not schema_name:
+                    continue
+                with engine.connect() as conn:
+                    if not conn.dialect.has_schema(conn, schema_name):
+                        conn.execute(sa.schema.CreateSchema(schema_name))
+                        conn.commit()
+        return engine
+
+    @staticmethod
+    def _get_repository_metadata(entities: list[Entity]) -> set[sa.MetaData]:
+        """Validate persistable entities and collect their SQLAlchemy metadata."""
+        metadata_set: set[sa.MetaData] = set()
+        for entity in entities:
+            # Retrieve metadata
+            if not entity.persistable:
+                continue
+            db_model_class = entity.db_model_class
+            if not db_model_class:
+                raise ValueError(
+                    f"Entity {entity.name} is persistable but does not have a db_model_class"
+                )
+            metadata_set.add(cast(sa.MetaData, getattr(db_model_class, "metadata")))
+        return metadata_set
+
     @classmethod
     def test_connection(
         cls,
         connection_string: str,
         **kwargs: Any,
-    ) -> BaseException | None:
+    ) -> Exception | None:
         """
         Try to open a database connection; return None on success or the
         exception on failure.
@@ -1791,6 +1903,6 @@ class SARepository(BaseRepository):
             ).connect()
             connection.close()
             return None
-        except BaseException as exception:
+        except Exception as exception:
             # Connection failed, skip loading
             return exception

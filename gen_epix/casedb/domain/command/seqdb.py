@@ -29,6 +29,7 @@ class RetrieveGeneticSequenceFastaByIdCommand(Command):
     )
     wrap: int = Field(
         default=80,
+        ge=0,
         description="The line length to wrap sequences at, or 0 for no wrapping.",
     )
 

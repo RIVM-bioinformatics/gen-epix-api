@@ -177,6 +177,11 @@ class App:
             )
         return self._pdp
 
+    @pdp.setter
+    def pdp(self, pdp: PolicyDecisionPoint) -> None:
+        """Policy decision point."""
+        self._pdp = pdp
+
     @property
     def user_manager(self) -> BaseUserManager:
         """Return the user manager used by authorization policies.
@@ -843,43 +848,54 @@ class App:
         **kwargs: Any,
     ) -> str:
         """Create log message."""
-        content = {}
         if add_debug_info:
-            content["app"] = kwargs.pop("app", {}) | {
-                "id": self._id,
-                "name": self.name,
-            }
-            if cmd:
-                command_stack = self._get_command_stack()
-                is_initial_command = len(command_stack) < 2
-                cmd_object = json.loads(cmd.model_dump_json(exclude_none=True))
-                if self._log_summarization_enabled:
-                    cmd_object = self._summarise_command_object_for_log(cmd_object)
-                content["command"] = kwargs.pop("command", {}) | {
-                    "class": cmd.__class__.__name__,
-                    # Optionally summarize large list fields based on config.
-                    "object": cmd_object,
-                    "parent_command_id": (
-                        None if is_initial_command else f"{command_stack[-2].id}"
-                    ),
-                    "stack_trace": (
-                        "->".join([f"{x.__class__.__name__}" for x in command_stack])
-                    ),
-                }
-            if kwargs:
-                if self._log_summarization_enabled:
-                    kwargs = self._summarise_command_object_for_log(kwargs)
-                content = {**content, **kwargs}
+            content = self._create_debug_log_content(cmd, kwargs)
         else:
-            content = kwargs
-            if cmd:
-                content["command"] = kwargs.pop("command", {}) | {
-                    "class": cmd.__class__.__name__,
-                    "id": str(cmd.id),
-                    "user_id": cmd.user.id if cmd.user else None,
-                }
+            content = self._create_minimal_log_content(cmd, kwargs)
         log_item = self._log_item_class(code=code, msg=msg, **content)
         return log_item.dumps()
+
+    def _create_debug_log_content(
+        self, cmd: Command | None, kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Build a log payload with application and optional command diagnostics."""
+        content: dict[str, Any] = {
+            "app": kwargs.pop("app", {}) | {"id": self._id, "name": self.name}
+        }
+        if cmd:
+            is_initial_command = len(self._command_stack) < 2
+            cmd_object = json.loads(cmd.model_dump_json(exclude_none=True))
+            if self._log_summarization_enabled:
+                cmd_object = self._summarise_command_object_for_log(cmd_object)
+            content["command"] = kwargs.pop("command", {}) | {
+                "class": cmd.__class__.__name__,
+                "object": cmd_object,
+                "parent_command_id": (
+                    None if is_initial_command else f"{self._command_stack[-2].id}"
+                ),
+                "stack_trace": "->".join(
+                    [f"{item.__class__.__name__}" for item in self._command_stack]
+                ),
+            }
+        if kwargs:
+            if self._log_summarization_enabled:
+                kwargs = self._summarise_command_object_for_log(kwargs)
+            content = {**content, **kwargs}
+        return content
+
+    @staticmethod
+    def _create_minimal_log_content(
+        cmd: Command | None, kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Build a minimal payload with optional command identity metadata."""
+        content = kwargs
+        if cmd:
+            content["command"] = kwargs.pop("command", {}) | {
+                "class": cmd.__class__.__name__,
+                "id": str(cmd.id),
+                "user_id": cmd.user.id if cmd.user else None,
+            }
+        return content
 
     def _summarise_command_object_for_log(
         self,

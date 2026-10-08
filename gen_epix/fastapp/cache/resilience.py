@@ -142,6 +142,8 @@ class TimeoutGuard:
         """
         if timeout is not None and timeout <= 0:
             raise ValueError("timeout must be positive")
+        if max_workers <= 0:
+            raise ValueError("max_workers must be positive")
         self.timeout = timeout
         self._executor: ThreadPoolExecutor | None = None
         self._lock = threading.Lock()

@@ -65,6 +65,36 @@ class LicensesResponseBody(PydanticBaseModel):
     packages: list[PackageMetadata]
 
 
+def _handle_system_command(
+    app: App,
+    handle_exception: Callable[[str, Any, Exception], NoReturn],
+    error_code: str,
+    cmd: Command,
+    user: Any = None,
+) -> Any:
+    """Dispatch a system command and forward failures to the API adapter."""
+    try:
+        return app.handle(cmd)
+    except Exception as exception:
+        handle_exception(error_code, user, exception)
+
+
+def _log_external_items(app: App, user: Any, request_body: LogRequestBody) -> None:
+    """Normalize and emit externally submitted log items."""
+    user_id = str(user.id)
+    for log_item in request_body.log_items:
+        if isinstance(log_item.detail, str):
+            log_item.detail = json.loads(log_item.detail)
+        content_str = app.create_log_message(
+            log_item.command_id,
+            None,
+            add_debug_info=False,
+            user_id=user_id,
+            **log_item.model_dump(exclude_none=True, exclude={"level", "command_id"}),
+        )
+        external_logger_fmap[log_item.level](content_str)
+
+
 def create_system_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -166,20 +196,7 @@ def create_system_endpoints(
     async def log(user: registered_user_dependency, request_body: LogRequestBody) -> None:  # type: ignore
         """Log the provided log items."""
         try:
-            user_id = str(user.id)  # type: ignore[attr-defined]
-            for log_item in request_body.log_items:
-                if isinstance(log_item.detail, str):
-                    log_item.detail = json.loads(log_item.detail)
-                content_str = app.create_log_message(
-                    log_item.command_id,
-                    None,
-                    add_debug_info=False,
-                    user_id=user_id,
-                    **log_item.model_dump(
-                        exclude_none=True, exclude={"level", "command_id"}
-                    ),
-                )
-                external_logger_fmap[log_item.level](content_str)
+            _log_external_items(app, user, request_body)
         except Exception as exception:
             handle_exception("09c8e2cd", user, exception)
 

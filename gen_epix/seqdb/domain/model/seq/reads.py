@@ -134,30 +134,48 @@ class ReadSet(Model, HasSampleMixin, HasProtocolMixin, QualityMixin):
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
         """Validate mutually exclusive read links and paired-read values."""
-        if self.fwd_uri and self.rev_uri and self.fwd_uri == self.rev_uri:
-            raise ValueError("fwd_uri must be different from rev_uri")
-        if (
-            self.fwd_file_id
-            and self.rev_file_id
-            and self.fwd_file_id == self.rev_file_id
-        ):
-            raise ValueError("fwd_file_id must be different from rev_file_id")
-        if (
-            self.fwd_reads_hash
-            and self.rev_reads_hash
-            and self.fwd_reads_hash == self.rev_reads_hash
-        ):
-            raise ValueError("fwd_reads_hash must be different from rev_reads_hash")
-        if self.fwd_file_id is not None or self.rev_file_id is not None:
-            if self.file_format is None:
-                raise ValueError("file_format must be provided when linking read files")
-            if self.file_compression is None:
-                self.file_compression = enum.FileCompression.NONE
-        if (self.fwd_uri is not None or self.rev_uri is not None) and (
-            self.fwd_file_id is not None or self.rev_file_id is not None
-        ):
-            raise ValueError("Cannot have both uri and file_id")
+        self._validate_distinct_pair(
+            self.fwd_uri, self.rev_uri, "fwd_uri must be different from rev_uri"
+        )
+        self._validate_distinct_pair(
+            self.fwd_file_id,
+            self.rev_file_id,
+            "fwd_file_id must be different from rev_file_id",
+        )
+        self._validate_distinct_pair(
+            self.fwd_reads_hash,
+            self.rev_reads_hash,
+            "fwd_reads_hash must be different from rev_reads_hash",
+        )
+        self._validate_file_link_requirements()
+        self._validate_link_source_exclusivity()
         return self
+
+    @staticmethod
+    def _validate_distinct_pair(
+        forward_value: str | UUID | None,
+        reverse_value: str | UUID | None,
+        error_message: str,
+    ) -> None:
+        """Reject equal truthy forward and reverse values."""
+        if forward_value and reverse_value and forward_value == reverse_value:
+            raise ValueError(error_message)
+
+    def _validate_file_link_requirements(self) -> None:
+        """Require file metadata and default omitted compression for file links."""
+        if self.fwd_file_id is None and self.rev_file_id is None:
+            return
+        if self.file_format is None:
+            raise ValueError("file_format must be provided when linking read files")
+        if self.file_compression is None:
+            self.file_compression = enum.FileCompression.NONE
+
+    def _validate_link_source_exclusivity(self) -> None:
+        """Reject instances that mix URI and file-ID read links."""
+        has_uri = self.fwd_uri is not None or self.rev_uri is not None
+        has_file_id = self.fwd_file_id is not None or self.rev_file_id is not None
+        if has_uri and has_file_id:
+            raise ValueError("Cannot have both uri and file_id")
 
     @field_serializer("file_format", "file_compression")
     def _serialize_file_format(

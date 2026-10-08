@@ -102,6 +102,7 @@ class AbacService(BaseAbacService):
         update_user_commands: set[type[Command]] | None = None,
         read_organization_results_only_commands: set[type[Command]] | None = None,
         read_self_results_only_commands: set[type[Command]] | None = None,
+        **kwargs: Any,
     ) -> None:
         """Register ABAC policies at their required command lifecycle phases.
 
@@ -169,7 +170,7 @@ class AbacService(BaseAbacService):
                 is_all_organizations = (
                     len(
                         cmd.user.roles.intersection(
-                            policy.role_set_map[enum.RoleSet.GE_APP_ADMIN]
+                            self.role_set_map[enum.RoleSet.GE_APP_ADMIN]
                         )
                     )
                     > 0

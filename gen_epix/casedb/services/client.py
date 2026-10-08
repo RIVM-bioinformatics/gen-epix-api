@@ -49,6 +49,7 @@ class CasedbClient(CommondbClient):
         command.RetrieveCaseRightsCommand: "/retrieve/case_rights",
         command.RetrieveCaseSetRightsCommand: "/retrieve/case_set_rights",
         command.RetrievePhylogeneticTreeByCasesCommand: "/calculate/phylogenetic_tree",
+        command.RetrieveSeqDistancesByCasesCommand: "/retrieve/seq_distances_by_cases",
         command.RetrieveSimilarCasesCommand: "/retrieve/similar_cases",
         command.RetrieveGeneticSequenceFastaByCaseCommand: (
             "/retrieve/genetic_sequence/fasta"
@@ -129,6 +130,10 @@ class CasedbClient(CommondbClient):
         self.register_handler(
             command.RetrievePhylogeneticTreeByCasesCommand,
             self.retrieve_phylogenetic_tree_by_cases,
+        )
+        self.register_handler(
+            command.RetrieveSeqDistancesByCasesCommand,
+            self.retrieve_seq_distances_by_cases,
         )
         self.register_handler(
             command.RetrieveSimilarCasesCommand, self.retrieve_similar_cases
@@ -276,7 +281,8 @@ class CasedbClient(CommondbClient):
     ) -> list[model.CaseStats]:
         """Retrieve statistics per case set."""
         request_body = api.RetrieveCaseSetStatsRequestBody(
-            case_set_ids=cmd.case_set_ids
+            case_set_ids=cmd.case_set_ids,
+            datetime_range_filter=cmd.datetime_range_filter,
         )
         response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
             cmd, HttpMethod.POST, model=request_body
@@ -335,6 +341,23 @@ class CasedbClient(CommondbClient):
             model=request_body,
         )
         return model.PhylogeneticTree(**response_body)
+
+    def retrieve_seq_distances_by_cases(
+        self, cmd: command.RetrieveSeqDistancesByCasesCommand
+    ) -> list[seqdb_model.SeqDistance]:
+        """Retrieve sequence distances for cases over HTTP."""
+        request_body = api.RetrieveSeqDistancesByCasesRequestBody(
+            case_type_id=cmd.case_type_id,
+            case_ids=cmd.case_ids,
+            genetic_distance_col_id=cmd.genetic_distance_col_id,
+            filter_other_cases=cmd.filter_other_cases,
+        )
+        response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
+            cmd,
+            HttpMethod.POST,
+            model=request_body,
+        )
+        return [seqdb_model.SeqDistance(**x) for x in response_body]
 
     def retrieve_similar_cases(
         self, cmd: command.RetrieveSimilarCasesCommand

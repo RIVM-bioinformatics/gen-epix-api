@@ -1103,6 +1103,45 @@ class AppCfg(BaseAppCfg):
             )
         )
 
+    def _set_configured_logger_levels(self, resolved_level: str | int) -> None:
+        """Apply the resolved level to configured and owned logger names."""
+        logger_names = set(_THIRD_PARTY_LOGGER_NAMES)
+        logger_names.update(
+            AppCfg._prefix_logger(self._logger_prefix, name)
+            for name in _OWN_LOGGER_SUFFIXES
+        )
+        for logger_name, logger_cfg in self._logging_config_yaml["loggers"].items():
+            assert isinstance(logger_cfg, dict)
+            curr_logger = logging.getLogger(logger_name)
+            if self._log_setup:
+                self.setup_logger.debug(
+                    App.create_static_log_message(
+                        "6ba9367c",
+                        f"Updated logger {logger_name} with level {resolved_level}",
+                    )
+                )
+            # If the logger is in the config, use its level if specified, otherwise use the resolved level. If the logger is not in the config, use the resolved level.
+            effective_level = resolved_level
+            if logger_name in logger_names:
+                effective_level = logger_cfg.get("level", resolved_level)
+            curr_logger.setLevel(effective_level)
+
+    def _pin_runtime_child_loggers(self, resolved_level: str | int) -> None:
+        """Keep runtime children of pinned third-party loggers at their parent level."""
+        # Keep runtime child loggers of pinned third-party namespaces pinned as well.
+        runtime_logger_names = sorted(logging.root.manager.loggerDict.keys())
+        for runtime_logger_name in runtime_logger_names:
+            for pinned_logger_name in _THIRD_PARTY_LOGGER_NAMES:
+                if not _is_descendant_logger(runtime_logger_name, pinned_logger_name):
+                    continue
+                pinned_level = (
+                    self._logging_config_yaml["loggers"]
+                    .get(pinned_logger_name, {})
+                    .get("level", resolved_level)
+                )
+                logging.getLogger(runtime_logger_name).setLevel(pinned_level)
+                break
+
     def set_log_level(
         self, log_level: str | int | None = None, emit_diagnostic: bool = True
     ) -> None:
@@ -1139,39 +1178,8 @@ class AppCfg(BaseAppCfg):
             self._raw_cfg_snapshot["log"]["level"] = resolved_level
         self._set_known_handlers_to_notset()
         self._setup_logger.setLevel(resolved_level)
-        logger_names = set(_THIRD_PARTY_LOGGER_NAMES)
-        logger_names.update(
-            AppCfg._prefix_logger(self._logger_prefix, x) for x in _OWN_LOGGER_SUFFIXES
-        )
-        for logger_name, logger_cfg in self._logging_config_yaml["loggers"].items():
-            assert isinstance(logger_cfg, dict)
-            curr_logger = logging.getLogger(logger_name)
-            if self._log_setup:
-                self.setup_logger.debug(
-                    App.create_static_log_message(
-                        "6ba9367c",
-                        f"Updated logger {logger_name} with level {resolved_level}",
-                    )
-                )
-            # If the logger is in the config, use its level if specified, otherwise use the resolved level. If the logger is not in the config, use the resolved level.
-            effective_level = resolved_level
-            if logger_name in logger_names:
-                effective_level = logger_cfg.get("level", resolved_level)
-            curr_logger.setLevel(effective_level)
-
-        # Keep runtime child loggers of pinned third-party namespaces pinned as well.
-        runtime_logger_names = sorted(logging.root.manager.loggerDict.keys())
-        for runtime_logger_name in runtime_logger_names:
-            for pinned_logger_name in _THIRD_PARTY_LOGGER_NAMES:
-                if not _is_descendant_logger(runtime_logger_name, pinned_logger_name):
-                    continue
-                pinned_level = (
-                    self._logging_config_yaml["loggers"]
-                    .get(pinned_logger_name, {})
-                    .get("level", resolved_level)
-                )
-                logging.getLogger(runtime_logger_name).setLevel(pinned_level)
-                break
+        self._set_configured_logger_levels(resolved_level)
+        self._pin_runtime_child_loggers(resolved_level)
 
         if emit_diagnostic:
             self._emit_log_level_diagnostic(

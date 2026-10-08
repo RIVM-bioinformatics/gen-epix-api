@@ -18,6 +18,15 @@ from gen_epix.commondb.domain.command import Command, CrudCommand
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.seqdb.domain import enum, model
 
+_USE_NUMPY_ALLELE_DISTANCE_DESCRIPTION = (
+    "If True, use numpy-vectorised ALLELE Hamming with an automatic "
+    "variant gate: numpy_batch for n_new < 200, int32_vocab for "
+    "n_new >= 200. No effect on non-ALLELE profile types."
+)
+_SAMPLE_IDS_SEARCH_DESCRIPTION = (
+    "The IDs of the samples to search among. If None, search among all samples."
+)
+
 # Non-CRUD commands
 
 
@@ -75,11 +84,7 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     # TODO: is a temporary option, to be removed once the numpy-vectorised ALLELE distance calculation (or any other that is eventually chosen) is fully validated and deployed. It is intended to allow testing of the new implementation without affecting existing behaviour.
     use_numpy_allele_distance: bool = Field(
         default=False,
-        description=(
-            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
-            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
-            "n_new >= 200. No effect on non-ALLELE profile types."
-        ),
+        description=_USE_NUMPY_ALLELE_DISTANCE_DESCRIPTION,
     )
 
 
@@ -130,11 +135,7 @@ class CalculateSeqDistancesForNewProfilesCommand(Command):
     )
     use_numpy_allele_distance: bool = Field(
         default=False,
-        description=(
-            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
-            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
-            "n_new >= 200. No effect on non-ALLELE profile types."
-        ),
+        description=_USE_NUMPY_ALLELE_DISTANCE_DESCRIPTION,
     )
 
 
@@ -170,11 +171,7 @@ class UpdateSeqDistancesCommand(Command):
     )
     use_numpy_allele_distance: bool = Field(
         default=False,
-        description=(
-            "If True, use numpy-vectorised ALLELE Hamming with an automatic "
-            "variant gate: numpy_batch for n_new < 200, int32_vocab for "
-            "n_new >= 200. No effect on non-ALLELE profile types."
-        ),
+        description=_USE_NUMPY_ALLELE_DISTANCE_DESCRIPTION,
     )
 
 
@@ -274,6 +271,29 @@ class RetrieveSampleIdentifiersByIdCommand(Command):
         return sample_ids
 
 
+class RetrieveSeqDistancesBySeqProfilesCommand(Command):
+    """
+    Represents a request to retrieve distances between sequences.
+
+    The result contains a matrix of distances between the requested sequences.
+    """
+
+    seq_profile_ids: list[UUID] = Field(
+        description="IDs of the profiles to retrieve distances for. Must be unique.",
+        min_length=1,
+    )
+    protocol_id: UUID = Field(
+        description="ID of the protocol to use for distance calculation.",
+    )
+
+    @field_validator("seq_profile_ids", mode="after")
+    def _validate_profile_ids(cls, seq_profile_ids: list[UUID]) -> list[UUID]:
+        """Require every requested profile identifier to occur at most once."""
+        if len(set(seq_profile_ids)) != len(seq_profile_ids):
+            raise ValueError("seq_profile_ids must be unique")
+        return seq_profile_ids
+
+
 class RetrieveSeqFastaCommand(Command):
     """Represents a request to retrieve sequences in FASTA format.
 
@@ -283,9 +303,10 @@ class RetrieveSeqFastaCommand(Command):
     seq_ids: list[UUID] = Field(
         description="List of sequence IDs to retrieve in FASTA format.",
     )
-    wrap: int | None = Field(
+    wrap: int = Field(
         default=80,
-        description="Number of characters to wrap the sequence lines.",
+        ge=0,
+        description="The line length to wrap sequences at, or 0 for no wrapping.",
     )
 
 
@@ -294,6 +315,10 @@ class ConvertSeqFormatCommand(Command):
 
     Returns:
       The IDs of the sequences converted to the target format.
+
+    Model validation:
+        Sequence IDs must be unique. Both formats must be DNA formats, and
+        conversions between gapless and gap-inclusive formats are not supported.
     """
 
     seq_ids: list[UUID] = Field(
@@ -363,7 +388,7 @@ class RetrieveBestSeqPerSampleCommand(Command):
         description="The IDs of the assembly protocols to search among. If None, search among all seqs.",
     )
     sample_ids: set[UUID] | None = Field(
-        description="The IDs of the samples to search among. If None, search among all samples.",
+        description=_SAMPLE_IDS_SEARCH_DESCRIPTION,
     )
     ranking_strategy: enum.SeqProfileRankingStrategy = Field(
         default=enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
@@ -384,7 +409,7 @@ class RetrieveBestSeqProfilePerSampleCommand(Command):
         min_length=1,
     )
     sample_ids: set[UUID] | None = Field(
-        description="The IDs of the samples to search among. If None, search among all samples.",
+        description=_SAMPLE_IDS_SEARCH_DESCRIPTION,
     )
     ranking_strategy: enum.SeqProfileRankingStrategy = Field(
         default=enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
@@ -405,7 +430,7 @@ class RetrieveBestSeqClassificationPerSampleCommand(Command):
         min_length=1,
     )
     sample_ids: set[UUID] | None = Field(
-        description="The IDs of the samples to search among. If None, search among all samples.",
+        description=_SAMPLE_IDS_SEARCH_DESCRIPTION,
     )
     ranking_strategy: enum.SeqClassificationRankingStrategy = Field(
         default=enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,

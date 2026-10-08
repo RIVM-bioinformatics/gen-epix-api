@@ -7,10 +7,10 @@ NONE-mode default headers or OAuth2 client-credentials authentication.
 import importlib
 import math
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from logging import Logger
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 import jwt
 
@@ -37,9 +37,9 @@ class CommondbClient(Client):
 
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
-    DEFAULT_HTTP_TIMEOUTS: dict[type[Command], float] = {}
+    DEFAULT_HTTP_TIMEOUTS: ClassVar[dict[type[Command], float]] = {}
 
-    ROUTE_MAP: dict[type[Command], str] = {
+    ROUTE_MAP: ClassVar[dict[type[Command], str]] = {
         command.DeleteAllOperationalDataCommand: "/operational_data",
         command.DeleteAllRefDataCommand: "/ref_data",
         command.GetIdentityProvidersCommand: "/identity_providers",
@@ -316,12 +316,14 @@ class CommondbClient(Client):
             )
         return authorization.removeprefix("Bearer ")
 
-    def _retrieve_client_credentials_token(self) -> str:
-        """Retrieve a new token from the identity provider via client credentials."""
+    def _retrieve_client_credentials_token(self) -> tuple[str, float | None]:
+        """Retrieve a token and its advertised lifetime via client credentials."""
         assert self._oauth_idp_client is not None
         assert self._oauth_scope is not None
-        return self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
-            scope=self._oauth_scope
+        return (
+            self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow_and_expiry(
+                scope=self._oauth_scope
+            )
         )
 
     def _retrieve_provided_token(self) -> str:
@@ -335,32 +337,37 @@ class CommondbClient(Client):
             ) from e
 
     def _get_cached_bearer_headers(
-        self, retrieve_token: Callable[[], str]
+        self, retrieve_token: Callable[[], str | tuple[str, float | None]]
     ) -> dict[str, str]:
         """Return headers with a bearer token, calling ``retrieve_token`` only near expiry."""
+        now = datetime.now(UTC).timestamp()
         if self._oauth_header_cache and self._oauth_header_cache[0] > (
-            datetime.now(timezone.utc).timestamp() + self._oauth_token_refresh_margin
+            now + self._oauth_token_refresh_margin
         ):
             return self._oauth_header_cache[1]
-        jwt_token = retrieve_token()
+
+        token_result = retrieve_token()
+        if isinstance(token_result, tuple):
+            jwt_token, expires_in = token_result
+            expires_at = now + expires_in if expires_in is not None else None
+        else:
+            jwt_token = token_result
+            try:
+                # Only the unverified ``exp`` claim is read, to schedule renewal of
+                # the cached token; the service verifies the signature per request.
+                claims = jwt.decode(jwt_token, options=_UNVERIFIED_OPTIONS)  # NOSONAR
+                exp = claims.get("exp")
+            except jwt.DecodeError:
+                # Opaque (non-JWT) token, expiry unknown
+                exp = None
+            # Provider tokens without an exp claim are cached until a 401 forces refresh.
+            expires_at = exp if exp is not None else math.inf
+
         headers = dict(self._default_headers)
         headers["Authorization"] = f"Bearer {jwt_token}"
-        # Put header in cache together with its expiry time
-        exp: int | None
-        try:
-            # Only the unverified ``exp`` claim is read, to schedule renewal of the
-            # cached token; the token is not trusted based on it. The service
-            # verifies the signature on every request.
-            claims = jwt.decode(jwt_token, options=_UNVERIFIED_OPTIONS)  # NOSONAR
-            exp = claims.get("exp")
-        except jwt.DecodeError:
-            # Opaque (non-JWT) token, expiry unknown
-            exp = None
-        if exp is None:
-            # No expiration claim, valid forever
-            self._oauth_header_cache = (math.inf, headers)
-        else:
-            self._oauth_header_cache = (exp, headers)
+        self._oauth_header_cache = (
+            (expires_at, headers) if expires_at is not None else None
+        )
         return headers
 
     def _handle_once(self, cmd: Command) -> Any:
@@ -737,7 +744,9 @@ class CommondbClient(Client):
         if "app_cfg" in no_client_props:
             app_cfg = no_client_props.pop("app_cfg")
         else:
-            app_cfg = AppCfg(app_type, service_type_enum, repository_type_enum)
+            app_cfg = util.get_app_cfg_class(app_type)(
+                app_type, service_type_enum, repository_type_enum
+            )
         log_setup = no_client_props.get("log_setup", logger is not None)
         # Create local app and user
         app_composer = app_composer_class(app_cfg, log_setup=log_setup)

@@ -5,53 +5,91 @@ This is a simple metadata entity with no ABAC restrictions.
 
 from uuid import UUID
 
-import gen_epix.casedb.domain.command as command
-import gen_epix.casedb.domain.model as model
+from gen_epix.casedb.domain import command, enum, model
+from gen_epix.casedb.policies.pdp import PolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
-    _crud_cascade_delete,
     crud_with_access_filter,
-    get_ref_data_access_from_command,
-    is_refdata_admin_or_above,
 )
-from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.fastapp import exc
+from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.filter.uuid_set import UuidSetFilter
 
 
 def case_service_crud_ref_dim(
     self: BaseCaseService, cmd: command.RefDimCrudCommand
 ) -> list[model.RefDim] | model.RefDim | list[UUID] | UUID | list[bool] | bool | None:
-    """Handle CRUD operations for RefDim entities."""
-    # Start unit of work
-    with self.repository.uow() as uow:
-        assert cmd.user is not None
-        _crud_cascade_delete(self, uow, cmd)
-        if is_refdata_admin_or_above(self, cmd.user):
-            result = _crud_ref_dim_without_abac(self, uow, cmd)
-        else:
-            result = _crud_ref_dim_with_abac(self, uow, cmd)
+    """Handle CRUD operations for reference-dimension entities.
 
-    return result
+    Update operations ensure each dependent reference column remains compatible
+    with the dimension type.
 
+    Args:
+        self: Case service used for CRUD and repository operations.
+        cmd: Reference-dimension CRUD command to execute.
 
-def _crud_ref_dim_without_abac(
-    self: BaseCaseService,
-    uow: BaseUnitOfWork,
-    cmd: command.RefDimCrudCommand,
-) -> list[model.RefDim] | model.RefDim | list[UUID] | UUID | list[bool] | bool | None:
-    """RefDim admin command handling, no ABAC applied."""
-    return self.crud(cmd)  # type: ignore[return-value]
+    Returns:
+        The result produced by the requested CRUD operation.
 
+    Raises:
+        InvalidArgumentsError: If the operation is unsupported or an update would
+            make a dependent reference column incompatible.
+    """
+    if cmd.is_read():
+        pdp: PolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
+            return self.crud(cmd)  # type: ignore[return-value]
+        access_filter = pdp.get_ref_dim_id_filter(cmd, ref_dim_id_field_name="id")
+        with self.repository.uow() as uow:
+            retval = crud_with_access_filter(self, uow, cmd, access_filter)
+        return retval  # type: ignore[return-value]
 
-def _crud_ref_dim_with_abac(
-    self: BaseCaseService,
-    uow: BaseUnitOfWork,
-    cmd: command.RefDimCrudCommand,
-) -> list[model.RefDim] | model.RefDim | list[UUID] | UUID | list[bool] | bool | None:
-    """RefDim user command handling, ABAC applied."""
-    ref_data_access = get_ref_data_access_from_command(cmd)
-    if ref_data_access is None or ref_data_access.is_full_access:
-        # Special case: no policy (implies full access) or explicit full access
+    assert cmd.user is not None and cmd.user.id is not None
+
+    if cmd.is_delete():
         return self.crud(cmd)  # type: ignore[return-value]
-    access_filter = ref_data_access.get_ref_dim_filter("id")
-    # No cascade delete to force conscious decision to delete from other models
-    return crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]
+
+    if cmd.is_create():
+        return self.crud(cmd)  # type: ignore[return-value]
+
+    # Perform some validation on UPDATE
+    if cmd.is_update():
+        ref_dims: list[model.RefDim] = cmd.get_objs()  # type: ignore[assignment]
+        ref_dim_ids = [x.id for x in ref_dims if x.id is not None]
+        ref_dim_map: dict[UUID, model.RefDim] = {
+            x.id: x for x in ref_dims if x.id is not None
+        }  # type: ignore[assignment]
+        with self.repository.uow() as uow:
+            # Get RefCols
+            ref_cols: list[model.RefCol] = self.repository.crud(
+                uow,
+                cmd.user.id,
+                model.RefCol,
+                CrudOperation.READ_ALL,
+                filter=UuidSetFilter(key="ref_dim_id", members=frozenset(ref_dim_ids)),
+            )
+
+            # Verify col_type corresponds to dim_type
+            invalid_ref_dims = []
+            for ref_col in ref_cols:
+                ref_dim = ref_dim_map[ref_col.ref_dim_id]
+                if (
+                    ref_col.col_type
+                    not in enum.DimColTypeSet[ref_dim.dim_type.value].value
+                ):
+                    invalid_ref_dims.append(ref_dim)
+            if invalid_ref_dims:
+                invalid_ref_dim_ids = list(
+                    {x.id for x in invalid_ref_dims if x.id is not None}
+                )
+                raise exc.InvalidArgumentsError(
+                    "7ad7a294",
+                    "RefDim.dim_type must correspond to dependentRefCols.col_type",
+                    ids=invalid_ref_dim_ids,
+                )
+
+        return self.crud(cmd)  # type: ignore[return-value]
+
+    raise exc.InvalidArgumentsError(
+        "0a65acec", f"Unsupported operation: {cmd.operation}"
+    )

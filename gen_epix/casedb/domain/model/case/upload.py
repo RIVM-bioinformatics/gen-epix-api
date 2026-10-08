@@ -206,9 +206,7 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
             ValueError: If column IDs repeat or one alternate sample identifier maps
                 to different non-null sample IDs.
         """
-        if values is None:
-            return
-        if len(values) == 0:
+        if not values:
             return
         col_ids = [x.col_id for x in values]
         if len(col_ids) != len(set(col_ids)):
@@ -224,18 +222,18 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
             )
             sample_id = value.sample_id
             if (
-                other_sample_identifier is not None
-                and sample_id is not None
-                and sample_id != NULL_ID
+                other_sample_identifier is None
+                or sample_id is None
+                or sample_id == NULL_ID
             ):
-                # Both provided, check for consistency
-                if other_sample_identifier in sample_id_map:
-                    if sample_id_map[other_sample_identifier] != sample_id:
-                        raise ValueError(
-                            f"Inconsistent mapping of other_sample_identifier to sample_id in {field_name}."
-                        )
-                else:
-                    sample_id_map[other_sample_identifier] = sample_id
+                continue
+            # Both provided, check for consistency
+            existing_sample_id = sample_id_map.get(other_sample_identifier)
+            if existing_sample_id is not None and existing_sample_id != sample_id:
+                raise ValueError(
+                    f"Inconsistent mapping of other_sample_identifier to sample_id in {field_name}."
+                )
+            sample_id_map[other_sample_identifier] = sample_id
 
     def _validate_no_col_id_overlap(self) -> None:
         """Validate that read sets and sequences use disjoint columns.
@@ -262,7 +260,7 @@ class CaseDataIssue(DataIssue):
 class CaseUploadResult(ParentUploadResult):
     """Represents one case upload result and its content validation issues."""
 
-    ID: ClassVar[str] = "c4fdab13"
+    RESULT_ID: ClassVar[str] = "c4fdab13"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "CaseUploadResult"
 
@@ -343,7 +341,7 @@ class CaseBatchForUpload(BaseBatchForUpload):
 class CaseBatchUploadResult(BaseBatchUploadResult):
     """Represents the results of uploading a batch of cases."""
 
-    ID: ClassVar[str] = "3bb22119"
+    RESULT_ID: ClassVar[str] = "3bb22119"
     ENTITY: ClassVar = BaseBatchForUpload.model_entity().clone(
         update={"persistable": False}
     )

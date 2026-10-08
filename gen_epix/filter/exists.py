@@ -3,6 +3,8 @@
 from collections.abc import Callable, Hashable, Iterable
 from typing import Any, Literal
 
+from pydantic import BaseModel
+
 from gen_epix.filter.base import Filter
 from gen_epix.filter.enum import FilterType
 
@@ -28,7 +30,7 @@ class ExistsFilter(Filter):
         values: Iterable[Any | None],
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
-    ) -> Iterable[bool]:
+    ) -> Iterator[bool]:
         """Yield existence matches for each value in a column."""
         if na_values is None:
             for value in values:
@@ -39,9 +41,10 @@ class ExistsFilter(Filter):
 
     def match_row(
         self,
-        row: dict[Hashable, Any | None],
+        row: dict[Hashable, Any | None] | BaseModel,
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
+        is_model: bool = False,
     ) -> bool:
         """Return whether the filter key exists in a row with a value.
 
@@ -49,6 +52,7 @@ class ExistsFilter(Filter):
             row: Row to inspect.
             na_values: Values treated as unavailable.
             map_fn: Ignored compatibility mapping argument.
+            is_model: Whether the row is a model instance.
 
         Returns:
             Whether the configured key has a usable value.
@@ -58,24 +62,28 @@ class ExistsFilter(Filter):
         """
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
-        # Match if both key exists and value not null
         key = self.key
+        # Match if both key exists and value not null
+        has_key = isinstance(key, str) and hasattr(row, key) if is_model else key in row
+        value = self._get_row_value(row, key, is_model) if has_key else None
         if na_values is None:
-            return ((key in row) and (row[key] is not None)) ^ self.invert
-        return ((key in row) and (row[key] not in na_values)) ^ self.invert
+            return (has_key and value is not None) ^ self.invert
+        return (has_key and value not in na_values) ^ self.invert
 
     def match_rows(
         self,
-        rows: Iterable[dict[Hashable, Any | None]],
+        rows: Iterable[dict[Hashable, Any | None] | BaseModel],
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
-    ) -> Iterable[bool]:
+        is_model: bool = False,
+    ) -> Iterator[bool]:
         """Yield existence matches for each row.
 
         Args:
             rows: Rows to inspect.
             na_values: Values treated as unavailable.
             map_fn: Ignored compatibility mapping argument.
+            is_model: Whether the rows are model instances.
 
         Yields:
             Whether each row has a usable value at the configured key.
@@ -89,13 +97,8 @@ class ExistsFilter(Filter):
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
         # Match if both key exists and value not null
-        key = self.key
-        if na_values is None:
-            for row in rows:
-                yield ((key in row) and (row[key] is not None)) ^ self.invert
-        else:
-            for row in rows:
-                yield ((key in row) and (row[key] not in na_values)) ^ self.invert
+        for row in rows:
+            yield self.match_row(row, na_values=na_values, is_model=is_model)
 
     def _match(self, value: Any) -> bool:
         """Treat every supplied value as an existing value."""

@@ -7,7 +7,7 @@ sequence uploads while updating command and result models in place.
 
 from collections import defaultdict
 from hashlib import sha256
-from typing import cast
+from typing import Any, cast
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -28,6 +28,9 @@ from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.uuid_set import UuidSetFilter
+
+_INVALID_COMMAND_TYPE = "Invalid command type"
+_INVALID_RETURN_VALUE_TYPE = "Invalid return value type"
 
 
 class CaseBatchUploader(BatchUploader):
@@ -76,7 +79,7 @@ class CaseBatchUploader(BatchUploader):
         """
         # Verify command type
         if not isinstance(cmd, command.UploadCasesCommand):
-            raise exc.InvalidArgumentsError("510ea98a", "Invalid command type")
+            raise exc.InvalidArgumentsError("510ea98a", _INVALID_COMMAND_TYPE)
 
         # Verify user has at least one role that may manipulate case data
         if cmd.user is not None and not cmd.user.roles.intersection(
@@ -110,9 +113,9 @@ class CaseBatchUploader(BatchUploader):
             InvalidArgumentsError: If the command or result has the wrong type.
         """
         if not isinstance(cmd, command.UploadCasesCommand):
-            raise exc.InvalidArgumentsError("92bef72e", "Invalid command type")
+            raise exc.InvalidArgumentsError("92bef72e", _INVALID_COMMAND_TYPE)
         if not isinstance(batch_result, model.CaseBatchUploadResult):
-            raise exc.InvalidArgumentsError("42b47de6", "Invalid return value type")
+            raise exc.InvalidArgumentsError("42b47de6", _INVALID_RETURN_VALUE_TYPE)
         success = True
 
         # Verify samples via seqdb service
@@ -160,41 +163,14 @@ class CaseBatchUploader(BatchUploader):
             InvalidArgumentsError: If the command or result has the wrong type.
         """
         if not isinstance(cmd, command.UploadCasesCommand):
-            raise exc.InvalidArgumentsError("0935eb52", "Invalid command type")
+            raise exc.InvalidArgumentsError("0935eb52", _INVALID_COMMAND_TYPE)
         if not isinstance(batch_result, model.CaseBatchUploadResult):
-            raise exc.InvalidArgumentsError("078d4af1", "Invalid return value type")
+            raise exc.InvalidArgumentsError("078d4af1", _INVALID_RETURN_VALUE_TYPE)
         success = True
 
-        # Create new command with only cases and content updated during verification
-        cases_only_cmd = cmd.model_copy()
-        cases_only_cmd.case_batch = cmd.case_batch.model_copy()
-        cases_only_cmd.case_batch.cases = [x.model_copy() for x in cmd.case_batch.cases]
-        cases_for_validation: list[model.Case] = []
-        for i, (case_for_upload, case_result) in enumerate(
-            zip(cases_only_cmd.case_batch.cases, batch_result.cases)
-        ):
-            # Create a new case for upload without any read sets or seqs, and with
-            # updated case content equal to the validated content from the verification
-            # step. This is a shallow copy so that the case contained in both the
-            # original and the new case for upload is the shared.
-            new_case_for_upload = case_for_upload.model_copy(deep=False)
-            new_case_for_upload.read_sets = None
-            new_case_for_upload.seqs = None
-            cases_only_cmd.case_batch.cases[i] = new_case_for_upload
-            case = new_case_for_upload.case
-            if case is None:
-                continue
-            if case.content != case_result.validated_content:
-                # Set case content to validated content. Since the case is a reference
-                # shared with the original cmd, it will be updated there as well
-                case.content = case_result.validated_content
-            if case_result.is_new and case.content:
-                # For creates, None has no deletion semantics and must never be
-                # persisted as content value.
-                case.content = {x: y for x, y in case.content.items() if y is not None}
-            if not self.is_null(case.id) and case.content:
-                # Case and its content will be updated and has to be validated again
-                cases_for_validation.append(case)
+        cases_only_cmd, cases_for_validation = self._prepare_cases_only_command(
+            cmd, batch_result
+        )
 
         # Merge case content with that already in the database for updates, and
         # validate the merged content again so that there are no inconsistencies
@@ -225,6 +201,69 @@ class CaseBatchUploader(BatchUploader):
         ]
         success &= super().upsert_batch(cases_only_cmd, batch_result, uow)
 
+        return self._upsert_samples_after_cases(
+            cmd,
+            cases_only_cmd,
+            batch_result,
+            uow,
+            success,
+            is_pending_before_cases_only_upsert,
+        )
+
+    def _prepare_cases_only_command(
+        self,
+        cmd: command.UploadCasesCommand,
+        batch_result: model.CaseBatchUploadResult,
+    ) -> tuple[command.UploadCasesCommand, list[model.Case]]:
+        """Copy the case command and apply verified case content in place."""
+        # Create new command with only cases and content updated during verification
+        cases_only_cmd = cmd.model_copy()
+        cases_only_cmd.case_batch = cmd.case_batch.model_copy()
+        cases_only_cmd.case_batch.cases = [
+            case_for_upload.model_copy() for case_for_upload in cmd.case_batch.cases
+        ]
+        cases_for_validation: list[model.Case] = []
+        for index, (case_for_upload, case_result) in enumerate(
+            zip(cases_only_cmd.case_batch.cases, batch_result.cases)
+        ):
+            # Create a new case for upload without any read sets or seqs, and with
+            # updated case content equal to the validated content from the verification
+            # step. This is a shallow copy so that the case contained in both the
+            # original and the new case for upload is the shared.
+            new_case_for_upload = case_for_upload.model_copy(deep=False)
+            new_case_for_upload.read_sets = None
+            new_case_for_upload.seqs = None
+            cases_only_cmd.case_batch.cases[index] = new_case_for_upload
+            case = new_case_for_upload.case
+            if case is None:
+                continue
+            if case.content != case_result.validated_content:
+                # Set case content to validated content. Since the case is a reference
+                # shared with the original cmd, it will be updated there as well
+                case.content = case_result.validated_content
+            if case_result.is_new and case.content:
+                # For creates, None has no deletion semantics and must never be
+                # persisted as content value.
+                case.content = {
+                    key: value
+                    for key, value in case.content.items()
+                    if value is not None
+                }
+            if not self.is_null(case.id) and case.content:
+                # Case and its content will be updated and has to be validated again
+                cases_for_validation.append(case)
+        return cases_only_cmd, cases_for_validation
+
+    def _upsert_samples_after_cases(
+        self,
+        cmd: command.UploadCasesCommand,
+        cases_only_cmd: command.UploadCasesCommand,
+        batch_result: model.CaseBatchUploadResult,
+        uow: BaseUnitOfWork,
+        success: bool,
+        is_pending_before_cases_only_upsert: list[bool],
+    ) -> bool:
+        """Upload samples after cases and persist any resulting content IDs."""
         # Determine if there are samples to be created or updated
         if not cmd.case_batch.has_samples():
             return success
@@ -244,10 +283,10 @@ class CaseBatchUploader(BatchUploader):
                     )
                     assert case_only_for_upload.case is not None
                     case_only_for_upload.case.content = case_for_upload.case.content
-                # Reset case_result status to pending for cases that were pending before the cases only, since the content update may have fixed the issues that caused them to be failed, and they should be retried in the next batch upload attempt. Cases that were not pending before should keep their status since they may have other issues that need to be fixed.
                 for case_result, was_pending in zip(
                     batch_result.cases, is_pending_before_cases_only_upsert
                 ):
+                    # Reset case_result status to pending for cases that were pending before the cases only, since the content update may have fixed the issues that caused them to be failed, and they should be retried in the next batch upload attempt. Cases that were not pending before should keep their status since they may have other issues that need to be fixed.
                     if was_pending:
                         case_result.status = EtlStatus.PENDING
                         case_result.is_new = (
@@ -255,7 +294,6 @@ class CaseBatchUploader(BatchUploader):
                         )
                 success &= super().upsert_batch(cases_only_cmd, batch_result, uow)
         success &= curr_success
-
         return success
 
     def _validate_merged_content(
@@ -349,6 +387,7 @@ class CaseBatchUploader(BatchUploader):
 
         # Upload to seqdb, possibly only verifying
         upload_samples_cmd.verify_only = verify_only
+        # Upsert samples via seqdb service, again through full upload including verification
         seqdb_retval: seqdb_model.SampleBatchUploadResult = self.service.app.handle(
             upload_samples_cmd
         )
@@ -356,42 +395,57 @@ class CaseBatchUploader(BatchUploader):
 
         # Map verification results back to cases and child IDs back to cases
         for sample_index, sample_result in enumerate(seqdb_retval.samples):
-            # Map read sets and seqs back to cases
-            for i, seqdb_result in enumerate(sample_result.read_sets or []):
-                case_index, child_index = sample_case_index_map[
-                    seqdb_model.ReadSetForUpload
-                ][(sample_index, i)]
-                case = cmd.case_batch.cases[case_index]
-                assert case is not None and case.case is not None
-                case_content = case.case.content
-                result = batch_result.cases[case_index].read_sets[child_index]  # type: ignore[index]
-                result.id = seqdb_result.id
-                result.status = seqdb_result.status
-                result.add_logs(seqdb_result.logs)
-                assert case.read_sets is not None
-                # only update content if there is an ID, otherwise a unknown value appears in the content,
-                # causing a data validation issue in the case upload
-                if seqdb_result.id is not None:
-                    case_content[case.read_sets[child_index].col_id] = str(
-                        seqdb_result.id
-                    )
+            # Map read sets back to cases
+            self._map_one_child_result_collection(
+                cmd,
+                batch_result,
+                sample_case_index_map,
+                sample_index,
+                seqdb_model.ReadSetForUpload,
+                "read_sets",
+                sample_result.read_sets,
+            )
             # Map seqs back to cases
-            for i, seqdb_result in enumerate(sample_result.seqs or []):
-                case_index, child_index = sample_case_index_map[
-                    seqdb_model.SeqForUpload
-                ][(sample_index, i)]
-                case = cmd.case_batch.cases[case_index]
-                assert case is not None and case.case is not None
-                case_content = case.case.content
-                result = batch_result.cases[case_index].seqs[child_index]  # type: ignore[index]
-                result.id = seqdb_result.id
-                result.status = seqdb_result.status
-                result.add_logs(seqdb_result.logs)
-                assert case.seqs is not None
-                if seqdb_result.id is not None:
-                    case_content[case.seqs[child_index].col_id] = str(seqdb_result.id)
+            self._map_one_child_result_collection(
+                cmd,
+                batch_result,
+                sample_case_index_map,
+                sample_index,
+                seqdb_model.SeqForUpload,
+                "seqs",
+                sample_result.seqs,
+            )
 
         return success
+
+    @staticmethod
+    def _map_one_child_result_collection(
+        cmd: command.UploadCasesCommand,
+        batch_result: model.CaseBatchUploadResult,
+        sample_case_index_map: dict[type[Any], dict[tuple[int, int], tuple[int, int]]],
+        sample_index: int,
+        child_model_class: type[Any],
+        child_field_name: str,
+        seqdb_results: list[Any] | None,
+    ) -> None:
+        """Map one seqdb result collection to its corresponding CASEDB children."""
+        for result_index, seqdb_result in enumerate(seqdb_results or []):
+            case_index, child_index = sample_case_index_map[child_model_class][
+                (sample_index, result_index)
+            ]
+            case = cmd.case_batch.cases[case_index]
+            assert case is not None and case.case is not None
+            case_result = batch_result.cases[case_index]
+            child_result = getattr(case_result, child_field_name)[child_index]  # type: ignore[index]
+            child_result.id = seqdb_result.id
+            child_result.status = seqdb_result.status
+            child_result.add_logs(seqdb_result.logs)
+            children = getattr(case, child_field_name)
+            assert children is not None
+            # only update content if there is an ID, otherwise a unknown value appears in the content,
+            # causing a data validation issue in the case upload
+            if seqdb_result.id is not None:
+                case.case.content[children[child_index].col_id] = str(seqdb_result.id)
 
     def _set_default_created_in_data_collection_id(
         self,
@@ -499,108 +553,138 @@ class CaseBatchUploader(BatchUploader):
         success = True
         # Get complete CaseType with no ABAC applied to get all columns for validation
         complete_case_type = self._get_complete_case_type(cmd, ignore_abac=True)
-
         # Get private data collections in which the user may create new cases
-        allowed_created_data_collection_ids = set()
-        for (
-            data_collection_id,
-            access_abac,
-        ) in complete_case_type.case_type_access_abacs.items():
-            if access_abac.is_private and access_abac.add_case:
-                allowed_created_data_collection_ids.add(data_collection_id)
-
+        allowed_created_data_collection_ids = {
+            data_collection_id
+            for data_collection_id, access_abac in complete_case_type.case_type_access_abacs.items()
+            if access_abac.is_private and access_abac.add_case
+        }
         # Get data collection IDs for each case
         case_data_collections = self._get_case_data_collections(cmd, batch_result, uow)
-
         # Get readable and writeable columns for each unique combination of data collection IDs
-        uq_col_access: dict[frozenset[UUID], tuple[set[UUID], set[UUID]]] = {}
+        column_access_by_collections: dict[
+            frozenset[UUID], tuple[set[UUID], set[UUID]]
+        ] = {}
         for case_for_upload, case_result, data_collection_ids in zip(
             cmd.case_batch.cases, batch_result.cases, case_data_collections
         ):
-            # Determine if the case, if new, may be created by this user
-            if case_result.is_new:
-                case = case_for_upload.case
-                assert case is not None
-                if (
-                    case.created_in_data_collection_id
-                    not in allowed_created_data_collection_ids
-                ):
-                    # Case would be created in a data collection in which the user has no create access
-                    case_result.add_error(
-                        "29e256f1",
-                        f"Not allowed to create cases in data collection {case.created_in_data_collection_id}",
-                    )
-                    success = False
-
-            # Get all column IDs that would be written, including those from the case content, read sets and seqs
             content: dict[UUID, str | None] | None = (
                 case_for_upload.case.content
                 if case_for_upload.case is not None
                 else None
             )
-            content_col_ids = set(content.keys()) if content is not None else set()
             col_ids = (
-                content_col_ids
+                # Get all column IDs that would be written, including those from the case content, read sets and seqs
+                (set(content) if content is not None else set())
                 | {x.col_id for x in case_for_upload.read_sets or []}
                 | {x.col_id for x in case_for_upload.seqs or []}
             )
-
-            # Retrieve readable_col_ids, writeable_col_ids for this combination of data_collection_ids, or calculate and cache if not seen before
-            readable_col_ids, writeable_col_ids = uq_col_access.get(
-                data_collection_ids, (None, None)
+            success &= self._verify_case_creation_access(
+                case_for_upload,
+                case_result,
+                allowed_created_data_collection_ids,
             )
-            if readable_col_ids is None or writeable_col_ids is None:
-                readable_col_ids = set()
-                writeable_col_ids = set()
-                for data_collection_id in data_collection_ids:
-                    if (
-                        data_collection_id
-                        not in complete_case_type.case_type_access_abacs
-                    ):
-                        # Case data collection not found in CaseType access ABACs for this user -> no access to any columns for this data collection
-                        continue
-                    access_abac = complete_case_type.case_type_access_abacs[
-                        data_collection_id
-                    ]
-                    readable_col_ids.update(access_abac.read_col_ids)
-                    writeable_col_ids.update(access_abac.write_col_ids)
-                uq_col_access[data_collection_ids] = (
-                    readable_col_ids,
-                    writeable_col_ids,
+            readable_col_ids, writeable_col_ids = (
+                self._get_column_access_for_collections(
+                    complete_case_type,
+                    data_collection_ids,
+                    column_access_by_collections,
                 )
-            # Check if all provided columns are writeable
-            no_write_access_col_ids = col_ids - writeable_col_ids
-            if not no_write_access_col_ids:
-                # All columns are writeable -> no ABAC issues
-                continue
-            # Go over columns with no write access -> remove value and add data issue
-            for col_id in no_write_access_col_ids:
-                if content is not None and col_id in content:
-                    orig_value = content[col_id]
-                    del content[col_id]
-                else:
-                    # Column is not in content, so it must be from a read set or seq. These are not included in the content and therefore no value can be removed, but a data issue should still be added if there is no write access.
-                    orig_value = None
-                if col_id in readable_col_ids:
-                    # Read access but no write access -> not authorized but informative message since the user can see the column but not update it
-                    code = "3e7c1a9f"
-                    message = "No write access, only read access"
-                else:
-                    # No access to this col_id, whether it actually exists or not -> treat as unauthorized since the user should not know the difference
-                    code = "a7b3f9d2"
-                    message = "Unknown Col"
-                case_result.data_issues.append(
-                    model.CaseDataIssue(
-                        col_id=col_id,
-                        original_value=orig_value,
-                        updated_value=None,
-                        data_issue_type=DataIssueType.UNAUTHORIZED,
-                        code=code,
-                        message=message,
-                    )
-                )
+            )
+            self._record_unwritable_column_issues(
+                content,
+                col_ids,
+                readable_col_ids,
+                writeable_col_ids,
+                case_result,
+            )
 
         return success
+
+    @staticmethod
+    def _verify_case_creation_access(
+        case_for_upload: model.CaseForUpload,
+        case_result: Any,
+        allowed_created_data_collection_ids: set[UUID],
+    ) -> bool:
+        """Check whether a new case may be created in its target collection."""
+        # Determine if the case, if new, may be created by this user
+        if not case_result.is_new:
+            return True
+        case = case_for_upload.case
+        assert case is not None
+        if case.created_in_data_collection_id in allowed_created_data_collection_ids:
+            return True
+        # Case would be created in a data collection in which the user has no create access
+        case_result.add_error(
+            "29e256f1",
+            f"Not allowed to create cases in data collection {case.created_in_data_collection_id}",
+        )
+        return False
+
+    @staticmethod
+    def _get_column_access_for_collections(
+        complete_case_type: model.CompleteCaseType,
+        data_collection_ids: frozenset[UUID],
+        cache: dict[frozenset[UUID], tuple[set[UUID], set[UUID]]],
+    ) -> tuple[set[UUID], set[UUID]]:
+        """Return cached readable and writable columns for collection membership."""
+        # Retrieve readable_col_ids, writeable_col_ids for this combination of data_collection_ids, or calculate and cache if not seen before
+        cached_access = cache.get(data_collection_ids)
+        if cached_access is not None:
+            return cached_access
+        readable_col_ids: set[UUID] = set()
+        writeable_col_ids: set[UUID] = set()
+        for data_collection_id in data_collection_ids:
+            access_abac = complete_case_type.case_type_access_abacs.get(
+                data_collection_id
+            )
+            if access_abac is None:
+                # Case data collection not found in CaseType access ABACs for this user -> no access to any columns for this data collection
+                continue
+            readable_col_ids.update(access_abac.read_col_ids)
+            writeable_col_ids.update(access_abac.write_col_ids)
+        access = readable_col_ids, writeable_col_ids
+        cache[data_collection_ids] = access
+        return access
+
+    @staticmethod
+    def _record_unwritable_column_issues(
+        content: dict[UUID, str | None] | None,
+        col_ids: set[UUID],
+        readable_col_ids: set[UUID],
+        writeable_col_ids: set[UUID],
+        case_result: Any,
+    ) -> None:
+        """Remove unwritable content and append an unauthorized issue per column."""
+        # Check if all provided columns are writeable
+        # All columns are writeable -> no ABAC issues
+        # Go over columns with no write access -> remove value and add data issue
+        for col_id in col_ids - writeable_col_ids:
+            # Column is not in content, so it must be from a read set or seq. These are not included in the content and therefore no value can be removed, but a data issue should still be added if there is no write access.
+            orig_value = (
+                content.pop(col_id)
+                if content is not None and col_id in content
+                else None
+            )
+            if col_id in readable_col_ids:
+                # Read access but no write access -> not authorized but informative message since the user can see the column but not update it
+                code = "3e7c1a9f"
+                message = "No write access, only read access"
+            else:
+                # No access to this col_id, whether it actually exists or not -> treat as unauthorized since the user should not know the difference
+                code = "a7b3f9d2"
+                message = "Unknown Col"
+            case_result.data_issues.append(
+                model.CaseDataIssue(
+                    col_id=col_id,
+                    original_value=orig_value,
+                    updated_value=None,
+                    data_issue_type=DataIssueType.UNAUTHORIZED,
+                    code=code,
+                    message=message,
+                )
+            )
 
     def _verify_case_content(
         self,
@@ -782,126 +866,16 @@ class CaseBatchUploader(BatchUploader):
         Raises:
             InvalidArgumentsError: If the command or result has the wrong type.
         """
+        # Initialise some
         success = True
         if not isinstance(cmd, command.UploadCasesCommand):
-            raise exc.InvalidArgumentsError("7b5a31ae", "Invalid command type")
+            raise exc.InvalidArgumentsError("7b5a31ae", _INVALID_COMMAND_TYPE)
         if not isinstance(batch_result, model.CaseBatchUploadResult):
-            raise exc.InvalidArgumentsError("e46018b7", "Invalid return value type")
+            raise exc.InvalidArgumentsError("e46018b7", _INVALID_RETURN_VALUE_TYPE)
 
-        # Initialise some
-        samples_for_upload: list[seqdb_model.SampleForUpload] = []
-        sample_id_to_index_map: dict[UUID, int] = {}
-        sample_external_id_to_index_map: dict[IdentifierForUpload, int] = {}
-        sample_case_index_map: dict[int, int] = {}
-        child_index_map: dict[
-            type[model.Model], dict[tuple[int, int], tuple[int, int]]
-        ] = defaultdict(dict)
-
-        # Functionality to get/create new sample for upload
-        def _get_or_create_sample_for_upload(
-            case_index: int,
-            sample_id: UUID | None,
-            external_sample_id: IdentifierForUpload | None,
-        ) -> int:
-            """Return a deduplicated sample index, creating the sample if needed."""
-            has_id = not self.is_null(sample_id)
-            has_external_id = external_sample_id is not None
-            if has_id and sample_id in sample_id_to_index_map:
-                assert sample_id is not None
-                return sample_id_to_index_map[sample_id]
-            if (
-                has_external_id
-                and external_sample_id in sample_external_id_to_index_map
-            ):
-                return sample_external_id_to_index_map[external_sample_id]
-            # New sample for upload: create
-            sample_for_upload_id = sample_id if has_id else NULL_ID
-            sample_for_upload = seqdb_model.SampleForUpload(
-                id=sample_for_upload_id,
-                sample=seqdb_model.Sample(
-                    id=sample_for_upload_id,
-                    created_in_data_collection_id=cmd.default_created_in_data_collection_id,
-                ),
-                identifiers=[external_sample_id] if has_external_id else [],  # type: ignore[call-arg]
-                read_sets=[],
-                seqs=[],
-            )
-            #  Add to list and maps
-            sample_index = len(samples_for_upload)
-            samples_for_upload.append(sample_for_upload)
-            if has_id:
-                assert sample_id is not None
-                sample_id_to_index_map[sample_id] = sample_index
-            if has_external_id:
-                assert external_sample_id is not None
-                sample_external_id_to_index_map[external_sample_id] = sample_index
-            sample_case_index_map[sample_index] = case_index
-            return sample_index
-
-        # Process cases to extract samples for upload
-        for case_index, (case_for_upload, case_result) in enumerate(
-            zip(cmd.case_batch.cases, batch_result.cases)
-        ):
-            has_case = case_for_upload.case is not None
-            # Add read sets
-            for i, read_set_for_upload in enumerate(case_for_upload.read_sets or []):
-                sample_index = _get_or_create_sample_for_upload(
-                    case_index,
-                    read_set_for_upload.sample_id,
-                    read_set_for_upload.other_sample_identifier,
-                )
-                sample_for_upload = samples_for_upload[sample_index]
-                # Add read set
-                assert sample_for_upload.read_sets is not None
-                sample_for_upload.read_sets.append(
-                    seqdb_model.ReadSetForUpload(
-                        sample_id=NULL_ID,
-                        protocol_id=read_set_for_upload.protocol_id,
-                    )
-                )
-                child_index_map[seqdb_model.ReadSetForUpload][(sample_index, i)] = (
-                    case_index,
-                    i,
-                )
-                if not has_case:
-                    # Case is required for read sets, so if there is no case, the read set cannot be uploaded and should be marked as failed with an appropriate message
-                    success = False
-                    curr_result = case_result.read_sets[i]  # type: ignore[index]
-                    curr_result.status = EtlStatus.FAILED
-                    curr_result.add_error(
-                        "cea1cae9",
-                        "Case must be provided for read sets to be uploaded",
-                    )
-            # Add seqs
-            for i, seq_for_upload in enumerate(case_for_upload.seqs or []):
-                sample_index = _get_or_create_sample_for_upload(
-                    case_index,
-                    seq_for_upload.sample_id,
-                    seq_for_upload.other_sample_identifier,
-                )
-                sample_for_upload = samples_for_upload[sample_index]
-                # Add sequence
-                assert sample_for_upload.seqs is not None
-                sample_for_upload.seqs.append(
-                    seqdb_model.SeqForUpload(
-                        sample_id=NULL_ID,
-                        protocol_id=seq_for_upload.protocol_id,
-                    )
-                )
-                child_index_map[seqdb_model.SeqForUpload][(sample_index, i)] = (
-                    case_index,
-                    i,
-                )
-                if not has_case:
-                    # Case is required for seqs, so if there is no case, the seq cannot be uploaded and should be marked as failed with an appropriate message
-                    success = False
-                    assert case_result.seqs is not None
-                    curr_result = case_result.seqs[i]  # type: ignore[index]
-                    curr_result.status = EtlStatus.FAILED
-                    curr_result.add_error(
-                        "1f1c3c29",
-                        "Case must be provided for seqs to be uploaded",
-                    )
+        success, samples_for_upload, child_index_map = self._build_sample_upload_batch(
+            cmd, batch_result
+        )
         # Create command if any samples for upload were found
         if not samples_for_upload:
             return True, None, child_index_map
@@ -915,6 +889,200 @@ class CaseBatchUploader(BatchUploader):
             on_new=cmd.on_new,
         )
         return success, upload_samples_cmd, child_index_map
+
+    def _build_sample_upload_batch(
+        self,
+        cmd: command.UploadCasesCommand,
+        batch_result: model.CaseBatchUploadResult,
+    ) -> tuple[
+        bool,
+        list[seqdb_model.SampleForUpload],
+        dict[type[model.Model], dict[tuple[int, int], tuple[int, int]]],
+    ]:
+        """Collect deduplicated samples and their CASEDB child index mappings."""
+        success = True
+        samples_for_upload: list[seqdb_model.SampleForUpload] = []
+        sample_id_to_index_map: dict[UUID, int] = {}
+        sample_external_id_to_index_map: dict[IdentifierForUpload, int] = {}
+        sample_case_index_map: dict[int, int] = {}
+        child_index_map: dict[
+            type[model.Model], dict[tuple[int, int], tuple[int, int]]
+        ] = defaultdict(dict)
+        # Process cases to extract samples for upload
+        for case_index, (case_for_upload, case_result) in enumerate(
+            zip(cmd.case_batch.cases, batch_result.cases)
+        ):
+            success &= self._append_read_sets_for_sample_upload(
+                cmd,
+                case_index,
+                case_for_upload,
+                case_result,
+                samples_for_upload,
+                sample_id_to_index_map,
+                sample_external_id_to_index_map,
+                sample_case_index_map,
+                child_index_map,
+            )
+            success &= self._append_seqs_for_sample_upload(
+                cmd,
+                case_index,
+                case_for_upload,
+                case_result,
+                samples_for_upload,
+                sample_id_to_index_map,
+                sample_external_id_to_index_map,
+                sample_case_index_map,
+                child_index_map,
+            )
+        return success, samples_for_upload, child_index_map
+
+    def _get_or_create_sample_for_upload(
+        self,
+        cmd: command.UploadCasesCommand,
+        case_index: int,
+        sample_id: UUID | None,
+        external_sample_id: IdentifierForUpload | None,
+        samples_for_upload: list[seqdb_model.SampleForUpload],
+        sample_id_to_index_map: dict[UUID, int],
+        sample_external_id_to_index_map: dict[IdentifierForUpload, int],
+        sample_case_index_map: dict[int, int],
+    ) -> int:
+        """Return a deduplicated sample index, creating the sample if needed."""
+        # Functionality to get/create new sample for upload
+        has_id = not self.is_null(sample_id)
+        has_external_id = external_sample_id is not None
+        if has_id and sample_id in sample_id_to_index_map:
+            assert sample_id is not None
+            return sample_id_to_index_map[sample_id]
+        if has_external_id and external_sample_id in sample_external_id_to_index_map:
+            return sample_external_id_to_index_map[external_sample_id]
+        # New sample for upload: create
+        sample_for_upload_id = sample_id if has_id else NULL_ID
+        sample_for_upload = seqdb_model.SampleForUpload(
+            id=sample_for_upload_id,
+            sample=seqdb_model.Sample(
+                id=sample_for_upload_id,
+                created_in_data_collection_id=cmd.default_created_in_data_collection_id,
+            ),
+            identifiers=[external_sample_id] if has_external_id else [],  # type: ignore[call-arg]
+            read_sets=[],
+            seqs=[],
+        )
+        sample_index = len(samples_for_upload)
+        #  Add to list and maps
+        samples_for_upload.append(sample_for_upload)
+        if has_id:
+            assert sample_id is not None
+            sample_id_to_index_map[sample_id] = sample_index
+        if has_external_id:
+            assert external_sample_id is not None
+            sample_external_id_to_index_map[external_sample_id] = sample_index
+        sample_case_index_map[sample_index] = case_index
+        return sample_index
+
+    def _append_read_sets_for_sample_upload(
+        self,
+        cmd: command.UploadCasesCommand,
+        case_index: int,
+        case_for_upload: model.CaseForUpload,
+        case_result: Any,
+        samples_for_upload: list[seqdb_model.SampleForUpload],
+        sample_id_to_index_map: dict[UUID, int],
+        sample_external_id_to_index_map: dict[IdentifierForUpload, int],
+        sample_case_index_map: dict[int, int],
+        child_index_map: dict[
+            type[model.Model], dict[tuple[int, int], tuple[int, int]]
+        ],
+    ) -> bool:
+        """Append read sets and record their source-case indices."""
+        success = True
+        # Add read sets
+        for child_index, read_set in enumerate(case_for_upload.read_sets or []):
+            sample_index = self._get_or_create_sample_for_upload(
+                cmd,
+                case_index,
+                read_set.sample_id,
+                read_set.other_sample_identifier,
+                samples_for_upload,
+                sample_id_to_index_map,
+                sample_external_id_to_index_map,
+                sample_case_index_map,
+            )
+            sample_for_upload = samples_for_upload[sample_index]
+            assert sample_for_upload.read_sets is not None
+            # Add read set
+            sample_for_upload.read_sets.append(
+                seqdb_model.ReadSetForUpload(
+                    sample_id=NULL_ID,
+                    protocol_id=read_set.protocol_id,
+                )
+            )
+            child_index_map[seqdb_model.ReadSetForUpload][
+                (sample_index, child_index)
+            ] = (case_index, child_index)
+            if case_for_upload.case is None:
+                success = False
+                # Case is required for read sets, so if there is no case, the read set cannot be uploaded and should be marked as failed with an appropriate message
+                curr_result = case_result.read_sets[child_index]  # type: ignore[index]
+                curr_result.status = EtlStatus.FAILED
+                curr_result.add_error(
+                    "cea1cae9",
+                    "Case must be provided for read sets to be uploaded",
+                )
+        return success
+
+    def _append_seqs_for_sample_upload(
+        self,
+        cmd: command.UploadCasesCommand,
+        case_index: int,
+        case_for_upload: model.CaseForUpload,
+        case_result: Any,
+        samples_for_upload: list[seqdb_model.SampleForUpload],
+        sample_id_to_index_map: dict[UUID, int],
+        sample_external_id_to_index_map: dict[IdentifierForUpload, int],
+        sample_case_index_map: dict[int, int],
+        child_index_map: dict[
+            type[model.Model], dict[tuple[int, int], tuple[int, int]]
+        ],
+    ) -> bool:
+        """Append sequences and record their source-case indices."""
+        success = True
+        # Add seqs
+        for child_index, seq in enumerate(case_for_upload.seqs or []):
+            sample_index = self._get_or_create_sample_for_upload(
+                cmd,
+                case_index,
+                seq.sample_id,
+                seq.other_sample_identifier,
+                samples_for_upload,
+                sample_id_to_index_map,
+                sample_external_id_to_index_map,
+                sample_case_index_map,
+            )
+            sample_for_upload = samples_for_upload[sample_index]
+            assert sample_for_upload.seqs is not None
+            # Add sequence
+            sample_for_upload.seqs.append(
+                seqdb_model.SeqForUpload(
+                    sample_id=NULL_ID,
+                    protocol_id=seq.protocol_id,
+                )
+            )
+            child_index_map[seqdb_model.SeqForUpload][(sample_index, child_index)] = (
+                case_index,
+                child_index,
+            )
+            if case_for_upload.case is None:
+                success = False
+                assert case_result.seqs is not None
+                # Case is required for seqs, so if there is no case, the seq cannot be uploaded and should be marked as failed with an appropriate message
+                curr_result = case_result.seqs[child_index]  # type: ignore[index]
+                curr_result.status = EtlStatus.FAILED
+                curr_result.add_error(
+                    "1f1c3c29",
+                    "Case must be provided for seqs to be uploaded",
+                )
+        return success
 
 
 def case_service_upload_cases(

@@ -28,7 +28,7 @@ from gen_epix.util import copy_model_field
 
 
 class CaseTypeSetCaseTypeUpdateAssociationRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.CaseTypeSetCaseTypeUpdateAssociationCommand.__doc__
     case_type_set_members: list[model.CaseTypeSetMember] = copy_model_field(
@@ -39,7 +39,7 @@ class CaseTypeSetCaseTypeUpdateAssociationRequestBody(PydanticBaseModel):
 
 
 class ColSetColUpdateAssociationRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.ColSetColUpdateAssociationCommand.__doc__
     col_set_members: list[model.ColSetMember] = copy_model_field(
@@ -50,7 +50,7 @@ class ColSetColUpdateAssociationRequestBody(PydanticBaseModel):
 
 
 class CreateCaseSetRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.CreateCaseSetCommand.__doc__
     case_set: model.CaseSet = copy_model_field(command.CreateCaseSetCommand, "case_set")
@@ -67,7 +67,7 @@ class CreateCaseSetRequestBody(PydanticBaseModel):
 
 
 class UpdateCaseCreatedInDataCollectionRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.UpdateCaseCreatedInDataCollectionCommand.__doc__
     case_ids: list[UUID] = copy_model_field(
@@ -82,7 +82,7 @@ class UpdateCaseCreatedInDataCollectionRequestBody(PydanticBaseModel):
 
 
 class RetrieveCaseRightsRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveCaseRightsCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -96,7 +96,7 @@ class RetrieveCaseRightsRequestBody(PydanticBaseModel):
 
 
 class RetrieveCasesByIdRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveCasesByIdCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -110,7 +110,7 @@ class RetrieveCasesByIdRequestBody(PydanticBaseModel):
 
 
 class RetrieveCaseCohortLinksByCaseTypeRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveCaseCohortLinksByCaseTypeCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -119,7 +119,7 @@ class RetrieveCaseCohortLinksByCaseTypeRequestBody(PydanticBaseModel):
 
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrievePhylogeneticTreeByCasesCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -139,8 +139,28 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     )
 
 
+class RetrieveSeqDistancesByCasesRequestBody(PydanticBaseModel):
+    """Docstring assigned programmatically."""  # noqa: D415
+
+    __doc__ = command.RetrieveSeqDistancesByCasesCommand.__doc__
+    case_type_id: UUID = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand, "case_type_id"
+    )
+    genetic_distance_col_id: UUID = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand, "genetic_distance_col_id"
+    )
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand,
+        "case_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    filter_other_cases: bool = copy_model_field(
+        command.RetrieveSeqDistancesByCasesCommand, "filter_other_cases"
+    )
+
+
 class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveSimilarCasesCommand.__doc__
     case_type_id: UUID = copy_model_field(
@@ -160,13 +180,13 @@ class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
 
 
 class RetrieveSimilarCasesResponseBody(command.RetrieveSimilarCasesReturnValue):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveSimilarCasesReturnValue.__doc__
 
 
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveCaseTypeStatsCommand.__doc__
     case_type_ids: set[UUID] | None = copy_model_field(
@@ -180,7 +200,7 @@ class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
 
 
 class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.RetrieveCaseSetStatsCommand.__doc__
     case_set_ids: set[UUID] | None = copy_model_field(
@@ -194,7 +214,7 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
 
 
 class CreateFileForReadSetRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.CreateFileForReadSetCommand.__doc__
     file_content: str = Field(
@@ -213,7 +233,7 @@ class CreateFileForReadSetRequestBody(PydanticBaseModel):
 
 
 class CreateFileForSeqRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically"""  # noqa: D415
+    """Docstring assigned programmatically."""  # noqa: D415
 
     __doc__ = command.CreateFileForSeqCommand.__doc__
     file_content: str = Field(
@@ -615,6 +635,34 @@ def create_case_endpoints(
                     genetic_distance_col_id=request_body.genetic_distance_col_id,
                     tree_algorithm=request_body.tree_algorithm_code,
                     case_ids=request_body.case_ids,
+                ),
+            ),
+        )
+
+    @router.post(
+        "/retrieve/seq_distances_by_cases",
+        operation_id="retrieve__seq_distances_by_cases",
+        name="Retrieve sequence distances",
+        description=command.RetrieveSeqDistancesByCasesCommand.__doc__,
+    )
+    async def retrieve__seq_distances_by_cases(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: RetrieveSeqDistancesByCasesRequestBody,
+    ) -> list[seqdb_model.SeqDistance]:
+        """See router description."""
+        return cast(
+            list[seqdb_model.SeqDistance],
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="b983141b",
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveSeqDistancesByCasesCommand(
+                    user=user,
+                    case_type_id=request_body.case_type_id,
+                    case_ids=request_body.case_ids,
+                    genetic_distance_col_id=request_body.genetic_distance_col_id,
+                    filter_other_cases=request_body.filter_other_cases,
                 ),
             ),
         )

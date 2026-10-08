@@ -23,7 +23,7 @@ from gen_epix.util import copy_model_field
 
 
 class UploadSamplesRequestBody(command.UploadSamplesCommand):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.UploadSamplesCommand.__doc__
 
@@ -48,7 +48,7 @@ class UploadSamplesRequestBody(command.UploadSamplesCommand):
 
 
 class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.CalculatePhylogeneticTreeCommand.__doc__
 
@@ -71,7 +71,7 @@ class CalculatePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveSimilarProfilesCommand.__doc__
 
@@ -89,7 +89,7 @@ class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
 
 
 class UpdateSeqDistancesRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.UpdateSeqDistancesCommand.__doc__
     protocol_id: UUID = copy_model_field(
@@ -117,7 +117,7 @@ class UpdateSeqDistancesRequestBody(PydanticBaseModel):
 
 
 class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveSamplesByIdCommand.__doc__
     sample_ids: list[UUID] = copy_model_field(
@@ -128,7 +128,7 @@ class RetrieveSamplesByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveSampleIdentifiersByIdCommand.__doc__
     sample_ids: list[UUID] = copy_model_field(
@@ -138,8 +138,23 @@ class RetrieveSampleIdentifiersByIdsRequestBody(PydanticBaseModel):
     )
 
 
+class RetrieveSeqDistancesBySeqProfilesRequestBody(PydanticBaseModel):
+    """Docstring assigned programmatically."""
+
+    __doc__ = command.RetrieveSeqDistancesBySeqProfilesCommand.__doc__
+
+    seq_profile_ids: list[UUID] = copy_model_field(
+        command.RetrieveSeqDistancesBySeqProfilesCommand,
+        "seq_profile_ids",
+        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
+    )
+    protocol_id: UUID = copy_model_field(
+        command.RetrieveSeqDistancesBySeqProfilesCommand, "protocol_id"
+    )
+
+
 class RetrieveSeqFastaRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveSeqFastaCommand.__doc__
 
@@ -148,6 +163,7 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
         "seq_ids",
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
+    wrap: int = copy_model_field(command.RetrieveSeqFastaCommand, "wrap")
     file_name: str = Field(
         description="The desired filename for the FASTA download.",
         max_length=MAX_CODE_FIELD_LENGTH,
@@ -155,7 +171,7 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
 
 
 class ConvertSeqFormatRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.ConvertSeqFormatCommand.__doc__
 
@@ -173,7 +189,7 @@ class ConvertSeqFormatRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveBestSeqPerSampleCommand.__doc__
 
@@ -190,7 +206,7 @@ class RetrieveBestSeqPerSampleRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveBestSeqProfilePerSampleCommand.__doc__
 
@@ -207,7 +223,7 @@ class RetrieveBestSeqProfilePerSampleRequestBody(PydanticBaseModel):
 
 
 class RetrieveBestSeqClassificationPerSampleRequestBody(PydanticBaseModel):
-    """Docstring assigned automatically."""
+    """Docstring assigned programmatically."""
 
     __doc__ = command.RetrieveBestSeqClassificationPerSampleCommand.__doc__
 
@@ -228,6 +244,26 @@ class RetrieveBestSeqClassificationPerSampleRequestBody(PydanticBaseModel):
         command.RetrieveBestSeqClassificationPerSampleCommand,
         "return_primary_category_id",
     )
+
+
+def _handle_seq_command(
+    app: App,
+    handle_exception: Callable[[str, Any, Exception], NoReturn],
+    error_code: str,
+    user: Any,
+    cmd: Any,
+    request_ids: Any | None = None,
+) -> Any:
+    """Dispatch one SeqDB command and forward failures to the API adapter."""
+    try:
+        return app.handle(cmd)
+    except Exception as exception:
+        if request_ids is None:
+            handle_exception(error_code, user, exception)
+        else:
+            handle_exception(
+                error_code, user, exception, request_ids=request_ids  # type: ignore[call-arg]
+            )
 
 
 def create_seq_endpoints(
@@ -351,6 +387,30 @@ def create_seq_endpoints(
         request_body: RetrieveSampleIdentifiersByIdsRequestBody,
     ) -> list[model.SampleIdentifier]:
         """See router description."""
+        retval: list[model.SampleIdentifier] = _handle_seq_command(
+            app,
+            handle_exception,
+            "b3f91a2e",
+            user,
+            command.RetrieveSampleIdentifiersByIdCommand(
+                user=user,
+                sample_ids=request_body.sample_ids,
+            ),
+            request_ids=request_body.sample_ids,
+        )
+        return retval
+
+    @router.post(
+        "/retrieve/seq_distances_by_seq_profiles",
+        operation_id="retrieve__seq_distances_by_seq_profiles",
+        name="RetrieveSeqDistancesBySeqProfiles",
+        description=command.RetrieveSeqDistancesBySeqProfilesCommand.__doc__,
+    )
+    async def retrieve__seq_distances_by_seq_profiles(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: RetrieveSeqDistancesBySeqProfilesRequestBody,
+    ) -> list[model.SeqDistance]:
+        """See router description."""
         try:
             retval: list[model.SampleIdentifier] = await run_in_threadpool(
                 app.handle,
@@ -360,7 +420,7 @@ def create_seq_endpoints(
                 ),
             )
         except Exception as exception:
-            handle_exception("b3f91a2e", user, exception, request_ids=request_body.sample_ids)  # type: ignore[call-arg]
+            handle_exception("f1c2d3e4", user, exception, request_ids=request_body.seq_profile_ids)  # type: ignore[call-arg]
         return retval
 
     @router.post(
@@ -404,19 +464,19 @@ def create_seq_endpoints(
         request_body: ConvertSeqFormatRequestBody,
     ) -> list[UUID]:
         """See router description."""
-        try:
-            retval: list[UUID] = app.handle(
-                command.ConvertSeqFormatCommand(
-                    user=user,
-                    seq_ids=request_body.seq_ids,
-                    from_format=request_body.from_format,
-                    to_format=request_body.to_format,
-                )
-            )
-        except Exception as exception:
-            handle_exception(
-                "b8c4d2e1", user, exception, request_ids=request_body.seq_ids  # type: ignore[call-arg]
-            )
+        retval: list[UUID] = _handle_seq_command(
+            app,
+            handle_exception,
+            "b8c4d2e1",
+            user,
+            command.ConvertSeqFormatCommand(
+                user=user,
+                seq_ids=request_body.seq_ids,
+                from_format=request_body.from_format,
+                to_format=request_body.to_format,
+            ),
+            request_ids=request_body.seq_ids,
+        )
         return retval
 
     @router.post(

@@ -90,6 +90,11 @@ class IntervalTransformer(Transformer):
                 upper_bound_is_inclusive
             ] * self._n_intervals
 
+        self._sort_intervals()
+        self._validate_intervals()
+
+    def _sort_intervals(self) -> None:
+        """Sort intervals and associated metadata by their lower bounds."""
         # Sort bins
         sorted_indices = sorted(
             range(self._n_intervals), key=lambda i: self._lower_bounds[i]
@@ -104,6 +109,8 @@ class IntervalTransformer(Transformer):
         ]
         self._interval_names = [self._interval_names[i] for i in sorted_indices]
 
+    def _validate_intervals(self) -> None:
+        """Ensure each interval is ordered and no adjacent intervals overlap."""
         # Verify input
         for i in range(self._n_intervals):
             lb = self._lower_bounds[i]
@@ -152,13 +159,7 @@ class IntervalTransformer(Transformer):
         if value is None:
             return None
         if not isinstance(value, (int, float, Decimal)):
-            if on_no_match == OnException.RAISE:
-                raise ValueError(f"Value {value} does not match any interval")
-            elif on_no_match == OnException.SET_NONE:
-                return None
-            elif on_no_match == OnException.SET_NO_RETURN:
-                return NoReturn
-            raise NotImplementedError(f"Invalid on_no_match value {on_no_match}")
+            return self._handle_no_interval_match(value, on_no_match)
         for i in range(self._n_intervals):
             # Match interval
             match_lb = value > self._lower_bounds[i] or (
@@ -171,6 +172,16 @@ class IntervalTransformer(Transformer):
                 # Interval matches -> assign value to target field and stop
                 return self._interval_names[i]
         # Does not match to any interval
+        return self._handle_no_interval_match(value, on_no_match)
+
+    @staticmethod
+    def _handle_no_interval_match(
+        value: Any,
+        on_no_match: Literal[
+            OnException.RAISE, OnException.SET_NONE, OnException.SET_NO_RETURN
+        ],
+    ) -> Hashable | None | NoReturn:
+        """Apply the configured behavior when a value has no interval match."""
         if on_no_match == OnException.RAISE:
             raise ValueError(f"Value {value} does not match any interval")
         elif on_no_match == OnException.SET_NONE:
@@ -342,38 +353,41 @@ class IntervalToIntervalTransformer(Transformer):
         mapping = {}
 
         for src_interval in self._src_intervals:
-            best_match = None
-            max_overlap = 0
-
-            for tgt_interval in self._tgt_intervals:
-                overlap = self._calculate_overlap(src_interval, tgt_interval)
-                if self._is_contained(src_interval, tgt_interval):
-                    mapping[src_interval["name"]] = tgt_interval["name"]
-                    break
-                if self._transform_strategy == IntervalTransformStrategy.CONTAINS_ONLY:
-                    continue  # Skip if source interval is not contained in target
-
-                if (
-                    self._transform_strategy
-                    == IntervalTransformStrategy.LARGEST_OVERLAP
-                ):
-                    # Map to target with largest overlap
-                    if overlap > max_overlap:
-                        max_overlap = overlap
-                        best_match = tgt_interval["name"]
-                    continue
-                raise NotImplementedError(
-                    f"transform_strategy={self._transform_strategy} not implemented"
-                )
-
-            if (
-                self._transform_strategy == IntervalTransformStrategy.LARGEST_OVERLAP
-                and best_match
-                and max_overlap > 0
-            ):
-                mapping[src_interval["name"]] = best_match
+            target_interval = self._find_target_interval(src_interval)
+            if target_interval is not None:
+                mapping[src_interval["name"]] = target_interval["name"]
 
         return mapping
+
+    def _find_target_interval(self, src_interval: IntervalDict) -> IntervalDict | None:
+        """Find the containing target interval or the best positive overlap."""
+        best_match = None
+        max_overlap = 0
+
+        for tgt_interval in self._tgt_intervals:
+            overlap = self._calculate_overlap(src_interval, tgt_interval)
+            if self._is_contained(src_interval, tgt_interval):
+                return tgt_interval
+            if self._transform_strategy == IntervalTransformStrategy.CONTAINS_ONLY:
+                continue  # Skip if source interval is not contained in target
+
+            if self._transform_strategy == IntervalTransformStrategy.LARGEST_OVERLAP:
+                # Map to target with largest overlap
+                if overlap > max_overlap:
+                    max_overlap = overlap
+                    best_match = tgt_interval
+                continue
+            raise NotImplementedError(
+                f"transform_strategy={self._transform_strategy} not implemented"
+            )
+
+        if (
+            self._transform_strategy == IntervalTransformStrategy.LARGEST_OVERLAP
+            and best_match is not None
+            and max_overlap > 0
+        ):
+            return best_match
+        return None
 
     def _calculate_overlap(
         self,

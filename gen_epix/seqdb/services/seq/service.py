@@ -89,6 +89,9 @@ from gen_epix.seqdb.services.seq.retrieve_sample import (
     seq_service_retrieve_samples_by_id,
     seq_service_retrieve_samples_by_query,
 )
+from gen_epix.seqdb.services.seq.retrieve_seq_distances_by_seq_profiles import (
+    seq_service_retrieve_seq_distances_by_seq_profiles,
+)
 from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 
@@ -127,16 +130,24 @@ class SeqService(BaseSeqService):
         """Delegate sample-query retrieval to the sample operation."""
         return seq_service_retrieve_samples_by_query(self, cmd)
 
+    def retrieve_seq_distances_by_seq_profiles(
+        self,
+        cmd: command.RetrieveSeqDistancesBySeqProfilesCommand,
+    ) -> list[model.SeqDistance]:
+        """Delegate sequence-distance retrieval to the distance operation."""
+        return seq_service_retrieve_seq_distances_by_seq_profiles(self, cmd)
+
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         """Stream repository contigs as wrapped or unwrapped FASTA records."""
-        wrap = cmd.wrap or cmd.model_fields["wrap"].default
+        wrap = cmd.wrap
         self.repository: BaseSeqRepository
         with self.repository.uow() as uow:
             for seq_id, contigs in self.repository.retrieve_seq_fasta(uow, cmd.seq_ids):
                 for contig_seq_hash, raw_seq in contigs:
                     header = f">{seq_id}:{contig_seq_hash}\n"
-                    if not wrap:
+                    if wrap == 0:
                         yield f"{header}{raw_seq}\n"
+                        continue
                     seq_length = len(raw_seq)
                     n_chunks = (seq_length // wrap) + (seq_length % wrap > 0)
                     yield header + "\n".join(

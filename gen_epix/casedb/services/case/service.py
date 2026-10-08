@@ -14,6 +14,7 @@ from cachetools import cached
 
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
+from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_date import (
     case_service_calculate_case_date,
@@ -88,6 +89,9 @@ from gen_epix.casedb.services.case.retrieve_seq import (
     case_service_retrieve_genetic_sequence_fasta_by_case,
     case_service_retrieve_phylogenetic_tree,
     case_service_retrieve_protocols,
+)
+from gen_epix.casedb.services.case.retrieve_seq_distances_by_cases import (
+    case_service_retrieve_seq_distances_by_cases,
 )
 from gen_epix.casedb.services.case.retrieve_similar_cases import (
     case_service_retrieve_similar_cases,
@@ -433,6 +437,12 @@ class CaseService(BaseCaseService):
         """
         return case_service_retrieve_phylogenetic_tree(self, cmd)
 
+    def retrieve_seq_distances_by_cases(
+        self, cmd: command.RetrieveSeqDistancesByCasesCommand
+    ) -> list[seqdb_model.SeqDistance]:
+        """Retrieve sequence distances for accessible case profiles."""
+        return case_service_retrieve_seq_distances_by_cases(self, cmd)
+
     def retrieve_similar_cases(
         self, cmd: command.RetrieveSimilarCasesCommand
     ) -> command.RetrieveSimilarCasesReturnValue:
@@ -543,6 +553,7 @@ class CaseService(BaseCaseService):
         self,
         uow: BaseUnitOfWork,
         user_id: UUID,
+        pdp: BasePolicyDecisionPoint,
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
         case_type_id: UUID | None = None,
@@ -559,6 +570,7 @@ class CaseService(BaseCaseService):
         Args:
             uow: Active repository unit of work.
             user_id: User whose access is evaluated.
+            pdp: BasePolicyDecisionPoint. Used to evaluate access rights for the user.
             case_abac: Effective case access metadata.
             right: Required case-set content right.
             case_type_id: Optional case type restriction.
@@ -583,8 +595,8 @@ class CaseService(BaseCaseService):
             uow,
             user_id,
             model.CaseSet,
-            CrudOperation.READ_SOME if case_set_ids else CrudOperation.READ_ALL,
-            filter=None if case_set_ids else filter,
+            CrudOperation.READ_ALL if case_set_ids is None else CrudOperation.READ_SOME,
+            filter=filter if case_set_ids is None else None,
             obj_ids=case_set_ids if case_set_ids else None,
         )
 

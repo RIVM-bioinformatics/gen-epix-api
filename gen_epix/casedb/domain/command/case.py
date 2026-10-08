@@ -1,6 +1,7 @@
 """Define casedb commands for case schemas, content, sets, and sequence links."""
 
-from typing import ClassVar, Self
+from collections import defaultdict
+from typing import ClassVar, Self, cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -14,8 +15,11 @@ from gen_epix.commondb.domain.command import (
 )
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
+
+_CASE_TYPE_ID_DESCRIPTION = "The CaseType ID that all the cases must belong to."
 
 # Non-CRUD
 
@@ -245,9 +249,7 @@ class RetrievePhylogeneticTreeByProfilesCommand(Command):
 class RetrievePhylogeneticTreeByCasesCommand(Command):
     """Represents a request to calculate a phylogenetic tree from cases and genetic distances."""
 
-    case_type_id: UUID = Field(
-        description="The CaseType ID that all the cases must belong to."
-    )
+    case_type_id: UUID = Field(description=_CASE_TYPE_ID_DESCRIPTION)
     tree_algorithm: enum.TreeAlgorithmType = Field(
         description="The algorithm to use for constructing the phylogenetic tree."
     )
@@ -263,6 +265,24 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
     )
 
 
+class RetrieveSeqDistancesByCasesCommand(Command):
+    """Represents a request to retrieve sequence distances for cases."""
+
+    case_type_id: UUID = Field(
+        description="The CaseType ID that all the cases must belong to."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to retrieve sequence distances for."
+    )
+    genetic_distance_col_id: UUID = Field(
+        description="The ID of the genetic distance Col to use."
+    )
+    filter_other_cases: bool = Field(
+        default=True,
+        description="Whether to omit distances to cases not included in case_ids.",
+    )
+
+
 class RetrieveSimilarCasesCommand(Command):
     """Represents a request to retrieve genetically similar cases.
 
@@ -270,9 +290,7 @@ class RetrieveSimilarCasesCommand(Command):
     threshold applied to the supplied case IDs.
     """
 
-    case_type_id: UUID = Field(
-        description="The CaseType ID that all the cases must belong to."
-    )
+    case_type_id: UUID = Field(description=_CASE_TYPE_ID_DESCRIPTION)
 
     max_distance: float = Field(
         description="The maximum genetic distance for cases to be considered similar.",
@@ -301,9 +319,7 @@ class RetrieveGeneticSequenceFastaByCaseCommand(Command):
     through the specified genetic-sequence column.
     """
 
-    case_type_id: UUID = Field(
-        description="The CaseType ID that all the cases must belong to."
-    )
+    case_type_id: UUID = Field(description=_CASE_TYPE_ID_DESCRIPTION)
     genetic_sequence_col_id: UUID = Field(
         description="The ID of the genetic sequence Col to use."
     )
@@ -369,9 +385,7 @@ class RetrieveIsOwnCasesCommand(Command):
     The response contains the supplied case IDs that the user owns or may access.
     """
 
-    case_type_id: UUID = Field(
-        description="The CaseType ID that all the cases must belong to."
-    )
+    case_type_id: UUID = Field(description=_CASE_TYPE_ID_DESCRIPTION)
     case_ids: list[UUID] = Field(
         description="The IDs of the cases to check ownership for."
     )
@@ -462,9 +476,27 @@ class CaseTypeCrudCommand(CrudCommand):
 
 
 class DimCrudCommand(CrudCommand):
-    """Represents a request to execute a CRUD operation on Dims."""
+    """Represents a request to execute a CRUD operation on Dims.
+
+    Model validation:
+        Write-some operations allow at most one case-date dimension per case type.
+    """
 
     MODEL_CLASS: ClassVar = model.Dim
+
+    @model_validator(mode="after")
+    def _validate_case_date_dim_batch(self) -> Self:
+        """Allow at most one case-date dimension per case type in a batch create."""
+        if self.operation in CrudOperationSet.WRITE_SOME.value:
+            dims = cast(list[model.Dim] | None, self.get_objs()) or []
+            case_date_dim_counts: dict[UUID, int] = defaultdict(int)
+            for dim in dims:
+                case_date_dim_counts[dim.case_type_id] += int(dim.is_case_date_dim)
+                if case_date_dim_counts[dim.case_type_id] > 1:
+                    raise ValueError(
+                        "At most one case-date dimension may be created per case type in a batch."
+                    )
+        return self
 
 
 class CaseTypeSetCategoryCrudCommand(CrudCommand):

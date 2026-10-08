@@ -753,6 +753,30 @@
         "justMyCode": true
 },
 {
+        "name": "test.casedb.unit.domain.command",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/domain/command"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.domain.policy",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/domain/policy"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.casedb.unit.domain.model",
         "type": "debugpy",
         "request": "launch",
@@ -789,6 +813,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.casedb.unit.policies",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/policies"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.casedb.unit.client",
         "type": "debugpy",
         "request": "launch",
@@ -796,6 +832,18 @@
         "args": [
                 "run_test",
                 "test/casedb/unit/client"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.casedb.unit.repositories",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/casedb/unit/repositories"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -880,18 +928,6 @@
         "args": [
                 "run_test",
                 "test/casedb/unit/services/case/update_case_created_in_data_collection"
-        ],
-        "console": "integratedTerminal",
-        "justMyCode": true
-},
-{
-        "name": "test.casedb.unit.services.case.upload",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "run.py",
-        "args": [
-                "run_test",
-                "test/casedb/unit/services/case/upload"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1012,6 +1048,42 @@
         "args": [
                 "run_test",
                 "test/commondb/unit/config"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.domain",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/domain"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.domain.model",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/domain/model"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.commondb.unit.domain.policy",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/commondb/unit/domain/policy"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1173,6 +1245,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.etl.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/etl/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.fastapp",
         "type": "debugpy",
         "request": "launch",
@@ -1288,6 +1372,18 @@
         "args": [
                 "run_test",
                 "test/fastapp/unit/cache"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.fastapp.unit.cache.backend",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/cache/backend"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1581,6 +1677,30 @@
         "justMyCode": true
 },
 {
+        "name": "test.omopdb.unit.domain.model",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/domain/model"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.omopdb.unit.domain.model.omop",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/omopdb/unit/domain/model/omop"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.omopdb.unit.repositories",
         "type": "debugpy",
         "request": "launch",
@@ -1797,6 +1917,42 @@
         "justMyCode": true
 },
 {
+        "name": "test.seqdb.unit.domain.command",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/domain/command"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.domain.model",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/domain/model"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.seqdb.unit.domain.model.seq",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/seqdb/unit/domain/model/seq"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.seqdb.unit.domain.models_for_upload",
         "type": "debugpy",
         "request": "launch",
@@ -2008,6 +2164,30 @@
         "args": [
                 "run_test",
                 "test/transform/unit"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.transform.unit.transformers",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/transform/unit/transformers"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
+        "name": "test.unit",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/unit"
         ],
         "console": "integratedTerminal",
         "justMyCode": true

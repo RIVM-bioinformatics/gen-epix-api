@@ -42,11 +42,11 @@ class CrudEndpointSet(BaseModel):
     def _validate_args(cls, data: Any) -> Any:
         """Normalize endpoint-set initialization data."""
         if isinstance(data, dict):
-            if not data.get("read_api_model_class"):
+            if "model_class" in data and not data.get("read_api_model_class"):
                 data["read_api_model_class"] = data["model_class"]
-            if not data.get("create_api_model_class"):
+            if "model_class" in data and not data.get("create_api_model_class"):
                 data["create_api_model_class"] = data["read_api_model_class"]
-            if not data.get("operation_id_basename"):
+            if "endpoint_basename" in data and not data.get("operation_id_basename"):
                 data["operation_id_basename"] = data["endpoint_basename"]
         else:
             raise NotImplementedError("Not implemented for non-dict data")
