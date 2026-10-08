@@ -153,6 +153,8 @@ with a reason and explicitly disclose any remaining coverage gaps.
   Patch dependencies where looked up; do not mock away the module logic under
   test. Keep tests deterministic, avoid real external services, and assert
   behavior rather than internal call sequences.
+- Make sure the test does not have any linting errors and follows the project's
+  code style conventions.
 
 ## 4. Register Every New Test Folder
 

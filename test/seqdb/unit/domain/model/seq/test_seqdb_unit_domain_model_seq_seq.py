@@ -134,11 +134,6 @@ and SampleBatchForUpload models with various validation scenarios.
 """
 
 
-
-
-
-
-
 @pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestModelSeq:
     """Test cases for Seq model functionality and inheritance."""

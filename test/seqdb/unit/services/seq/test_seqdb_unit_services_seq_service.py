@@ -66,8 +66,7 @@ def test_retrieve_seq_fasta_wrap_zero_yields_unwrapped_records() -> None:
     result = "".join(SeqService.retrieve_seq_fasta(cast(SeqService, service), cmd))
 
     assert result == (
-        f">{seq_id}:{first_contig}\nacgtac\n"
-        f">{seq_id}:{second_contig}\ntgcata\n"
+        f">{seq_id}:{first_contig}\nacgtac\n" f">{seq_id}:{second_contig}\ntgcata\n"
     )
 
 
