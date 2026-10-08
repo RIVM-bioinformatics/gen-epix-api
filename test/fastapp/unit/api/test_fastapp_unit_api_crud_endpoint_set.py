@@ -231,6 +231,30 @@ class TestCrudEndpointSetValidation:
                 id_class=UUID,
             )
 
+    def test_validator_mutates_initialization_mapping_with_defaults(
+        self, test_app: App
+    ) -> None:
+        """Verify validation adds defaults to the caller's mapping."""
+        data = {
+            "model_class": DummyModel,
+            "endpoint_basename": "/items",
+            "crud_command_class": DummyCrudCommand,
+            "endpoint_types": {CrudEndpointType.GET_ALL},
+            "app": test_app,
+            "id_class": UUID,
+        }
+
+        CrudEndpointSet.model_validate(data)
+
+        assert data["read_api_model_class"] is DummyModel
+        assert data["create_api_model_class"] is DummyModel
+        assert data["operation_id_basename"] == "/items"
+
+    def test_validator_rejects_non_mapping_data(self) -> None:
+        """Verify the validator rejects non-mapping initialization data."""
+        with pytest.raises(NotImplementedError, match="non-dict data"):
+            CrudEndpointSet._validate_args(None)
+
     def test_requires_endpoint_basename(self, test_app: App) -> None:
         """Verify endpoint_basename is required."""
         with pytest.raises(ValidationError):
@@ -253,6 +277,7 @@ class TestCrudEndpointSetValidation:
             read_api_model_class=CustomReadModel,
             create_api_model_class=CustomReadModel,
             endpoint_basename="/items",
+            operation_id_basename="custom_items",
             crud_command_class=DummyCrudCommand,
             endpoint_types={CrudEndpointType.GET_ALL},
             app=test_app,
@@ -260,6 +285,7 @@ class TestCrudEndpointSetValidation:
         )
         assert endpoint_set.read_api_model_class == CustomReadModel
         assert endpoint_set.create_api_model_class == CustomReadModel
+        assert endpoint_set.operation_id_basename == "custom_items"
 
 
 class TestCrudEndpointSetMultipleEndpointTypes:

@@ -17,6 +17,7 @@ class CrudEndpointSet(BaseModel):
     Model validation:
     Missing read and create API model classes are derived from `model_class`.
     Non-mapping initialization data is rejected.
+    The input mapping is modified in place during normalization.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
@@ -40,7 +41,7 @@ class CrudEndpointSet(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _validate_args(cls, data: Any) -> Any:
-        """Normalize endpoint-set initialization data."""
+        """Normalize endpoint-set initialization data in place."""
         if isinstance(data, dict):
             if "model_class" in data and not data.get("read_api_model_class"):
                 data["read_api_model_class"] = data["model_class"]

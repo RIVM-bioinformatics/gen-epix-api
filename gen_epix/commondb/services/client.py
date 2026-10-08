@@ -130,7 +130,9 @@ class CommondbClient(Client):
             oauth_flow = OAuthFlow(oauth_flow)
         default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         oauth_token_refresh_margin = (
-            oauth_token_refresh_margin or self.DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN
+            self.DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN
+            if oauth_token_refresh_margin is None
+            else oauth_token_refresh_margin
         )
 
         super().__init__(

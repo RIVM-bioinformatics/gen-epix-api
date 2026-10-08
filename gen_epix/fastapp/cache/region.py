@@ -542,9 +542,13 @@ class CacheRegion:
             _check_multi_result(ordered, produced)
             return produced
         cached = self.get_multi(ordered)
-        missing = [
-            key for key, value in zip(ordered, cached, strict=True) if value is NO_VALUE
-        ]
+        missing = list(
+            dict.fromkeys(
+                key
+                for key, value in zip(ordered, cached, strict=True)
+                if value is NO_VALUE
+            )
+        )
         if not missing:
             return list(cached)
         produced = list(creator(missing))

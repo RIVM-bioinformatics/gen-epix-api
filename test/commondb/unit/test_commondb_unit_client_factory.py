@@ -87,6 +87,11 @@ class TestSettings:
         with pytest.raises(ValueError, match="SEQDB_PORT"):
             client_factory.SeqdbClientSettings.load()
 
+    def test_invalid_variable_message(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("SEQDB_PORT", "not-an-integer")
+        with pytest.raises(ValueError, match="validation error"):
+            client_factory.SeqdbClientSettings.load()
+
     def test_env_file_loading(self, tmp_path: Path) -> None:
         (tmp_path / ".env").write_text("SEQDB_PORT=1234\nSEQDB_HOST=from.dotenv\n")
         settings = client_factory.SeqdbClientSettings.load()

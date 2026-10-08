@@ -161,7 +161,8 @@ class CasedbClient(CommondbClient):
     ) -> list[model.CaseCohortLink]:
         """Retrieve cohort links for a given case type."""
         request_body = api.RetrieveCaseCohortLinksByCaseTypeRequestBody(
-            case_type_id=cmd.case_type_id
+            case_type_id=cmd.case_type_id,
+            include_missing=cmd.include_missing,
         )
         response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
             cmd,

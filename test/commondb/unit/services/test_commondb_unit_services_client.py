@@ -17,14 +17,17 @@ from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any, cast
 from uuid import uuid4
 
+import httpx
 import jwt
 import pytest
 
+import gen_epix.commondb.services.client as commondb_client_module
+from gen_epix import fastapp
 from gen_epix.commondb.domain import DOMAIN, command, model
 from gen_epix.commondb.services.client import CommondbClient
 from gen_epix.fastapp import Client, exc
 from gen_epix.fastapp.domain.domain import Domain
-from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
+from gen_epix.fastapp.enum import AuthProtocol, HttpProtocol, OAuthFlow
 from gen_epix.fastapp.model import Command, Permission
 
 _JWT_TEST_HS256_SECRET = "commondb-remote-app-test-secret-key-32b"
@@ -218,6 +221,15 @@ class TestInitialization(BaseCommondbClientTestCase):
         )
         assert app._oauth_token_refresh_margin == 120
 
+    def test_init_zero_oauth_token_refresh_margin(self) -> None:
+        app = CommondbClient(
+            domain=self.domain,
+            host="example.org",
+            port=8000,
+            oauth_token_refresh_margin=0,
+        )
+        assert app._oauth_token_refresh_margin == 0
+
 
 # ============================================================================
 # OAuth2 Validation Tests (Missing Configuration)
@@ -303,6 +315,18 @@ class TestGetHeaders(BaseCommondbClientTestCase):
         cmd = DummyCommand()
         headers = app.get_headers(cmd)
         assert headers == {"X-Custom": "value"}
+
+    def test_get_headers_rejects_unsupported_auth_protocol(self) -> None:
+        app = CommondbClient(
+            domain=self.domain,
+            host="example.org",
+            port=8000,
+            auth_protocol=AuthProtocol.NONE,
+        )
+        app._auth_protocol = AuthProtocol.OIDC
+
+        with pytest.raises(exc.InitializationServiceError, match="not supported"):
+            app.get_headers(DummyCommand())
 
     def test_get_headers_caches_token(self) -> None:
         """get_headers caches token when not expired."""
@@ -475,6 +499,101 @@ class TestCreateLocalOrClient(BaseCommondbClientTestCase):
             )
             mock_local.assert_called_once()
 
+    def test_remote_setup_delegates_to_remote_client_factory(self) -> None:
+        app = Mock()
+        remote_props = {"module": "example", "class_name": "RemoteClient"}
+        with patch.object(
+            CommondbClient, "_create_client", return_value=(app, None)
+        ) as mock_remote:
+            result_app, user = CommondbClient.create_local_or_remote(
+                app_type=Mock(),
+                app_setup_type="REMOTE",
+                remote_client_props=remote_props,
+            )
+
+        assert result_app is app
+        assert user is None
+        mock_remote.assert_called_once_with(remote_props)
+
+    def test_local_setup_builds_config_when_not_supplied(self) -> None:
+        app = Mock()
+        user = Mock()
+        app_type = Mock()
+        service_type_enum = Mock()
+        repository_type_enum = Mock()
+        app_cfg = Mock()
+        cfg_factory = Mock(return_value=app_cfg)
+        composer_result = Mock(app=app)
+        composer_class = Mock(return_value=composer_result)
+        user_class = Mock(return_value=user)
+        props = {"user": {"key": "test-user"}}
+        with patch(
+            f"{commondb_client_module.__name__}.util.get_app_cfg_class",
+            return_value=cfg_factory,
+        ) as mock_get_cfg:
+            result_app, result_user = CommondbClient.create_local_or_remote(
+                app_type=app_type,
+                app_setup_type="LOCAL",
+                local_client_props=props,
+                app_composer_class=composer_class,
+                user_class=user_class,
+                service_type_enum=service_type_enum,
+                repository_type_enum=repository_type_enum,
+                logger=Mock(),
+            )
+
+        assert result_app is app
+        assert result_user is user
+        mock_get_cfg.assert_called_once_with(app_type)
+        cfg_factory.assert_called_once_with(
+            app_type, service_type_enum, repository_type_enum
+        )
+        composer_class.assert_called_once_with(app_cfg, log_setup=True)
+        user_class.assert_called_once_with(key="test-user")
+
+    def test_local_setup_uses_supplied_config_and_log_setup(self) -> None:
+        app = Mock()
+        user = Mock()
+        app_cfg = Mock()
+        composer_result = Mock(app=app)
+        composer_class = Mock(return_value=composer_result)
+        user_class = Mock(return_value=user)
+        props = {"app_cfg": app_cfg, "log_setup": False, "user": {"key": "u"}}
+
+        result_app, result_user = CommondbClient.create_local_or_remote(
+            app_type=Mock(),
+            app_setup_type="LOCAL",
+            local_client_props=props,
+            app_composer_class=composer_class,
+            user_class=user_class,
+            service_type_enum=Mock(),
+            repository_type_enum=Mock(),
+        )
+
+        assert result_app is app
+        assert result_user is user
+        composer_class.assert_called_once_with(app_cfg, log_setup=False)
+        user_class.assert_called_once_with(key="u")
+
+    def test_local_setup_rejects_missing_user_key(self) -> None:
+        with pytest.raises(exc.InitializationServiceError, match="'user' key"):
+            CommondbClient.create_local_or_remote(
+                app_type=Mock(),
+                app_setup_type="LOCAL",
+                local_client_props={},
+                app_composer_class=Mock(),
+                user_class=Mock(),
+                service_type_enum=Mock(),
+                repository_type_enum=Mock(),
+            )
+
+    def test_local_setup_requires_configuration(self) -> None:
+        with pytest.raises(exc.InitializationServiceError, match="local_client_props"):
+            CommondbClient.create_local_or_remote(
+                app_type=Mock(),
+                app_setup_type="LOCAL",
+            )
+
     def test_none_app_setup_returns_app_without_user(self) -> None:
         """NONE setup returns the no-client application and no user."""
         app = Mock()
@@ -504,6 +623,56 @@ class TestCreateLocalOrClient(BaseCommondbClientTestCase):
             )
 
         assert "no_client_props" in str(exc_info.value)
+
+    def test_no_client_setup_builds_config_when_not_supplied(self) -> None:
+        app = Mock()
+        app_type = Mock()
+        service_type_enum = Mock()
+        repository_type_enum = Mock()
+        app_cfg = Mock()
+        cfg_factory = Mock(return_value=app_cfg)
+        composer_result = Mock(app=app)
+        composer_class = Mock(return_value=composer_result)
+        props: dict[str, Any] = {}
+        with patch(
+            f"{commondb_client_module.__name__}.util.get_app_cfg_class",
+            return_value=cfg_factory,
+        ) as mock_get_cfg:
+            result_app, user = CommondbClient.create_local_or_remote(
+                app_type=app_type,
+                app_setup_type="NONE",
+                no_client_props=props,
+                app_composer_class=composer_class,
+                user_class=Mock(),
+                service_type_enum=service_type_enum,
+                repository_type_enum=repository_type_enum,
+            )
+
+        assert result_app is app
+        assert user is None
+        mock_get_cfg.assert_called_once_with(app_type)
+        cfg_factory.assert_called_once_with(
+            app_type, service_type_enum, repository_type_enum
+        )
+        composer_class.assert_called_once_with(app_cfg, log_setup=False)
+
+    def test_no_client_setup_uses_supplied_config(self) -> None:
+        app = Mock()
+        app_cfg = Mock()
+        composer_class = Mock(return_value=Mock(app=app))
+        props = {"app_cfg": app_cfg, "log_setup": True}
+
+        result = CommondbClient._create_no_client(
+            app_type=Mock(),
+            no_client_props=props,
+            app_composer_class=composer_class,
+            user_class=Mock(),
+            service_type_enum=Mock(),
+            repository_type_enum=Mock(),
+        )
+
+        assert result is app
+        composer_class.assert_called_once_with(app_cfg, log_setup=True)
 
 
 # ============================================================================
@@ -1014,3 +1183,235 @@ class TestNonCrudHandlers:
         assert method == "GET"
         assert url == app._routes[command.RetrieveOutagesCommand]
         assert result == [model.Outage(**data[0])]
+
+
+_TOKEN_PROVIDER_SECRET = "token-provider-test-secret-key-32bytes"
+
+
+class ProviderCommand(Command):
+    NAME = "ProviderCommand"
+
+
+def _provider_token(exp_offset: float | None, sub: str = "u") -> str:
+    claims: dict[str, Any] = {"sub": sub}
+    if exp_offset is not None:
+        claims["exp"] = int(datetime.now(timezone.utc).timestamp() + exp_offset)
+    return jwt.encode(claims, _TOKEN_PROVIDER_SECRET, algorithm="HS256")
+
+
+class TokenProvider:
+    def __init__(self, *tokens: str | Exception) -> None:
+        self.tokens = list(tokens)
+        self.calls = 0
+
+    def __call__(self) -> str:
+        self.calls += 1
+        item = self.tokens.pop(0) if len(self.tokens) > 1 else self.tokens[0]
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+def _token_provider_status_error(status: int) -> httpx.HTTPStatusError:
+    request = httpx.Request("GET", "http://example.org/x")
+    return httpx.HTTPStatusError(
+        "boom", request=request, response=httpx.Response(status, request=request)
+    )
+
+
+def _make_token_provider_client(
+    provider: TokenProvider, **kwargs: Any
+) -> CommondbClient:
+    return CommondbClient(
+        DOMAIN,
+        "example.org",
+        8000,
+        protocol=HttpProtocol.HTTP,
+        auth_protocol=AuthProtocol.NONE,
+        token_provider=provider,
+        **kwargs,
+    )
+
+
+class TestTokenProviderHeaders:
+    def test_provider_called_once_while_token_valid(self) -> None:
+        token = _provider_token(3600)
+        provider = TokenProvider(token)
+        client = _make_token_provider_client(provider)
+        for _ in range(3):
+            headers = client.get_headers(ProviderCommand())
+        assert headers["Authorization"] == f"Bearer {token}"
+        assert provider.calls == 1
+
+    def test_default_headers_are_kept(self) -> None:
+        token = _provider_token(3600)
+        client = _make_token_provider_client(TokenProvider(token))
+        headers = client.get_headers(ProviderCommand())
+        assert headers["Authorization"] == f"Bearer {token}"
+        assert headers["Content-Type"] == "application/json"
+
+    def test_provider_recalled_within_refresh_margin(self) -> None:
+        first, second = _provider_token(30, "a"), _provider_token(3600, "b")
+        provider = TokenProvider(first, second)
+        client = _make_token_provider_client(provider, oauth_token_refresh_margin=60)
+        assert client.get_headers(ProviderCommand())["Authorization"].endswith(first)
+        assert client.get_headers(ProviderCommand())["Authorization"].endswith(second)
+        assert provider.calls == 2
+
+    def test_token_without_exp_cached_indefinitely(self) -> None:
+        provider = TokenProvider(_provider_token(None))
+        client = _make_token_provider_client(provider)
+        client.get_headers(ProviderCommand())
+        client.get_headers(ProviderCommand())
+        assert provider.calls == 1
+
+    def test_opaque_token_cached_indefinitely(self) -> None:
+        provider = TokenProvider("not-a-jwt")
+        client = _make_token_provider_client(provider)
+        assert client.get_headers(ProviderCommand())["Authorization"] == (
+            "Bearer not-a-jwt"
+        )
+        client.get_headers(ProviderCommand())
+        assert provider.calls == 1
+
+    def test_get_access_token(self) -> None:
+        token = _provider_token(3600)
+        assert (
+            _make_token_provider_client(TokenProvider(token)).get_access_token()
+            == token
+        )
+
+    def test_get_access_token_without_token_source(self) -> None:
+        client = CommondbClient(DOMAIN, "example.org", 8000, protocol=HttpProtocol.HTTP)
+        with pytest.raises(exc.InitializationServiceError):
+            client.get_access_token()
+
+
+class TestTokenProviderValidation:
+    def test_conflicts_with_oauth2(self) -> None:
+        with pytest.raises(exc.InitializationServiceError, match="OAUTH2"):
+            CommondbClient(
+                DOMAIN,
+                "example.org",
+                8000,
+                auth_protocol=AuthProtocol.OAUTH2,
+                oauth_discovery_url="https://idp/.well-known",
+                oauth_client_id="id",
+                oauth_scope="s",
+                token_provider=TokenProvider("x"),
+            )
+
+    def test_conflicts_with_authorization_default_header(self) -> None:
+        with pytest.raises(exc.InitializationServiceError, match="Authorization"):
+            _make_token_provider_client(
+                TokenProvider("x"), default_headers={"authorization": "Bearer abc"}
+            )
+
+
+class TestTokenProviderHandle:
+    @staticmethod
+    def _register(client: CommondbClient, handler: Any) -> None:
+        client.register_route(ProviderCommand, "/provider")
+        client.register_handler(ProviderCommand, handler)
+
+    def test_handle_without_provider_uses_base_client(self) -> None:
+        client = CommondbClient(
+            DOMAIN,
+            "example.org",
+            8000,
+            protocol=HttpProtocol.HTTP,
+            auth_protocol=AuthProtocol.NONE,
+        )
+        self._register(client, lambda _cmd: "ok")
+
+        assert client.handle(ProviderCommand()) == "ok"
+
+    def test_401_refreshes_token_and_retries_once(self) -> None:
+        first, second = _provider_token(3600, "a"), _provider_token(3600, "b")
+        provider = TokenProvider(first, second)
+        client = _make_token_provider_client(provider)
+        seen: list[str] = []
+
+        def handler(cmd: Command) -> str:
+            seen.append(client.get_headers(cmd)["Authorization"])
+            if len(seen) == 1:
+                raise _token_provider_status_error(401)
+            return "ok"
+
+        self._register(client, handler)
+        assert client.handle(ProviderCommand()) == "ok"
+        assert provider.calls == 2
+        assert seen == [f"Bearer {first}", f"Bearer {second}"]
+
+    def test_second_401_propagates(self) -> None:
+        provider = TokenProvider(_provider_token(3600, "a"), _provider_token(3600, "b"))
+        client = _make_token_provider_client(provider)
+        calls = 0
+
+        def handler(cmd: Command) -> str:
+            nonlocal calls
+            calls += 1
+            client.get_headers(cmd)
+            raise _token_provider_status_error(401)
+
+        self._register(client, handler)
+        with pytest.raises(exc.ServiceException, match="HTTP status 401"):
+            client.handle(ProviderCommand())
+        assert calls == 2
+
+    def test_other_errors_do_not_refresh(self) -> None:
+        provider = TokenProvider(_provider_token(3600))
+        client = _make_token_provider_client(provider)
+
+        def handler(cmd: Command) -> str:
+            client.get_headers(cmd)
+            raise _token_provider_status_error(403)
+
+        self._register(client, handler)
+        with pytest.raises(exc.ServiceException):
+            client.handle(ProviderCommand())
+        assert provider.calls == 1
+
+    def test_provider_failure_is_auth_error_and_not_transient_retried(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sleeps: list[float] = []
+        monkeypatch.setattr("tenacity.nap.time.sleep", sleeps.append)
+        provider = TokenProvider(RuntimeError("login failed"))
+        client = _make_token_provider_client(
+            provider, retry_policy=fastapp.RetryPolicy(frozenset({500}), (1, 1))
+        )
+
+        def handler(cmd: Command) -> str:
+            client.get_headers(cmd)
+            return "ok"
+
+        self._register(client, handler)
+        with pytest.raises(exc.ServiceException) as info:
+            client.handle(ProviderCommand())
+        assert isinstance(info.value.__cause__, exc.AuthException)
+        assert provider.calls == 1
+        assert sleeps == []
+
+    def test_401_refresh_does_not_consume_transient_attempt(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("tenacity.nap.time.sleep", lambda _: None)
+        provider = TokenProvider(_provider_token(3600, "a"), _provider_token(3600, "b"))
+        client = _make_token_provider_client(
+            provider, retry_policy=fastapp.RetryPolicy(frozenset({503}), (1,))
+        )
+        errors = [_token_provider_status_error(401), _token_provider_status_error(503)]
+        calls = 0
+
+        def handler(cmd: Command) -> str:
+            nonlocal calls
+            calls += 1
+            client.get_headers(cmd)
+            if errors:
+                raise errors.pop(0)
+            return "ok"
+
+        self._register(client, handler)
+        assert client.handle(ProviderCommand()) == "ok"
+        assert calls == 3

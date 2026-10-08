@@ -592,3 +592,44 @@ def test_single_filter_matches_pydantic_and_plain_python_rows() -> None:
 
     filtered_plain_rows = list(number_filter.filter_rows(plain_rows, is_model=True))
     assert [row.x for row in filtered_plain_rows] == values[:-1]
+
+
+def test_column_methods_apply_mapping_function() -> None:
+    value_filter = EqualsFilter(expected="x")
+    values = ["X", "Y"]
+    map_fn = str.lower
+
+    assert list(value_filter.match_column(values, map_fn=map_fn)) == [True, False]
+    assert list(value_filter.filter_column(values, map_fn=map_fn)) == ["X"]
+
+
+def test_row_methods_apply_mapping_function() -> None:
+    value_filter = EqualsFilter(expected="x").set_key("a")
+    rows = [{"a": "X"}, {"a": "Y"}, {}]
+    map_fn = str.lower
+
+    assert value_filter.match_row(rows[0], map_fn=map_fn) is True
+    assert list(value_filter.match_rows(rows, map_fn=map_fn)) == [True, False, False]
+    assert list(value_filter.filter_rows(rows, map_fn=map_fn)) == [rows[0]]
+
+
+def test_row_methods_handle_na_values_for_models() -> None:
+    value_filter = AlwaysTrueFilter().set_key("a")
+    rows = [RowModel(a="x"), RowModel(a=None), RowModel(a="y")]
+    na_values = {None}
+
+    assert value_filter.match_row(rows[0], na_values=na_values, is_model=True) is True
+    assert list(value_filter.match_rows(rows, na_values=na_values, is_model=True)) == [
+        True,
+        False,
+        True,
+    ]
+    assert list(value_filter.filter_rows(rows, na_values=na_values, is_model=True)) == [
+        rows[0],
+        rows[2],
+    ]
+
+
+def test_base_filter_match_is_abstract() -> None:
+    with pytest.raises(NotImplementedError):
+        Filter._match(EqualsFilter(), "value")
