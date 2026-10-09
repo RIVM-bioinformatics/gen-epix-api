@@ -33,6 +33,8 @@ from gen_epix.omopdb.domain.model.omop.base import (
     validate_str_key_args,
 )
 
+_NO_OMOP_GUIDANCE_DESCRIPTION = "User guidance:\nNone\nETL conventions:\nNone"
+
 
 class Vocabulary(Model):
     """The VOCABULARY table includes a list of the Vocabularies integrated from
@@ -321,7 +323,7 @@ class Relationship(Model):
         description="User guidance:\nRenamed from CDM relationship_id. A unique identifier for each Relationship.\nETL conventions:\nNone"
     )
     relationship_name: str = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone", max_length=255
+        description=_NO_OMOP_GUIDANCE_DESCRIPTION, max_length=255
     )
     is_hierarchical: str = Field(
         description="User guidance:\nDefines whether a relationship defines\r\nconcepts into classes or hierarchies. Values\r\nare 1 for hierarchical relationship or 0 if not.\nETL conventions:\nNone",
@@ -389,12 +391,8 @@ class ConceptRelationship(Model):
         default=None,
         description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of concept_id_1 bytes, concept_id_2 bytes, and relationship_id bytes.\nETL conventions:\nNone",
     )
-    concept_id_1: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
-    concept_id_2: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
+    concept_id_1: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
+    concept_id_2: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     relationship_id: UUID = Field(
         description="User guidance:\nThe relationship between CONCEPT_ID_1 and CONCEPT_ID_2. Please see the [Vocabulary Conventions](https://ohdsi.github.io/CommonDataModel/dataModelConventions.html#concept_relationships). for more information.\nETL conventions:\nNone"
     )
@@ -551,13 +549,11 @@ class ConceptSynonym(Model):
         default=None,
         description="User guidance:\nNot part of OMOP CDM. The primary key for this table. Always auto-computed as the SHA256 hash of the byte concatenation of concept_id, concept_synonym_name and language_concept_id bytes.\nETL conventions:\nNone",
     )
-    concept_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    concept_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
     concept_synonym_name: str = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone", max_length=1000
+        description=_NO_OMOP_GUIDANCE_DESCRIPTION, max_length=1000
     )
-    language_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
-    )
+    language_concept_id: UUID = Field(description=_NO_OMOP_GUIDANCE_DESCRIPTION)
 
     @model_validator(mode="before")
     @classmethod

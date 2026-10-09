@@ -2,6 +2,7 @@
 
 import base64
 import logging
+import math
 import ssl
 import time
 import urllib.parse
@@ -83,12 +84,14 @@ class OauthTokenClient:
             or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS
         )
         self._client_credential_flow_max_retries = (
-            client_credential_flow_max_retries
-            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES
+            self.DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES
+            if client_credential_flow_max_retries is None
+            else client_credential_flow_max_retries
         )
         self._client_credential_flow_base_delay = (
-            client_credential_flow_base_delay
-            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY
+            self.DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY
+            if client_credential_flow_base_delay is None
+            else client_credential_flow_base_delay
         )
 
     def update_server_config_from_discovery(
@@ -96,10 +99,11 @@ class OauthTokenClient:
         url: str | None = None,
         doc: dict[str, Any] | None = None,
     ) -> None:
-        """
-        Update the OIDC configuration from the discovery URL or, if provided, the
-        discovery document.
+        """Update OIDC configuration from a discovery URL or document.
 
+        Raises:
+            InitializationServiceError: If discovery data is missing, unavailable, or
+                invalid.
         """
         url = url or self.server_cfg.discovery_url
         if url is None and doc is None:
@@ -160,10 +164,25 @@ class OauthTokenClient:
         base_delay: float | None = None,
     ) -> str:
         """Call server to get token through OAuth Client Credentials flow."""
+        token, _ = self.retrieve_jwt_with_client_credentials_flow_and_expiry(
+            scope, headers, max_retries, base_delay
+        )
+        return token
+
+    def retrieve_jwt_with_client_credentials_flow_and_expiry(
+        self,
+        scope: str,
+        headers: dict[str, str] | None = None,
+        max_retries: int | None = None,
+        base_delay: float | None = None,
+    ) -> tuple[str, float | None]:
+        """Return an OAuth access token and its advertised lifetime in seconds."""
         # Parse input
         headers = dict(headers or self._client_credential_flow_request_headers)
-        max_retries = max_retries or self._client_credential_flow_max_retries
-        base_delay = base_delay or self._client_credential_flow_base_delay
+        if max_retries is None:
+            max_retries = self._client_credential_flow_max_retries
+        if base_delay is None:
+            base_delay = self._client_credential_flow_base_delay
         # Add basic auth header
         self._set_authorization_header(headers)
         # Get token endpoint URL
@@ -182,7 +201,7 @@ class OauthTokenClient:
         base_delay: float,
         url: str,
         token_data: str,
-    ) -> str:
+    ) -> tuple[str, float | None]:
         """Request token with retries."""
         last_exception: Exception | None = None
         for attempt in range(max_retries + 1):
@@ -196,7 +215,20 @@ class OauthTokenClient:
                     response.raise_for_status()
                     token_response = response.json()
                     token: str = token_response["access_token"]
-                    return token
+                    expires_in = token_response.get("expires_in")
+                    if isinstance(expires_in, bool) or not isinstance(
+                        expires_in, (int, float)
+                    ):
+                        expires_in = None
+                    try:
+                        expires_in = (
+                            float(expires_in) if expires_in is not None else None
+                        )
+                    except OverflowError:
+                        expires_in = None
+                    if expires_in is not None and not math.isfinite(expires_in):
+                        expires_in = None
+                    return token, expires_in
             except Exception as exception:
                 last_exception = exception
                 if self.logger:

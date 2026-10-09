@@ -26,6 +26,8 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.util import copy_model_field
 
+_ORGANIZATION_ID_FK_DESCRIPTION = "The ID of the organization. FOREIGN KEY"
+
 
 class Organization(Model):
     """Represents an organization that owns users and related domain data."""
@@ -183,7 +185,7 @@ class OrganizationSetMember(Model):
     organization_set: OrganizationSet | None = Field(
         default=None, description="The organization set"
     )
-    organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
+    organization_id: UUID = Field(description=_ORGANIZATION_ID_FK_DESCRIPTION)
     organization: Organization | None = Field(None, description="The organization")
 
 
@@ -201,7 +203,7 @@ class Site(Model):
             }
         ),
     )
-    organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
+    organization_id: UUID = Field(description=_ORGANIZATION_ID_FK_DESCRIPTION)
     organization: Organization | None = Field(
         default=None, description="The organization corresponding to the ID"
     )
@@ -435,7 +437,7 @@ class OrganizationIdentifierIssuerLink(Model):
             }
         ),
     )
-    organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
+    organization_id: UUID = Field(description=_ORGANIZATION_ID_FK_DESCRIPTION)
     organization: Organization | None = Field(
         default=None, description="The organization corresponding to the ID"
     )

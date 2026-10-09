@@ -55,15 +55,18 @@ for rules not covered here.
    `Yields:`, and `Raises:` sections. Treat command dispatch, authorization,
    persistence, generated interfaces, stateful orchestration, and multi-branch
    workflows as complex. Do not narrate internal statements; explain phases,
-   guarantees, mutations, and delegation that affect callers.
-8. Document exceptions in `Raises:` when they are relevant to the caller-facing
-   contract, including propagated exceptions when applicable. Do not document
-   exceptions raised only because a caller violated the documented API. Include
-   `Args:`, `Returns:`, and `Yields:` only when they add meaning beyond names and
-   annotations. Use a consistent hanging indent of two or four spaces. Put a
-   blank line between Google-style sections (for example, between `Args:` and
-   `Returns:`), but not between a section heading and its entries. Do not leave a
-   blank line between a function or method docstring and its first statement.
+   guarantees, mutations, and delegation that affect callers. Do not add type
+   information in the docstring that is not already captured in the type hints
+   of the signature.
+8. Any method that explicitly raises an exception must use a complete docstring.
+   Describe relevant arguments and return values. Document exceptions in `Raises:`
+   when they are relevant to the caller-facing contract, including propagated
+   exceptions when applicable. Do not document exceptions raised only because a
+   caller violated the documented API. Include `Args:`, `Returns:`, and `Yields:`
+   only when they add meaning beyond names and annotations. Do not restate
+   obvious types. Use a consistent hanging indent of two or four spaces within
+   the file. This rule does not apply to some specific cases that are documented
+   further down in Step 10.
 9. For public classes with multiple responsibilities or lifecycle behavior, use
    a summary followed by paragraphs explaining their role, collaboration
    boundaries, lifecycle, side effects, and security or trust implications where
@@ -100,11 +103,13 @@ for rules not covered here.
       Python docstring. A concise one-line docstring is sufficient when the
       decorator already supplies the complete caller-facing description.
    d. Programmatically overridden docstrings: if the body of the function, method,
-      class or module contains a statement that assigns a value to __doc__
+      class or module contains a statement that assigns a value to `__doc__`
       (typically the first statement of the body), then there is technically no
       need for a docstring. However, for clarity and to avoid linting false 
       positives put in place the literal docstring
-      `"""Docstring assigned automatically"""`.
+      `"""Docstring assigned programmatically."""`. During a reassessment of the docstring,
+      do not replace this it again with a complete docstring if you notice that it is
+      automatically assigned to `__doc__` in the code.
 11. Public module docstrings must state the module's responsibility and summarize
    its principal public types, functions, and collaboration boundary. Package
    docstrings in `__init__.py` must additionally summarize each group of

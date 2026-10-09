@@ -236,7 +236,8 @@ def create_organization_endpoints(
         try:
             cmd = command.AnonymizeUserCommand(user=user, tgt_user_id=user_id)
             retval = app.handle(cmd)
-            assert retval is None
+            if retval is not None:
+                raise RuntimeError("AnonymizeUserCommand must not return a value")
         except Exception as exception:
             handle_exception("c8fd634f", user, exception)
 

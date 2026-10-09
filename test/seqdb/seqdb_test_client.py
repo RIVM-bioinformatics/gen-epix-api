@@ -685,6 +685,9 @@ class SeqdbTestClient(TestClient):
         locus_code_map_id: UUID | None = None,
         locus_ids: list[UUID] | None = None,
     ) -> model.SampleBatchForUpload:
+        if n_seqs == 0:
+            return model.SampleBatchForUpload(samples=[], alleles=[])
+
         # set IDs if not provided
         assembly_protocol_id = (
             assembly_protocol_id if assembly_protocol_id is not None else uuid.uuid4()

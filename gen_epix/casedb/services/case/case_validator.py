@@ -284,6 +284,7 @@ class CaseValidator:
             if content is None:
                 continue
             assert data_issues is not None
+            # @ABAC: use CompleteCaseType to determine allowed Cols
             invalid_col_ids = set(content.keys()) - set(
                 self.complete_case_type.cols.keys()
             )
@@ -321,101 +322,149 @@ class CaseValidator:
                 unexpectedly produces ``None`` from a non-``None`` value.
         """
         msg_template = "{orig_value}"
+        # @ABAC: use CompleteCaseType to loop over allowed Cols
         for col in self.complete_case_type.cols.values():
             col_id = col.id
             assert col_id is not None
             ref_col = self.complete_case_type.ref_cols[col.ref_col_id]
-            if ref_col.col_type == ColType.REGULAR_LANGUAGE:
-                assert ref_col.id is not None
-                pattern = self.regex_patterns[ref_col.id]
-                transform_fn = lambda x: (
-                    x if x is None or pattern.match(x) else NoReturn
-                )
-                code = "b1c4e5f6"
-                msg_template = "{orig_value} does not match regex"
-            elif ref_col.col_type in ColTypeSet.STRING_SET.value:
-                concept_set_id = ref_col.concept_set_id
-                assert concept_set_id is not None
-                concept_value_map = self.concept_value_maps[concept_set_id]
-                transform_fn = lambda x: (
-                    concept_value_map.get(x.lower(), NoReturn) if x else None
-                )
-                code = "c2d5f6a7"
-                msg_template = "{orig_value} cannot be mapped to concept"
-            elif ref_col.col_type in ColTypeSet.HAS_REGION_SET.value:
-                assert ref_col.region_set_id
-                region_value_map = self.region_value_maps[ref_col.region_set_id]
-                transform_fn = lambda x: (
-                    region_value_map.get(x.lower(), NoReturn) if x else None
-                )
-                code = "d3e9f1a8"
-                msg_template = "{orig_value} cannot be mapped to region"
-            elif ref_col.col_type in ColTypeSet.TIME.value:
-                transform_fn = self.TIME_MATCHERS[ref_col.col_type]
-                code = "e4f1a2b9"
-                msg_template = (
-                    "{orig_value} is not a valid " + ref_col.col_type.value + " value"
-                )
-            elif ref_col.col_type in ColTypeSet.NUMBER.value:
-                n_decimals = self.N_DECIMALS[ref_col.col_type]
-                code = "f5a2b3c0"
-                transform_fn = lambda x: CaseValidator._transform_decimal(x, n_decimals)
-            elif ref_col.col_type == ColType.ORGANIZATION:
-                organization_value_map = self.organization_value_map
-                transform_fn = lambda x: (
-                    organization_value_map.get(x.lower(), NoReturn) if x else None
-                )
-                code = "a6b1c2d3"
-                msg_template = "{orig_value} cannot be mapped to organization"
-            else:
-                # TODO: transform any other col_types
-                code = "8f7a2d1b"
-                transform_fn = lambda x: x
+            transform_fn, code, msg_template = self._get_individual_value_transformer(
+                ref_col, msg_template
+            )
+            self._transform_column_values(
+                col_id,
+                transform_fn,
+                code,
+                msg_template,
+                contents,
+                updated_contents,
+                data_issues_list,
+            )
+
+    def _get_individual_value_transformer(
+        self, ref_col: model.RefCol, msg_template: str
+    ) -> tuple[Callable, str, str]:
+        """Select the value transformer and issue metadata for a reference column."""
+        if ref_col.col_type == ColType.REGULAR_LANGUAGE:
+            assert ref_col.id is not None
+            pattern = self.regex_patterns[ref_col.id]
+            transform_fn = lambda x: x if x is None or pattern.match(x) else NoReturn
+            code = "b1c4e5f6"
+            msg_template = "{orig_value} does not match regex"
+        elif ref_col.col_type in ColTypeSet.STRING_SET.value:
+            concept_set_id = ref_col.concept_set_id
+            assert concept_set_id is not None
+            concept_value_map = self.concept_value_maps[concept_set_id]
+            transform_fn = lambda x: (
+                concept_value_map.get(x.lower(), NoReturn) if x else None
+            )
+            code = "c2d5f6a7"
+            msg_template = "{orig_value} cannot be mapped to concept"
+        elif ref_col.col_type in ColTypeSet.HAS_REGION_SET.value:
+            assert ref_col.region_set_id
+            region_value_map = self.region_value_maps[ref_col.region_set_id]
+            transform_fn = lambda x: (
+                region_value_map.get(x.lower(), NoReturn) if x else None
+            )
+            code = "d3e9f1a8"
+            msg_template = "{orig_value} cannot be mapped to region"
+        elif ref_col.col_type in ColTypeSet.TIME.value:
+            transform_fn = self.TIME_MATCHERS[ref_col.col_type]
+            code = "e4f1a2b9"
+            msg_template = (
+                "{orig_value} is not a valid " + ref_col.col_type.value + " value"
+            )
+        elif ref_col.col_type in ColTypeSet.NUMBER.value:
+            n_decimals = self.N_DECIMALS[ref_col.col_type]
+            code = "f5a2b3c0"
+            transform_fn = lambda x: CaseValidator._transform_decimal(x, n_decimals)
+        elif ref_col.col_type == ColType.ORGANIZATION:
+            organization_value_map = self.organization_value_map
+            transform_fn = lambda x: (
+                organization_value_map.get(x.lower(), NoReturn) if x else None
+            )
+            code = "a6b1c2d3"
+            msg_template = "{orig_value} cannot be mapped to organization"
+        else:
+            # TODO: transform any other col_types
+            code = "8f7a2d1b"
+            transform_fn = lambda x: x
+        return transform_fn, code, msg_template
+
+    def _transform_column_values(
+        self,
+        col_id: UUID,
+        transform_fn: Callable,
+        code: str,
+        msg_template: str,
+        contents: list[dict[UUID, str | None] | None],
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
+    ) -> None:
+        """Apply a selected transformer to each uploaded value for one column."""
+        for content, updated_content, data_issues in zip(
+            contents, updated_contents, data_issues_list
+        ):
+            if content is None:
+                continue
+            assert updated_content is not None
+            assert data_issues is not None
+            if col_id not in content:
+                continue
             # Update value
-            for content, updated_content, data_issues in zip(
-                contents, updated_contents, data_issues_list
-            ):
-                if content is None:
-                    continue
-                assert updated_content is not None
-                assert data_issues is not None
-                if col_id not in content:
-                    continue
-                orig_value = content[col_id]
-                new_value: str | None | NoReturn = transform_fn(orig_value)  # type: ignore[assignment]
-                if new_value == NoReturn:
-                    new_value = None
-                    # No mapping found
-                    data_issues.append(
-                        model.CaseDataIssue(
-                            col_id=col_id,
-                            original_value=orig_value,
-                            updated_value=new_value,
-                            data_issue_type=DataIssueType.INVALID,
-                            code=code,
-                            message=msg_template.format(orig_value=orig_value),
-                        )
-                    )
-                    # None is not added to updated_content, since an explicit None value is interpreted as deletion of a value during update
-                    continue
-                if new_value != orig_value:
-                    # Value transformed
-                    data_issues.append(
-                        model.CaseDataIssue(
-                            col_id=col_id,
-                            original_value=orig_value,
-                            updated_value=new_value,
-                            data_issue_type=DataIssueType.TRANSFORMED,
-                            code=code,
-                            message="Value transformed",
-                        )
-                    )
-                    if new_value is None:
-                        raise AssertionError(
-                            f"Unexpected None value after transformation of value {orig_value} for Col {col_id}"
-                        )
+            self._transform_individual_value(
+                col_id,
+                content[col_id],
+                updated_content,
+                data_issues,
+                transform_fn,
+                code,
+                msg_template,
+            )
+
+    @staticmethod
+    def _transform_individual_value(
+        col_id: UUID,
+        orig_value: str | None,
+        updated_content: dict[UUID, str | None],
+        data_issues: list[model.CaseDataIssue],
+        transform_fn: Callable,
+        code: str,
+        msg_template: str,
+    ) -> None:
+        """Transform one value and append its issue, if any."""
+        new_value: str | None | NoReturn = transform_fn(orig_value)  # type: ignore[assignment]
+        if new_value == NoReturn:
+            # No mapping found
+            data_issues.append(
+                model.CaseDataIssue(
+                    col_id=col_id,
+                    original_value=orig_value,
+                    updated_value=None,
+                    data_issue_type=DataIssueType.INVALID,
+                    code=code,
+                    message=msg_template.format(orig_value=orig_value),
+                )
+            )
+            # None is not added to updated_content, since an explicit None value is interpreted as deletion of a value during update
+            return
+        if new_value != orig_value:
+            # Value transformed
+            data_issues.append(
+                model.CaseDataIssue(
+                    col_id=col_id,
+                    original_value=orig_value,
+                    updated_value=new_value,
+                    data_issue_type=DataIssueType.TRANSFORMED,
+                    code=code,
+                    message="Value transformed",
+                )
+            )
+            if new_value is None:
+                raise AssertionError(
+                    f"Unexpected None value after transformation of value {orig_value} for Col {col_id}"
+                )
                 # Add to updated_content
-                updated_content[col_id] = new_value
+        updated_content[col_id] = new_value
 
     def transform_value_pairs(
         self,
@@ -437,40 +486,53 @@ class CaseValidator:
         Raises:
             NotImplementedError: If a numeric unit pair has no conversion multiplier.
         """
-        # Go over each Dim
+        # @ABAC: use CompleteCaseType to go over allowed Dims and Cols
         for dim in self.complete_case_type.dims.values():
             assert dim.id is not None
             dim_type = self.complete_case_type.ref_dims[dim.ref_dim_id]
             col_ids = self.complete_case_type.ordered_col_ids_by_dim[dim.id]
-            # Handle each type of dimension
-            if dim_type.dim_type == enum.DimType.GEO:
-                col_pairs = CaseValidator._get_col_pairs(col_ids)
-                self._transform_geo_value_pairs(
-                    contents, updated_contents, data_issues_list, col_pairs
+            self._transform_value_pairs_for_dim(
+                dim_type.dim_type,
+                col_ids,
+                contents,
+                updated_contents,
+                data_issues_list,
+            )
+
+    def _transform_value_pairs_for_dim(
+        self,
+        dim_type: enum.DimType,
+        col_ids: list[UUID],
+        contents: list[dict[UUID, str | None] | None],
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
+    ) -> None:
+        """Dispatch paired-value transformations for one dimension."""
+        # Handle each type of dimension
+        if dim_type == enum.DimType.GEO:
+            col_pairs = CaseValidator._get_col_pairs(col_ids)
+            self._transform_geo_value_pairs(
+                contents, updated_contents, data_issues_list, col_pairs
+            )
+        elif dim_type == enum.DimType.TIME:
+            # Sort col_pairs by time resolution descending (DAY, WEEK, MONTH, QUARTER, YEAR)
+            col_ids.sort(
+                key=lambda x: enum.ColTypeOrder.TIME_RESOLUTION_DESC.value.get(
+                    self.complete_case_type.ref_cols[
+                        self.complete_case_type.cols[x].ref_col_id
+                    ].col_type,
+                    len(col_ids),
                 )
-            elif dim_type.dim_type == enum.DimType.TIME:
-                # Sort col_pairs by time resolution descending (DAY, WEEK, MONTH, QUARTER, YEAR)
-                col_ids.sort(
-                    key=lambda x: enum.ColTypeOrder.TIME_RESOLUTION_DESC.value.get(
-                        self.complete_case_type.ref_cols[
-                            self.complete_case_type.cols[x].ref_col_id
-                        ].col_type,
-                        len(col_ids),
-                    )
-                )
-                col_pairs = CaseValidator._get_col_pairs(col_ids)
-                self._transform_time_value_pairs(
-                    contents, updated_contents, data_issues_list, col_pairs
-                )
-            elif dim_type.dim_type == enum.DimType.NUMBER:
-                col_pairs = CaseValidator._get_col_pairs(col_ids)
-                self._transform_number_value_pairs(
-                    contents, updated_contents, data_issues_list, col_pairs
-                )
-            elif dim_type.dim_type == enum.DimType.TEXT:
-                pass
-            else:
-                continue
+            )
+            col_pairs = CaseValidator._get_col_pairs(col_ids)
+            self._transform_time_value_pairs(
+                contents, updated_contents, data_issues_list, col_pairs
+            )
+        elif dim_type == enum.DimType.NUMBER:
+            col_pairs = CaseValidator._get_col_pairs(col_ids)
+            self._transform_number_value_pairs(
+                contents, updated_contents, data_issues_list, col_pairs
+            )
 
     def calculate_case_date(
         self,
@@ -495,10 +557,12 @@ class CaseValidator:
         """
         # Determine Cols from which the case date needs to be derived
         # Calculate case date where possible
+        # @ABAC: use CompleteCaseType to determine Dim, if any, for case date
         case_date_dim_id = self.complete_case_type.case_date_dim_id
         if case_date_dim_id is None:
             case_date_col_mappers = {}
         else:
+            # @ABAC: use CompleteCaseType to determine Cols for case date Dim
             cols = [
                 self.complete_case_type.cols[x]
                 for x in self.complete_case_type.ordered_col_ids_by_dim[
@@ -598,7 +662,6 @@ class CaseValidator:
         col_pairs: list[tuple[UUID, UUID]],
     ) -> None:
         """Validate and transform TIME pairs of values."""
-        # For TIME dimension: use IsoTimeTransformer with TimeUnitTransformStrategy.EXACT_ONLY to transform from-values to to-values. When no transformation is possible (e.g. from MONTH to DAY), skip that pair of cols to avoid a call to the IsoTimeTransformer.
         for col_pair in col_pairs:
             ref_col1 = self.complete_case_type.ref_cols[
                 self.complete_case_type.cols[col_pair[0]].ref_col_id
@@ -606,65 +669,94 @@ class CaseValidator:
             ref_col2 = self.complete_case_type.ref_cols[
                 self.complete_case_type.cols[col_pair[1]].ref_col_id
             ]
-            # Skip if columns are not TIME types
-            if (
-                ref_col1.col_type not in ColTypeSet.TIME.value
-                or ref_col2.col_type not in ColTypeSet.TIME.value
-            ):
-                continue
-
-            from_time_unit = self.COL_TYPE_TO_TIME_UNIT[ref_col1.col_type]
-            to_time_unit = self.COL_TYPE_TO_TIME_UNIT[ref_col2.col_type]
-
-            # Skip if transformation is not possible
-            if not IsoTimeTransformer.can_transform_time(from_time_unit, to_time_unit):
-                continue
-
-            # Create IsoTimeTransformer for this transformation
-            time_transformer = IsoTimeTransformer(
-                field_name="time_value",
-                src_unit=from_time_unit,
-                tgt_unit=to_time_unit,
-                strategy=TimeUnitTransformStrategy.EXACT_ONLY,
+            self._transform_time_value_pair(
+                contents,
+                updated_contents,
+                data_issues_list,
+                col_pair,
+                ref_col1,
+                ref_col2,
             )
 
-            for content, updated_content, data_issues in zip(
-                contents, updated_contents, data_issues_list
-            ):
-                if content is None:
-                    continue
-                assert updated_content is not None
-                assert data_issues is not None
-                from_time = updated_content.get(col_pair[0])
-                if from_time is None:
-                    continue
-                ref_col1 = self.complete_case_type.ref_cols[
-                    self.complete_case_type.cols[col_pair[0]].ref_col_id
-                ]
+    def _transform_time_value_pair(
+        self,
+        contents: list[dict[UUID, str | None] | None],
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
+        col_pair: tuple[UUID, UUID],
+        ref_col1: model.RefCol,
+        ref_col2: model.RefCol,
+    ) -> None:
+        """Build and apply the time transformer for one directed column pair."""
+        if (
+            ref_col1.col_type not in ColTypeSet.TIME.value
+            or ref_col2.col_type not in ColTypeSet.TIME.value
+        ):
+            # Skip if columns are not TIME types
+            return
+        from_time_unit = self.COL_TYPE_TO_TIME_UNIT[ref_col1.col_type]
+        to_time_unit = self.COL_TYPE_TO_TIME_UNIT[ref_col2.col_type]
+        # For TIME dimension: use IsoTimeTransformer with TimeUnitTransformStrategy.EXACT_ONLY to transform from-values to to-values. When no transformation is possible (e.g. from MONTH to DAY), skip that pair of cols to avoid a call to the IsoTimeTransformer.
+        # Skip if transformation is not possible
+        if not IsoTimeTransformer.can_transform_time(from_time_unit, to_time_unit):
+            return
+        # Create IsoTimeTransformer for this transformation
+        time_transformer = IsoTimeTransformer(
+            field_name="time_value",
+            src_unit=from_time_unit,
+            tgt_unit=to_time_unit,
+            strategy=TimeUnitTransformStrategy.EXACT_ONLY,
+        )
+        for content, updated_content, data_issues in zip(
+            contents, updated_contents, data_issues_list
+        ):
+            self._transform_time_value(
+                content,
+                updated_content,
+                data_issues,
+                col_pair,
+                ref_col1,
+                time_transformer,
+            )
 
-                # Check if from_time is a valid time value for col1's type
-                if self.TIME_MATCHERS[ref_col1.col_type](from_time) is NoReturn:
-                    continue
-
-                # Transform the time value using ObjectAdapter
-                try:
-                    adapter = ObjectAdapter({"time_value": from_time})
-                    transformed_adapter = time_transformer.transform(adapter)
-                    to_time = transformed_adapter.get("time_value")
-                except Exception:
-                    # Skip if transformation fails
-                    continue
-                if to_time is None:
-                    continue
-
-                self._set_derived_value(
-                    content,
-                    updated_content,
-                    data_issues,
-                    "d4e2f3a4",
-                    col_pair,
-                    to_time,
-                )
+    def _transform_time_value(
+        self,
+        content: dict[UUID, str | None] | None,
+        updated_content: dict[UUID, str | None] | None,
+        data_issues: list[model.CaseDataIssue] | None,
+        col_pair: tuple[UUID, UUID],
+        ref_col: model.RefCol,
+        time_transformer: IsoTimeTransformer,
+    ) -> None:
+        """Validate and transform one content value for a time pair."""
+        if content is None:
+            return
+        assert updated_content is not None
+        assert data_issues is not None
+        from_time = updated_content.get(col_pair[0])
+        if from_time is None:
+            return
+        # Check if from_time is a valid time value for col1's type
+        if self.TIME_MATCHERS[ref_col.col_type](from_time) is NoReturn:
+            return
+        # Transform the time value using ObjectAdapter
+        try:
+            adapter = ObjectAdapter({"time_value": from_time})
+            transformed_adapter = time_transformer.transform(adapter)
+        except Exception:
+            # Skip if transformation fails
+            return
+        to_time = transformed_adapter.get("time_value")
+        if to_time is None:
+            return
+        self._set_derived_value(
+            content,
+            updated_content,
+            data_issues,
+            "d4e2f3a4",
+            col_pair,
+            to_time,
+        )
 
     def _transform_number_value_pairs(
         self,
@@ -754,36 +846,51 @@ class CaseValidator:
         for content, updated_content, data_issues in zip(
             contents, updated_contents, data_issues_list
         ):
-            if content is None:
-                continue
-            assert updated_content is not None
-            assert data_issues is not None
-            from_number_str = updated_content.get(col_pair[0])
-            if from_number_str is None:
-                continue
-            from_number = float(from_number_str)
-
-            if not interval_transformer.is_transformable(from_number):
-                continue
-
-            # Use the interval transformer with "value" field name
-            adapter = ObjectAdapter({"value": from_number * multiplier})
-            transformed_adapter = interval_transformer.transform(adapter)
-            to_interval_id = transformed_adapter.get("value")
-            if to_interval_id is None:
-                continue
-
-            if updated_content.get(col_pair[1]) is not None:
-                continue
-
-            self._set_derived_value(
+            self._transform_decimal_content_to_interval(
                 content,
                 updated_content,
                 data_issues,
-                "c9d4e1f2",
                 col_pair,
-                to_interval_id,
+                interval_transformer,
+                multiplier,
             )
+
+    def _transform_decimal_content_to_interval(
+        self,
+        content: dict[UUID, str | None] | None,
+        updated_content: dict[UUID, str | None] | None,
+        data_issues: list[model.CaseDataIssue] | None,
+        col_pair: tuple[UUID, UUID],
+        interval_transformer: IntervalTransformer,
+        multiplier: float,
+    ) -> None:
+        """Transform one decimal value into its corresponding interval ID."""
+        if content is None:
+            return
+        assert updated_content is not None
+        assert data_issues is not None
+        from_number_str = updated_content.get(col_pair[0])
+        if from_number_str is None:
+            return
+        from_number = float(from_number_str)
+        if not interval_transformer.is_transformable(from_number):
+            return
+        # Use the interval transformer with "value" field name
+        adapter = ObjectAdapter({"value": from_number * multiplier})
+        transformed_adapter = interval_transformer.transform(adapter)
+        to_interval_id = transformed_adapter.get("value")
+        if to_interval_id is None:
+            return
+        if updated_content.get(col_pair[1]) is not None:
+            return
+        self._set_derived_value(
+            content,
+            updated_content,
+            data_issues,
+            "c9d4e1f2",
+            col_pair,
+            to_interval_id,
+        )
 
     def _transform_interval_to_interval(
         self,
@@ -796,24 +903,62 @@ class CaseValidator:
         multiplier: float,
     ) -> None:
         """Process INTERVAL -> INTERVAL transformation using IntervalToIntervalTransformer."""
+        interval_to_interval_transformer = (
+            self._create_interval_to_interval_transformer(
+                ref_col1, ref_col2, multiplier
+            )
+        )
+        if interval_to_interval_transformer is None:
+            return
+
+        for content, updated_content, data_issues in zip(
+            contents, updated_contents, data_issues_list
+        ):
+            if content is None:
+                continue
+            assert updated_content is not None
+            assert data_issues is not None
+            from_interval_id = updated_content.get(col_pair[0])
+            if from_interval_id is None:
+                continue
+            to_interval_id = self._transform_interval_id(
+                interval_to_interval_transformer, from_interval_id
+            )
+            if to_interval_id is None:
+                continue
+            if updated_content.get(col_pair[1]) is not None:
+                continue
+
+            self._set_derived_value(
+                content,
+                updated_content,
+                data_issues,
+                "a8f2d5e7",
+                col_pair,
+                to_interval_id,
+            )
+
+    def _create_interval_to_interval_transformer(
+        self,
+        ref_col1: model.RefCol,
+        ref_col2: model.RefCol,
+        multiplier: float,
+    ) -> IntervalToIntervalTransformer | None:
+        """Create a compatible transformer for two interval concept sets."""
         # Check if both columns have concept sets
         if ref_col1.concept_set_id is None or ref_col2.concept_set_id is None:
-            return
-
+            return None
         # Skip if trying to map to the same concept set
         if ref_col1.concept_set_id == ref_col2.concept_set_id:
-            return
-
+            return None
         # Get interval transformers for both concept sets
         src_transformer = self.interval_transformers.get(ref_col1.concept_set_id)
         tgt_transformer = self.interval_transformers.get(ref_col2.concept_set_id)
-
         if src_transformer is None or tgt_transformer is None:
-            return
-
-        # Create IntervalToIntervalTransformer
+            return None
         try:
-            interval_to_interval_transformer = IntervalToIntervalTransformer(
+            # Create IntervalToIntervalTransformer
+            return IntervalToIntervalTransformer(
                 src_field="interval_value",
                 src_interval_names=src_transformer._interval_names,
                 src_lower_bounds=[
@@ -834,47 +979,24 @@ class CaseValidator:
             )
         except Exception:
             # Skip if transformer creation fails
-            return
+            return None
 
-        for content, updated_content, data_issues in zip(
-            contents, updated_contents, data_issues_list
-        ):
-            if content is None:
-                continue
-            assert updated_content is not None
-            assert data_issues is not None
-            from_interval_id = updated_content.get(col_pair[0])
-            if from_interval_id is None:
-                continue
-
-            # TODO: replace by pre-calculated interval_relation_map for efficiency
-            # Check if transformation is possible
-            if not interval_to_interval_transformer.is_transformable(from_interval_id):
-                continue
-            # Transform the interval value using ObjectAdapter
-            try:
-                adapter = ObjectAdapter({"interval_value": from_interval_id})
-                transformed_adapter = interval_to_interval_transformer.transform(
-                    adapter
-                )
-                to_interval_id = transformed_adapter.get("interval_value")
-            except Exception:
-                # Skip if transformation fails
-                continue
-            if to_interval_id is None:
-                continue
-
-            if updated_content.get(col_pair[1]) is not None:
-                continue
-
-            self._set_derived_value(
-                content,
-                updated_content,
-                data_issues,
-                "a8f2d5e7",
-                col_pair,
-                to_interval_id,
-            )
+    @staticmethod
+    def _transform_interval_id(
+        transformer: IntervalToIntervalTransformer, from_interval_id: str
+    ) -> str | None:
+        """Transform an interval ID, returning ``None`` when it cannot be mapped."""
+        # Check if transformation is possible
+        if not transformer.is_transformable(from_interval_id):
+            return None
+        # Transform the interval value using ObjectAdapter
+        try:
+            adapter = ObjectAdapter({"interval_value": from_interval_id})
+            transformed_adapter = transformer.transform(adapter)
+        except Exception:
+            # Skip if transformation fails
+            return None
+        return transformed_adapter.get("interval_value")
 
     def _set_derived_value(
         self,
@@ -946,6 +1068,7 @@ class CaseValidator:
         self.interval_concept_set_ids = set()
         self.region_set_ids = set()
         # Get unique concept and region sets across the complete CaseType
+        # @ABAC: use CompleteCaseType to determine RefCols
         for ref_col in self.complete_case_type.ref_cols.values():
             if ref_col.col_type in ColTypeSet.HAS_CONCEPT_SET.value:
                 assert ref_col.concept_set_id
@@ -959,6 +1082,7 @@ class CaseValidator:
     def _init_regex_metadata(self) -> None:
         """Compile regular-language patterns by reference-column identifier."""
         self.regex_patterns = {}
+        # @ABAC: use CompleteCaseType to determine RefCols
         for ref_col in self.complete_case_type.ref_cols.values():
             if ref_col.col_type != ColType.REGULAR_LANGUAGE:
                 continue

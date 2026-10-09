@@ -64,44 +64,14 @@ def _get_best_id_per_sample(
         NotImplementedError: The command type is unsupported.
         ServiceException: The requested ranking strategy is unsupported.
     """
-    model_class: type[model.Model]
-    return_primary_category_id = False
-    if isinstance(cmd, command.RetrieveBestSeqProfilePerSampleCommand):
-        model_class = model.SeqProfile
-    elif isinstance(cmd, command.RetrieveBestSeqPerSampleCommand):
-        model_class = model.Seq
-    elif isinstance(cmd, command.RetrieveBestSeqClassificationPerSampleCommand):
-        model_class = model.SeqClassification
-        return_primary_category_id = cmd.return_primary_category_id
-    else:
-        raise NotImplementedError(f"Unsupported command type: {type(cmd).__name__}")
+    model_class, return_primary_category_id = _get_result_model(cmd)
+    _validate_ranking_strategy(cmd)
     user_id = cmd.user.id if cmd.user else None
-    if cmd.ranking_strategy not in {
-        enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
-        enum.SeqRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
-        enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
-    }:
-        raise exc.ServiceException(
-            "a3f7c2b1", f"Unsupported ranking strategy: {cmd.ranking_strategy}"
-        )
-
     sample_ids = cmd.sample_ids or set()
     if not sample_ids:
         return {}
-    protocol_ids = cmd.protocol_ids or set()
-
     repository: BaseSeqRepository = self.repository  # type: ignore[assignment]
-    sample_filter = UuidSetFilter(key="sample_id", members=frozenset(sample_ids))
-    filter: Filter
-    if protocol_ids:
-        protocol_filter = UuidSetFilter(
-            key="protocol_id", members=frozenset(protocol_ids)
-        )
-        filter = CompositeFilter(
-            filters=[sample_filter, protocol_filter], operator=LogicalOperator.AND
-        )
-    else:
-        filter = sample_filter
+    filter = _create_best_result_filter(sample_ids, cmd.protocol_ids or set())
     with repository.uow() as uow:
         # qc_result is a denormalized, cached copy of the effective quality result
         # that is only refreshed on create, not on update (see QualityMixin). Read
@@ -125,46 +95,88 @@ def _get_best_id_per_sample(
             field_names=field_names,
             filter=filter,
         )
-        best_id_per_sample: dict[UUID, UUID] = {}
-        if cmd.ranking_strategy in {
-            enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
-            enum.SeqRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
-            enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
-        }:
-            # Sort descending by (sample_id, qc_result, qc_score, created_at), where
-            # qc_result is the effective result: the manual (human) result when
-            # provided (i.e. not PENDING), otherwise the automated (machine) result.
-            map_qc_result_to_sort_key = {
-                x: enum.QualityControlResult.get_sort_key(x)
-                for x in enum.QualityControlResult
-            }
+        return _select_best_ids(iter_fields, return_primary_category_id)
 
-            def _effective_qc_result(
-                qc_result_machine: enum.QualityControlResult,
-                qc_result_human: enum.QualityControlResult,
-            ) -> enum.QualityControlResult:
-                if qc_result_human != enum.QualityControlResult.PENDING:
-                    return qc_result_human
-                return qc_result_machine
 
-            sort_fn = lambda x: (
-                x[1],
-                map_qc_result_to_sort_key[_effective_qc_result(x[2], x[3])],
-                x[4],
-                x[5],
+def _get_result_model(
+    cmd: (
+        command.RetrieveBestSeqPerSampleCommand
+        | command.RetrieveBestSeqProfilePerSampleCommand
+        | command.RetrieveBestSeqClassificationPerSampleCommand
+    ),
+) -> tuple[type[model.Model], bool]:
+    """Resolve the result model and optional primary-category projection."""
+    if isinstance(cmd, command.RetrieveBestSeqProfilePerSampleCommand):
+        return model.SeqProfile, False
+    if isinstance(cmd, command.RetrieveBestSeqPerSampleCommand):
+        return model.Seq, False
+    if isinstance(cmd, command.RetrieveBestSeqClassificationPerSampleCommand):
+        return model.SeqClassification, cmd.return_primary_category_id
+    raise NotImplementedError(f"Unsupported command type: {type(cmd).__name__}")
+
+
+def _validate_ranking_strategy(
+    cmd: (
+        command.RetrieveBestSeqPerSampleCommand
+        | command.RetrieveBestSeqProfilePerSampleCommand
+        | command.RetrieveBestSeqClassificationPerSampleCommand
+    ),
+) -> None:
+    """Reject ranking strategies not supported by the shared ranking query."""
+    if cmd.ranking_strategy not in {
+        enum.SeqProfileRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
+        enum.SeqRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
+        enum.SeqClassificationRankingStrategy.QC_RESULT_THEN_SCORE_THEN_CREATED,
+    }:
+        raise exc.ServiceException(
+            "a3f7c2b1", f"Unsupported ranking strategy: {cmd.ranking_strategy}"
+        )
+
+
+def _create_best_result_filter(
+    sample_ids: set[UUID], protocol_ids: set[UUID]
+) -> Filter:
+    """Create the sample filter, optionally constrained by protocol IDs."""
+    sample_filter = UuidSetFilter(key="sample_id", members=frozenset(sample_ids))
+    if not protocol_ids:
+        return sample_filter
+    protocol_filter = UuidSetFilter(key="protocol_id", members=frozenset(protocol_ids))
+    return CompositeFilter(
+        filters=[sample_filter, protocol_filter], operator=LogicalOperator.AND
+    )
+
+
+def _select_best_ids(
+    iter_fields: list[tuple], return_primary_category_id: bool
+) -> dict[UUID, UUID]:
+    """Select the top-ranked result row for each sample."""
+    map_qc_result_to_sort_key = {
+        result: enum.QualityControlResult.get_sort_key(result)
+        for result in enum.QualityControlResult
+    }
+
+    def effective_qc_result(
+        qc_result_machine: enum.QualityControlResult,
+        qc_result_human: enum.QualityControlResult,
+    ) -> enum.QualityControlResult:
+        if qc_result_human != enum.QualityControlResult.PENDING:
+            return qc_result_human
+        return qc_result_machine
+
+    sort_fn = lambda row: (
+        row[1],
+        map_qc_result_to_sort_key[effective_qc_result(row[2], row[3])],
+        row[4],
+        row[5],
+    )
+    sorted_iter = sorted(iter_fields, key=sort_fn, reverse=True)
+    best_id_per_sample: dict[UUID, UUID] = {}
+    previous_sample_id = None
+    for row in sorted_iter:
+        sample_id = row[1]
+        if sample_id != previous_sample_id:
+            best_id_per_sample[sample_id] = (
+                row[6] if return_primary_category_id else row[0]
             )
-            sorted_iter = sorted(iter_fields, key=sort_fn, reverse=True)
-            prev_sample_id = None
-            for row in sorted_iter:
-                sample_id = row[1]
-                if sample_id != prev_sample_id:
-                    # First row for new sample is the best according to the ranking strategy
-                    best_id_per_sample[sample_id] = (
-                        row[6] if return_primary_category_id else row[0]
-                    )
-                    prev_sample_id = sample_id
-        else:  # pragma: no cover
-            raise AssertionError(
-                "Should not reach here due to earlier check on ranking strategy"
-            )
+            previous_sample_id = sample_id
     return best_id_per_sample

@@ -145,7 +145,12 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
         return self.server_cfg.scope
 
     async def get_jwk_from_jwt(self, jwt_token: str) -> jwt.PyJWK:
-        """Return jwk from jwt."""
+        """Return the signing key identified by a JWT.
+
+        Raises:
+            UnauthorizedAuthError: If the token has no key ID or its key is unknown.
+            InitializationServiceError: If signing keys cannot be loaded.
+        """
         key_id = self._parse_kid(jwt_token)
         if not key_id:
             if self.logger:
@@ -223,13 +228,25 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
             raise exc.UnauthorizedAuthError("5bb8ffb6") from e
 
     async def get_claims_from_jwt(self, jwt_token: str) -> dict[str, Any] | None:
-        """Return claims from jwt."""
-        claims = self._decode_jwt_unverified(jwt_token)
-        if not self._validate_issuer(claims):
-            return None
+        """Return validated claims from a JWT, or ``None`` for an untrusted issuer.
+
+        Raises:
+            CredentialsAuthError: If the JWT header is malformed.
+            UnauthorizedAuthError: If the token cannot be verified or lacks required
+                claims.
+            InitializationServiceError: If signing keys cannot be loaded.
+        """
+        try:
+            jwt.get_unverified_header(jwt_token)
+        except jwt.PyJWTError as exception:
+            raise exc.CredentialsAuthError(
+                "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            ) from exception
         key = await self.get_jwk_from_jwt(jwt_token)
 
         claims = self._verify_token(jwt_token, key)
+        if not self._validate_issuer(claims):
+            return None
         self._check_required_claims(claims)
 
         # optionally apply token introspection
@@ -290,8 +307,8 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
                 key=key,
                 algorithms=self._allowed_signing_algorithms,
                 audience=self.audience,
-                issuer=self.server_cfg.issuer,
                 options={
+                    "require": ["iss"],
                     "require_iat": True,
                     "verify_iat": True,
                     "require_exp": True,
@@ -337,15 +354,6 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
                 )
             return False
         return True
-
-    def _decode_jwt_unverified(self, jwt_token: str) -> dict[str, Any]:
-        """Decode jwt unverified."""
-        try:
-            return jwt.decode(jwt_token, options={"verify_signature": False})
-        except jwt.PyJWTError as exception:
-            raise exc.CredentialsAuthError(
-                "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-            ) from exception
 
     def get_claims_from_userinfo(self, access_token: str) -> dict[str, Any]:
         """Return claims from userinfo."""

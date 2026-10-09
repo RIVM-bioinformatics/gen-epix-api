@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import Any, Hashable, cast
 
-from dynaconf import Dynaconf
+from dynaconf import Dynaconf  # type: ignore[import-untyped]
 
 from gen_epix import fastapp
 from gen_epix.commondb.app_impl_details import AppImplDetails
@@ -17,20 +17,21 @@ from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import DOMAIN, enum, exc, model
 from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
-from gen_epix.commondb.domain.policy.permission import RoleGenerator
+from gen_epix.commondb.domain.policy import BasePolicyDecisionPoint, RoleGenerator
+from gen_epix.commondb.domain.service import (
+    BaseAbacService,
+    BaseAuthService,
+    BaseOrganizationService,
+    BaseRbacService,
+    BaseSystemService,
+    BaseUserManager,
+)
+from gen_epix.commondb.policies import PolicyDecisionPoint
 from gen_epix.commondb.repositories.dict_modifier import CommondbDictModelModifier
 from gen_epix.commondb.repositories.sa_mapper import CommondbSAMapperFactory
-from gen_epix.commondb.services import AuthService, RbacService
-from gen_epix.commondb.services.abac import AbacService
-from gen_epix.commondb.services.organization import OrganizationService
-from gen_epix.commondb.services.system import SystemService
-from gen_epix.commondb.services.user_manager import UserManager
-from gen_epix.fastapp.domain.domain import Domain
-from gen_epix.fastapp.repositories.dict.repository import DictRepository
-from gen_epix.fastapp.repositories.sa import SARepository
-from gen_epix.fastapp.repository import BaseRepository
-from gen_epix.fastapp.service import BaseService
-from gen_epix.fastapp.util import create_ssl_context
+from gen_epix.commondb.services import UserManager
+from gen_epix.fastapp import BaseRepository, BaseService, Domain, create_ssl_context
+from gen_epix.fastapp.repositories import DictRepository, SARepository
 
 
 class App(fastapp.App):
@@ -54,8 +55,8 @@ class AppComposer(BaseAppComposer):
         domain: Domain | None = None,
         sorted_service_types: tuple[Enum, ...] | None = None,
         role_generator_class: type[RoleGenerator] | None = None,
-        rbac_service_class: type[RbacService] | None = None,
-        user_manager_class: type[UserManager] | None = None,
+        user_manager_class: type[BaseUserManager] | None = None,
+        pdp_class: type[BasePolicyDecisionPoint] | None = None,
         model_class_map: dict[type[fastapp.Model], type[fastapp.Model]] | None = None,
         command_class_map: (
             dict[type[fastapp.Command], type[fastapp.Command]] | None
@@ -76,6 +77,7 @@ class AppComposer(BaseAppComposer):
             sorted_service_types: Optional service initialization order.
             role_generator_class: Optional class that derives roles and permissions.
             rbac_service_class: Optional RBAC service implementation.
+            abac_service_class: Optional ABAC service implementation.
             user_manager_class: Optional user-manager implementation.
             model_class_map: Optional mappings to derived model classes.
             command_class_map: Optional mappings to derived command classes.
@@ -99,8 +101,8 @@ class AppComposer(BaseAppComposer):
         self._domain = domain or DOMAIN
         self._sorted_service_types = sorted_service_types or SORTED_SERVICE_TYPES
         self._role_generator_class = role_generator_class or RoleGenerator
-        self._rbac_service_class = rbac_service_class or RbacService
         self._user_manager_class = user_manager_class or UserManager
+        self._pdp_class = pdp_class or PolicyDecisionPoint
         self._model_class_map = model_class_map or {}
         self._command_class_map = command_class_map or {}
         self._policy_class_map = policy_class_map or {}
@@ -158,8 +160,10 @@ class AppComposer(BaseAppComposer):
             cfg_dict = cast(dict[str, Any], cfg)
             app_impl = AppImplDetails(
                 sorted_service_types=list(self._sorted_service_types),
-                rbac_service_class=self._rbac_service_class,
+                rbac_service_class=cfg.service["rbac"]["class"],
+                abac_service_class=cfg.service["abac"]["class"],
                 user_manager_class=self._user_manager_class,
+                pdp_class=self._pdp_class,
                 model_class_map=self._model_class_map,
                 command_class_map=self._command_class_map,
                 policy_class_map=self._policy_class_map,
@@ -221,6 +225,9 @@ class AppComposer(BaseAppComposer):
                 abac_service,
                 organization_service,
             ) = self._get_services(app_impl)
+
+            # Set up the Policy Decision Point (PDP)
+            app.pdp = app_impl.pdp_class(abac_service)  # type: ignore[call-arg]
 
             # Set up roles
             role_permissions = cast(
@@ -304,37 +311,39 @@ class AppComposer(BaseAppComposer):
             "idp_user_dependency": app_impl.idp_user_dependency,
         }
 
-    def _get_services(
-        self, app_impl: AppImplDetails
-    ) -> tuple[
-        SystemService, AuthService, RbacService, AbacService, OrganizationService
+    def _get_services(self, app_impl: AppImplDetails) -> tuple[
+        BaseSystemService,
+        BaseAuthService,
+        BaseRbacService,
+        BaseAbacService,
+        BaseOrganizationService,
     ]:
         """Retrieve the core services from the application implementation details."""
         system_service_type = AppComposer._get_enum_from_list(
             self._sorted_service_types, "SYSTEM"
         )
         system_service = app_impl.services[system_service_type]
-        assert isinstance(system_service, SystemService)
+        assert isinstance(system_service, BaseSystemService)
         auth_service_type = AppComposer._get_enum_from_list(
             self._sorted_service_types, "AUTH"
         )
         auth_service = app_impl.services[auth_service_type]
-        assert isinstance(auth_service, AuthService)
+        assert isinstance(auth_service, BaseAuthService)
         rbac_service_type = AppComposer._get_enum_from_list(
             self._sorted_service_types, "RBAC"
         )
         rbac_service = app_impl.services[rbac_service_type]
-        assert isinstance(rbac_service, RbacService)
+        assert isinstance(rbac_service, BaseRbacService)
         abac_service_type = AppComposer._get_enum_from_list(
             self._sorted_service_types, "ABAC"
         )
         abac_service = app_impl.services[abac_service_type]
-        assert isinstance(abac_service, AbacService)
+        assert isinstance(abac_service, BaseAbacService)
         organization_service_type = AppComposer._get_enum_from_list(
             self._sorted_service_types, "ORGANIZATION"
         )
         organization_service = app_impl.services[organization_service_type]
-        assert isinstance(organization_service, OrganizationService)
+        assert isinstance(organization_service, BaseOrganizationService)
         return (
             system_service,
             auth_service,
@@ -342,6 +351,73 @@ class AppComposer(BaseAppComposer):
             abac_service,
             organization_service,
         )
+
+    def _create_repository(
+        self,
+        repository_cfg: dict[str, Any],
+        service_type: Enum,
+        setup_logger: logging.Logger,
+        app: App,
+    ) -> tuple[BaseRepository, list[Any]]:
+        """Create the configured repository and return its ordered entities."""
+        repository_class: type[BaseRepository] = repository_cfg["class"]
+        repository_props = repository_cfg.get("props", {})
+        if isinstance(repository_cfg["type"], str):
+            repository_type = enum.RepositoryType(repository_cfg["type"])
+        else:
+            repository_type = enum.RepositoryType(repository_cfg["type"].value)
+        entities = app.domain.get_dag_sorted_entities(service_type=service_type)
+        if self._log_setup and setup_logger:
+            setup_logger.debug(
+                app.create_log_message(
+                    "db89f0a5",
+                    f"Setting up {service_type.value} service with {repository_type.value} repository",
+                )
+            )
+        # Inject a CommondbSAMapperFactory for SA-backed repositories so that
+        # mapper update logic (created_at/modified_at protection, modified_by
+        # stamping) lives in the db layer rather than in fastapp.
+        factory_kwargs: dict[str, Any] = {}
+        if issubclass(repository_class, SARepository):
+            factory_kwargs["sa_mapper_factory"] = CommondbSAMapperFactory()
+        # Create repository
+        repository = repository_class.create_repository(
+            entities=entities, **factory_kwargs, **repository_props
+        )
+        return repository, entities
+
+    @staticmethod
+    def _configure_dict_repository(
+        repository: DictRepository, entities: list[Any]
+    ) -> None:
+        """Register modifiers and backfill timestamps for persisted dict models."""
+        # Register a CommondbDictModelModifier for every model class that carries
+        # RowMetadataMixin fields, mirroring what CommondbSAMapper does for SA.
+        modifier = CommondbDictModelModifier()
+        for entity in entities:
+            if not entity.persistable:
+                continue
+            if not issubclass(entity.model_class, model.ModelNoId):
+                continue
+            repository.register_model_modifier(entity.model_class, modifier)
+        # TODO: Check if this is correct or the data should be updated...
+        # Backfill timestamps on objects loaded from demo pickle files.
+        # Pkl demo data was serialized before the modifier existed, so
+        # created_at / modified_at are None on all pre-loaded objects.
+        # This runs for every DICT-backed service (omopdb, casedb,
+        # seqdb, commondb) so all repositories are treated consistently.
+        default_timestamp = datetime.datetime(2000, 1, 1, tzinfo=datetime.timezone.utc)
+        for entity in entities:
+            if not entity.persistable:
+                continue
+            if not issubclass(entity.model_class, model.ModelNoId):
+                continue
+            for stored_obj in repository.db.get(entity.model_class, {}).values():
+                assert isinstance(stored_obj, model.ModelNoId)
+                if stored_obj.modified_at is None:
+                    stored_obj.modified_at = default_timestamp
+                if stored_obj.created_at is None:
+                    stored_obj.created_at = default_timestamp
 
     def _init_service(
         self,
@@ -364,64 +440,11 @@ class AppComposer(BaseAppComposer):
         # Create repository if necessary
         curr_repository = None
         if repository_cfg:
-            repository_class: type[BaseRepository] = repository_cfg["class"]
-            repository_props = repository_cfg.get("props", {})
-            if isinstance(repository_cfg["type"], str):
-                repository_type = enum.RepositoryType(repository_cfg["type"])
-            else:
-                repository_type = enum.RepositoryType(repository_cfg["type"].value)
-            entities = app.domain.get_dag_sorted_entities(service_type=service_type)
-            if self._log_setup and setup_logger:
-                setup_logger.debug(
-                    app.create_log_message(
-                        "db89f0a5",
-                        f"Setting up {service_type.value} service with {repository_type.value} repository",
-                    )
-                )
-            # Inject a CommondbSAMapperFactory for SA-backed repositories so that
-            # mapper update logic (created_at/modified_at protection, modified_by
-            # stamping) lives in the db layer rather than in fastapp.
-            factory_kwargs: dict[str, Any] = {}
-            if issubclass(repository_class, SARepository):
-                factory_kwargs["sa_mapper_factory"] = CommondbSAMapperFactory()
-            # Create repository
-            curr_repository = repository_class.create_repository(
-                entities=entities, **factory_kwargs, **repository_props
+            curr_repository, entities = self._create_repository(
+                repository_cfg, service_type, setup_logger, app
             )
-            # Register a CommondbDictModelModifier for every model class that carries
-            # RowMetadataMixin fields, mirroring what CommondbSAMapper does for SA.
             if isinstance(curr_repository, DictRepository):
-                modifier = CommondbDictModelModifier()
-                for entity in entities:
-                    if not entity.persistable:
-                        continue
-                    if not issubclass(entity.model_class, model.ModelNoId):
-                        continue
-                    curr_repository.register_model_modifier(
-                        entity.model_class, modifier
-                    )
-                # TODO: Check if this is correct or the data should be updated...
-                # Backfill timestamps on objects loaded from demo pickle files.
-                # Pkl demo data was serialized before the modifier existed, so
-                # created_at / modified_at are None on all pre-loaded objects.
-                # This runs for every DICT-backed service (omopdb, casedb,
-                # seqdb, commondb) so all repositories are treated consistently.
-                _DEFAULT_TIMESTAMP = datetime.datetime(
-                    2000, 1, 1, tzinfo=datetime.timezone.utc
-                )
-                for entity in entities:
-                    if not entity.persistable:
-                        continue
-                    if not issubclass(entity.model_class, model.ModelNoId):
-                        continue
-                    for stored_obj in curr_repository.db.get(
-                        entity.model_class, {}
-                    ).values():
-                        assert isinstance(stored_obj, model.ModelNoId)
-                        if stored_obj.modified_at is None:
-                            stored_obj.modified_at = _DEFAULT_TIMESTAMP
-                        if stored_obj.created_at is None:
-                            stored_obj.created_at = _DEFAULT_TIMESTAMP
+                self._configure_dict_repository(curr_repository, entities)
             # Add to overview of repositories
             app_impl.repositories[service_type] = curr_repository
 
@@ -468,42 +491,55 @@ class AppComposer(BaseAppComposer):
         cfg = cast(dict[str, Any], self._app_cfg.cfg)
         # Convert boolean values
         for cfg_path in cfg_content_types:
-            # Traverse config path to get value
-            cfg_section: dict[str, Any] = cfg
-            path_exists = True
-            for ancestor_key in cfg_path[:-2]:
-                if ancestor_key not in cfg_section:
-                    path_exists = False
-                    break
-                next_section = cfg_section[ancestor_key]
-                if not isinstance(next_section, dict):
-                    path_exists = False
-                    break
-                cfg_section = cast(dict[str, Any], next_section)
-            if not path_exists:
+            cfg_section = self._get_config_section(cfg, cfg_path)
+            if cfg_section is None:
+                continue
+            self._parse_config_leafs(cfg_section, cfg_path)
+
+    @staticmethod
+    def _get_config_section(
+        cfg: dict[str, Any], cfg_path: tuple[Any, ...]
+    ) -> dict[str, Any] | None:
+        """Traverse a configuration path and return its parent section."""
+        # Traverse config path to get value
+        cfg_section = cfg
+        for ancestor_key in cfg_path[:-2]:
+            if ancestor_key not in cfg_section:
                 # Config path does not exist
-                continue
-            if cfg_path[-2] and cfg_path[-2] not in cfg_section:
-                # Leaf key does not exist
-                continue
-            # Check if value is of the correct type, and if not attempt to convert
-            if cfg_path[-2] is None:
-                # Special case: all leaf keys should have this content type
-                leaf_dict: dict[str, Any] = dict(cfg_section)
-            else:
-                # Single leaf key with content type
-                leaf_dict = {cfg_path[-2]: cfg_section[cfg_path[-2]]}
-            for leaf_key, leaf_value in leaf_dict.items():
-                is_valid, converted_value = AppComposer._verify_type(
-                    leaf_value, cfg_path[-1]
+                return None
+            next_section = cfg_section[ancestor_key]
+            if not isinstance(next_section, dict):
+                # Config path does not exist
+                return None
+            cfg_section = cast(dict[str, Any], next_section)
+        return cfg_section
+
+    @staticmethod
+    def _parse_config_leafs(
+        cfg_section: dict[str, Any], cfg_path: tuple[Any, ...]
+    ) -> None:
+        """Validate and convert the configured leaf values at one path."""
+        if cfg_path[-2] and cfg_path[-2] not in cfg_section:
+            # Leaf key does not exist
+            return
+        # Check if value is of the correct type, and if not attempt to convert
+        if cfg_path[-2] is None:
+            # Special case: all leaf keys should have this content type
+            leaf_dict: dict[str, Any] = dict(cfg_section)
+        else:
+            # Single leaf key with content type
+            leaf_dict = {cfg_path[-2]: cfg_section[cfg_path[-2]]}
+        for leaf_key, leaf_value in leaf_dict.items():
+            is_valid, converted_value = AppComposer._verify_type(
+                leaf_value, cfg_path[-1]
+            )
+            if not is_valid:
+                raise exc.InitializationServiceError(
+                    "d6c2c377",
+                    f"Invalid value for config {'.'.join((str(x) for x in cfg_path + (leaf_key,)))}: expected type {cfg_path[-1].__name__}",
                 )
-                if not is_valid:
-                    raise exc.InitializationServiceError(
-                        "d6c2c377",
-                        f"Invalid value for config {'.'.join((str(x) for x in cfg_path + (leaf_key,)))}: expected type {cfg_path[-1].__name__}",
-                    )
-                if converted_value != leaf_value:
-                    cfg_section[leaf_key] = converted_value
+            if converted_value != leaf_value:
+                cfg_section[leaf_key] = converted_value
 
     @staticmethod
     def _verify_type(value: Any, content_type: type) -> Any:

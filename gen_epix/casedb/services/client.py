@@ -281,7 +281,8 @@ class CasedbClient(CommondbClient):
     ) -> list[model.CaseStats]:
         """Retrieve statistics per case set."""
         request_body = api.RetrieveCaseSetStatsRequestBody(
-            case_set_ids=cmd.case_set_ids
+            case_set_ids=cmd.case_set_ids,
+            datetime_range_filter=cmd.datetime_range_filter,
         )
         response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
             cmd, HttpMethod.POST, model=request_body

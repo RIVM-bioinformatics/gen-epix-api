@@ -28,7 +28,7 @@ dependencies = [
     "httpx==0.28.1",
     "pyjwt==2.15.1",
     "urllib3==2.8.0",
-    "pydantic==2.13.5",
+    "pydantic==2.14.0",
     "ulid-py==1.1.0",
     "fire==0.7.1",
     "dynaconf==3.3.3",
@@ -50,7 +50,7 @@ dependencies = [
 # and the validation of signed tokens. requirements.txt lists the base
 # dependencies plus this extra.
 server = [
-    "fastapi[standard]>=0.142.2,<0.143.0",
+    "fastapi[standard]>=0.143.0,<0.144.0",
     "gunicorn==26.2.*",
     "starlette==1.7.*",
     "sqlalchemy==2.0.54",

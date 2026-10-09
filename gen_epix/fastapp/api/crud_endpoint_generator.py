@@ -36,6 +36,12 @@ from gen_epix.filter import (
     FilterUnion,
 )
 
+_USER_DEPENDENCY_REQUIRED = "User dependency must be provided"
+_READ_API_MODEL_REQUIRED = "Read API model class must be provided"
+_CREATE_API_MODEL_REQUIRED = "Create API model class must be provided"
+_EXCEPTION_HANDLER_MUST_RAISE = "Exception handler expected to raise exception"
+_OBJECT_ID_PATH_SUFFIX = "/{object_id}"
+
 
 def _default_validate_query_filter(
     query_filter: Filter,
@@ -137,10 +143,10 @@ class CrudEndpointGenerator:
         """Generate get all."""
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         read_api_model_class = route.read_api_model_class
         if read_api_model_class is None:
-            raise ValueError("Read API model class must be provided")
+            raise ValueError(_READ_API_MODEL_REQUIRED)
 
         async def endpoint_function(user: user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore[valid-type]
             """Endpoint function."""
@@ -172,9 +178,7 @@ class CrudEndpointGenerator:
                     exception,
                     request_ids=obj_ids,
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
@@ -199,11 +203,11 @@ class CrudEndpointGenerator:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
         read_api_model_class = route.read_api_model_class
         if read_api_model_class is None:
-            raise ValueError("Read API model class must be provided")
+            raise ValueError(_READ_API_MODEL_REQUIRED)
 
         async def endpoint_function(user: user_dependency, ids: str) -> Any:  # type: ignore[valid-type]
             """Endpoint function."""
@@ -224,9 +228,7 @@ class CrudEndpointGenerator:
                     ),
                     request_ids=invalid_obj_ids,
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
             cmd = route.crud_command_class(
                 user=user,
                 obj_ids=obj_ids,
@@ -246,9 +248,7 @@ class CrudEndpointGenerator:
                     exception,
                     request_ids=obj_ids,
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
@@ -273,7 +273,7 @@ class CrudEndpointGenerator:
             exists_route_suffix = CrudEndpointGenerator.DEFAULT_EXISTS_ROUTE_SUFFIX
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
         async def endpoint_function(user: user_dependency, ids: str) -> Any:  # type: ignore[valid-type]
@@ -295,9 +295,7 @@ class CrudEndpointGenerator:
                     ),
                     request_ids=invalid_obj_ids,
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
             cmd = route.crud_command_class(
                 user=user,
                 obj_ids=obj_ids,
@@ -314,9 +312,7 @@ class CrudEndpointGenerator:
                     exception,
                     request_ids=obj_ids,
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
@@ -355,10 +351,10 @@ class CrudEndpointGenerator:
             operation_id += "__ids"
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         read_api_model_class = route.read_api_model_class
         if read_api_model_class is None:
-            raise ValueError("Read API model class must be provided")
+            raise ValueError(_READ_API_MODEL_REQUIRED)
         id_class = route.id_class
 
         async def endpoint_function(
@@ -375,9 +371,7 @@ class CrudEndpointGenerator:
                     user,
                     exc.InvalidArgumentsError(error_code, "Invalid filter"),
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -406,9 +400,7 @@ class CrudEndpointGenerator:
                 handle_exception_fn(
                     "ca2591fa" + route.endpoint_basename, user, exception
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
@@ -429,11 +421,11 @@ class CrudEndpointGenerator:
         """Generate get one."""
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
         read_api_model_class = route.read_api_model_class
         if read_api_model_class is None:
-            raise ValueError("Read API model class must be provided")
+            raise ValueError(_READ_API_MODEL_REQUIRED)
 
         async def endpoint_function(
             user: user_dependency,  # type: ignore[valid-type]
@@ -454,18 +446,18 @@ class CrudEndpointGenerator:
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
                 handle_exception_fn(
-                    "3680417c" + route.endpoint_basename + f"/{object_id}",
+                    "3680417c"
+                    + route.endpoint_basename
+                    + _OBJECT_ID_PATH_SUFFIX.format(object_id=object_id),
                     user,
                     exception,
                     request_ids=[object_id],
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
-            route.endpoint_basename + "/{object_id}",
+            route.endpoint_basename + _OBJECT_ID_PATH_SUFFIX,
             endpoint_function,
             HttpMethod.GET,
             read_api_model_class,
@@ -486,7 +478,7 @@ class CrudEndpointGenerator:
             exists_route_suffix = CrudEndpointGenerator.DEFAULT_EXISTS_ROUTE_SUFFIX
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
         async def endpoint_function(
@@ -505,18 +497,18 @@ class CrudEndpointGenerator:
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
                 handle_exception_fn(
-                    "f2c9e1b6" + route.endpoint_basename + f"/{object_id}",
+                    "f2c9e1b6"
+                    + route.endpoint_basename
+                    + _OBJECT_ID_PATH_SUFFIX.format(object_id=object_id),
                     user,
                     exception,
                     request_ids=[object_id],
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
-            route.endpoint_basename + "/{object_id}" + exists_route_suffix,
+            route.endpoint_basename + _OBJECT_ID_PATH_SUFFIX + exists_route_suffix,
             endpoint_function,
             HttpMethod.GET,
             bool,
@@ -534,13 +526,13 @@ class CrudEndpointGenerator:
         """Generate post one."""
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         create_api_model_class = route.create_api_model_class
         if create_api_model_class is None:
-            raise ValueError("Create API model class must be provided")
+            raise ValueError(_CREATE_API_MODEL_REQUIRED)
         read_api_model_class = route.read_api_model_class
         if read_api_model_class is None:
-            raise ValueError("Read API model class must be provided")
+            raise ValueError(_READ_API_MODEL_REQUIRED)
         id_class = route.id_class
 
         async def endpoint_function(
@@ -577,9 +569,7 @@ class CrudEndpointGenerator:
                     exception,
                     request_ids=request_ids,
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
@@ -605,13 +595,13 @@ class CrudEndpointGenerator:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         create_api_model_class = route.create_api_model_class
         if create_api_model_class is None:
-            raise ValueError("Create API model class must be provided")
+            raise ValueError(_CREATE_API_MODEL_REQUIRED)
         read_api_model_class = route.read_api_model_class
         if read_api_model_class is None:
-            raise ValueError("Read API model class must be provided")
+            raise ValueError(_READ_API_MODEL_REQUIRED)
         id_class = route.id_class
 
         async def endpoint_function(
@@ -651,9 +641,7 @@ class CrudEndpointGenerator:
                     exception,
                     request_ids=request_ids,
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
@@ -685,14 +673,14 @@ class CrudEndpointGenerator:
         """
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
         create_api_model_class = route.create_api_model_class
         if create_api_model_class is None:
-            raise ValueError("Create API model class must be provided")
+            raise ValueError(_CREATE_API_MODEL_REQUIRED)
         read_api_model_class = route.read_api_model_class
         if read_api_model_class is None:
-            raise ValueError("Read API model class must be provided")
+            raise ValueError(_READ_API_MODEL_REQUIRED)
 
         async def endpoint_function(
             user: user_dependency,  # type: ignore[valid-type]
@@ -727,18 +715,18 @@ class CrudEndpointGenerator:
                 return retval
             except Exception as exception:
                 handle_exception_fn(
-                    "1459d302" + route.endpoint_basename + f"/{object_id}",
+                    "1459d302"
+                    + route.endpoint_basename
+                    + _OBJECT_ID_PATH_SUFFIX.format(object_id=object_id),
                     user,
                     exception,
                     request_ids=[object_id],
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
-            route.endpoint_basename + "/{object_id}",
+            route.endpoint_basename + _OBJECT_ID_PATH_SUFFIX,
             endpoint_function,
             HttpMethod.PUT,
             id_class if route.put_returns_id else read_api_model_class,
@@ -759,13 +747,13 @@ class CrudEndpointGenerator:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         create_api_model_class = route.create_api_model_class
         if create_api_model_class is None:
-            raise ValueError("Create API model class must be provided")
+            raise ValueError(_CREATE_API_MODEL_REQUIRED)
         read_api_model_class = route.read_api_model_class
         if read_api_model_class is None:
-            raise ValueError("Read API model class must be provided")
+            raise ValueError(_READ_API_MODEL_REQUIRED)
         id_class = route.id_class
 
         async def endpoint_function(
@@ -797,9 +785,7 @@ class CrudEndpointGenerator:
                     user,
                     exception,
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
@@ -821,7 +807,7 @@ class CrudEndpointGenerator:
         """Generate delete one."""
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
         async def endpoint_function(user: user_dependency, object_id: id_class) -> Any:  # type: ignore[valid-type]
@@ -838,18 +824,18 @@ class CrudEndpointGenerator:
                 return retval
             except Exception as exception:
                 handle_exception_fn(
-                    "ab4df15f" + route.endpoint_basename + f"/{object_id}",
+                    "ab4df15f"
+                    + route.endpoint_basename
+                    + _OBJECT_ID_PATH_SUFFIX.format(object_id=object_id),
                     user,
                     exception,
                     request_ids=[object_id],
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
-            route.endpoint_basename + "/{object_id}",
+            route.endpoint_basename + _OBJECT_ID_PATH_SUFFIX,
             endpoint_function,
             HttpMethod.DELETE,
             id_class,
@@ -867,7 +853,7 @@ class CrudEndpointGenerator:
         """Generate delete all."""
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
         async def endpoint_function(user: user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore[valid-type]
@@ -891,9 +877,7 @@ class CrudEndpointGenerator:
                     exception,
                     request_ids=obj_ids,
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
@@ -918,7 +902,7 @@ class CrudEndpointGenerator:
             batch_route_suffix = CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
         user_dependency = route.user_dependency
         if user_dependency is None:
-            raise ValueError("User dependency must be provided")
+            raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
         async def endpoint_function(
@@ -960,9 +944,7 @@ class CrudEndpointGenerator:
                     exception,
                     request_ids=obj_ids,
                 )
-                raise NotImplementedError(
-                    "Exception handler expected to raise exception"
-                )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
 
         CrudEndpointGenerator._add_route(
             fast_api,
@@ -1030,7 +1012,6 @@ class CrudEndpointGenerator:
             Callable[[Filter], bool] | None
         ) = _default_validate_query_filter,
     ) -> None:
-        # Map endpoint types to functions
         """Generate endpoints."""
         function_map: dict[CrudEndpointType, Callable] = {
             CrudEndpointType.GET_ALL: CrudEndpointGenerator.generate_get_all,
@@ -1055,32 +1036,51 @@ class CrudEndpointGenerator:
             for endpoint_type in CrudEndpointGenerator.CRUD_ENDPOINT_TYPE_ORDER:
                 if endpoint_type not in route.endpoint_types:
                     continue
-                extra_args: dict[str, Any] = {}
-                if endpoint_type == CrudEndpointType.POST_QUERY:
-                    extra_args["query_route_suffix"] = query_route_suffix
-                    extra_args["return_id"] = False
-                    extra_args["ids_route_suffix"] = ids_route_suffix
-                    extra_args["validate_query_filter"] = validate_query_filter
-                elif endpoint_type == CrudEndpointType.POST_QUERY_IDS:
-                    extra_args["query_route_suffix"] = query_route_suffix
-                    extra_args["return_id"] = True
-                    extra_args["ids_route_suffix"] = ids_route_suffix
-                    extra_args["validate_query_filter"] = validate_query_filter
-                elif endpoint_type == CrudEndpointType.POST_SOME:
-                    extra_args["batch_route_suffix"] = batch_route_suffix
-                elif endpoint_type == CrudEndpointType.GET_SOME:
-                    extra_args["batch_route_suffix"] = batch_route_suffix
-                elif endpoint_type == CrudEndpointType.PUT_SOME:
-                    extra_args["batch_route_suffix"] = batch_route_suffix
-                elif endpoint_type == CrudEndpointType.DELETE_SOME:
-                    extra_args["batch_route_suffix"] = batch_route_suffix
-                elif endpoint_type == CrudEndpointType.GET_EXISTS_ONE:
-                    extra_args["exists_route_suffix"] = exists_route_suffix
-                elif endpoint_type == CrudEndpointType.GET_EXISTS_SOME:
-                    extra_args["exists_route_suffix"] = exists_route_suffix
+                extra_args = CrudEndpointGenerator._get_endpoint_extra_args(
+                    endpoint_type,
+                    batch_route_suffix,
+                    query_route_suffix,
+                    ids_route_suffix,
+                    exists_route_suffix,
+                    validate_query_filter,
+                )
                 function_map[endpoint_type](
                     fast_api, route, handle_exception_fn, **extra_args
                 )
+
+    @staticmethod
+    def _get_endpoint_extra_args(
+        endpoint_type: CrudEndpointType,
+        batch_route_suffix: str | None,
+        query_route_suffix: str | None,
+        ids_route_suffix: str | None,
+        exists_route_suffix: str | None,
+        validate_query_filter: Callable[[Filter], bool] | None,
+    ) -> dict[str, Any]:
+        """Return optional generator arguments for one CRUD endpoint type."""
+        if endpoint_type in {
+            CrudEndpointType.POST_QUERY,
+            CrudEndpointType.POST_QUERY_IDS,
+        }:
+            return {
+                "query_route_suffix": query_route_suffix,
+                "return_id": endpoint_type == CrudEndpointType.POST_QUERY_IDS,
+                "ids_route_suffix": ids_route_suffix,
+                "validate_query_filter": validate_query_filter,
+            }
+        if endpoint_type in {
+            CrudEndpointType.POST_SOME,
+            CrudEndpointType.GET_SOME,
+            CrudEndpointType.PUT_SOME,
+            CrudEndpointType.DELETE_SOME,
+        }:
+            return {"batch_route_suffix": batch_route_suffix}
+        if endpoint_type in {
+            CrudEndpointType.GET_EXISTS_ONE,
+            CrudEndpointType.GET_EXISTS_SOME,
+        }:
+            return {"exists_route_suffix": exists_route_suffix}
+        return {}
 
     @staticmethod
     def create_crud_endpoint_set_for_domain(

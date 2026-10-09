@@ -1,0 +1,686 @@
+from test.casedb.unit.services.case.base import BaseCrudTestCase
+from test.util.mock_compat import Mock, patch
+from uuid import UUID, uuid4
+
+import pytest
+
+from gen_epix.casedb.domain import exc as case_exc
+from gen_epix.casedb.domain import model as casedb_model
+from gen_epix.casedb.domain.enum import CaseRight
+from gen_epix.casedb.services.case.crud_case_set import case_service_crud_case_set
+from gen_epix.fastapp import CrudOperation
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestAdminPath(BaseCrudTestCase):
+    """Tests for admin-level operations (no ABAC)."""
+
+    def test_admin_user_calls_crud_and_returns_value(self) -> None:
+        # 1. Input
+        cmd: Mock = self.create_crud_command(operation=CrudOperation.READ_SOME)
+
+        # 2. Mocks
+        expected_result: list[int] = [1, 2]
+        self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
+        self.service.app.pdp.is_exempted.return_value = True  # Admin path
+        with patch(
+            "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+            new=Mock(),
+        ) as cascade_mock:
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify
+            assert retval == expected_result
+            self.service.crud.assert_called_once_with(cmd)  # type: ignore[attr-defined]
+            self.service.repository.uow.assert_called_once()  # type: ignore[attr-defined]
+            cascade_mock.assert_called_once()
+            # Ensure cascade received uow
+            args, _ = cascade_mock.call_args
+            assert args[0] is self.service and args[1] is self.uow and args[2] is cmd
+            self.service.app.pdp.is_exempted.assert_called_once_with(cmd)  # type: ignore[attr-defined]
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestAbacNoPolicy(BaseCrudTestCase):
+    """Tests for ABAC path when no policy is present."""
+
+    def test_no_policy_returns_crud_value(self) -> None:
+        # 1. Input
+        cmd: Mock = self.create_crud_command(operation=CrudOperation.READ_SOME)
+
+        # 2. Mocks
+        expected_result: list[str] = ["a"]
+        self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ) as cascade_mock,
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=None),
+            ),
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify
+            assert retval == expected_result
+            self.service.crud.assert_called_once_with(cmd)  # type: ignore[attr-defined]
+            cascade_mock.assert_called_once()
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestAbacCreateOperation(BaseCrudTestCase):
+    """Tests for ABAC path with create operation raising error."""
+
+    def test_create_operation_raises_assertion(self) -> None:
+        # 1. Input
+        cmd: Mock = self.create_crud_command(operation=CrudOperation.CREATE_ONE)
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ) as cascade_mock,
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+        ):
+            # 3. Execute & Verify
+            with pytest.raises(AssertionError):
+                case_service_crud_case_set(self.service, cmd)
+            cascade_mock.assert_called_once()
+            self.service.crud.assert_not_called()  # type: ignore[attr-defined]
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestReadOperations(BaseCrudTestCase):
+    """Tests for read operations with ABAC policy."""
+
+    def test_read_one_with_abac_returns_first(self) -> None:
+        # 1. Input
+        ids: list[UUID] = [uuid4(), uuid4()]
+        query_filter: dict[str, str] = {"k": "v"}
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.READ_ONE, ids=ids, query_filter=query_filter
+        )
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        case_sets: list[int] = [10, 20]
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        self.service.app.pdp.get_command_user_id = Mock(return_value=cmd.user.id)
+        self.service._retrieve_case_set_data_collections_map = Mock(return_value={})
+        self.service.repository.read_fields = Mock(return_value=[])
+        self.service.app.pdp.filter_case_set_ids = Mock(return_value=iter([]))
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._retrieve_case_sets_with_content_right",
+                return_value=case_sets,
+            ) as retrieve_mock,
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify
+            assert retval == case_sets[0]
+            retrieve_mock.assert_called_once()
+            args, kwargs = retrieve_mock.call_args
+            assert args[0] is self.service
+            assert args[1] is self.uow
+            assert args[2] is cmd
+            assert args[3] is self.service.app.pdp
+            assert args[4] == CaseRight.READ_CASE_SET
+            assert kwargs.get("case_set_ids") == ids
+            assert kwargs.get("filter") == query_filter
+
+    def test_read_some_with_abac_returns_list(self) -> None:
+        # 1. Input
+        ids: list[UUID] = [uuid4(), uuid4()]
+        query_filter: dict[str, str] = {"k": "v"}
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.READ_SOME, ids=ids, query_filter=query_filter
+        )
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        case_sets: list[int] = [10, 20]
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        self.service.app.pdp.get_command_user_id = Mock(return_value=cmd.user.id)
+        self.service._retrieve_case_set_data_collections_map = Mock(return_value={})
+        self.service.repository.read_fields = Mock(return_value=[])
+        self.service.app.pdp.filter_case_set_ids = Mock(return_value=iter([]))
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._retrieve_case_sets_with_content_right",
+                return_value=case_sets,
+            ) as retrieve_mock,
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify
+            assert retval == case_sets
+            retrieve_mock.assert_called_once()
+            args, kwargs = retrieve_mock.call_args
+            assert args[0] is self.service
+            assert args[1] is self.uow
+            assert args[2] is cmd
+            assert args[3] is self.service.app.pdp
+            assert args[4] == CaseRight.READ_CASE_SET
+            assert kwargs.get("case_set_ids") == ids
+            assert kwargs.get("filter") == query_filter
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestUpdateOperation(BaseCrudTestCase):
+    """Tests for update operation with ABAC policy."""
+
+    def test_update_with_abac_calls_retrieve_and_crud(self) -> None:
+        # 1. Input
+        ids: list[UUID] = [uuid4()]
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.UPDATE_SOME, ids=ids
+        )
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        case_sets: list[Mock] = self.create_case_sets(1)
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        self.service.app.pdp.get_command_user_id = Mock(return_value=cmd.user.id)
+        self.service._retrieve_case_set_data_collections_map = Mock(return_value={})
+        self.service.repository.read_fields = Mock(return_value=[])
+        self.service.app.pdp.filter_case_set_ids = Mock(return_value=iter([]))
+        expected_result: str = "updated"
+        self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._retrieve_case_sets_with_content_right",
+                return_value=case_sets,
+            ) as retrieve_mock,
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify
+            assert retval == expected_result
+            retrieve_mock.assert_called_once()
+            args = retrieve_mock.call_args[0]
+            assert args[0] is self.service
+            assert args[1] is self.uow
+            assert args[2] is cmd
+            assert args[3] is self.service.app.pdp
+            self.service.crud.assert_called_once_with(cmd)  # type: ignore[attr-defined]
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestDeleteAllOperation(BaseCrudTestCase):
+    """Tests for delete-all operation denial with ABAC policy."""
+
+    def test_delete_all_raises_unauthorized(self) -> None:
+        # 1. Input
+        cmd: Mock = self.create_crud_command(operation=CrudOperation.DELETE_ALL)
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+        ):
+            # 3. Execute & Verify
+            with pytest.raises(case_exc.UnauthorizedAuthError):
+                case_service_crud_case_set(self.service, cmd)
+            self.service.crud.assert_not_called()  # type: ignore[attr-defined]
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestDeleteSomeOperation(BaseCrudTestCase):
+    """Tests for delete-some operation with ABAC policy."""
+
+    def test_delete_some_allowed_calls_crud(self) -> None:
+        case_sets: list[Mock] = self.create_case_sets(2)
+        ids = [case_set.id for case_set in case_sets]
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.DELETE_SOME, ids=ids
+        )
+        cmd.is_delete_all = Mock(return_value=False)
+        self.service.repository.crud.return_value = case_sets  # type: ignore[attr-defined]
+        dc_map: dict[UUID, set[UUID]] = {
+            case_sets[0].id: {uuid4()},
+            case_sets[1].id: {uuid4(), uuid4()},
+        }
+        self.service._retrieve_case_set_data_collections_map.return_value = dc_map  # type: ignore[attr-defined]
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        expected_result: bool = True
+        self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify
+            assert retval is expected_result
+            self.service.repository.crud.assert_called_once_with(  # type: ignore[attr-defined]
+                self.uow,
+                cmd.user.id,
+                casedb_model.CaseSet,
+                CrudOperation.READ_SOME,
+                obj_ids=ids,
+            )
+            self.service._retrieve_case_set_data_collections_map.assert_called_once_with(  # type: ignore[attr-defined]
+                self.uow, cmd.user.id, case_set_ids=ids
+            )
+            self.service.crud.assert_called_once_with(cmd)  # type: ignore[attr-defined]
+            assert case_abac.is_allowed.call_count == 2
+
+    def test_delete_some_unauthorized_raises(self) -> None:
+        # 1. Input
+        ids: list[UUID] = [uuid4()]
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.DELETE_SOME, ids=ids
+        )
+
+        # 2. Mocks
+        case_sets: list[Mock] = self.create_case_sets(1)
+        self.service.repository.crud.return_value = case_sets  # type: ignore[attr-defined]
+        dc_map: dict[UUID, set[UUID]] = {case_sets[0].id: {uuid4()}}
+        self.service._retrieve_case_set_data_collections_map.return_value = dc_map  # type: ignore[attr-defined]
+        case_abac: Mock = self.create_case_abac(allowed=False)
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+        ):
+            # 3. Execute & Verify
+            with pytest.raises(case_exc.UnauthorizedAuthError):
+                case_service_crud_case_set(self.service, cmd)
+            self.service.crud.assert_not_called()  # type: ignore[attr-defined]
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestEdgeCasesUnknownOperation(BaseCrudTestCase):
+    """Tests for unknown operation type edge case."""
+
+    def test_unknown_operation_raises_assertion(self) -> None:
+        # 1. Input - use EXISTS_ONE which is not handled by create/read/update/delete
+        cmd: Mock = self.create_crud_command(operation=CrudOperation.EXISTS_ONE)
+        # Override is_* methods to all return False to trigger unknown operation path
+        cmd.is_create = Mock(return_value=False)
+        cmd.is_read = Mock(return_value=False)
+        cmd.is_update = Mock(return_value=False)
+        cmd.is_delete = Mock(return_value=False)
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+        ):
+            # 3. Execute & Verify
+            with pytest.raises(AssertionError, match="Unexpected operation"):
+                case_service_crud_case_set(self.service, cmd)
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestEdgeCasesUserNone(BaseCrudTestCase):
+    """Tests for user being None assertion."""
+
+    def test_user_is_none_raises_assertion(self) -> None:
+        # 1. Input
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.READ_SOME, set_user_none=True
+        )
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+        ):
+            # 3. Execute & Verify
+            with pytest.raises(AssertionError):
+                case_service_crud_case_set(self.service, cmd)
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestEdgeCasesEmptyResults(BaseCrudTestCase):
+    """Tests for empty result set handling."""
+
+    def test_read_with_empty_results_returns_empty_list(self) -> None:
+        # 1. Input
+        ids: list[UUID] = [uuid4()]
+        cmd: Mock = self.create_crud_command(operation=CrudOperation.READ_SOME, ids=ids)
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        self.service.app.pdp.get_command_user_id = Mock(return_value=cmd.user.id)
+        self.service._retrieve_case_set_data_collections_map = Mock(return_value={})
+        self.service.repository.read_fields = Mock(return_value=[])
+        self.service.app.pdp.filter_case_set_ids = Mock(return_value=iter([]))
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._retrieve_case_sets_with_content_right",
+                return_value=[],
+            ) as retrieve_mock,
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify - empty list should be returned
+            assert retval == []
+            retrieve_mock.assert_called_once()
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestEdgeCasesReadWithoutFilter(BaseCrudTestCase):
+    """Tests for read operations without query filter."""
+
+    def test_read_one_without_filter_passes_none(self) -> None:
+        # 1. Input
+        ids: list[UUID] = [uuid4()]
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.READ_ONE, ids=ids, query_filter=None
+        )
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        case_sets: list[int] = [10]
+        self.service.app.pdp.is_exempted.return_value = False
+        self.service.app.pdp.get_command_user_id = Mock(return_value=cmd.user.id)
+        self.service._retrieve_case_set_data_collections_map = Mock(return_value={})
+        self.service.repository.read_fields = Mock(return_value=[])
+        self.service.app.pdp.filter_case_set_ids = Mock(return_value=iter([]))
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._retrieve_case_sets_with_content_right",
+                return_value=case_sets,
+            ) as retrieve_mock,
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify - filter should be None in kwargs
+            assert retval == case_sets[0]
+            args, kwargs = retrieve_mock.call_args
+            assert kwargs.get("filter") is None
+            assert kwargs.get("case_set_ids") == ids
+
+    def test_read_some_without_filter_passes_none(self) -> None:
+        # 1. Input
+        ids: list[UUID] = [uuid4()]
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.READ_SOME, ids=ids, query_filter=None
+        )
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        case_sets: list[int] = [10]
+        self.service.app.pdp.is_exempted.return_value = False
+        self.service.app.pdp.get_command_user_id = Mock(return_value=cmd.user.id)
+        self.service._retrieve_case_set_data_collections_map = Mock(return_value={})
+        self.service.repository.read_fields = Mock(return_value=[])
+        self.service.app.pdp.filter_case_set_ids = Mock(return_value=iter([]))
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._retrieve_case_sets_with_content_right",
+                return_value=case_sets,
+            ) as retrieve_mock,
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify - filter should be None in kwargs
+            assert retval == case_sets
+            args, kwargs = retrieve_mock.call_args
+            assert kwargs.get("filter") is None
+            assert kwargs.get("case_set_ids") == ids
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestEdgeCasesUpdateWithoutFilter(BaseCrudTestCase):
+    """Tests for update operations behavior (validation without filter)."""
+
+    def test_update_without_explicit_ids_calls_retrieve_without_ids(self) -> None:
+        # 1. Input - when ids is not provided explicitly
+        cmd: Mock = self.create_crud_command(operation=CrudOperation.UPDATE_SOME)
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        case_sets: list[Mock] = self.create_case_sets(1)
+        self.service.app.pdp.is_exempted.return_value = False
+        self.service.app.pdp.get_command_user_id = Mock(return_value=cmd.user.id)
+        self.service._retrieve_case_set_data_collections_map = Mock(return_value={})
+        self.service.repository.read_fields = Mock(return_value=[])
+        self.service.app.pdp.filter_case_set_ids = Mock(return_value=iter([]))
+        expected_result: str = "updated"
+        self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._retrieve_case_sets_with_content_right",
+                return_value=case_sets,
+            ) as retrieve_mock,
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify - update should be called and result returned
+            assert retval == expected_result
+            self.service.crud.assert_called_once_with(cmd)
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestEdgeCasesDeleteMultipleMixed(BaseCrudTestCase):
+    """Tests for delete operation with multiple case sets."""
+
+    def test_delete_multiple_case_sets_all_allowed(self) -> None:
+        # 1. Input
+        ids: list[UUID] = [uuid4(), uuid4()]
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.DELETE_SOME, ids=ids
+        )
+
+        # 2. Mocks
+        case_sets: list[Mock] = self.create_case_sets(2)
+        self.service.repository.crud.return_value = case_sets  # type: ignore[attr-defined]
+        dc_map: dict[UUID, set[UUID]] = {
+            case_sets[0].id: {uuid4()},
+            case_sets[1].id: {uuid4(), uuid4()},
+        }
+        self.service._retrieve_case_set_data_collections_map.return_value = dc_map  # type: ignore[attr-defined]
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        expected_result: bool = True
+        self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
+        self.service.app.pdp.is_exempted.return_value = False
+        cmd.is_delete_all = Mock(
+            return_value=False
+        )  # Ensure DELETE_SOME, not DELETE_ALL
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify - should call crud with the command and return result
+            assert retval == expected_result
+            self.service.crud.assert_called_once_with(cmd)
+
+    def test_delete_multiple_case_sets_first_denied(self) -> None:
+        # 1. Input
+        ids: list[UUID] = [uuid4(), uuid4()]
+        cmd: Mock = self.create_crud_command(
+            operation=CrudOperation.DELETE_SOME, ids=ids
+        )
+
+        # 2. Mocks
+        case_sets: list[Mock] = self.create_case_sets(2)
+        self.service.repository.crud.return_value = case_sets  # type: ignore[attr-defined]
+        dc_map: dict[UUID, set[UUID]] = {
+            case_sets[0].id: {uuid4()},
+            case_sets[1].id: {uuid4()},
+        }
+        self.service._retrieve_case_set_data_collections_map.return_value = dc_map  # type: ignore[attr-defined]
+        # First allowed, second denied
+        case_abac: Mock = Mock()
+        case_abac.is_allowed = Mock(side_effect=[False, True])
+        self.service.app.pdp.is_exempted.return_value = False
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+        ):
+            # 3. Execute & Verify - should raise on first denied case set
+            with pytest.raises(case_exc.UnauthorizedAuthError):
+                case_service_crud_case_set(self.service, cmd)
+            # Crud should not be called since validation failed
+            self.service.crud.assert_not_called()  # type: ignore[attr-defined]
+
+
+@pytest.mark.scenario_ids("TC-SEC-29-02")
+class TestEdgeCasesCascadeDelete(BaseCrudTestCase):
+    """Tests for cascade delete behavior in different paths."""
+
+    def test_cascade_delete_called_in_abac_path(self) -> None:
+        # 1. Input
+        cmd: Mock = self.create_crud_command(operation=CrudOperation.READ_SOME)
+
+        # 2. Mocks
+        case_abac: Mock = self.create_case_abac(allowed=True)
+        expected_result: list[int] = [1, 2]
+        self.service.crud.return_value = expected_result  # type: ignore[attr-defined]
+        self.service.app.pdp.is_exempted.return_value = False  # ABAC path
+        self.service.app.pdp.get_command_user_id = Mock(return_value=cmd.user.id)
+        self.service._retrieve_case_set_data_collections_map = Mock(return_value={})
+        self.service.repository.read_fields = Mock(return_value=[])
+        self.service.app.pdp.filter_case_set_ids = Mock(return_value=iter([]))
+        with (
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._crud_cascade_delete",
+                new=Mock(),
+            ) as cascade_mock,
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set.get_case_abac_from_command",
+                new=Mock(return_value=case_abac),
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_set._retrieve_case_sets_with_content_right",
+                return_value=expected_result,
+            ),
+        ):
+            # 3. Execute
+            retval = case_service_crud_case_set(self.service, cmd)
+
+            # 4. Verify - cascade delete should be called in ABAC path too
+            cascade_mock.assert_called_once()
+            assert retval == expected_result

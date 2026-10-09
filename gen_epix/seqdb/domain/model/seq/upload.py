@@ -38,6 +38,17 @@ from gen_epix.seqdb.domain.model.seq.seq import (
 )
 from gen_epix.util import copy_model_field
 
+_PROTOCOL_ID_DESCRIPTION = (
+    "The UUID of the protocol, if available. If not available, the null ID is put. "
+    "Must be present if protocol_code is not present. The use of protocol_id is "
+    "preferred over protocol_code since the latter may change."
+)
+_PROTOCOL_CODE_DESCRIPTION = (
+    "The code of the protocol. Must be present if protocol_id is not present. "
+    "The use of protocol_code is meant for situations where the protocol_id is "
+    "not known, but the code is and/or improves human interpretation."
+)
+
 
 class ValidateRefDataIdCodeMixin:
     """Encapsulates the requirement to identify upload reference data by an ID or a code.
@@ -78,11 +89,11 @@ class ReadSetForUpload(ReadSet, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     )
     protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
+        description=_PROTOCOL_ID_DESCRIPTION,
     )
     protocol_code: str | None = Field(
         default=None,
-        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
+        description=_PROTOCOL_CODE_DESCRIPTION,
         max_length=255,
     )
 
@@ -103,11 +114,11 @@ class SeqForUpload(Seq, IdentifiersMixin, ValidateRefDataIdCodeMixin):
     )
     protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
+        description=_PROTOCOL_ID_DESCRIPTION,
     )
     protocol_code: str | None = Field(
         default=None,
-        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
+        description=_PROTOCOL_CODE_DESCRIPTION,
         max_length=255,
     )
 
@@ -140,11 +151,11 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
     )
     protocol_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the protocol, if available. If not available, the null ID is put. Must be present if protocol_code is not present. The use of protocol_id is preferred over protocol_code since the latter may change.",
+        description=_PROTOCOL_ID_DESCRIPTION,
     )
     protocol_code: str | None = Field(
         default=None,
-        description="The code of the protocol. Must be present if protocol_id is not present. The use of protocol_code is meant for situations where the protocol_id is not known, but the code is and/or improves human interpretation.",
+        description=_PROTOCOL_CODE_DESCRIPTION,
         max_length=255,
     )
     content: str = Field(
@@ -543,7 +554,7 @@ class SampleUploadResult(ParentUploadResult):
     Result field names match ``SampleForUpload`` fields to support caller processing.
     """
 
-    ID: ClassVar[str] = "d8f4cd68"
+    RESULT_ID: ClassVar[str] = "d8f4cd68"
     ENTITY: ClassVar = ParentUploadResult.model_entity().clone()
     NAME: ClassVar = "SampleUploadResult"
 
@@ -585,31 +596,28 @@ class SampleUploadResult(ParentUploadResult):
     def get_errors(self) -> list[LogItem]:
         """Get all data issues that are errors."""
         log_items = super().get_errors()
-        if self.identifiers:
-            for identifier_result in self.identifiers:
-                log_items.extend(identifier_result.get_errors())
-        if self.read_sets:
-            for read_set_result in self.read_sets:
-                log_items.extend(read_set_result.get_errors())
-        if self.seqs:
-            for seq_result in self.seqs:
-                log_items.extend(seq_result.get_errors())
-        if self.seq_taxonomies:
-            for seq_taxonomy_result in self.seq_taxonomies:
-                log_items.extend(seq_taxonomy_result.get_errors())
-        if self.seq_classifications:
-            for seq_classification_result in self.seq_classifications:
-                log_items.extend(seq_classification_result.get_errors())
-        if self.seq_profiles:
-            for seq_profile_result in self.seq_profiles:
-                log_items.extend(seq_profile_result.get_errors())
-        if self.pcr_measurements:
-            for pcr_measurement_result in self.pcr_measurements:
-                log_items.extend(pcr_measurement_result.get_errors())
-        if self.ast_measurements:
-            for ast_measurement_result in self.ast_measurements:
-                log_items.extend(ast_measurement_result.get_errors())
+        result_groups = (
+            self.identifiers,
+            self.read_sets,
+            self.seqs,
+            self.seq_taxonomies,
+            self.seq_classifications,
+            self.seq_profiles,
+            self.pcr_measurements,
+            self.ast_measurements,
+        )
+        for results in result_groups:
+            _extend_upload_result_errors(log_items, results)
         return log_items
+
+
+def _extend_upload_result_errors(
+    log_items: list[LogItem], results: Iterable[UploadResult] | None
+) -> None:
+    """Append errors from a child-result group in its existing order."""
+    if results:
+        for result in results:
+            log_items.extend(result.get_errors())
 
 
 class SampleBatchForUpload(BaseBatchForUpload):
@@ -685,6 +693,10 @@ class SampleBatchForUpload(BaseBatchForUpload):
         (locus_allele_id_map, allele_ids, content) rather than trusting a
         single one, since a profile can be normalized to carry more than one
         of them at once (e.g. allele_ids input also derives content).
+
+        Raises:
+            NotImplementedError: If an allele profile has no supported
+                representation from which to determine allele IDs.
         """
         referenced: set[UUID] = set()
         for sample in self.samples:
@@ -786,7 +798,7 @@ class SampleBatchForUpload(BaseBatchForUpload):
 class SampleBatchUploadResult(BaseBatchUploadResult):
     """Represents the result of uploading a batch of samples."""
 
-    ID: ClassVar = "0205001b"
+    RESULT_ID: ClassVar[str] = "0205001b"
     ENTITY: ClassVar = SampleBatchForUpload.model_entity().clone()
     NAME: ClassVar = "SampleBatchUploadResult"
 

@@ -29,6 +29,8 @@ from gen_epix.fastapp.enum import (
 )
 from gen_epix.filter.base import Filter
 
+_POLICY_METHOD_NOT_IMPLEMENTED = "Method is not implemented for this policy"
+
 
 class Model(PydanticBaseModel):
     """
@@ -53,7 +55,11 @@ class Model(PydanticBaseModel):
 
     @classmethod
     def model_entity(cls) -> Entity:
-        """Get the Entity associated with this model."""
+        """Get the Entity associated with this model.
+
+        Raises:
+            InitializationServiceError: If the model does not define an Entity.
+        """
         if cls.ENTITY is None:
             raise exc.InitializationServiceError(
                 "dd866d20", f"Entity not set for model {cls.__name__}"
@@ -62,7 +68,11 @@ class Model(PydanticBaseModel):
 
     @classmethod
     def model_name(cls) -> str:
-        """Get the name of the model."""
+        """Get the name of the model.
+
+        Raises:
+            InitializationServiceError: If the model does not define a name.
+        """
         if cls.NAME is None:
             raise exc.InitializationServiceError(
                 "1cea00dc", f"Name not set for model {cls.__name__}"
@@ -88,6 +98,10 @@ class Model(PydanticBaseModel):
         across systems.
 
         This method should be overridden where relevant for performance reasons.
+
+        Raises:
+            InitializationServiceError: If no ID field is configured or the ID is
+                missing while `raise_on_missing` is true.
         """
         id_: Hashable | None = getattr(self, self.ENTITY.get_id_field_name())
         if id_ is None and raise_on_missing:
@@ -193,23 +207,39 @@ class Policy(abc.ABC):
 
     # Not an abstract method since it is not always needed
     def is_allowed(self, cmd: Command) -> bool:
-        """Return whether the command is allowed by this policy."""
-        raise NotImplementedError("Method is not implemented for this policy")
+        """Return whether the command is allowed by this policy.
+
+        Raises:
+            NotImplementedError: If this policy does not implement the method.
+        """
+        raise NotImplementedError(_POLICY_METHOD_NOT_IMPLEMENTED)
 
     # Not an abstract method since it is not always needed
     def get_content(self, cmd: Command) -> Any:
-        """Return policy content associated with a command."""
-        raise NotImplementedError("Method is not implemented for this policy")
+        """Return policy content associated with a command.
+
+        Raises:
+            NotImplementedError: If this policy does not implement the method.
+        """
+        raise NotImplementedError(_POLICY_METHOD_NOT_IMPLEMENTED)
 
     # Not an abstract method since it is not always needed
     def get_content_return_type(self, cmd: Command) -> type:
-        """Return the type of content produced by this policy."""
-        raise NotImplementedError("Method is not implemented for this policy")
+        """Return the type of content produced by this policy.
+
+        Raises:
+            NotImplementedError: If this policy does not implement the method.
+        """
+        raise NotImplementedError(_POLICY_METHOD_NOT_IMPLEMENTED)
 
     # Not an abstract method since it is not always needed
     def filter(self, cmd: Command, retval: Any) -> Any:
-        """Filter a command result according to this policy."""
-        raise NotImplementedError("Method is not implemented for this policy")
+        """Filter a command result according to this policy.
+
+        Raises:
+            NotImplementedError: If this policy does not implement the method.
+        """
+        raise NotImplementedError(_POLICY_METHOD_NOT_IMPLEMENTED)
 
 
 class Command(PydanticBaseModel):
@@ -233,6 +263,23 @@ class Command(PydanticBaseModel):
     # @field_serializer("id", mode="plain")
     # def _serialize_id(self, value: Hashable) -> str | None:
     #     return serialize_id(value)
+
+    def get_user_id(self, raise_on_missing: bool = False) -> Hashable | None:
+        """Get the ID of the user associated with this command."""
+        if self.user:
+            return self.user.id
+        if raise_on_missing:
+            raise ValueError("User is missing for this command")
+        return None
+
+    def get_permission_type(self) -> PermissionType:
+        """Get the permission type for this command, allowing to create a permission
+        as a tuple[type[Command], PermissionType]. For this base command, the permission
+        type is always EXECUTE, but subclasses may override this to return a different
+        permission type depending on the specific command subclass as well as the
+        content of the command instance.
+        """
+        return PermissionType.EXECUTE
 
 
 class CrudCommand(Command):
@@ -393,6 +440,22 @@ class CrudCommand(Command):
         if self.objs is not None:
             return self.objs if isinstance(self.objs, list) else [self.objs]
         return None
+
+    def get_permission_type(self) -> PermissionType:
+        """Get the permission type corresponding to the command's CRUD operation."""
+        if self.operation in CrudOperationSet.READ_OR_EXISTS.value:
+            permission_type = PermissionType.READ
+        elif self.operation in CrudOperationSet.UPDATE.value:
+            permission_type = PermissionType.UPDATE
+        elif self.operation in CrudOperationSet.CREATE.value:
+            permission_type = PermissionType.CREATE
+        elif self.operation in CrudOperationSet.DELETE.value:
+            permission_type = PermissionType.DELETE
+        else:
+            raise NotImplementedError(
+                f"Unsupported operation for permission type: {self.operation}"
+            )
+        return permission_type
 
     def is_create(self) -> bool:
         """Whether the command is a create operation."""

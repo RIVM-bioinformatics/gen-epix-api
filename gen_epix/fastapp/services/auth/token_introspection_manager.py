@@ -51,11 +51,14 @@ class TokenIntrospectionManager:
             introspection_auth_method or self.DEFAULT_INTROSPECTION_AUTH_METHOD
         ).lower()
         self._introspection_timeout_seconds = (
-            introspection_timeout_seconds or self.DEFAULT_INTROSPECTION_TIMEOUT_SECONDS
+            self.DEFAULT_INTROSPECTION_TIMEOUT_SECONDS
+            if introspection_timeout_seconds is None
+            else introspection_timeout_seconds
         )
         self._introspection_interval_seconds = (
-            introspection_interval_seconds
-            or self.DEFAULT_INTROSPECTION_INTERVAL_SECONDS
+            self.DEFAULT_INTROSPECTION_INTERVAL_SECONDS
+            if introspection_interval_seconds is None
+            else introspection_interval_seconds
         )
         self._validate_introspection_interval()
         self._validate_discovery_url()

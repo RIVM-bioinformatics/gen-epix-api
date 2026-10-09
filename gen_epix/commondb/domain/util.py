@@ -32,6 +32,51 @@ if TYPE_CHECKING:
     from gen_epix.fastapp.repositories.sa import SARepository
 
 
+def _get_identity_provider_settings_file(
+    dev_idp_config: DevIdpConfig, general_cfg_path: Path
+) -> Path:
+    """Return the settings file for the configured identity-provider mode."""
+    if dev_idp_config == DevIdpConfig.IDPS:
+        return general_cfg_path / "identity_providers.toml"
+    if dev_idp_config == DevIdpConfig.MOCK:
+        return general_cfg_path / "mock_identity_provider.toml"
+    if dev_idp_config == DevIdpConfig.NONE:
+        return general_cfg_path / "no_identity_providers.toml"
+    raise ValueError(f"Unknown dev_idp_config: {dev_idp_config}")
+
+
+def _get_repository_settings_files(
+    dev_repository_config: DevRepositoryConfig, cfg_path: Path
+) -> list[Path]:
+    """Return settings files for the configured repository mode."""
+    settings_files: list[Path] = []
+    if dev_repository_config == DevRepositoryConfig.SA_SQL:
+        file = cfg_path / "secrets.repository.sa_sql.toml"
+        if file.is_file():
+            settings_files.append(file)
+    elif dev_repository_config in (
+        DevRepositoryConfig.DICT_DEMO,
+        DevRepositoryConfig.DICT_EMPTY,
+    ):
+        settings_files.append(cfg_path / "settings.repository.dict.toml")
+        if dev_repository_config == DevRepositoryConfig.DICT_DEMO:
+            settings_files.append(cfg_path / "settings.repository.dict.demo.toml")
+        else:
+            settings_files.append(cfg_path / "settings.repository.dict.empty.toml")
+    elif dev_repository_config in (
+        DevRepositoryConfig.SA_SQLITE_DEMO,
+        DevRepositoryConfig.SA_SQLITE_EMPTY,
+    ):
+        settings_files.append(cfg_path / "settings.repository.sa_sqlite.toml")
+        if dev_repository_config == DevRepositoryConfig.SA_SQLITE_DEMO:
+            settings_files.append(cfg_path / "settings.repository.sa_sqlite.demo.toml")
+        else:
+            settings_files.append(cfg_path / "settings.repository.sa_sqlite.empty.toml")
+    else:
+        raise ValueError(f"Unknown dev_repository_config: {dev_repository_config}")
+    return settings_files
+
+
 def set_env_variables(
     app_type: AppType | str,
     dev_idp_config: DevIdpConfig | str,
@@ -93,14 +138,9 @@ def set_env_variables(
     # General settings
     settings_files.append(cfg_path / "settings.toml")
     # Identity provider settings
-    if dev_idp_config_enum == DevIdpConfig.IDPS:
-        settings_files.append(general_cfg_path / "identity_providers.toml")
-    elif dev_idp_config_enum == DevIdpConfig.MOCK:
-        settings_files.append(general_cfg_path / "mock_identity_provider.toml")
-    elif dev_idp_config_enum == DevIdpConfig.NONE:
-        settings_files.append(general_cfg_path / "no_identity_providers.toml")
-    else:
-        raise ValueError(f"Unknown dev_idp_config: {dev_idp_config_enum}")
+    settings_files.append(
+        _get_identity_provider_settings_file(dev_idp_config_enum, general_cfg_path)
+    )
     # Repository settings. SA_SQL's connection details are already fully
     # described by AppCfg.DEFAULT_SETTINGS, as the baseline repository
     # backend; secrets.repository.sa_sql.toml is loaded only if present, so a
@@ -114,30 +154,9 @@ def set_env_variables(
     # template resolves against whichever variant file is loaded alongside
     # it, regardless of load order, since Dynaconf's @format strings
     # resolve against the fully-merged settings at read time.
-    if dev_repository_config_enum == DevRepositoryConfig.SA_SQL:
-        file = cfg_path / "secrets.repository.sa_sql.toml"
-        if file.is_file():
-            settings_files.append(file)
-    elif dev_repository_config_enum in (
-        DevRepositoryConfig.DICT_DEMO,
-        DevRepositoryConfig.DICT_EMPTY,
-    ):
-        settings_files.append(cfg_path / "settings.repository.dict.toml")
-        if dev_repository_config_enum == DevRepositoryConfig.DICT_DEMO:
-            settings_files.append(cfg_path / "settings.repository.dict.demo.toml")
-        else:
-            settings_files.append(cfg_path / "settings.repository.dict.empty.toml")
-    elif dev_repository_config_enum in (
-        DevRepositoryConfig.SA_SQLITE_DEMO,
-        DevRepositoryConfig.SA_SQLITE_EMPTY,
-    ):
-        settings_files.append(cfg_path / "settings.repository.sa_sqlite.toml")
-        if dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_DEMO:
-            settings_files.append(cfg_path / "settings.repository.sa_sqlite.demo.toml")
-        else:
-            settings_files.append(cfg_path / "settings.repository.sa_sqlite.empty.toml")
-    else:
-        raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
+    settings_files.extend(
+        _get_repository_settings_files(dev_repository_config_enum, cfg_path)
+    )
     # Add any extra settings files at the end
     if extra_settings_files:
         settings_files.extend(extra_settings_files)
@@ -243,140 +262,182 @@ def load_demo_data(
     sa_sqlite_app_cfg_data = cast(dict[str, Any], sa_sqlite_app_cfg.cfg)
     sa_sql_app_cfg_data = cast(dict[str, Any], sa_sql_app_cfg.cfg)
     for service_type in enum.ServiceType:
-        # # TODO: TEMPORARY for debugging, remove later
-        # if service_type.value != "CASE":
-        #     continue
-        dict_repository_cfg = cast(
-            dict[str, Any] | None,
-            cast(dict[str, Any], dict_app_cfg_data["repository"]).get(
-                service_type.value
-            ),
+        _load_demo_data_for_service(
+            app_type,
+            service_type,
+            module_root,
+            domain,
+            dict_app_cfg_data,
+            sa_sqlite_app_cfg_data,
+            sa_sql_app_cfg_data,
+            user_id,
+            connect_timeout,
+            verbose,
         )
-        if not dict_repository_cfg:
-            continue
-        entities = domain.get_dag_sorted_entities(
-            service_type=service_type, persistable=True
+
+
+def _load_demo_data_for_service(
+    app_type: AppType,
+    service_type: Any,
+    module_root: str,
+    domain: Domain,
+    dict_app_cfg_data: dict[str, Any],
+    sa_sqlite_app_cfg_data: dict[str, Any],
+    sa_sql_app_cfg_data: dict[str, Any],
+    user_id: UUID,
+    connect_timeout: float,
+    verbose: bool,
+) -> None:
+    """Create and populate each repository variant for one service type."""
+    # # TODO: TEMPORARY for debugging, remove later
+    # if service_type.value != "CASE":
+    #     continue
+    dict_repository_cfg = cast(
+        dict[str, Any] | None,
+        cast(dict[str, Any], dict_app_cfg_data["repository"]).get(service_type.value),
+    )
+    if not dict_repository_cfg:
+        return
+    entities = domain.get_dag_sorted_entities(
+        service_type=service_type, persistable=True
+    )
+    # Create dict repository, which is assumed to always be available
+    dict_repository_class: type[DictRepository] = dict_repository_cfg["class"]
+    demo_dict_file = Path(dict_repository_cfg["props"]["file"]).resolve()
+    empty_dict_file = Path(str(demo_dict_file).replace(".full.", ".empty.")).resolve()
+    zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
+    start_time = datetime.datetime.now(datetime.timezone.utc)
+    dict_repository: DictRepository = (
+        dict_repository_class.create_repository(  # type: ignore[assignment]
+            entities=entities, file=zip_file
         )
-        # Create dict repository, which is assumed to always be available
-        dict_repository_class: type[DictRepository] = dict_repository_cfg["class"]
-        demo_dict_file = Path(dict_repository_cfg["props"]["file"]).resolve()
-        empty_dict_file = Path(
-            str(demo_dict_file).replace(".full.", ".empty.")
-        ).resolve()
-        zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
-        start_time = datetime.datetime.now(datetime.timezone.utc)
-        dict_repository: DictRepository = (
-            dict_repository_class.create_repository(  # type: ignore[assignment]
-                entities=entities, file=zip_file
-            )
+    )
+    end_time = datetime.datetime.now(datetime.timezone.utc)
+    if verbose:
+        print(
+            f"App {app_type.value}, service {service_type.value}: demo data parsed in {end_time - start_time}s"
         )
-        end_time = datetime.datetime.now(datetime.timezone.utc)
-        if verbose:
-            print(
-                f"App {app_type.value}, service {service_type.value}: demo data parsed in {end_time - start_time}s"
-            )
-        # Write empty and demo dict repository to file
-        start_time = datetime.datetime.now(datetime.timezone.utc)
-        with gzip.open(empty_dict_file, "wb") as handle:
-            pickle.dump({x: {} for x in dict_repository.db}, handle)
-        with gzip.open(demo_dict_file, "wb") as handle:
-            pickle.dump(dict_repository.db, handle)
-        end_time = datetime.datetime.now(datetime.timezone.utc)
-        if verbose:
-            print(
-                f"App {app_type.value}, service {service_type.value}: dict repository written to file in {end_time - start_time}s"
-            )
-        # Create empty and demo SA_SQLITE repositories
-        sa_sqlite_repository_cfg = cast(
-            dict[str, Any],
-            cast(dict[str, Any], sa_sqlite_app_cfg_data["repository"])[
-                service_type.value
-            ],
+    # Write empty and demo dict repository to file
+    start_time = datetime.datetime.now(datetime.timezone.utc)
+    with gzip.open(empty_dict_file, "wb") as handle:
+        pickle.dump({x: {} for x in dict_repository.db}, handle)
+    with gzip.open(demo_dict_file, "wb") as handle:
+        pickle.dump(dict_repository.db, handle)
+    end_time = datetime.datetime.now(datetime.timezone.utc)
+    if verbose:
+        print(
+            f"App {app_type.value}, service {service_type.value}: dict repository written to file in {end_time - start_time}s"
         )
-        sa_repository_class: type[SARepository] = sa_sqlite_repository_cfg["class"]
-        demo_sa_sqlite_file = Path(sa_sqlite_repository_cfg["props"]["file"]).resolve()
-        empty_sa_sqlite_file = Path(
-            str(demo_sa_sqlite_file).replace(".full", ".empty")
-        ).resolve()
-        start_time = datetime.datetime.now(datetime.timezone.utc)
-        # Empty repository
-        sa_repository_class.create_repository(
+    # Create empty and demo SA_SQLITE repositories
+    sa_sqlite_repository_cfg = cast(
+        dict[str, Any],
+        cast(dict[str, Any], sa_sqlite_app_cfg_data["repository"])[service_type.value],
+    )
+    sa_repository_class: type[SARepository] = sa_sqlite_repository_cfg["class"]
+    demo_sa_sqlite_file = Path(sa_sqlite_repository_cfg["props"]["file"]).resolve()
+    empty_sa_sqlite_file = Path(
+        str(demo_sa_sqlite_file).replace(".full", ".empty")
+    ).resolve()
+    start_time = datetime.datetime.now(datetime.timezone.utc)
+    # Empty repository
+    sa_repository_class.create_repository(
+        entities=entities,
+        file=empty_sa_sqlite_file,
+        name=service_type.value,
+        recreate_sqlite_file=True,
+    )
+    # Full repository
+    sa_sqlite_repository: SARepository = (
+        sa_repository_class.create_repository(  # type: ignore[assignment]
             entities=entities,
-            file=empty_sa_sqlite_file,
+            file=demo_sa_sqlite_file,
             name=service_type.value,
             recreate_sqlite_file=True,
         )
-        # Full repository
-        sa_sqlite_repository: SARepository = (
-            sa_repository_class.create_repository(  # type: ignore[assignment]
-                entities=entities,
-                file=demo_sa_sqlite_file,
-                name=service_type.value,
-                recreate_sqlite_file=True,
-            )
+    )
+    create_demo_data_from_repository(
+        user_id, entities, dict_repository, sa_sqlite_repository, module_root
+    )
+    end_time = datetime.datetime.now(datetime.timezone.utc)
+    if verbose:
+        print(
+            f"App {app_type.value}, service {service_type.value}: sa_sqlite repository written to file in {end_time - start_time}s"
         )
-        create_demo_data_from_repository(
-            user_id, entities, dict_repository, sa_sqlite_repository, module_root
-        )
-        end_time = datetime.datetime.now(datetime.timezone.utc)
+    # Create empty SA_SQL repository or loaded with demo data
+    sa_sql_repository_cfg = cast(
+        dict[str, Any],
+        cast(dict[str, Any], sa_sql_app_cfg_data["repository"])[service_type.value],
+    )
+    connection_string = sa_sql_repository_cfg["props"]["connection_string"]
+    if "mssql" in connection_string:
+        connect_args = {
+            "timeout": connect_timeout,
+            "login_timeout": connect_timeout,
+        }
+    elif "pyodcb" in connection_string:
+        connect_args = {
+            "connect_timeout": connect_timeout,
+            "timeout": connect_timeout,
+        }
+    else:
+        connect_args = {}
+    # Warn about files over 100 MB as they cannot be pushed
+    if (
+        demo_sa_sqlite_file.exists()
+        and demo_sa_sqlite_file.is_file()
+        and demo_sa_sqlite_file.stat().st_size > 100 * 1024 * 1024
+    ):
         if verbose:
             print(
-                f"App {app_type.value}, service {service_type.value}: sa_sqlite repository written to file in {end_time - start_time}s"
+                f"WARNING: App {app_type.value}, service {service_type.value}: sa_sql repository file {demo_sa_sqlite_file} is too large ({demo_sa_sqlite_file.stat().st_size / (1024 * 1024):.2f} MB) to be pushed"
             )
-        # Create empty SA_SQL repository or loaded with demo data
-        sa_sql_repository_cfg = cast(
-            dict[str, Any],
-            cast(dict[str, Any], sa_sql_app_cfg_data["repository"])[service_type.value],
-        )
-        connection_string = sa_sql_repository_cfg["props"]["connection_string"]
-        if "mssql" in connection_string:
-            connect_args = {
-                "timeout": connect_timeout,
-                "login_timeout": connect_timeout,
-            }
-        elif "pyodcb" in connection_string:
-            connect_args = {
-                "connect_timeout": connect_timeout,
-                "timeout": connect_timeout,
-            }
-        else:
-            connect_args = {}
-        # Warn about files over 100 MB as they cannot be pushed
-        if (
-            demo_sa_sqlite_file.exists()
-            and demo_sa_sqlite_file.is_file()
-            and demo_sa_sqlite_file.stat().st_size > 100 * 1024 * 1024
-        ):
-            if verbose:
-                print(
-                    f"WARNING: App {app_type.value}, service {service_type.value}: sa_sql repository file {demo_sa_sqlite_file} is too large ({demo_sa_sqlite_file.stat().st_size / (1024 * 1024):.2f} MB) to be pushed"
-                )
-            # demo_sa_sqlite_file.unlink()
-        # Skip load if no connection can be made
-        if exception := sa_repository_class.test_connection(
-            connection_string, **connect_args
-        ):
-            if verbose:
-                print(
-                    # f"App {app_type.value}, service {service_type.value}: sa_sql connection failed: {exception}"
-                    f"App {app_type.value}, service {service_type.value}: sa_sql connection failed"
-                )
-            continue
-        start_time = datetime.datetime.now(datetime.timezone.utc)
-        sa_repository_class.clear_repository_content(
-            entities=entities, connection_string=connection_string
-        )
-        sa_sql_repository: SARepository = (
-            sa_repository_class.create_repository(  # type: ignore[assignment]
-                entities=entities,
-                connection_string=connection_string,
-                name=service_type.value,
+        # demo_sa_sqlite_file.unlink()
+    # Skip load if no connection can be made
+    if exception := sa_repository_class.test_connection(
+        connection_string, **connect_args
+    ):
+        if verbose:
+            print(
+                # f"App {app_type.value}, service {service_type.value}: sa_sql connection failed: {exception}"
+                f"App {app_type.value}, service {service_type.value}: sa_sql connection failed"
             )
+        return
+    start_time = datetime.datetime.now(datetime.timezone.utc)
+    sa_repository_class.clear_repository_content(
+        entities=entities, connection_string=connection_string
+    )
+    sa_sql_repository: SARepository = (
+        sa_repository_class.create_repository(  # type: ignore[assignment]
+            entities=entities,
+            connection_string=connection_string,
+            name=service_type.value,
         )
-        create_demo_data_from_repository(
-            user_id, entities, dict_repository, sa_sql_repository, module_root
-        )
-        end_time = datetime.datetime.now(datetime.timezone.utc)
+    )
+    create_demo_data_from_repository(
+        user_id, entities, dict_repository, sa_sql_repository, module_root
+    )
+    end_time = datetime.datetime.now(datetime.timezone.utc)
+
+
+def _resolve_extra_settings_files(
+    extra_settings_files: list[Path | str] | Path | str | None,
+) -> list[Path] | None:
+    """Validate and resolve optional configuration file paths."""
+    if not extra_settings_files:
+        return None
+    if not isinstance(extra_settings_files, list):
+        extra_settings_files = [extra_settings_files]
+    resolved_files = []
+    for file in extra_settings_files:
+        if not isinstance(file, (str, Path)):
+            raise ValueError("extra_settings_files must be a list of str or Path")
+        file_path = file if isinstance(file, Path) else Path(file)
+        if not file_path.is_file():
+            raise ValueError(
+                f"extra_settings_file {file_path} does not exist or is not a file"
+            )
+        resolved_files.append(file_path.resolve())
+    return resolved_files
 
 
 def get_app_cfgs(
@@ -422,20 +483,7 @@ def get_app_cfgs(
     """
     if isinstance(test_type, Enum):
         test_type = test_type.value
-    resolved_extra_settings_files: list[Path] | None = None
-    if extra_settings_files:
-        if not isinstance(extra_settings_files, list):
-            extra_settings_files = [extra_settings_files]
-        resolved_extra_settings_files = []
-        for file in extra_settings_files:
-            if not isinstance(file, (str, Path)):
-                raise ValueError("extra_settings_files must be a list of str or Path")
-            file_path = file if isinstance(file, Path) else Path(file)
-            if not file_path.is_file():
-                raise ValueError(
-                    f"extra_settings_file {file_path} does not exist or is not a file"
-                )
-            resolved_extra_settings_files.append(file_path.resolve())
+    resolved_extra_settings_files = _resolve_extra_settings_files(extra_settings_files)
     app_cfgs: dict[str, AppCfg] = {}
     for dev_repository_config in DevRepositoryConfig:
         name = f"{test_type}__{dev_repository_config.value}"
@@ -482,29 +530,87 @@ def complete_stored_model_field_props(
     # Complete the stored model field props with default props for all other models/fields
     for model_classes in sorted_models_by_service_type.values():
         for model_class in model_classes:
-            entity = model_class.ENTITY
-            if entity is None:
-                raise ValueError(
-                    f"Model class {model_class.__name__} does not have an ENTITY defined."
-                )
-            if not entity.persistable:
-                if model_class in stored_model_field_props:
-                    raise ValueError(
-                        f"Model class {model_class.__name__} is not persistable but has stored field props defined."
-                    )
-                continue
-            if model_class not in stored_model_field_props:
-                # Add default props for all fields
-                stored_model_field_props[model_class] = {
-                    x: ModelFieldProps() for x in model_class.model_fields
-                }  # Default props
-                continue
-            for field_name in model_class.model_fields:
-                # Add default props for any missing fields
-                if field_name not in stored_model_field_props[model_class]:
-                    stored_model_field_props[model_class][
-                        field_name
-                    ] = ModelFieldProps()  # Default props
+            _complete_model_field_props(model_class, stored_model_field_props)
+
+
+def _complete_model_field_props(
+    model_class: type[fastapp.Model],
+    stored_model_field_props: dict[type[fastapp.Model], dict[str, ModelFieldProps]],
+) -> None:
+    """Validate one model and add defaults for its missing stored fields."""
+    entity = model_class.ENTITY
+    if entity is None:
+        raise ValueError(
+            f"Model class {model_class.__name__} does not have an ENTITY defined."
+        )
+    if not entity.persistable:
+        if model_class in stored_model_field_props:
+            raise ValueError(
+                f"Model class {model_class.__name__} is not persistable but has stored field props defined."
+            )
+        return
+    if model_class not in stored_model_field_props:
+        # Add default props for all fields
+        stored_model_field_props[model_class] = {
+            field_name: ModelFieldProps() for field_name in model_class.model_fields
+        }  # Default props
+        return
+    for field_name in model_class.model_fields:
+        # Add default props for any missing fields
+        if field_name not in stored_model_field_props[model_class]:
+            stored_model_field_props[model_class][
+                field_name
+            ] = ModelFieldProps()  # Default props
+
+
+def _register_service_models(
+    domain: Domain,
+    service_type: Hashable,
+    schema_name: str,
+    model_classes: list[type[Model]],
+    common_model_map: dict[type[Model], type[Model]],
+    set_schema_to_service_type: bool,
+) -> None:
+    """Register one service's models, applying class and schema substitutions."""
+    # Register the models
+    for index, model_class in enumerate(model_classes):
+        if model_class in common_model_map:
+            # Substitute the model class with its commondb implementation,
+            # also in the input
+            model_class = common_model_map[model_class]
+            model_classes[index] = model_class
+        if model_class.ENTITY is None:
+            raise exc.InitializationServiceError(
+                "8d14eae7",
+                f"Entity for model class {model_class} is not initialized.",
+            )
+        if (
+            set_schema_to_service_type
+            and model_class.ENTITY.persistable
+            and model_class.ENTITY.schema_name is None
+        ):
+            model_class.ENTITY.schema_name = schema_name
+        domain.register_entity(
+            model_class.ENTITY, model_class=model_class, service_type=service_type
+        )
+
+
+def _register_service_commands(
+    domain: Domain,
+    service_type: Hashable,
+    command_classes: set[type[Command]],
+    common_command_map: dict[type[Command], type[Command]],
+) -> None:
+    """Register one service's commands, applying common-command substitutions."""
+    # Register the commands
+    for command_class in command_classes.copy():
+        if command_class in common_command_map:
+            # Substitute the command class with its commondb implementation,
+            # also in the input
+            command_classes.remove(command_class)
+            command_class = common_command_map[command_class]
+            command_classes.add(command_class)
+        domain.register_command(command_class, service_type=service_type)
 
 
 def register_domain_entities(
@@ -542,6 +648,8 @@ def register_domain_entities(
     """
     if not common_model_map:
         common_model_map = {}
+    if not common_command_map:
+        common_command_map = {}
     for service_type in sorted_service_types:
         # Register the service type
         domain.register_service_type(service_type)
@@ -550,35 +658,17 @@ def register_domain_entities(
             if isinstance(service_type, Enum)
             else str(service_type)
         )
-        # Register the models
-        for i, model_class in enumerate(
-            sorted_models_by_service_type.get(service_type, [])
-        ):
-            if model_class in common_model_map:
-                # Substitute the model class with its commondb implementation,
-                # also in the input
-                model_class = common_model_map[model_class]
-                sorted_models_by_service_type[service_type][i] = model_class
-            if model_class.ENTITY is None:
-                raise exc.InitializationServiceError(
-                    "8d14eae7",
-                    f"Entity for model class {model_class} is not initialized.",
-                )
-            if (
-                set_schema_to_service_type
-                and model_class.ENTITY.persistable
-                and model_class.ENTITY.schema_name is None
-            ):
-                model_class.ENTITY.schema_name = schema_name
-            domain.register_entity(
-                model_class.ENTITY, model_class=model_class, service_type=service_type
-            )
-        # Register the commands
-        for command_class in commands_by_service_type.get(service_type, []):
-            if common_command_map and command_class in common_command_map:
-                # Substitute the command class with its commondb implementation,
-                # also in the input
-                commands_by_service_type[service_type].remove(command_class)
-                command_class = common_command_map[command_class]
-                commands_by_service_type[service_type].add(command_class)
-            domain.register_command(command_class, service_type=service_type)
+        _register_service_models(
+            domain,
+            service_type,
+            schema_name,
+            sorted_models_by_service_type.get(service_type, []),
+            common_model_map,
+            set_schema_to_service_type,
+        )
+        _register_service_commands(
+            domain,
+            service_type,
+            commands_by_service_type.get(service_type, set()),
+            common_command_map,
+        )
