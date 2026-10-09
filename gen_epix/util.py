@@ -16,12 +16,15 @@ from collections import defaultdict
 from collections.abc import Hashable, Iterable
 from functools import lru_cache, wraps
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 from uuid import UUID
 
 import ulid
 from pydantic import BaseModel, Field
-from pyinstrument import Profiler
+
+if TYPE_CHECKING:
+    # A development dependency, imported at runtime only by profile_method
+    from pyinstrument import Profiler
 
 
 def generate_ulid() -> uuid.UUID:
@@ -354,6 +357,9 @@ def profile_method(path: str | None = None) -> Callable:
     writes a report even when the callable raises. When no path is provided,
     reports are written at the repository root.
 
+    Requires ``pyinstrument``, which is a development dependency and is therefore
+    only imported when this function is called.
+
     Args:
         path: Directory in which profiling logs should be created, or ``None``
             to use the project root.
@@ -361,9 +367,16 @@ def profile_method(path: str | None = None) -> Callable:
     Returns:
         A decorator that profiles the wrapped callable.
     """
+    # Deliberately not imported at the top of the module: pyinstrument is a
+    # development dependency (dev-requirements.txt), and this module is imported
+    # by the remote clients and the applications, which must work without it.
+    # test_general_client_import_isolation.py fails if this moves to the top.
+    # pylint: disable-next=import-outside-toplevel
+    from pyinstrument import Profiler
+
     file_path = Path(path) if path else get_package_root()
 
-    def _write_profile(profiler: Profiler, method_name: str) -> None:
+    def _write_profile(profiler: "Profiler", method_name: str) -> None:
         """Write profiler output to a timestamped log file."""
         filename = (
             f"{method_name}-"

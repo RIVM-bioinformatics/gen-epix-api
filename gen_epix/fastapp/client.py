@@ -15,8 +15,7 @@ import httpx
 import tenacity
 from pydantic import BaseModel as PydanticBaseModel
 
-from gen_epix.fastapp import exc, model
-from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
+from gen_epix.fastapp import exc, literal, model
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.domain.util import get_type_from_annotation
@@ -575,18 +574,10 @@ class Client(App):
         exists_route_suffix: str | None = None,
     ) -> Callable[[Command], Any]:
         """Return a partial handler that maps CRUD operations to HTTP requests."""
-        batch_route_suffix = (
-            batch_route_suffix or CrudEndpointGenerator.DEFAULT_BATCH_ROUTE_SUFFIX
-        )
-        query_route_suffix = (
-            query_route_suffix or CrudEndpointGenerator.DEFAULT_QUERY_ROUTE_SUFFIX
-        )
-        ids_route_suffix = (
-            ids_route_suffix or CrudEndpointGenerator.DEFAULT_IDS_ROUTE_SUFFIX
-        )
-        exists_route_suffix = (
-            exists_route_suffix or CrudEndpointGenerator.DEFAULT_EXISTS_ROUTE_SUFFIX
-        )
+        batch_route_suffix = batch_route_suffix or literal.DEFAULT_BATCH_ROUTE_SUFFIX
+        query_route_suffix = query_route_suffix or literal.DEFAULT_QUERY_ROUTE_SUFFIX
+        ids_route_suffix = ids_route_suffix or literal.DEFAULT_IDS_ROUTE_SUFFIX
+        exists_route_suffix = exists_route_suffix or literal.DEFAULT_EXISTS_ROUTE_SUFFIX
         model_class = command_class.MODEL_CLASS
         entity = model_class.ENTITY
         assert entity is not None

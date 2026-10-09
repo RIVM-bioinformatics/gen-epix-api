@@ -16,6 +16,8 @@ pylint==4.1.*
 mypy==2.4.*
 oauthlib==4.0.0
 coverage==7.16.2
+# profiling, used by gen_epix.util.profile_method
+pyinstrument==5.1.*
 
 
 # stubs

@@ -107,6 +107,8 @@ Project tree (trimmed to the main structure):
 
    **Some hardware architectures (especially Apple M1/M2/M3 chips) require pyodbc to be compiled from source for compatibility***
 
+   When installing Gen-EpiX as a package into another project instead, use `pip install "gen-epix[server]"` to run or compose an application, or plain `pip install gen-epix` to only call the applications through the remote clients.
+
 4. For development, add testing tools:
 
    ```console
