@@ -10,7 +10,8 @@ from uuid import UUID
 
 import pytest
 
-from gen_epix.commondb.domain import command, model
+from gen_epix.commondb.domain import command, exc, model
+from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.commondb.services.organization import OrganizationService
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -162,3 +163,17 @@ class TestRetrieveOwnUser:
         result = service.retrieve_own_user(command.RetrieveOwnUserCommand(user=user))
 
         assert result is user
+
+    def test_retrieve_own_user_without_a_user_is_unauthorized(self) -> None:
+        """Refuse a command that carries no authenticated user."""
+        service = OrganizationService.__new__(OrganizationService)
+
+        with pytest.raises(exc.UnauthorizedAuthError):
+            service.retrieve_own_user(command.RetrieveOwnUserCommand(user=None))
+
+    def test_base_service_leaves_retrieve_own_user_to_concrete_services(self) -> None:
+        """The abstract method has no behaviour of its own."""
+        with pytest.raises(NotImplementedError):
+            BaseOrganizationService.retrieve_own_user(
+                Mock(), command.RetrieveOwnUserCommand(user=None)
+            )
