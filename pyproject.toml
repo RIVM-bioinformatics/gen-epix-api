@@ -41,7 +41,6 @@ dependencies = [
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
     "types-setuptools==84.0.*",
-    "pyinstrument==5.1.*",
     "tenacity==9.2.*",
     "pydantic-settings==2.*",
 ]

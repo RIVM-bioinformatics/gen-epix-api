@@ -26,6 +26,8 @@ SERVER_ONLY_PACKAGES = (
     "python_multipart",
     "cryptography",
     "oauthlib",
+    # Not in the server extra either: a development dependency
+    "pyinstrument",
 )
 
 _BLOCK_SERVER_ONLY_PACKAGES = f"""
