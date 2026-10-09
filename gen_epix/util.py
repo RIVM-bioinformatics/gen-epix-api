@@ -367,6 +367,10 @@ def profile_method(path: str | None = None) -> Callable:
     Returns:
         A decorator that profiles the wrapped callable.
     """
+    # Deliberately not imported at the top of the module: pyinstrument is a
+    # development dependency (dev-requirements.txt), and this module is imported
+    # by the remote clients and the applications, which must work without it.
+    # test_general_client_import_isolation.py fails if this moves to the top.
     # pylint: disable-next=import-outside-toplevel
     from pyinstrument import Profiler
 
