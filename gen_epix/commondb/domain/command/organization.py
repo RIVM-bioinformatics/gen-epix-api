@@ -161,6 +161,16 @@ class RetrieveOrganizationAdminNameEmailsCommand(Command):
     pass
 
 
+class RetrieveOwnUserCommand(Command):
+    """Represents a request to retrieve the executing user.
+
+    The result is the registered user that the request is authenticated as,
+    including its key, roles, and organization.
+    """
+
+    pass
+
+
 class AnonymizeUserCommand(Command):
     """Represents a request to anonymize a target user according to GDPR requirements.
 

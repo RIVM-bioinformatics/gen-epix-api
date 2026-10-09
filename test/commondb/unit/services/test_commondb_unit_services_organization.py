@@ -143,3 +143,22 @@ class TestAnonymizeUser:
         # Both should have the same key (the admin user's ID)
         assert first_anonymized_user.key == str(first_anonymized_user.id)
         assert second_anonymized_user.key == str(second_anonymized_user.id)
+
+
+class TestRetrieveOwnUser:
+    """Verify retrieval of the user a command is executed as."""
+
+    def test_retrieve_own_user_returns_the_command_user(self) -> None:
+        """Return the authenticated user of the command unchanged."""
+        user = model.User(
+            id=UUID("550e8400-e29b-41d4-a716-446655440000"),
+            key="functional-user-sub",
+            roles={"COMMONDB_ADMIN"},
+            organization_id=UUID("550e8400-e29b-41d4-a716-446655440003"),
+            is_active=True,
+        )
+        service = OrganizationService.__new__(OrganizationService)
+
+        result = service.retrieve_own_user(command.RetrieveOwnUserCommand(user=user))
+
+        assert result is user

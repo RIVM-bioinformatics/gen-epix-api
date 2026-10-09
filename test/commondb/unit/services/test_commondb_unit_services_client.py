@@ -840,6 +840,21 @@ class TestNonCrudHandlers:
         assert url == app._routes[command.RetrieveOwnPermissionsCommand]
         assert result == {Permission(**data[0])}
 
+    def test_retrieve_own_user(self, app: CommondbClient, mock_client: Any) -> None:
+        data = {
+            "id": str(uuid4()),
+            "key": "functional-user-sub",
+            "roles": ["ADMIN"],
+            "organization_id": str(uuid4()),
+        }
+        mock_client.request.return_value = _mock_response(data)
+        result = app.retrieve_own_user(command.RetrieveOwnUserCommand(user=None))
+        method, url = mock_client.request.call_args.args
+        assert method == "GET"
+        assert url == app._routes[command.RetrieveOwnUserCommand]
+        assert url.endswith("/user_me")
+        assert result == model.User(**data)
+
     def test_anonymize_user(self, app: CommondbClient, mock_client: Any) -> None:
         tgt_user_id = uuid4()
         mock_client.request.return_value = _mock_response(None)
