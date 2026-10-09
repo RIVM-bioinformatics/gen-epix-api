@@ -51,6 +51,7 @@ class CommondbClient(Client):
             "/data_collection_sets"
         ),
         command.RetrieveOwnPermissionsCommand: "/user_me/permissions",
+        command.RetrieveOwnUserCommand: "/user_me",
         command.AnonymizeUserCommand: "/user",
         command.UpdateUserCommand: "/update_user",
         command.UpdateUserOwnOrganizationCommand: "/update_user_own_organization",
@@ -178,6 +179,7 @@ class CommondbClient(Client):
         self.register_handler(
             command.RetrieveOwnPermissionsCommand, self.retrieve_own_permissions
         )
+        self.register_handler(command.RetrieveOwnUserCommand, self.retrieve_own_user)
         self.register_handler(command.AnonymizeUserCommand, self.anonymize_user)
         self.register_handler(command.UpdateUserCommand, self.update_user)
         self.register_handler(
@@ -456,6 +458,11 @@ class CommondbClient(Client):
         """Retrieve the set of permissions for the authenticated user."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
         return {Permission(**x) for x in response_body}
+
+    def retrieve_own_user(self, cmd: command.RetrieveOwnUserCommand) -> model.User:
+        """Retrieve the user the client is authenticated as."""
+        response_body: dict[str, Any] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
+        return model.User(**response_body)
 
     def anonymize_user(self, cmd: command.AnonymizeUserCommand) -> None:
         """Anonymize a user's personal data."""

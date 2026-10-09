@@ -10,7 +10,8 @@ from uuid import UUID
 
 import pytest
 
-from gen_epix.commondb.domain import command, model
+from gen_epix.commondb.domain import command, exc, model
+from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.commondb.services.organization import OrganizationService
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -143,3 +144,36 @@ class TestAnonymizeUser:
         # Both should have the same key (the admin user's ID)
         assert first_anonymized_user.key == str(first_anonymized_user.id)
         assert second_anonymized_user.key == str(second_anonymized_user.id)
+
+
+class TestRetrieveOwnUser:
+    """Verify retrieval of the user a command is executed as."""
+
+    def test_retrieve_own_user_returns_the_command_user(self) -> None:
+        """Return the authenticated user of the command unchanged."""
+        user = model.User(
+            id=UUID("550e8400-e29b-41d4-a716-446655440000"),
+            key="functional-user-sub",
+            roles={"COMMONDB_ADMIN"},
+            organization_id=UUID("550e8400-e29b-41d4-a716-446655440003"),
+            is_active=True,
+        )
+        service = OrganizationService.__new__(OrganizationService)
+
+        result = service.retrieve_own_user(command.RetrieveOwnUserCommand(user=user))
+
+        assert result is user
+
+    def test_retrieve_own_user_without_a_user_is_unauthorized(self) -> None:
+        """Refuse a command that carries no authenticated user."""
+        service = OrganizationService.__new__(OrganizationService)
+
+        with pytest.raises(exc.UnauthorizedAuthError):
+            service.retrieve_own_user(command.RetrieveOwnUserCommand(user=None))
+
+    def test_base_service_leaves_retrieve_own_user_to_concrete_services(self) -> None:
+        """The abstract method has no behaviour of its own."""
+        with pytest.raises(NotImplementedError):
+            BaseOrganizationService.retrieve_own_user(
+                Mock(), command.RetrieveOwnUserCommand(user=None)
+            )
