@@ -23,6 +23,9 @@ def upgrade() -> None:
     op.add_column(
         "case", sa.Column("timed_at", sa.DateTime(), nullable=True), schema="case"
     )
+    # TODO: LSP-3893 Existing non-null case_date values are lost; expected: preserve
+    # them in timed_at; actual: timed_at remains NULL. Uncertain whether timed_at
+    # should instead be recomputed from case content during migration.
     op.drop_column("case", "case_date", schema="case")
     op.alter_column(
         "case_set",

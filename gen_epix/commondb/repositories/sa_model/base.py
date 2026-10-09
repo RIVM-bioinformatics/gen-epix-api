@@ -23,6 +23,9 @@ class RowMetadataMixin:
         server_default=ServerUtcCurrentTime(),
         onupdate=ServerUtcCurrentTime(),
     )
+    # TODO: LSP-3893 A persisted NULL modified_by is allowed by nullable=True, but this
+    # annotation advertises UUID rather than None; confirm whether nulls are valid
+    # existing audit data or whether the column should instead be non-nullable.
     modified_by: Mapped[UUID] = mapped_column(UUIDType(), nullable=True)
 
 

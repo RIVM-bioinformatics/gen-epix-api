@@ -18,6 +18,10 @@ revision = "b9c5e10bf42c"
 down_revision = None
 branch_labels = None
 depends_on = None
+# TODO: LSP-3893 When this revision targets SQLite, the expected schema creation
+# and UTC timestamp defaults can fail because SQLite does not support
+# `GETUTCDATE()`; confirm whether SQLite is a supported Alembic target before
+# choosing a portable expression or declaring this migration SQL Server-only.
 _DEFAULT_UTC_TIMESTAMP_SQL = "GETUTCDATE()"
 _ORGANIZATION_ID_FK_TARGET = "organization.organization.id"
 

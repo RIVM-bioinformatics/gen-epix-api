@@ -58,6 +58,10 @@ class CacheStatistics:
         """Return the fraction of reads served from cache, or 0.0 when idle."""
         return self.hits / self.requests if self.requests else 0.0
 
+    # TODO: LSP-3893 A failed-only load (for example, a 2s loader) reports 0.0 because
+    # failures count in the denominator but caller paths record elapsed time only on
+    # success. Confirm whether failed attempts belong in the average; if so, expected
+    # is measured elapsed time, while actual is 0.0.
     @property
     def average_load_seconds(self) -> float:
         """Return the mean loader duration, or 0.0 when nothing was loaded."""

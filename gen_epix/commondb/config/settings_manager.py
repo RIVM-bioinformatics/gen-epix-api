@@ -80,6 +80,10 @@ class SettingsManager:
                 validators=validators,
             )
             settings.validators.validate_all()
+            # TODO: LSP-3893 After load_settings() with constructor-supplied
+            # settings_files, settings and get_setting() raise RuntimeError
+            # instead of exposing the loaded settings. Confirm whether this
+            # explicit-file mode should populate the manager cache.
             return settings
         settings_files_envvar = (
             settings_files_envvar or self.DEFAULT_SETTINGS_FILES_ENVVAR

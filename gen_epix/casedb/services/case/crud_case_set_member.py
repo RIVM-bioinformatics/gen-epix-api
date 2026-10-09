@@ -106,4 +106,8 @@ def _crud_case_set_member_with_abac(
 
     # return _crud_data_by_non_admin(self, uow, cmd)  # type: ignore[return-value]
     # !FIXME: Temporary workaround until the complex ABAC logic is implemented
+    # TODO: LSP-3893 When a non-exempt user retrieves a member linked to an
+    # inaccessible case or case set, results should be ABAC-filtered, but this
+    # delegation returns them unrestricted. Confirm whether both access scopes
+    # must constrain the row-level check.
     return self.crud(cmd)  # type: ignore[return-value]

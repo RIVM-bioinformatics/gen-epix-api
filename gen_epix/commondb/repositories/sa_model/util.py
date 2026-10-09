@@ -184,6 +184,9 @@ def create_composite_primary_key_mapper_args(
         sa_field_names = [
             field_name_map[model_class].get(x, x) for x in entity.get_field_names()
         ]
+    # TODO: LSP-3893 With `mapper_args={"eager_defaults": True}`, retain that option
+    # alongside the derived `primary_key`; this return currently drops it. Clarify
+    # whether a caller-provided `primary_key` should override the derived fields.
     return {"primary_key": sa_field_names}
 
 

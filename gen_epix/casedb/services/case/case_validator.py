@@ -1022,6 +1022,9 @@ class CaseValidator:
         if new_value == orig_updated_value:
             # Same value, no need to log data issue
             return
+        # TODO: LSP-3893 When a source derives a value that differs from an uploaded
+        # target, this assignment precedes conflict detection and reports DERIVED
+        # instead of CONFLICT; confirm the intended conflict details before repair.
         updated_content[col_pair[1]] = new_value
 
         # Log data issue in validation report

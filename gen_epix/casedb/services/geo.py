@@ -11,4 +11,7 @@ class GeoService(BaseGeoService):
         self, cmd: command.RetrieveContainingRegionCommand
     ) -> list[model.Region | None]:
         """See base method."""
+        # TODO: LSP-3893 For a containment command with locations, the base
+        # contract expects aligned Region/None entries, but this returns None.
+        # Confirm whether casedb should resolve containment here or delegate.
         ...

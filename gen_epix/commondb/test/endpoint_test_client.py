@@ -363,6 +363,9 @@ class EndpointTestClient:
             "iss": iss or f"https://{uuid.uuid4()}.org",
             "sub": sub or str(uuid.uuid4()),
             "aud": aud or str(uuid.uuid4()),
+            # TODO: LSP-3893 With exp=0, preserve the explicit expired-at claim;
+            # this truthiness fallback instead creates a future expiration. Confirm
+            # whether zero is valid under the test client's expiration contract.
             "exp": exp
             or datetime.now(timezone.utc) + timedelta(minutes=expire_default_minutes),
         }

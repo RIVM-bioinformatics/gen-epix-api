@@ -7,6 +7,9 @@ from typing import Any
 class DomainException(Exception):
     """Base error that carries a stable application error code and message."""
 
+    # TODO: LSP-3893 ServiceUnavailableError("E") sets a default message, but
+    # str(error) retains the original argument; confirm whether logs should show
+    # the effective message or preserve the code before changing exception output.
     def __init__(self, code: str, message: str | None):
         """Initialize a DomainException instance."""
         self.code = code

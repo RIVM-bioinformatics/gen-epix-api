@@ -35,6 +35,9 @@ def _crud_col_set_without_abac(
     cmd: command.ColSetCrudCommand,
 ) -> list[model.ColSet] | model.ColSet | list[UUID] | UUID | list[bool] | bool | None:
     """ColSet admin command handling, no ABAC applied."""
+    # TODO: LSP-3893 An organization-scoped user can reach unfiltered ColSet CRUD;
+    # expected access-limited results/writes may expose unrelated columns. The
+    # visibility rule for sets with mixed-access members is unresolved.
     return self.crud(cmd)  # type: ignore[return-value]
 
 

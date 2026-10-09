@@ -38,6 +38,9 @@ class BaseRemoteService(BaseService):
         cmd: Command,
     ) -> Any:
         """Handle the requested value."""
+        # TODO: LSP-3893 With default use_endpoints=True, handling any command raises
+        # NotImplementedError instead of forwarding it to the remote client; confirm
+        # whether endpoint transport is intentionally unsupported or should work here.
         if self.use_endpoints:
             raise NotImplementedError()
         else:

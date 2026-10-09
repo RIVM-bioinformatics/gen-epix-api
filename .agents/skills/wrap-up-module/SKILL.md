@@ -13,6 +13,11 @@ final PR-readiness audit. Complete the steps below in order. The final filesyste
 operation is writing the proposed commit message snippet to the module-specific
 path described in Step 6.
 
+Respect explicit user approval constraints. Do not invoke tools or commands that
+require a manual Allow action. Use an auto-approved equivalent when available;
+if a required gate cannot be run without manual approval, report the module as
+blocked and do not write its commit snippet.
+
 ## 1. Validate the Target and Inventory Its Changes
 
 1. Require exactly one existing `.py` source path beneath `gen_epix/`. If none is 
@@ -27,6 +32,12 @@ path described in Step 6.
    whose launch entry must be added in a later, centralized update. This is an
    explicit workflow exception for parallel module work; it defers only launch
    configuration and does not waive the other test-path requirements.
+4. Scan the module for any lines containing `TODO: LSP-3893`. If one or more are
+   found, this means that the module has already been processed. In a
+   queued batch, mark only this module blocked/deferred and immediately continue
+   with the next pending module in that worker slot; do not ask the user to
+   choose among resolutions. Do not edit tests, silently fix production code,
+   encode suspected buggy behavior, or hide it with skip/xfail.
 
 ## 2. Reconcile and Update This Module's Unit Test
 
@@ -35,12 +46,22 @@ path described in Step 6.
    and do not check if other related canonical tests may cover functionality that
    should be covered by this test. Do not edit `launch.json`.
 2. If the logic review finds a likely implementation defect, stop before test
-   edits and explain the exact source location (as a clickable link), triggering 
-   input, expected versus actual behavior, and uncertainty. Ask whether to fix 
-   production code first, clarify the contract, or explicitly authorize a regression
-   test. Do not silently fix production code, encode suspected buggy behavior, or hide
-   it with skip/xfail. If a likely defect emerges later, stop and apply the same 
-   approval gate.
+   edits. Before stopping, add one inline comment directly above the implicated
+   production code in this form:
+
+   ```python
+   # TODO: LSP-3893 <triggering input; expected versus actual behavior; unresolved
+   # contract question or uncertainty>
+   ```
+
+   Include enough detail to record the suspected defect without changing its
+   behavior. Then report the exact source location (as a clickable link),
+   triggering input, expected versus actual behavior, and uncertainty. In a
+   queued batch, mark only this module blocked/deferred and immediately continue
+   with the next pending module in that worker slot; do not ask the user to
+   choose among resolutions. Do not edit tests, silently fix production code,
+   encode suspected buggy behavior, or hide it with skip/xfail. If a likely
+   defect emerges later, add the TODO comment and defer that module the same way.
 3. Factor only this target's relevant tests into its canonical module and reuse 
    appropriate fixtures
 

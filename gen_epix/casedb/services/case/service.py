@@ -885,6 +885,9 @@ class CaseService(BaseCaseService):
 
         # Calculate case date if necessary
         if calculate_case_date and case_date_col_mappers:
+            # TODO: LSP-3893 If an inaccessible case has malformed date content,
+            # conversion can fail instead of returning accessible cases only.
+            # Confirm inaccessible records must not affect date conversion.
             case_service_calculate_case_date(cases, case_date_col_mappers)
 
         return filtered_cases, is_max_results_exceeded

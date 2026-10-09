@@ -7,7 +7,7 @@ from __future__ import (  # Resolves pylint not recognizing Mapped as subscripta
 
 from uuid import UUID
 
-import sqlalchemy.orm as orm
+from sqlalchemy import orm
 from sqlalchemy.orm import Mapped, relationship
 
 from gen_epix.casedb.domain import DOMAIN, enum, model

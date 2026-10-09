@@ -863,6 +863,10 @@ class TestClient:
             linked_objs = self.read_some(user, linked_model_class, list(linked_obj_ids))
             linked_obj_map = {x.get_id(): x for x in linked_objs}
             for obj in objs:
+                # TODO: LSP-3893 When cascade=True reads an object with a populated
+                # link field, preserve its ID and attach the loaded object through
+                # relationship_field_name; this currently replaces the ID field with
+                # a one-item object list. Confirm the intended relationship shape.
                 setattr(
                     obj,
                     link_field_name,

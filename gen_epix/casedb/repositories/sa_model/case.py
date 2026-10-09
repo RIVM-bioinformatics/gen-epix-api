@@ -67,6 +67,11 @@ class TreeAlgorithm(Base, RowMetadataMixin):
     tree_algorithm_class: Mapped[TreeAlgorithmClass] = relationship(
         TreeAlgorithmClass, foreign_keys=[tree_algorithm_class_id]
     )
+    # TODO: LSP-3893 When consumers inspect TreeAlgorithm.__table__.c.rank.doc,
+    # expected metadata describes TreeAlgorithm.rank; it currently describes
+    # TreeAlgorithmClass.rank because create_mapped_column receives that model.
+    # Confirm whether consumers rely on the current SQLAlchemy metadata before
+    # changing the mapping.
     rank: Mapped[int | None] = create_mapped_column(
         DOMAIN, model.TreeAlgorithmClass, "rank"
     )

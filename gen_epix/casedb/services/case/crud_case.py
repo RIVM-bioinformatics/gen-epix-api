@@ -26,6 +26,9 @@ def case_service_crud_case(
         pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
         if pdp.is_exempted(cmd):
             return _crud_case_without_abac(self, uow, cmd)
+        # TODO: LSP-3893 A non-exempted CaseCrudCommand reaches this branch; expected
+        # ABAC handling via _crud_case_with_abac, but it raises AssertionError. Confirm
+        # whether Case ABAC is intentionally disabled before enabling the handler.
         raise AssertionError("CRUD Case with ABAC not expected to be allowed")
         # return _crud_case_with_abac(self, uow, cmd)
 
