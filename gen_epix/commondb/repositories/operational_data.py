@@ -1,4 +1,8 @@
-"""Provide failure-safe dictionary clearing for app-specific operational resets."""
+"""Provide dictionary-backed operational-data reset support.
+
+`delete_dict_operational_data` clears explicitly selected tables in place and
+restores their contents if a clear fails.
+"""
 
 from collections.abc import Hashable, Iterable
 

@@ -1,4 +1,9 @@
-"""UUID set-membership filter models."""
+"""Match values against configured UUID membership sets.
+
+This module provides `UuidSetFilter`, a `Filter` implementation that normalizes
+members to UUIDs and matches values by set membership. Row handling, inversion,
+and missing-value behavior are delegated to the base `Filter` contract.
+"""
 
 from typing import Any, Literal, Self
 from uuid import UUID

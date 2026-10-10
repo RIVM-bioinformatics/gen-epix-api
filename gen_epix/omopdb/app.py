@@ -44,5 +44,5 @@ FAST_API = create_fast_api(
     },
 )
 
-# TODO: app variable added for backwards compatibility with startup code that imports "app". Remove once that code is updated as well.
+# Keep the `app` alias while startup code still imports it.
 app = FAST_API

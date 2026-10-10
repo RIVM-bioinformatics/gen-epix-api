@@ -1,4 +1,8 @@
-"""Define commondb organization, user, invitation, and association commands."""
+"""Define commands for commondb organizations, users, invitations, and associations.
+
+These Pydantic request models bind CRUD and association operations to their domain
+models and declare service-handler inputs; they do not perform persistence.
+"""
 
 from typing import ClassVar
 from uuid import UUID
@@ -96,11 +100,9 @@ class RegisterInvitedUserCommand(Command):
 
 
 class RetrieveOrganizationContactsCommand(Command):
-    """Represents a request to retrieve {contact}s associated with organizations, sites, or specific contacts.
+    """Represents a request to retrieve contacts associated with one organization.
 
-    Exactly one of organization_ids, site_ids, or contact_ids must be provided.
-    Returns a list of contacts with their associated site and organization data
-    cascaded.
+    Returns contacts with their associated site and organization data cascaded.
     """
 
     __doc__ = str(__doc__).format(contact=model.Contact.__name__)
@@ -121,10 +123,10 @@ class UpdateUserCommand(Command):
     __doc__ = str(__doc__).format(user=model.User.__name__)
 
     tgt_user_id: UUID = Field(description="The ID of the user to update")
-    is_active: bool | None = copy_model_field(model.User, "is_active")
-    roles: set[str] | None = copy_model_field(model.User, "roles")
+    is_active: bool | None = copy_model_field(model.User, "is_active", default=None)
+    roles: set[str] | None = copy_model_field(model.User, "roles", default=None)
     organization_id: UUID | None = Field(
-        description="The organization ID the user belongs to"
+        default=None, description="The organization ID the user belongs to"
     )
 
 

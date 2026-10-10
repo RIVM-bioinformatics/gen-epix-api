@@ -13,10 +13,32 @@ final PR-readiness audit. Complete the steps below in order. The final filesyste
 operation is writing the proposed commit message snippet to the module-specific
 path described in Step 6.
 
-Respect explicit user approval constraints. Do not invoke tools or commands that
-require a manual Allow action. Use an auto-approved equivalent when available;
-if a required gate cannot be run without manual approval, report the module as
-blocked and do not write its commit snippet.
+## 0. Constraints
+
+1. Use the shared checkout. Do not create worktrees.
+2. Do not edit .vscode/launch.json;
+3. Do not stage, commit, or push.
+4. Do not perform, under any circumstance, operations that cannot be auto-approved
+   and would thus have to be approved manually. Use an auto-approved equivalent when
+   available; if a required gate cannot be run without manual approval, report the 
+   module as blocked and do not write its commit snippet.Use an auto-approved 
+   equivalent when available; if a required gate cannot be run without manual approval,
+   report the module as blocked and do not write its commit snippet.
+5. Process the module using the wrap-up-module skill.
+5. Stay within the assigned module and its necessary test/docstring work. Do not 
+   edit shared fixtures, conftest.py, or another worker's files concurrently.
+6. If a likely production defect is found as part of the code logic assessment, put
+   the skill-required details and questions in a "# TODO: LSP-3893 <details>" inline
+   comment above the code in question. Then, stop work on that module so the
+   orchestrator can assign a new one. Do not, under any circumstance, prompt for
+   further action.
+7. Scan the module using a Python script for any lines containing `TODO: LSP-3893`.
+   If one or more are found, this means that the module has already been processed.
+   In a queued batch, mark only this module blocked/deferred and immediately continue
+   with the next pending module in that worker slot; do not ask the user to
+   choose among resolutions. Do not edit tests, silently fix production code,
+   encode suspected buggy behavior, or hide it with skip/xfail.
+
 
 ## 1. Validate the Target and Inventory Its Changes
 
@@ -28,23 +50,18 @@ blocked and do not write its commit snippet.
    [create-unit-test](../create-unit-test/SKILL.md). Keep the source module and
    that test as the primary scope; include other files only when they are
    necessary consequences of work on this module.
-3. Do not edit `.vscode/launch.json`. Record every newly created test directory
-   whose launch entry must be added in a later, centralized update. This is an
-   explicit workflow exception for parallel module work; it defers only launch
-   configuration and does not waive the other test-path requirements.
-4. Scan the module for any lines containing `TODO: LSP-3893`. If one or more are
-   found, this means that the module has already been processed. In a
-   queued batch, mark only this module blocked/deferred and immediately continue
-   with the next pending module in that worker slot; do not ask the user to
-   choose among resolutions. Do not edit tests, silently fix production code,
-   encode suspected buggy behavior, or hide it with skip/xfail.
+3. Do not edit `.vscode/launch.json`, contrary to what the create-unit-test task 
+   instructs. Record every newly created test directory whose launch entry must 
+   be added in a later, centralized update. This is an explicit workflow exception
+   for parallel module work; it defers only launch configuration and does not waive
+   the other test-path requirements.
 
 ## 2. Reconcile and Update This Module's Unit Test
 
-1. Load [create-unit-test](../create-unit-test/SKILL.md) and apply it only to the
-   specified module. Do not search for tests outside its canonical unit-test path
-   and do not check if other related canonical tests may cover functionality that
-   should be covered by this test. Do not edit `launch.json`.
+1. Apply `create-unit-test` only to the specified module. Do not search for tests
+   outside its canonical unit-test path and do not check if other related canonical
+   tests may cover functionality that should be covered by this test. Do not edit 
+   `launch.json`.
 2. If the logic review finds a likely implementation defect, stop before test
    edits. Before stopping, add one inline comment directly above the implicated
    production code in this form:

@@ -6,8 +6,6 @@ from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.commondb.policies import (
     IsOrganizationAdminPolicy as CommonIsOrganizationAdminPolicy,
 )
-from gen_epix.omopdb.domain import model
-from gen_epix.omopdb.domain.policy import COMMON_ROLE_MAP
 
 
 class IsOrganizationAdminPolicy(CommonIsOrganizationAdminPolicy):
@@ -21,7 +19,5 @@ class IsOrganizationAdminPolicy(CommonIsOrganizationAdminPolicy):
         """Initialize the policy with OmopDB users and role mappings."""
         super().__init__(
             abac_service,
-            role_map=COMMON_ROLE_MAP,  # type: ignore[arg-type]
-            user_class=model.User,
             **kwargs,
         )

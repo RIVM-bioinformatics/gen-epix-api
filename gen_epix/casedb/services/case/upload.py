@@ -954,6 +954,9 @@ class CaseBatchUploader(BatchUploader):
         if has_id and sample_id in sample_id_to_index_map:
             assert sample_id is not None
             return sample_id_to_index_map[sample_id]
+        # TODO: LSP-3893 Distinct non-null sample IDs paired with one alternate
+        # identifier are merged into the first sample; should inconsistent mappings
+        # across cases and child groups be rejected instead?
         if has_external_id and external_sample_id in sample_external_id_to_index_map:
             return sample_external_id_to_index_map[external_sample_id]
         # New sample for upload: create

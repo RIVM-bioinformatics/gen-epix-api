@@ -1,4 +1,8 @@
-"""Expose seqdb api.organization API adapters and request representations."""
+"""Expose seqdb command permissions as API payload models.
+
+`CommandName` mirrors the registered seqdb commands, and `ApiPermission` copies
+the shared permission field configuration for API validation and serialization.
+"""
 
 from enum import Enum
 

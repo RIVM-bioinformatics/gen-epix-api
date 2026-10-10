@@ -64,6 +64,8 @@ class RetrieveSpecimenIdsByCohortIdsCommand(Command):
     """
 
     cohort_definition_id: UUID = Field(description="The cohort definition ID.")
+    # TODO: LSP-3893 Duplicate cohort IDs pass command validation despite the UNIQUE
+    # contract; repositories treat them as a set. Confirm whether to reject or normalize.
     cohort_ids: list[UUID] = Field(description="The cohort IDs to look up. UNIQUE")
 
 

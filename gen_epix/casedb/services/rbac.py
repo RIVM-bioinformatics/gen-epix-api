@@ -1,4 +1,7 @@
-"""Configure role-based authorization for the casedb role hierarchy."""
+"""Bind the shared RBAC service to the casedb role hierarchy.
+
+`RbacService` supplies the casedb role enumeration to shared authorization behavior.
+"""
 
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.services import RbacService as CommonRbacService

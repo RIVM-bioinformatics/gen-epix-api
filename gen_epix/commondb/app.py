@@ -30,6 +30,9 @@ APP_CFG = AppCfg(APP_NAME, enum.ServiceType, enum.RepositoryType)
 APP_COMPOSER = AppComposer(APP_CFG)
 
 # Create fastapi
+# TODO: LSP-3893 Importing `gen_epix.commondb.app` passes shared `SCHEMA_KWARGS`
+# to `create_fast_api`; expected: the config remains unchanged; actual: it gains
+# `routes`. Confirm whether this mutation is part of the setup contract.
 FAST_API = create_fast_api(
     app=APP_COMPOSER.app,
     setup_logger=APP_CFG.setup_logger,

@@ -47,6 +47,10 @@ def seq_service_crud_ast_measurement(
         # TODO: Specific logic for delete operation to be added, e.g. check for foreign key constraints before deletion
         pass
 
+    # TODO: LSP-3893 Valid UPSERT_ONE/UPSERT_SOME commands with AST measurement
+    # objects pass CrudCommand validation but raise here instead of delegating to
+    # self.crud(cmd); confirm AST measurement upserts are intended before changing
+    # the supported-operation contract.
     else:
         raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 

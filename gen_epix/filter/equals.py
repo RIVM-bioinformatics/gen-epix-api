@@ -1,4 +1,8 @@
-"""Generic equality filter implementation."""
+"""Provide generic value equality filtering through the shared Filter API.
+
+EqualsFilter defines scalar equality matching and inherits column and row
+filtering behavior from Filter.
+"""
 
 from typing import Any
 
