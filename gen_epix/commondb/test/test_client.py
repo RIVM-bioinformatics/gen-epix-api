@@ -144,10 +144,10 @@ class TestClient:
             default_route_prefix or self.DEFAULT_ROUTE_PREFIX_VALUE
         )
         self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(
-            "endpoint_test_client"
+            "endpoint_test_client", None
         )
         self.app_last_handled_exception: dict | None = kwargs.pop(
-            "app_last_handled_exception"
+            "app_last_handled_exception", None
         )
         if self.use_endpoints:
             if not self.endpoint_test_client:
@@ -191,7 +191,13 @@ class TestClient:
             NotImplementedError: If `on_missing` is unsupported.
         """
         if isinstance(obj, list):
-            return [cast(model.Model, self.get_obj(model_class, x)) for x in obj]
+            return [
+                cast(
+                    model.Model,
+                    self.get_obj(model_class, x, copy=copy, on_missing=on_missing),
+                )
+                for x in obj
+            ]
         if model_class not in self.db:
             self.db[model_class] = {}
         table = self.db[model_class]
@@ -863,14 +869,11 @@ class TestClient:
             linked_objs = self.read_some(user, linked_model_class, list(linked_obj_ids))
             linked_obj_map = {x.get_id(): x for x in linked_objs}
             for obj in objs:
-                # TODO: LSP-3893 When cascade=True reads an object with a populated
-                # link field, preserve its ID and attach the loaded object through
-                # relationship_field_name; this currently replaces the ID field with
-                # a one-item object list. Confirm the intended relationship shape.
+                linked_obj_id = getattr(obj, link_field_name)
                 setattr(
                     obj,
-                    link_field_name,
-                    [linked_obj_map[getattr(obj, link_field_name)]],
+                    relationship_field_name,
+                    linked_obj_map[linked_obj_id],
                 )
 
     def read_some(

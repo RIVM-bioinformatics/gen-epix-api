@@ -183,7 +183,9 @@ def _get_allele_ids_for_profile(
         return allele_ids
     if profile.content:
         if profile.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
-            return profile.get_allele_ids()
+            allele_ids = profile.get_allele_ids()
+            profile.allele_ids = allele_ids
+            return allele_ids
         profile_result.add_error(
             "a6097022",
             f"Allele profile format {profile.format} is not supported for upload",

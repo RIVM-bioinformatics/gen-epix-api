@@ -3,12 +3,13 @@
 import datetime
 import json
 from collections.abc import Iterable, Sequence
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, computed_field, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model.base import validate_int_enum_value
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
@@ -196,6 +197,46 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
         description="A mapping from locus codes to repeat numbers for all detected loci, in any order and if available. Undetected loci must have None as repeat number or may be omitted. Must be present if kmer_profile is not provided: these 2 properties are different representations of the same data that can be chosen between.",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_json_profile_has_representation(cls, value: Any) -> Any:
+        """Reject empty MLVA and k-mer uploads before inherited JSON parsing."""
+        if not isinstance(value, dict):
+            return value
+        profile_type_value = value.get("seq_profile_type")
+        if profile_type_value is None:
+            return value
+        try:
+            profile_type = enum.SeqProfileType(
+                validate_int_enum_value(enum.SeqProfileType, profile_type_value)
+            )
+        except (KeyError, ValueError):
+            return value
+
+        representation_fields = {
+            enum.SeqProfileType.MLVA: (
+                "content",
+                "repeat_numbers",
+                "locus_repeat_number_map",
+            ),
+            enum.SeqProfileType.SNP: ("content", "aligned_nucleotide_seq"),
+            enum.SeqProfileType.KMER: ("content", "kmer_frequency_map"),
+        }.get(profile_type)
+        if representation_fields is None:
+            return value
+
+        for field_name in representation_fields:
+            if (
+                value.get(field_name, "") != ""
+                if field_name == "content"
+                else value.get(field_name) is not None
+            ):
+                return value
+        raise ValueError(
+            "Exactly one of "
+            f"{cls._get_representation_list(representation_fields)} must be provided."
+        )
+
     @staticmethod
     def _get_representation_list(field_names: tuple[str, ...]) -> str:
         """Format representation names for a validation error message."""
@@ -286,8 +327,17 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
             ValueError: If representations conflict, map data lacks a code map, or a
                 supplied hash differs from the derived allele-profile hash.
         """
-        # Already normalized (content was derived from allele_ids on a prior validation pass)
-        if self.content != "" and self.allele_ids is not None:
+        # Preserve idempotent validation while rejecting contradictory representations.
+        if (
+            self.content != ""
+            and self.allele_ids is not None
+            and self.locus_allele_id_map is None
+        ):
+            expected_content = SeqProfile.get_ordered_allele_ids_representation(
+                self.allele_ids
+            )
+            if self.content != expected_content:
+                raise ValueError("Provided content does not match allele_ids")
             return self
         self._validate_exactly_one_representation(
             (
@@ -322,8 +372,19 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
             ValueError: If representations conflict, map data lacks a code map, or a
                 supplied hash differs from the derived MLVA-profile hash.
         """
-        # Already normalized (content was derived from repeat_numbers on a prior validation pass)
-        if self.content != "" and self.repeat_numbers is not None:
+        # Preserve idempotent validation while rejecting contradictory representations.
+        if (
+            self.content != ""
+            and self.repeat_numbers is not None
+            and self.locus_repeat_number_map is None
+        ):
+            expected_repeat_numbers = json.loads(
+                SeqProfile.get_ordered_repeat_numbers_representation(
+                    self.repeat_numbers
+                )
+            )
+            if json.loads(self.content) != expected_repeat_numbers:
+                raise ValueError("Provided content does not match repeat_numbers")
             return self
         self._validate_exactly_one_representation(
             (
@@ -363,8 +424,10 @@ class SeqProfileForUpload(SeqProfile, IdentifiersMixin, ValidateRefDataIdCodeMix
             ValueError: If representations conflict or a supplied hash differs from
                 the derived k-mer-profile hash.
         """
-        # Already normalized (content was derived from kmer_frequency_map on a prior validation pass)
+        # Preserve idempotent validation while rejecting contradictory representations.
         if self.content != "" and self.kmer_frequency_map is not None:
+            if json.loads(self.content) != self.kmer_frequency_map:
+                raise ValueError("Provided content does not match kmer_frequency_map")
             return self
         self._validate_exactly_one_representation(
             (

@@ -559,7 +559,6 @@ class CaseService(BaseCaseService):
         case_type_id: UUID | None = None,
         case_set_ids: list[UUID] | None = None,
         filter: Filter | None = None,
-        on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
         """Retrieve case sets for which a user has a content right.
 
@@ -576,21 +575,17 @@ class CaseService(BaseCaseService):
             case_type_id: Optional case type restriction.
             case_set_ids: Optional requested case-set identifiers.
             filter: Repository filter used only when IDs are not supplied.
-            on_invalid_case_set_id: Whether inaccessible requested IDs raise or are
-                ignored.
 
         Returns:
             Accessible case sets satisfying the supplied restrictions.
 
         Raises:
-            InvalidArgumentsError: If the right or invalid-ID mode is unsupported,
-                or requested sets have an incompatible case type.
-            UnauthorizedAuthError: If a requested set is inaccessible and raising is
-                configured.
-            AssertionError: If an unsupported invalid-ID mode reaches validation.
+            InvalidArgumentsError: If the right is invalid or a requested set has an
+                incompatible case type.
+            UnauthorizedAuthError: If a requested set is inaccessible.
         """
         # TODO: This is a temporary implementation, to be replaced by optimized query
-        self.validate_case_right(right, on_invalid_case_set_id)
+        self.validate_case_right(right)
         case_sets: list[model.CaseSet] = self.repository.crud(
             uow,
             user_id,
@@ -606,7 +601,9 @@ class CaseService(BaseCaseService):
         # call to the repository
         if case_type_id is not None:
             case_sets = self._filter_case_sets_by_same_case_type_id(
-                case_type_id, case_set_ids, on_invalid_case_set_id, case_sets
+                case_sets,
+                case_set_ids,
+                case_type_id,
             )
         if case_abac.is_full_access:
             return case_sets
@@ -621,8 +618,7 @@ class CaseService(BaseCaseService):
                 self._validate_case_set_access(
                     case_set,
                     user_id,
-                    case_set_ids,
-                    on_invalid_case_set_id,
+                    case_set_ids is not None,
                     case_set_data_collections,
                     has_access,
                 )
@@ -633,8 +629,7 @@ class CaseService(BaseCaseService):
                 if self._validate_case_set_access(
                     case_set,
                     user_id,
-                    None,
-                    on_invalid_case_set_id,
+                    False,
                     case_set_data_collections,
                     has_access,
                 ):
@@ -674,8 +669,7 @@ class CaseService(BaseCaseService):
         self,
         case_set: model.CaseSet,
         user_id: UUID,
-        case_set_ids: list[UUID] | None,
-        on_invalid_case_set_id: str,
+        raise_on_no_access: bool,
         case_set_data_collections: dict[UUID, set[UUID]],
         has_access: dict[UUID, set[UUID]],
     ) -> bool:
@@ -684,9 +678,7 @@ class CaseService(BaseCaseService):
         Args:
             case_set: Case set to authorize.
             user_id: User identifier included in authorization errors.
-            case_set_ids: Requested IDs, or ``None`` for a filter-only read.
-            on_invalid_case_set_id: Whether inaccessible requested IDs raise or are
-                ignored.
+            raise_on_no_access: Whether an error is raised if the case set is inaccessible.
             case_set_data_collections: Collections grouped by case-set ID.
             has_access: Accessible collections grouped by case-type ID.
 
@@ -694,84 +686,57 @@ class CaseService(BaseCaseService):
             Whether the user has access to the case set.
 
         Raises:
-            UnauthorizedAuthError: If a requested set is inaccessible and raising is
-                configured.
-            AssertionError: If inaccessible requested IDs use an unsupported mode.
+            UnauthorizedAuthError: If the set is inaccessible and
+                ``raise_on_no_access`` is true.
         """
         has_access_to_case_set = self._has_case_set_access(
             case_set, case_set_data_collections, has_access
         )
-        if case_set_ids:
-            if not has_access_to_case_set:
-                if on_invalid_case_set_id == "raise":
-                    raise exc.UnauthorizedAuthError(
-                        "e6782185",
-                        f"User {user_id} has no access to some requested cases",
-                    )
-                if on_invalid_case_set_id == "ignore":
-                    pass
-                else:
-                    raise AssertionError(
-                        f"Invalid on_invalid_case_id: {on_invalid_case_set_id}"
-                    )
+        if raise_on_no_access and not has_access_to_case_set:
+            raise exc.UnauthorizedAuthError(
+                "e6782185",
+                f"User {user_id} has no access to some requested case sets",
+            )
         return has_access_to_case_set
 
     def _filter_case_sets_by_same_case_type_id(
         self,
-        case_type_id: UUID,
-        case_set_ids: list[UUID] | None,
-        on_invalid_case_set_id: str,
         case_sets: list[model.CaseSet],
+        case_set_ids: list[UUID] | None,
+        case_type_id: UUID,
     ) -> list[model.CaseSet]:
         """Restrict case sets to one case type and validate requested IDs.
 
         Args:
-            case_type_id: Required case type identifier.
-            case_set_ids: Explicitly requested IDs, if any.
-            on_invalid_case_set_id: Failure behavior for incompatible requested sets.
             case_sets: Retrieved case sets to filter.
+            case_set_ids: Explicitly requested IDs, if any.
+            case_type_id: Required case type identifier.
 
         Returns:
             Case sets whose case type matches ``case_type_id``.
 
         Raises:
-            InvalidArgumentsError: If a requested set has another case type and
-                raising is configured.
-            AssertionError: If explicit IDs use an unsupported failure mode.
+            InvalidArgumentsError: If a requested set has another case type.
         """
-        if case_set_ids:
-            if on_invalid_case_set_id == "raise":
-                if not all(x.case_type_id == case_type_id for x in case_sets):
-                    raise exc.InvalidArgumentsError(
-                        "0c4731c3",
-                        f"Some case sets have invalid CaseType ids: {case_set_ids}",
-                    )
-            else:
-                raise AssertionError(
-                    f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
-                )
-
+        if case_set_ids and not all(x.case_type_id == case_type_id for x in case_sets):
+            raise exc.InvalidArgumentsError(
+                "0c4731c3",
+                f"Some case sets have invalid CaseType ids: {case_set_ids}",
+            )
         return [x for x in case_sets if x.case_type_id == case_type_id]
 
-    def validate_case_right(
-        self, right: enum.CaseRight, on_invalid_case_set_id: str
-    ) -> None:
+    def validate_case_right(self, right: enum.CaseRight) -> None:
         """Validate case-set content access arguments.
 
         Args:
             right: Case-set content right to validate.
-            on_invalid_case_set_id: Requested-ID failure mode.
 
         Raises:
-            InvalidArgumentsError: If the right or failure mode is unsupported.
+            InvalidArgumentsError: If the right is not a case-set content right.
         """
         if right not in enum.CaseRightSet.CASE_SET_CONTENT.value:
             raise exc.InvalidArgumentsError(
                 "28123c2c", f"Invalid case abac right: {right.value}"
-            )
-        if on_invalid_case_set_id not in {"raise", "ignore"}:
-            raise exc.InvalidArgumentsError(
-                "dbc2e500", f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
             )
 
     def _retrieve_cases_with_content_right(
@@ -783,11 +748,11 @@ class CaseService(BaseCaseService):
         case_type_id: UUID,
         case_ids: list[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
-        on_invalid_case_id: str = "raise",
         filter_content: bool = True,
         calculate_case_date: bool = False,
         extra_access_col_ids: set[UUID] | None = None,
         apply_max_n_cases: bool = True,
+        raise_on_no_access: bool = True,
     ) -> tuple[list[model.Case], bool]:
         """Retrieve cases under case-level and column-level ABAC restrictions.
 
@@ -804,12 +769,11 @@ class CaseService(BaseCaseService):
             case_type_id: Required case type identifier.
             case_ids: Optional requested case identifiers.
             datetime_range_filter: Optional case-date range restriction.
-            on_invalid_case_id: Whether inaccessible requested IDs raise or are
-                ignored.
             filter_content: Whether inaccessible content columns are removed.
             calculate_case_date: Whether accessible date columns populate case date.
             extra_access_col_ids: Additional columns retained during filtering.
             apply_max_n_cases: Whether configured request and result limits apply.
+            raise_on_no_access: Whether inaccessible requested case IDs raise or are ignored.
 
         Returns:
             Accessible cases and whether the configured result limit was exceeded.
@@ -824,9 +788,7 @@ class CaseService(BaseCaseService):
             AssertionError: If content filtering finds no accessible columns.
         """
         # TODO: This is a temporary implementation, to be replaced by optimized query
-        self._validate_case_access_args(
-            right, on_invalid_case_id, filter_content, calculate_case_date
-        )
+        self._validate_case_access_args(right, filter_content, calculate_case_date)
         access_data_collections, data_collection_col_access = (
             self._resolve_case_type_access(user_id, case_abac, right, case_type_id)
         )
@@ -873,13 +835,13 @@ class CaseService(BaseCaseService):
                 user_id,
                 right,
                 case_ids,
-                on_invalid_case_id,
                 filter_content,
                 extra_access_col_ids,
                 access_data_collections,
                 data_collection_col_access,
                 max_n_cases,
                 cases,
+                raise_on_no_access,
             )
         )
 
@@ -898,13 +860,13 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         right: enum.CaseRight,
         case_ids: list[UUID] | None,
-        on_invalid_case_id: str,
         filter_content: bool,
         extra_access_col_ids: set[UUID] | None,
         access_data_collections: set[UUID],
         data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
         max_n_cases: int,
         cases: list[model.Case],
+        raise_on_no_access: bool,
     ) -> tuple[list[model.Case], bool]:
         """Apply case access, weighted limits, and in-place content filtering.
 
@@ -913,13 +875,13 @@ class CaseService(BaseCaseService):
             user_id: User whose access is evaluated.
             right: Required case content right.
             case_ids: Explicitly requested case IDs, if any.
-            on_invalid_case_id: Failure behavior for inaccessible requested cases.
             filter_content: Whether returned content is filtered in place.
             extra_access_col_ids: Additional columns retained in content.
             access_data_collections: Collections granting case-level access.
             data_collection_col_access: Column access by collection.
             max_n_cases: Maximum weighted result count, or zero for unlimited.
             cases: Retrieved cases to filter and potentially mutate.
+            raise_on_no_access: Whether inaccessible requested case IDs raise or are ignored.
 
         Returns:
             Accessible cases and whether filtering stopped at the result limit.
@@ -938,8 +900,7 @@ class CaseService(BaseCaseService):
             data_collection_ids = (
                 self._authorize_case(
                     case,
-                    case_ids,
-                    on_invalid_case_id,
+                    case_ids is not None and raise_on_no_access,
                     user_id,
                     case_data_collections,
                     access_data_collections,
@@ -1019,8 +980,7 @@ class CaseService(BaseCaseService):
     def _authorize_case(
         self,
         case: model.Case,
-        case_ids: list[UUID] | None,
-        on_invalid_case_id: str,
+        raise_on_no_access: bool,
         user_id: UUID,
         case_data_collections: dict[UUID, set[UUID]],
         access_data_collections: set[UUID],
@@ -1029,8 +989,7 @@ class CaseService(BaseCaseService):
 
         Args:
             case: Case to authorize.
-            case_ids: Explicitly requested IDs, if any.
-            on_invalid_case_id: Failure behavior for inaccessible requested cases.
+            raise_on_no_access: Whether an error is raised if the case is inaccessible.
             user_id: User identifier included in authorization errors.
             case_data_collections: Collection IDs grouped by case ID.
             access_data_collections: Collections granting the required access.
@@ -1049,8 +1008,8 @@ class CaseService(BaseCaseService):
         data_collection_ids = case_data_collections.get(case_id, set()) | {
             case.created_in_data_collection_id
         }
-        if not bool(data_collection_ids & access_data_collections):
-            if case_ids and on_invalid_case_id == "raise":
+        if not data_collection_ids & access_data_collections:
+            if raise_on_no_access:
                 raise exc.UnauthorizedAuthError(
                     "a7f7b2a0", f"User {user_id} has no access to some requested cases"
                 )
@@ -1251,7 +1210,6 @@ class CaseService(BaseCaseService):
     def _validate_case_access_args(
         self,
         right: enum.CaseRight,
-        on_invalid_case_id: str,
         filter_content: bool,
         calculate_case_date: bool,
     ) -> None:
@@ -1259,18 +1217,15 @@ class CaseService(BaseCaseService):
 
         Args:
             right: Required READ_CASE or WRITE_CASE right.
-            on_invalid_case_id: Requested-case failure behavior.
             filter_content: Whether inaccessible content is removed.
             calculate_case_date: Whether a derived case date is requested.
 
         Raises:
-            ValueError: If the right or failure mode is unsupported, or case-date
-                calculation is requested without content filtering.
+            ValueError: If the right is unsupported, or case-date calculation is
+                requested without content filtering.
         """
         if right not in enum.CaseRightSet.CASE_CONTENT.value:
             raise ValueError(f"Invalid case abac right: {right.value}")
-        if on_invalid_case_id not in {"raise", "ignore"}:
-            raise ValueError(f"Invalid on_invalid_case_id: {on_invalid_case_id}")
         if not filter_content and calculate_case_date:
             raise ValueError("Cannot calculate case date when filter_content is False")
 

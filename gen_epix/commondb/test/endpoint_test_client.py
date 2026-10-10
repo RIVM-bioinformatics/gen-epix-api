@@ -169,7 +169,7 @@ class EndpointTestClient:
         Raises:
             NotImplementedError: If no handler is registered for the command class.
         """
-        route_prefix = route_prefix or self.route_prefix
+        route_prefix = self.route_prefix if route_prefix is None else route_prefix
         if cmd.user:
             headers = self.get_headers(cmd)
         else:
@@ -220,8 +220,7 @@ class EndpointTestClient:
         """
         request_body = self.user_invitation_request_body(
             key=cmd.key,
-            email=cmd.email,
-            name=cmd.name,
+            description=cmd.description,
             roles=cmd.roles,
             organization_id=cmd.organization_id,
         )
@@ -363,11 +362,12 @@ class EndpointTestClient:
             "iss": iss or f"https://{uuid.uuid4()}.org",
             "sub": sub or str(uuid.uuid4()),
             "aud": aud or str(uuid.uuid4()),
-            # TODO: LSP-3893 With exp=0, preserve the explicit expired-at claim;
-            # this truthiness fallback instead creates a future expiration. Confirm
-            # whether zero is valid under the test client's expiration contract.
-            "exp": exp
-            or datetime.now(timezone.utc) + timedelta(minutes=expire_default_minutes),
+            "exp": (
+                exp
+                if exp is not None
+                else datetime.now(timezone.utc)
+                + timedelta(minutes=expire_default_minutes)
+            ),
         }
         encoded_jwt = jwt.encode(
             claims, self.SECRET_KEY, algorithm=self.ENCRYPTION_ALGORITHM

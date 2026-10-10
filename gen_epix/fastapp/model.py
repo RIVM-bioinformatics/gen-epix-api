@@ -401,12 +401,15 @@ class CrudCommand(Command):
     def get_obj_ids(
         self, as_set: bool = False
     ) -> list[Hashable | None] | set[Hashable] | None:
-        """
-        Get the object IDs, either from the obj_ids field or from the objs field. In
-        the latter case, the IDs are extracted from the objects using the entity's ID
-        field name. In case the command has obj_ids=None, None is returned. If
-        as_set=True, a set of IDs and excluding None is returned where otherwise a list
-        would be returned.
+        """Get the object IDs, either from the obj_ids field or from the objs field.
+
+        In the latter case, the IDs are extracted from the objects using the model's
+        get_id() method.
+
+        Returns:
+            In case the command has obj_ids=None, None is returned. If as_set=True, a
+            set of IDs and excluding None is returned. Otherwise a list including None
+            as ID is returned.
         """
         if self.obj_ids is not None:
             # Command has obj_ids and cannot have objs

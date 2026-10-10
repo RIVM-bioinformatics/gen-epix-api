@@ -5,7 +5,7 @@ import re
 MLVA_NO_LOCUS_REPEAT_NUMBER = -1
 NCBI_TAXID_PATTERN = re.compile(r"^NCBI:txid\d+$")
 
-REQUIRED_NEXTCLADE_KEYS = [
+NEXTCLADE_REQUIRED_KEYS = [
     "substitutions",
     "deletions",
     "insertions",
@@ -13,7 +13,7 @@ REQUIRED_NEXTCLADE_KEYS = [
     "non_acgtns",
 ]
 
-REQUIRED_NEXTCLADE_SEQ_KEYS = REQUIRED_NEXTCLADE_KEYS + [
+NEXTCLADE_REQUIRED_SEQ_KEYS = NEXTCLADE_REQUIRED_KEYS + [
     "alignment_start",
     "alignment_end",
 ]

@@ -135,6 +135,7 @@ def _retrieve_case_profile_map(
     case_profile_map: dict[UUID, UUID] = {}
     if cmd.case_ids:
         case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
         cases, _ = self._retrieve_cases_with_content_right(
             uow,
             user.id,

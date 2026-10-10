@@ -54,7 +54,7 @@ def case_service_retrieve_is_own_cases(
             filter_content=True,
             calculate_case_date=False,
             apply_max_n_cases=False,
-            on_invalid_case_id="ignore",
+            raise_on_no_access=False,
         )
 
         case_type_access_abacs = case_abac.case_type_access_abacs.get(case_type_id, {})

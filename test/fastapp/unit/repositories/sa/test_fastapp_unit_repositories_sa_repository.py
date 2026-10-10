@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from pathlib import Path
+from test.util.mock_compat import Mock
 from typing import Any, ClassVar, cast
-from unittest.mock import Mock
 
 import pytest
 import sqlalchemy as sa
@@ -17,11 +17,15 @@ from gen_epix.fastapp.repositories.sa.mapper import SAMapper
 from gen_epix.fastapp.repositories.sa.repository import SARepository
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.filter import (
+    ComparisonOperator,
     CompositeFilter,
     EqualsNumberFilter,
     EqualsStringFilter,
+    ExistsFilter,
     LogicalOperator,
     NumberRangeFilter,
+    NumberSetFilter,
+    StringSetFilter,
 )
 
 Base: Any = declarative_base()
@@ -287,6 +291,26 @@ def test_read_some_raises_invalid_ids(repo: SARepository) -> None:
         repo.read_some(RepoModel, ["missing-id"])
 
 
+def test_delete_some_uses_supplied_session_for_uncommitted_rows(
+    repo: SARepository,
+) -> None:
+    with repo.get_session() as session:
+        session.add(repo.to_sql("user", RepoModel, _make_obj(1)))
+        session.flush()
+
+        assert repo.delete_some(RepoModel, "user", ["id-1"], session=session) == [
+            "id-1"
+        ]
+        assert repo.exists_some(RepoModel, ["id-1"], session=session) == [False]
+
+
+def test_delete_some_rejects_missing_ids(repo: SARepository) -> None:
+    with pytest.raises(exc.InvalidIdsError, match="8e431d94") as error:
+        repo.delete_some(RepoModel, "user", ["missing-id"])
+
+    assert error.value.ids == ["missing-id"]
+
+
 def test_read_some_reports_duplicate_ids(repo: SARepository) -> None:
     repo.create_one(RepoModel, "user", _make_obj(1))
 
@@ -333,6 +357,81 @@ def test_create_some_exact_batch_without_flush(repo: SARepository) -> None:
 
     assert [obj.id for obj in created] == ["id-1", "id-2"]
     assert repo.exists_some(RepoModel, ["id-1", "id-2"]) == [True, True]
+
+
+def test_create_some_without_flush_rejects_multiple_batches(
+    repo: SARepository,
+) -> None:
+    repo._max_insert_batch_size = 1  # pylint: disable=protected-access
+
+    with pytest.raises(exc.RepositoryServiceError, match="fa00ce85"):
+        repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2)], flush=False)
+
+
+@pytest.mark.parametrize(
+    ("filter_", "limit", "offset", "expected_ids"),
+    [
+        pytest.param(
+            EqualsNumberFilter(key="value", value=1),
+            2,
+            2,
+            [],
+            id="offset-past-end",
+        ),
+        pytest.param(
+            EqualsNumberFilter(key="value", value=99),
+            2,
+            0,
+            [],
+            id="empty-filter-result",
+        ),
+        pytest.param(
+            NumberRangeFilter(
+                key="value",
+                lower_bound=1,
+                upper_bound=3,
+                upper_bound_censor=ComparisonOperator.STE,
+            ),
+            0,
+            0,
+            ["id-1", "id-2", "id-3"],
+            id="unbounded",
+        ),
+        pytest.param(
+            NumberRangeFilter(
+                key="value",
+                lower_bound=1,
+                upper_bound=3,
+                upper_bound_censor=ComparisonOperator.STE,
+            ),
+            2,
+            2,
+            ["id-3"],
+            id="page-reaches-end",
+        ),
+        pytest.param(
+            NumberRangeFilter(key="value", lower_bound=1, upper_bound=3),
+            1,
+            1,
+            ["id-2"],
+            id="bounded-page",
+        ),
+    ],
+)
+def test_apply_read_all_obj_pagination_boundaries(
+    repo: SARepository,
+    filter_: Any,
+    limit: int,
+    offset: int,
+    expected_ids: list[str],
+) -> None:
+    repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2), _make_obj(3)])
+    result = cast(
+        list[RepoModel],
+        repo.read_all(RepoModel, None, obj_filter=filter_, limit=limit, offset=offset),
+    )
+
+    assert [obj.id for obj in result] == expected_ids
 
 
 def test_read_all_applies_zero_range_bound(repo: SARepository) -> None:
@@ -415,6 +514,94 @@ def test_split_filter_and_get_where_clause(repo: SARepository) -> None:
 
     where_clause = repo.get_where_clause_from_filter(row_class, mapper, only_db_filter)
     assert where_clause is not None
+
+
+@pytest.mark.parametrize(
+    ("filter_", "expected_ids"),
+    [
+        pytest.param(ExistsFilter(key="label"), ["id-1", "id-2", "id-3"], id="exists"),
+        pytest.param(ExistsFilter(key="label", invert=True), [], id="not-exists"),
+        pytest.param(
+            StringSetFilter(key="label", members=frozenset({"l-1", "l-3"})),
+            ["id-1", "id-3"],
+            id="string-set",
+        ),
+        pytest.param(
+            NumberSetFilter(key="value", members=frozenset({1, 3}), invert=True),
+            ["id-2"],
+            id="inverted-number-set",
+        ),
+        pytest.param(
+            NumberRangeFilter(
+                key="value",
+                lower_bound=1,
+                lower_bound_censor=ComparisonOperator.GT,
+                upper_bound=3,
+                upper_bound_censor=ComparisonOperator.STE,
+            ),
+            ["id-2", "id-3"],
+            id="bounded-range",
+        ),
+        pytest.param(
+            NumberRangeFilter(
+                key="value",
+                lower_bound=2,
+                lower_bound_censor=ComparisonOperator.GT,
+            ),
+            ["id-3"],
+            id="lower-only-range",
+        ),
+        pytest.param(
+            NumberRangeFilter(
+                key="value",
+                upper_bound=1,
+                upper_bound_censor=ComparisonOperator.STE,
+            ),
+            ["id-1"],
+            id="upper-only-range",
+        ),
+    ],
+)
+def test_read_all_translates_exists_set_and_range_filters(
+    repo: SARepository, filter_: Any, expected_ids: list[str]
+) -> None:
+    repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2), _make_obj(3)])
+
+    objs = cast(list[RepoModel], repo.read_all(RepoModel, filter_))
+
+    assert [obj.id for obj in objs] == expected_ids
+
+
+def test_split_filter_keeps_or_with_unmapped_branch_in_python(
+    repo: SARepository,
+) -> None:
+    filter_ = CompositeFilter(
+        operator=LogicalOperator.OR,
+        filters=[
+            EqualsNumberFilter(key="value", value=1),
+            EqualsStringFilter(key="unknown", value="x"),
+        ],
+    )
+
+    where_filter, remainder_filter = repo.split_filter(RepoModel, filter_)
+
+    assert where_filter is None
+    assert remainder_filter == filter_
+
+
+def test_split_filter_handles_empty_and_and_composites(repo: SARepository) -> None:
+    only_sql_filter = EqualsNumberFilter(key="value", value=1)
+    only_python_filter = EqualsStringFilter(key="unknown", value="x")
+
+    assert repo.split_filter(RepoModel, None) == (None, None)
+    assert repo.split_filter(
+        RepoModel,
+        CompositeFilter(operator=LogicalOperator.AND, filters=[only_sql_filter]),
+    ) == (only_sql_filter, None)
+    assert repo.split_filter(
+        RepoModel,
+        CompositeFilter(operator=LogicalOperator.AND, filters=[only_python_filter]),
+    ) == (None, only_python_filter)
 
 
 def test_print_db_content(
@@ -630,6 +817,20 @@ def test_check_schema_matches_reports_missing_table(tmp_path: Path) -> None:
     )
 
     assert problems == ["table repo_model does not exist"]
+
+
+def test_check_schema_matches_requires_connection_string() -> None:
+    with pytest.raises(ValueError, match="connection_string is required"):
+        SARepository.check_schema_matches(entities=[])
+
+
+def test_create_sa_repository_rejects_nonexistent_sqlite_file(tmp_path: Path) -> None:
+    connection_string = f"sqlite:///{(tmp_path / 'missing.sqlite').as_posix()}"
+
+    with pytest.raises(ValueError, match="Unable to derive file"):
+        SARepository.create_sa_repository(
+            entities=[], connection_string=connection_string
+        )
 
 
 def test_check_schema_matches_empty_for_matching_schema(tmp_path: Path) -> None:

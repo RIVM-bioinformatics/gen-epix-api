@@ -46,8 +46,8 @@ def test_literal_patterns_match_supported_token_syntax(pattern, value, matches):
 def test_required_nextclade_key_collections():
     """Keep common required fields as the prefix of sequence-required fields."""
     expected_keys = "substitutions deletions insertions missings non_acgtns".split()
-    assert literal.REQUIRED_NEXTCLADE_KEYS == expected_keys
-    assert literal.REQUIRED_NEXTCLADE_SEQ_KEYS == [
+    assert literal.NEXTCLADE_REQUIRED_KEYS == expected_keys
+    assert literal.NEXTCLADE_REQUIRED_SEQ_KEYS == [
         *expected_keys,
         "alignment_start",
         "alignment_end",

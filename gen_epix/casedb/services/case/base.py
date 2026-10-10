@@ -135,7 +135,6 @@ class BaseCaseService(DomainBaseCaseService):
         case_type_id: UUID | None = None,
         case_set_ids: list[UUID] | None = None,
         filter: Filter | None = None,
-        on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
         """Retrieve case sets for which a user has a content right.
 
@@ -148,7 +147,6 @@ class BaseCaseService(DomainBaseCaseService):
             case_type_id: Optional case type restriction.
             case_set_ids: Optional identifiers of requested case sets.
             filter: Optional repository query filter.
-            on_invalid_case_set_id: Whether invalid requested IDs raise or are ignored.
 
         Returns:
             Case sets that satisfy the request and access constraints.
@@ -168,11 +166,11 @@ class BaseCaseService(DomainBaseCaseService):
         case_type_id: UUID,
         case_ids: list[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
-        on_invalid_case_id: str = "raise",
         filter_content: bool = True,
         calculate_case_date: bool = False,
         extra_access_col_ids: set[UUID] | None = None,
         apply_max_n_cases: bool = True,
+        raise_on_no_access: bool = True,
     ) -> tuple[list[model.Case], bool]:
         """Retrieve cases for which a user has a content right.
 
@@ -184,11 +182,11 @@ class BaseCaseService(DomainBaseCaseService):
             case_type_id: Identifier of the requested case type.
             case_ids: Optional identifiers of requested cases.
             datetime_range_filter: Optional case-date range restriction.
-            on_invalid_case_id: Whether invalid requested IDs raise or are ignored.
             filter_content: Whether inaccessible content columns are removed.
             calculate_case_date: Whether the derived case date is populated.
             extra_access_col_ids: Additional column identifiers retained in content.
             apply_max_n_cases: Whether the configured result limit is applied.
+            raise_on_no_access: Whether inaccessible requested case IDs raise or are ignored.
 
         Returns:
             A pair containing accessible cases and whether the result limit was
