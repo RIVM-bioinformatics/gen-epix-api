@@ -1,5 +1,7 @@
 """Implementation base that supplies OmopDB runtime metadata to OMOP services."""
 
+# pylint: disable=abstract-method
+
 from typing import Any
 
 from gen_epix.commondb.app_impl_details import AppImplDetails

@@ -1,4 +1,4 @@
-"""Provide seqdb functionality for domain.literal."""
+"""Define SeqDB sentinel values, required Nextclade keys, and syntax patterns."""
 
 import re
 

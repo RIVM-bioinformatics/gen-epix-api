@@ -1,5 +1,7 @@
 """Transformer for applying a callable to one field of an adapted object."""
 
+# pylint: disable=too-few-public-methods
+
 from collections.abc import Callable, Hashable
 from typing import Any
 

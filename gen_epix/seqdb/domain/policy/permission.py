@@ -1,5 +1,9 @@
 """Define seqdb domain interfaces and policies for domain.policy.permission."""
 
+from enum import Enum
+from typing import ClassVar
+
+from gen_epix import fastapp
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.policy import RoleGenerator as CommonRoleGenerator
 from gen_epix.fastapp import PermissionTypeSet
@@ -11,9 +15,11 @@ from gen_epix.seqdb.domain.enum import Role
 class RoleGenerator(CommonRoleGenerator):
     """Encapsulates seqdb role generation from common and domain command mappings."""
 
-    COMMON_ROLE_ENUM_MAP = {x: Role[x.name] for x in CommonRole}
+    COMMON_ROLE_ENUM_MAP: ClassVar[dict[CommonRole, Enum]] = {
+        x: Role[x.name] for x in CommonRole
+    }
 
-    EXTRA_ROLE_SET_MAP = {}
+    EXTRA_ROLE_SET_MAP: ClassVar[dict[Enum, set[Enum]]] = {}
 
     COMMON_ROLE_PERMISSION_SETS = (
         CommonRoleGenerator.map_from_common_role_permission_sets(
@@ -21,7 +27,9 @@ class RoleGenerator(CommonRoleGenerator):
         )
     )
 
-    ROLE_PERMISSION_SETS = {
+    ROLE_PERMISSION_SETS: ClassVar[
+        dict[Enum, set[tuple[type[fastapp.Command], PermissionTypeSet]]]
+    ] = {
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN] | set(),
         Role.REFDATA_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.REFDATA_ADMIN]
         | {

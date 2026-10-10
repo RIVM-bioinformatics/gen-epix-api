@@ -121,6 +121,8 @@ class Seq(Base, RowMetadataMixin, QualityMixin):
     sample_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Seq, "sample_id", index=True
     )
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.Seq, "code")
+    seq_hash: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "seq_hash")
     uri: Mapped[str] = create_mapped_column(DOMAIN, model.Seq, "uri")
     file_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "file_id")
     file_format: Mapped[enum.SeqFileFormat] = create_mapped_column(
@@ -136,7 +138,6 @@ class Seq(Base, RowMetadataMixin, QualityMixin):
     contigs: Mapped[list[model.Contig]] = create_mapped_column(
         DOMAIN, model.Seq, "contigs"
     )
-    seq_hash: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "seq_hash")
     is_available: Mapped[bool] = create_mapped_column(DOMAIN, model.Seq, "is_available")
     n_contigs: Mapped[int] = create_mapped_column(DOMAIN, model.Seq, "n_contigs")
     length: Mapped[int] = create_mapped_column(DOMAIN, model.Seq, "length")
@@ -162,7 +163,6 @@ class Seq(Base, RowMetadataMixin, QualityMixin):
         "ReadSet", foreign_keys=[read_set2_id]
     )
     protocol: Mapped[Protocol] = relationship("Protocol", foreign_keys=[protocol_id])
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.Sample, "code")
 
 
 class SeqIdentifier(Base, IdentifierMixin):
