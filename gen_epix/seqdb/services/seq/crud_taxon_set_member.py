@@ -1,4 +1,8 @@
-"""Implement seqdb CRUD service operations for services.seq.crud_taxon_set_member."""
+"""Dispatch taxon-set-member CRUD commands through the sequence service.
+
+The public handler validates supported CRUD operation types and delegates persistence
+to the shared sequence service implementation.
+"""
 
 from uuid import UUID
 

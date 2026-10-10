@@ -1,4 +1,8 @@
-"""Implement seqdb CRUD service operations for services.seq.crud_taxon."""
+"""Dispatch taxon CRUD commands through the sequence service.
+
+The public handler validates supported CRUD operation types and delegates persistence
+to the shared sequence service implementation.
+"""
 
 from uuid import UUID
 
@@ -21,8 +25,6 @@ def seq_service_crud_taxon(
     Raises:
         AssertionError: The command operation is unsupported.
     """
-    user_id = cmd.user.id if cmd.user else None
-    taxons: list[model.Taxon] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
         # TODO: Specific logic for create operation to be added
         pass

@@ -1,4 +1,9 @@
-"""Define SQLAlchemy persistence mappings for seqdb repositories.sa_model.seq.operational_data."""
+"""Map operational seqdb models to SQLAlchemy tables.
+
+The public mappings cover samples, reads, sequences, measurements, classifications,
+taxonomy, profiles, distances, and their identifiers. They combine shared persistence
+mixins with seqdb domain metadata for use by the SQLAlchemy repository layer.
+"""
 
 from uuid import UUID
 
