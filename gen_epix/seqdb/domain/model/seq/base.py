@@ -23,7 +23,7 @@ from pydantic import (
 from gen_epix.commondb.domain.model import Model, validate_int_enum_value
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain import enum
-from gen_epix.seqdb.domain.literal import REQUIRED_NEXTCLADE_SEQ_KEYS
+from gen_epix.seqdb.domain.literal import NEXTCLADE_REQUIRED_SEQ_KEYS
 
 
 def str_uuid4() -> str:
@@ -311,7 +311,7 @@ class BaseSeq(Model):
         """Validate compact NextClade metadata and retain its supplied hash."""
         nextclade_seq: dict[str, Any] = json.loads(orig_seq)
         missing_keys = [
-            key for key in REQUIRED_NEXTCLADE_SEQ_KEYS if key not in nextclade_seq
+            key for key in NEXTCLADE_REQUIRED_SEQ_KEYS if key not in nextclade_seq
         ]
         if missing_keys:
             raise ValueError(

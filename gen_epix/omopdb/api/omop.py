@@ -18,6 +18,10 @@ from gen_epix.util import copy_model_field
 class RetrievePersonsByIdsRequestBody(PydanticBaseModel):
     """Represents unique person identifiers for a full-person retrieval request."""
 
+    # TODO: LSP-3893 Duplicate IDs pass this request model, then command construction
+    # raises ValidationError before handle_command; expected a client validation
+    # response, but the route may return 500. Confirm the intended HTTP status and
+    # where this validation should be translated.
     person_ids: list[UUID] = copy_model_field(
         command.RetrievePersonsByIdCommand, "person_ids"
     )

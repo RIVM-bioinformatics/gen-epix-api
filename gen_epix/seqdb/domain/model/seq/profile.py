@@ -20,7 +20,7 @@ from gen_epix.fastapp.domain.util import create_multi_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.literal import (
     MLVA_NO_LOCUS_REPEAT_NUMBER,
-    REQUIRED_NEXTCLADE_SEQ_KEYS,
+    NEXTCLADE_REQUIRED_SEQ_KEYS,
 )
 from gen_epix.seqdb.domain.model.seq.base import ContentMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.locus import Allele, Locus
@@ -119,6 +119,7 @@ class SeqProfile(
 
         Upload-only alternate representations skip this validation until normalized.
         """
+        self._validate_format_for_seq_profile_type()
         # TODO: 3268: not sure why this is here since these fields do not exist. Perhaps because of SeqProfileForUpload having these fields?
         if self.content == "" and any(
             getattr(self, field_name, None) is not None
@@ -171,9 +172,9 @@ class SeqProfile(
             # content is a flat JSON dict of NextClade fields for this single sample
             nextclade_dict: dict[str, Any] = json.loads(self.content)
             # Validate required fields at the top level of the flat dict
-            if any(key not in REQUIRED_NEXTCLADE_SEQ_KEYS for key in nextclade_dict):
+            if any(key not in nextclade_dict for key in NEXTCLADE_REQUIRED_SEQ_KEYS):
                 raise ValueError(
-                    f"Missing required NextClade fields for SNP profile content with format {self.format}: {REQUIRED_NEXTCLADE_SEQ_KEYS}"
+                    f"Missing required NextClade fields for SNP profile content with format {self.format}: {NEXTCLADE_REQUIRED_SEQ_KEYS}"
                 )
             snps = self.get_snps()
             computed_content_hash = SeqProfile.get_snp_profile_hash(snps)
@@ -463,9 +464,9 @@ class SeqProfile(
             if alignment_end < ref_seq_length:
                 missing_ranges.append((alignment_end + 1, ref_seq_length))
             # Add any missing ranges between the start and end
-            missing = nextclade_dict["missing"]
-            if missing:
-                for missing_range in missing.split(","):
+            missings = nextclade_dict.get("missings", "")
+            if missings:
+                for missing_range in missings.split(","):
                     missing_range_split = missing_range.split("-")
                     missing_start = int(missing_range_split[0])
                     if len(missing_range_split) == 2:
@@ -588,7 +589,7 @@ def _get_nextclade_non_acgtn_snps(
 ) -> list[tuple[int, str]]:
     """Expand NextClade non-ACGTN positions and inclusive ranges."""
     snps: list[tuple[int, str]] = []
-    non_acgtns = nextclade_dict.get("nonACGTNs")
+    non_acgtns = nextclade_dict.get("non_acgtns")
     if isinstance(non_acgtns, str):
         for non_acgtn in non_acgtns.split(","):
             if not non_acgtn:

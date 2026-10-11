@@ -41,6 +41,9 @@ def seq_service_crud_taxon_set(
         # TODO: Specific logic for delete operation to be added, e.g. check for foreign key constraints before deletion
         pass
 
+    # TODO: LSP-3893 Valid UPSERT_ONE/UPSERT_SOME commands reach this branch and raise
+    # AssertionError instead of delegating to self.crud(cmd); confirm taxon-set upserts
+    # are intended before changing this operation contract.
     else:
         raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 

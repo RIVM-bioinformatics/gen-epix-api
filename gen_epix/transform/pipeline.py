@@ -96,6 +96,8 @@ class RetryTransformer(Transformer):
         """Wrap a transformer and retry failed transformations with backoff."""
         super().__init__(name or f"Retry_{transformer.name}")
         self.transformer = transformer
+        # TODO: LSP-3893 max_retries=-1 skips all attempts and later raises TypeError
+        # from None; confirm whether negatives should be rejected or treated as zero.
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
 

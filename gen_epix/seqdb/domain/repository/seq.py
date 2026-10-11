@@ -68,7 +68,7 @@ class BaseSeqRepository(BaseRepository):
         matching_profile_ids: set[UUID],
         distance_format: enum.SeqDistanceFormat,
         distances: str,
-        distances2: str | None = None,
+        distances2: str | None = None,  # type: ignore[unused-argument]
     ) -> None:
         """Add distance-map profiles no farther than the supplied threshold."""
         if distance_format == enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP:

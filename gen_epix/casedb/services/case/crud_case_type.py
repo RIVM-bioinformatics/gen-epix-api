@@ -23,6 +23,10 @@ def case_service_crud_case_type(
     # Start unit of work
     with self.repository.uow() as uow:
         assert cmd.user is not None
+        # TODO: LSP-3893 A non-exempt DELETE_ONE/DELETE_SOME for a CaseType with
+        # CaseTypeSetMember rows can delete those rows before the ABAC-filtered
+        # delete is rejected; confirm whether a denied delete must preserve the
+        # memberships or whether their deletion is independently authorized.
         _crud_cascade_delete(self, uow, cmd)
         pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
         if pdp.is_exempted(cmd):

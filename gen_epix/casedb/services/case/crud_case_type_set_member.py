@@ -50,6 +50,9 @@ def _crud_case_type_set_member_without_abac(
     | None
 ):
     """CaseTypeSetMember admin command handling, no ABAC applied."""
+    # TODO: LSP-3893 An ORG_USER READ_SOME for members of an inaccessible
+    # CaseTypeSet should be filtered by case_type_set_id; this returns rows
+    # unrestricted. Confirm whether CaseTypeSet access alone defines visibility.
     return self.crud(cmd)  # type: ignore[return-value]
 
 

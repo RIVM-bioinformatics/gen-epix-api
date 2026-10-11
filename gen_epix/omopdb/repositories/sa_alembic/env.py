@@ -14,6 +14,11 @@ config = context.config
 
 
 def _configure_url() -> None:
+    """Set Alembic's connection URL from CLI or environment configuration.
+
+    Raises:
+        ValueError: If neither source provides a URL.
+    """
     url = context.get_x_argument(as_dictionary=True).get("url") or os.getenv(
         "ALEMBIC_URL"
     )

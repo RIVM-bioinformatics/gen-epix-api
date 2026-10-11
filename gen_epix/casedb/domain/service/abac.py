@@ -91,6 +91,10 @@ class BaseAbacService(CommonAbacService):
         command.DimCrudCommand,
     }
 
+    # TODO: LSP-3893 RetrieveSeqDistancesByCasesCommand is in CASE_ABAC_COMMANDS
+    # but has no entry here, so pdp.py gets exempted_role_set=None for it; expected
+    # GE_APP_ADMIN exemption like the sibling retrieve commands, actual no
+    # exemption. Unclear whether the omission is intentional.
     ABAC_EXEMPTED_ROLE_SET_MAP: dict[type[command.Command], enum.RoleSet] = {
         command.RetrieveCompleteCaseTypeCommand: enum.RoleSet.GE_APP_ADMIN,
         command.RetrieveCasesByQueryCommand: enum.RoleSet.GE_APP_ADMIN,

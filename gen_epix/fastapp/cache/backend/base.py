@@ -1,10 +1,12 @@
-"""Abstract cache store contract.
+"""Abstract cache store contract and delegating backend proxy.
 
-A backend is a dumb key-to-envelope store. It enforces capacity and, where it
-can, expiry, but it never interprets tags, generations, scopes or staleness:
-those belong to `CacheRegion`. Keeping the contract narrow is what allows an
-in-memory store, a null store and a layered near cache to be substituted for
-one another without changing behavior.
+`CacheBackend` defines a key-to-envelope interface for `CacheRegion`, with
+ordered batch defaults. `ProxyBackend` delegates that interface so wrappers
+can alter cross-cutting behavior without implementing storage. Backends enforce
+capacity and, where they can, expiry, but never interpret tags, generations,
+scopes or staleness; those belong to `CacheRegion`. Keeping the contract narrow
+allows in-memory, null and layered near-cache stores to be substituted without
+changing behavior.
 """
 
 from abc import ABC, abstractmethod
@@ -102,7 +104,7 @@ class CacheBackend(ABC):
         for key in keys:
             self.delete(key)
 
-    def get_mutex(self, key: str) -> Mutex | None:
+    def get_mutex(self, key: str) -> Mutex | None:  # type: ignore[unused-argument]
         """Return a store-provided mutex for regenerating `key`.
 
         Returns:

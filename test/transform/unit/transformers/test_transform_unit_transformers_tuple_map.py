@@ -418,6 +418,26 @@ class TestTupleMapTransformerValidation:
                 is_active_map_field="src",
             )
 
+    @pytest.mark.parametrize(
+        ("field_name", "field_value", "message"),
+        [
+            ("map_src_fields", [], "Map source columns has different length"),
+            ("map_tgt_fields", [], "Map target columns has different length"),
+        ],
+        ids=["empty-map-sources", "empty-map-targets"],
+    )
+    def test_empty_explicit_map_fields_rejected(
+        self, field_name: str, field_value: list, message: str
+    ) -> None:
+        """Reject explicitly empty fields instead of treating them as omitted."""
+        with pytest.raises(ValueError, match=message):
+            TupleMapTransformer(
+                map_rows=[{"src": "A", "tgt": 1}],
+                row_src_fields=["src"],
+                row_tgt_fields=["tgt"],
+                **{field_name: field_value},
+            )
+
     def test_duplicate_mapping_key_raises(self) -> None:
         """Test that duplicate mapping keys in map_rows raise KeyError."""
         with pytest.raises(KeyError, match="Duplicate mapping"):
@@ -499,6 +519,19 @@ class TestTupleMapTransformerDefaultValues:
                 on_no_match=OnException.SET_DEFAULT,
                 default_values=[1, 2],  # too many
             )
+
+    def test_set_default_without_values_uses_none(self) -> None:
+        """Apply None to target fields when defaults are omitted."""
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            on_no_match=OnException.SET_DEFAULT,
+        )
+
+        result = transformer.transform(ObjectAdapter({"src": "UNKNOWN"}))
+
+        assert result.get("tgt") is None
 
 
 @pytest.mark.scenario_ids("TC-MAIN-12-01")
@@ -584,3 +617,113 @@ class TestTupleMapTransformerCaseInsensitivity:
 
         result = transformer.transform(ObjectAdapter({"src": "unknown"}))
         assert result.get("tgt") == 0
+
+
+@pytest.mark.scenario_ids("TC-MAIN-12-01")
+class TestTupleMapTransformerAdditionalCoverage:
+    """Cover configuration and helper branches not reached by core cases."""
+
+    def test_missing_active_field_defaults_to_active(self) -> None:
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            is_active_map_field="active",
+        )
+
+        result = transformer.transform(ObjectAdapter({"src": "A"}))
+
+        assert result.get("tgt") == 1
+
+    def test_duplicate_mapping_with_identical_value_is_accepted(self) -> None:
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt": 1}, {"src": "A", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+        )
+
+        assert transformer.transform_row({"src": "A"}) == {"src": "A", "tgt": 1}
+
+    def test_set_row_fields_updates_names_and_get_row_key(self) -> None:
+        transformer = TupleMapTransformer(
+            map_rows=[{"map_src": "A", "map_tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            map_src_fields=["map_src"],
+            map_tgt_fields=["map_tgt"],
+        )
+        transformer.set_row_fields(["code"], ["value"])
+        row = {"code": "A", "extra": True}
+
+        assert transformer.get_row_key(row) == {"code": "A"}
+        assert transformer.transform_row(row) == {
+            "code": "A",
+            "extra": True,
+            "value": 1,
+        }
+
+    @pytest.mark.parametrize(
+        ("row_src_fields", "row_tgt_fields", "message"),
+        [
+            ([], ["tgt"], "same length"),
+            (["src"], [], "same length"),
+            (["same"], ["same"], "together must be unique"),
+        ],
+        ids=[
+            "source-count",
+            "target-count",
+            "overlap",
+        ],
+    )
+    def test_set_row_fields_rejects_invalid_fields(
+        self, row_src_fields: list, row_tgt_fields: list, message: str
+    ) -> None:
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+        )
+
+        with pytest.raises(ValueError, match=message):
+            transformer.set_row_fields(row_src_fields, row_tgt_fields)
+
+    def test_set_row_fields_rejects_duplicate_sources(self) -> None:
+        transformer = TupleMapTransformer(
+            map_rows=[{"src_a": "A", "src_b": "B", "tgt": 1}],
+            row_src_fields=["src_a", "src_b"],
+            row_tgt_fields=["tgt"],
+        )
+
+        with pytest.raises(ValueError, match="Row source column names are not unique"):
+            transformer.set_row_fields(["src", "src"], ["tgt"])
+
+    def test_set_row_fields_rejects_duplicate_targets(self) -> None:
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt_a": 1, "tgt_b": 2}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt_a", "tgt_b"],
+        )
+
+        with pytest.raises(ValueError, match="Row target column names are not unique"):
+            transformer.set_row_fields(["src"], ["tgt", "tgt"])
+
+    def test_invalid_on_no_match_value_raises_value_error(self) -> None:
+        transformer = TupleMapTransformer(
+            map_rows=[{"src": "A", "tgt": 1}],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+            on_no_match="ignore",  # type: ignore[arg-type]
+        )
+
+        with pytest.raises(ValueError, match="Invalid on_no_match value: ignore"):
+            transformer.transform(ObjectAdapter({"src": "UNKNOWN"}))
+
+    def test_default_value_validator_rejects_missing_defaults(self) -> None:
+        transformer = TupleMapTransformer(
+            map_rows=[],
+            row_src_fields=["src"],
+            row_tgt_fields=["tgt"],
+        )
+
+        with pytest.raises(ValueError, match="must be provided"):
+            transformer._verify_default_values(OnException.SET_DEFAULT, None)

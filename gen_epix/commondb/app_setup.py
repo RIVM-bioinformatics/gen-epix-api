@@ -163,6 +163,10 @@ def create_fast_api(
     # Update OpenAPI schema generator function
     if kwargs.pop("update_openapi_schema", False):
         update_openapi_kwargs = kwargs.pop("update_openapi_kwargs", {})
+        # TODO: LSP-3893 Reusing caller-owned OpenAPI kwargs removes
+        # `get_openapi_kwargs` and adds `routes` to its nested mapping. Expected:
+        # inputs remain unchanged; actual: both mappings are mutated. Confirm
+        # whether this mutation is part of the OpenAPI setup contract.
         get_open_api_kwargs = update_openapi_kwargs.pop("get_openapi_kwargs", {})
         get_open_api_kwargs.update({"routes": fast_api.routes})
         custom_openapi_fn = create_custom_openapi_function(

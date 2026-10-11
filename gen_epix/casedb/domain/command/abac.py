@@ -2,7 +2,7 @@
 
 from typing import ClassVar
 
-import gen_epix.casedb.domain.model as model
+from gen_epix.casedb.domain import model
 from gen_epix.commondb.domain.command import CrudCommand
 
 # Non-CRUD

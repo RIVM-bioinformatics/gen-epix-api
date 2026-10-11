@@ -1,6 +1,5 @@
 """Retrieve phylogenetic, FASTA, and protocol data through seqdb commands."""
 
-import json
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -136,6 +135,7 @@ def _retrieve_case_profile_map(
     case_profile_map: dict[UUID, UUID] = {}
     if cmd.case_ids:
         case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
         cases, _ = self._retrieve_cases_with_content_right(
             uow,
             user.id,
@@ -271,4 +271,7 @@ def _get_seq_ids_from_cases(
         filter_content=True,
     )
     retval = [x.content.get(seq_col_id) for x in cases]
+    # TODO: LSP-3893 Missing sequence content yields None; the caller expects it to
+    # raise NoResultsError, but this filter drops it. Confirm how empty strings
+    # should be treated before preserving missing values.
     return [UUID(x) for x in retval if x]

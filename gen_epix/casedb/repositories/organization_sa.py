@@ -1,4 +1,8 @@
-"""Provide casedb SQLAlchemy persistence behavior for organization data."""
+"""Provide casedb SQLAlchemy organization persistence specialization.
+
+OrganizationSARepository binds casedb domain user models and shared commondb SQL
+row models to the common organization repository.
+"""
 
 from typing import Any
 

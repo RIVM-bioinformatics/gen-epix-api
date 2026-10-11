@@ -26,6 +26,10 @@ class UpdateResponseHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process a request and add the configured response headers."""
         response: Response = await call_next(request)
+        # TODO: LSP-3893 With exception_headers=None and APP_VERSION set, the
+        # response may be expected to receive version headers, but this branch
+        # returns before adding them. Confirm whether that contract applies when
+        # endpoint-specific exceptions are not configured.
         if not self._exception_headers:
             if self._general_headers:
                 response.headers.update(self._general_headers)

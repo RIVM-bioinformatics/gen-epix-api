@@ -469,6 +469,43 @@ class TestValidateIntPrimaryKeyArgs:
         assert data[_uuid_field_name()] == expected_uuid
         assert data[_int_field_name()] == SAMPLE_INT
 
+    def test_uuid_id_without_int_id_passes(self) -> None:
+        """A direct UUID without an integer key should be accepted unchanged."""
+        expected_uuid = uuid4()
+        data: dict[str, object] = {_uuid_field_name(): expected_uuid}
+
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
+
+        assert data[_uuid_field_name()] is expected_uuid
+        assert _int_field_name() not in data
+
+    def test_uuid_string_without_int_id_is_normalized(self) -> None:
+        """A direct UUID string should be normalized to a UUID object."""
+        expected_uuid = uuid4()
+        data: dict[str, object] = {_uuid_field_name(): str(expected_uuid)}
+
+        validate_int_key_args(data, _uuid_field_name(), _int_field_name())
+
+        assert data[_uuid_field_name()] == expected_uuid
+        assert isinstance(data[_uuid_field_name()], UUID)
+
+    def test_invalid_uuid_string_without_int_id_raises(self) -> None:
+        """An invalid direct UUID string should not pass key validation."""
+        data: dict[str, object] = {_uuid_field_name(): "not-a-uuid"}
+
+        with pytest.raises(ValueError):
+            validate_int_key_args(data, _uuid_field_name(), _int_field_name())
+
+    @pytest.mark.parametrize(
+        "uuid_id", [3.14, [], {}, object()], ids=["float", "list", "dict", "object"]
+    )
+    def test_unsupported_direct_uuid_id_raises(self, uuid_id: object) -> None:
+        """Unsupported direct UUID-field values should be rejected."""
+        data: dict[str, object] = {_uuid_field_name(): uuid_id}
+
+        with pytest.raises(ValueError, match="must be a UUID or UUID string"):
+            validate_int_key_args(data, _uuid_field_name(), _int_field_name())
+
     def test_mismatching_uuid_string_and_int_id_raises_value_error(self) -> None:
         """When uuid_id is a string that does NOT match the derived UUID,
 

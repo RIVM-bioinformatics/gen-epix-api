@@ -12,6 +12,9 @@ real at module load time here would deadlock the import graph. A
 TYPE_CHECKING-guarded import never executes at runtime, so it does not.
 """
 
+# TODO: LSP-3893 Postponed annotations may make `TypedDict.__required_keys__`
+# classify `props` and `repository` as required despite `NotRequired`; confirm
+# whether runtime key metadata must reflect the declared optional contract.
 from __future__ import annotations
 
 from enum import Enum

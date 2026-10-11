@@ -104,4 +104,8 @@ def _crud_case_set_data_collection_link_with_abac(
 
     # return _crud_data_by_non_admin(self, uow, cmd)  # type: ignore[return-value]
     # !FIXME: Temporary workaround until the complex ABAC logic is implemented
+    # TODO: LSP-3893 A non-exempt user may read a link to an inaccessible case set
+    # or data collection through a filtered or by-ID read; expected behavior is to
+    # deny or filter the link, but this delegates without row-level checks. Confirm
+    # whether an upstream policy already enforces this before implementing access.
     return self.crud(cmd)  # type: ignore[return-value]

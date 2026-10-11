@@ -74,6 +74,9 @@ class SAUnitOfWork(BaseUnitOfWork):
             # orig for the message — str() includes [SQL:] and [parameters:] which
             # can contain large payloads like DNA sequences.
             # Suppress context for the same reason.
+            # TODO: LSP-3893 A foreign-key failure with a SQL statement or bound
+            # parameter containing "UNIQUE" may be reported as a unique violation;
+            # confirm whether keyword matching should use only the driver error.
             exc_upper = str(exception_value).upper()
             orig_msg = str(getattr(exception_value, "orig", exception_value))
             if (

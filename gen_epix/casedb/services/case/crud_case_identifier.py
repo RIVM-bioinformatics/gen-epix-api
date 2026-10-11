@@ -101,4 +101,8 @@ def _crud_case_identifier_with_abac(
     # return _crud_data_by_non_admin(self, uow, cmd)  # type: ignore[return-value]
 
     # !FIXME: Temporary workaround until the complex ABAC logic is implemented
+    # TODO: LSP-3893 A non-exempt user may read an identifier for an inaccessible
+    # case with a filtered read-all; expected results include only accessible
+    # identifiers, but this delegation adds no row-level filter. Verify whether
+    # another policy layer blocks this before implementing case-access checks.
     return self.crud(cmd)  # type: ignore[return-value]

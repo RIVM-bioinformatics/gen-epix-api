@@ -33,11 +33,12 @@ create, update, move, or rename test files until this assessment is complete.
    the assessment. Derive expected results from the contract or an independent
    calculation, never by copying the implementation's output into assertions.
 4. If any likely logic issue is found, **STOP and ask the user how to deal with
-   it before implementing or updating tests**. Explain the source location,
-   triggering input, expected versus actual behavior, and remaining uncertainty.
-   Use the question tool when available; otherwise ask in the response and wait.
-   Offer concrete choices such as fixing the module first, clarifying intended
-   behavior, or explicitly authorizing a regression test of the intended behavior.
+   it before implementing or updating tests**. Explain the source location with 
+   a clickable link to the exact line number where the issue starts, triggering
+   input, expected versus actual behavior, and remaining uncertainty. Use the
+   question tool when available; otherwise ask in the response and wait. Offer
+   concrete choices such as fixing the module first, clarifying intended behavior,
+   or explicitly authorizing a regression test of the intended behavior.
 5. Do not silently fix production code, encode a suspected bug as expected
    behavior, or hide it with a skip/xfail. Resume only after the user responds;
    implement only the authorized resolution. If source code changes, reassess

@@ -80,6 +80,9 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
             retval = [x for x in retval if getattr(x, id_attr) == user_id]
         if is_read_one and getattr(retval, id_attr) != user_id:
             raise exc.UnauthorizedAuthError("bcba2f7d", msg)
+        # TODO: LSP-3893 EXISTS_ONE/EXISTS_SOME return bool values, so ownership
+        # attribute access here can raise TypeError/AttributeError; clarify whether
+        # unauthorized existence should be hidden as False or rejected.
         if not is_read_one and any(getattr(x, id_attr) != user_id for x in retval):
             raise exc.UnauthorizedAuthError("49f667f6", msg)
         return retval

@@ -1,4 +1,8 @@
-"""SQLAlchemy metadata managed by omopdb migrations, including common models."""
+"""Provide SQLAlchemy metadata to Alembic for OMOP migrations.
+
+`target_metadata` combines mapped metadata from `sa_model` and applies SQL
+Server's primary-key nullability invariant for schema comparisons.
+"""
 
 import sqlalchemy as sa
 
@@ -6,6 +10,7 @@ from gen_epix.omopdb.repositories import sa_model
 
 
 def _get_target_metadata() -> tuple[sa.MetaData, ...]:
+    """Collect distinct SQLAlchemy metadata objects exported by mapped models."""
     metadata_by_id = {
         id(candidate.metadata): candidate.metadata
         for candidate in vars(sa_model).values()

@@ -366,12 +366,12 @@ def _load_demo_data_for_service(
         cast(dict[str, Any], sa_sql_app_cfg_data["repository"])[service_type.value],
     )
     connection_string = sa_sql_repository_cfg["props"]["connection_string"]
-    if "mssql" in connection_string:
+    if "mssql+pyodbc" in connection_string:
         connect_args = {
             "timeout": connect_timeout,
             "login_timeout": connect_timeout,
         }
-    elif "pyodcb" in connection_string:
+    elif "pyodbc" in connection_string:
         connect_args = {
             "connect_timeout": connect_timeout,
             "timeout": connect_timeout,

@@ -164,6 +164,7 @@ class SeqdbClient(CommondbClient):
         """Stream genetic sequence FASTA data by sequence IDs."""
         request_body = api.RetrieveSeqFastaRequestBody(
             seq_ids=cmd.seq_ids,
+            wrap=cmd.wrap,
             file_name="dummy.fasta",
         )
         return self.stream(cmd, HttpMethod.POST, model=request_body)

@@ -17,11 +17,17 @@ from uuid import uuid4
 
 import pytest
 
+import gen_epix.fastapp.client as fastapp_client
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.services.client import CasedbClient
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
+
+
+def test_delete_all_ref_data_route_and_timeout_are_registered() -> None:
+    assert CasedbClient.ROUTE_MAP[command.DeleteAllRefDataCommand] == "/ref_data"
+    assert CasedbClient.DEFAULT_HTTP_TIMEOUTS[command.DeleteAllRefDataCommand] == 300.0
 
 
 def _mock_response(json_data: Any, status_code: int = 200) -> Mock:
@@ -40,7 +46,7 @@ def app() -> CasedbClient:
 
 @pytest.fixture
 def mock_client() -> Any:
-    with patch("gen_epix.fastapp.client.httpx.Client") as mock_client_class:
+    with patch(f"{fastapp_client.__name__}.httpx.Client") as mock_client_class:
         client = MagicMock()
         client.__enter__.return_value = client
         client.__exit__.return_value = None
@@ -148,6 +154,37 @@ class TestNonCrudHandlers:
         assert url == app._routes[command.RetrieveCompleteCaseTypeCommand]
         assert params == {"case_type_id": str(case_type_id)}
         assert result == model.CompleteCaseType(**data)
+
+    def test_retrieve_case_cohort_links_by_case_type(
+        self, app: CasedbClient, mock_client: Any
+    ) -> None:
+        case_type_id = uuid4()
+        case_id = uuid4()
+        cohort_id = uuid4()
+        cohort_definition_id = uuid4()
+        cmd = command.RetrieveCaseCohortLinksByCaseTypeCommand(
+            user=None, case_type_id=case_type_id, include_missing=True
+        )
+        data: list[dict[str, Any]] = [
+            {
+                "case_id": str(case_id),
+                "cohort_id": str(cohort_id),
+                "cohort_definition_id": str(cohort_definition_id),
+            }
+        ]
+        mock_client.request.return_value = _mock_response(data)
+
+        result = app.retrieve_case_cohort_links_by_case_type(cmd)
+
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "POST"
+        assert url == app._routes[command.RetrieveCaseCohortLinksByCaseTypeCommand]
+        assert json_body == {
+            "case_type_id": str(case_type_id),
+            "include_missing": True,
+        }
+        assert result == [model.CaseCohortLink(**data[0])]
 
     def test_create_case_set(self, app: CasedbClient, mock_client: Any) -> None:
         case_set = model.CaseSet(
@@ -355,6 +392,91 @@ class TestNonCrudHandlers:
             "case_ids": [str(case_id)],
         }
         assert result == model.PhylogeneticTree(**data)
+
+    def test_retrieve_cases_by_query(self, app: CasedbClient, mock_client: Any) -> None:
+        case_query = model.CaseQuery(case_type_id=uuid4())
+        case_ids = [uuid4(), uuid4()]
+        cmd = command.RetrieveCasesByQueryCommand(user=None, case_query=case_query)
+        data: dict[str, Any] = {
+            "case_query": json.loads(case_query.model_dump_json()),
+            "case_ids": [str(case_id) for case_id in case_ids],
+            "is_max_results_exceeded": False,
+        }
+        mock_client.request.return_value = _mock_response(data)
+
+        result = app.retrieve_cases_by_query(cmd)
+
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "POST"
+        assert url == app._routes[command.RetrieveCasesByQueryCommand]
+        assert json_body == json.loads(case_query.model_dump_json())
+        assert result == model.CaseQueryResult(**data)
+
+    def test_upload_cases(self, app: CasedbClient, mock_client: Any) -> None:
+        case_type_id = uuid4()
+        created_in_data_collection_id = uuid4()
+        case_batch = model.CaseBatchForUpload(cases=[])
+        cmd = command.UploadCasesCommand(
+            user=None,
+            case_type_id=case_type_id,
+            default_created_in_data_collection_id=created_in_data_collection_id,
+            case_batch=case_batch,
+        )
+        batch_id = uuid4()
+        data: dict[str, Any] = {"batch_id": str(batch_id), "cases": []}
+        mock_client.request.return_value = _mock_response(data)
+
+        result = app.upload_cases(cmd)
+
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "POST"
+        assert url == app._routes[command.UploadCasesCommand]
+        assert json_body == cmd.model_dump(mode="json", exclude={"user"})
+        assert result.batch_id == batch_id
+        assert result.cases == []
+
+    def test_retrieve_seq_distances_by_cases(
+        self, app: CasedbClient, mock_client: Any
+    ) -> None:
+        case_type_id = uuid4()
+        genetic_distance_col_id = uuid4()
+        case_id = uuid4()
+        protocol_id = uuid4()
+        profile_id = uuid4()
+        cmd = command.RetrieveSeqDistancesByCasesCommand(
+            user=None,
+            case_type_id=case_type_id,
+            case_ids=[case_id],
+            genetic_distance_col_id=genetic_distance_col_id,
+            filter_other_cases=False,
+        )
+        distance = seqdb_model.SeqDistance(
+            id=case_id,
+            sample_id=uuid4(),
+            protocol_id=protocol_id,
+            seq_profile_id=profile_id,
+            format=seqdb_enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+            content=json.dumps({str(profile_id): 1.5}),
+        )
+        mock_client.request.return_value = _mock_response(
+            [json.loads(distance.model_dump_json())]
+        )
+
+        result = app.retrieve_seq_distances_by_cases(cmd)
+
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "POST"
+        assert url == app._routes[command.RetrieveSeqDistancesByCasesCommand]
+        assert json_body == {
+            "case_type_id": str(case_type_id),
+            "genetic_distance_col_id": str(genetic_distance_col_id),
+            "case_ids": [str(case_id)],
+            "filter_other_cases": False,
+        }
+        assert result == [distance]
 
     def test_retrieve_similar_cases(self, app: CasedbClient, mock_client: Any) -> None:
         case_type_id = uuid4()

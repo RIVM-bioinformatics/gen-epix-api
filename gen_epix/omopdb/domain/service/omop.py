@@ -1,4 +1,8 @@
-"""Service contract for OmopDB person uploads and retrieval queries."""
+"""Define the OmopDB service contract and its repository boundary.
+
+`BaseOmopService` registers person upload and retrieval handlers and delegates
+specimen lookup to `BaseOmopRepository`.
+"""
 
 from abc import abstractmethod
 
@@ -79,7 +83,14 @@ class BaseOmopService(BaseService[BaseOmopRepository]):
     def retrieve_specimen_ids_by_cohort_ids(
         self, cmd: command.RetrieveSpecimenIdsByCohortIdsCommand
     ) -> model.SpecimenIdsByCohortResult:
-        """Retrieve specimen IDs grouped by cohort ID."""
+        """Retrieve specimen IDs grouped by cohort ID.
+
+        Args:
+            cmd: Command containing the cohort definition and cohort IDs.
+
+        Returns:
+            Specimen IDs grouped by cohort ID.
+        """
         specimen_ids_by_cohort_id = self.repository.get_specimen_ids_by_cohort_ids(
             cohort_definition_id=cmd.cohort_definition_id,
             cohort_ids=cmd.cohort_ids,

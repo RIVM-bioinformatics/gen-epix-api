@@ -112,6 +112,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from gen_epix.commondb.domain import exc
 from gen_epix.commondb.domain.enum import Role, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import (
@@ -120,9 +121,12 @@ from gen_epix.commondb.domain.model.organization import (
     User,
 )
 from gen_epix.commondb.domain.model.upload import ParentUploadResult, UploadResult
+from gen_epix.commondb.services.upload import BatchUploader
 from gen_epix.etl.enum import EtlStatus, EtlStatusSet
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.exc import DuplicateIdsError
+from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
@@ -2403,6 +2407,666 @@ class TestUploadEdgeCases(BaseUploadTestCase):
 
         assert success
         self.service.app.handle.assert_not_called()
+
+    def test_identifier_error_rolls_back_sibling_identifier_creation(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An invalid pending identifier must fail the batch and roll back siblings."""
+        identifiers = [
+            self.create_identifier_for_upload(
+                identifier_issuer_id=self.identifier_issuer_id,
+                identifier_issuer_code=self.identifier_issuer_code,
+                external_id="existing-but-pending",
+            ),
+            self.create_identifier_for_upload(
+                identifier_issuer_id=self.identifier_issuer_id2,
+                identifier_issuer_code=self.identifier_issuer_code2,
+                external_id="new-sibling",
+            ),
+        ]
+        parent_for_upload = self.create_parent_for_upload(identifiers=identifiers)
+        cmd = self.create_command_for_parents(parent_for_upload)
+
+        def verify_with_existing_pending_identifier(
+            command: UploadParentsCommand,
+            batch_result: ParentBatchUploadResult,
+            uow: BaseUnitOfWork,
+        ) -> bool:
+            del command, uow
+            identifier_results = batch_result.parents[0].identifiers
+            assert identifier_results is not None
+            batch_result.parents[0].is_new = True
+            identifier_results[0].is_new = False
+            identifier_results[1].is_new = True
+            return True
+
+        monkeypatch.setattr(
+            self.batch_uploader,
+            "verify_batch",
+            verify_with_existing_pending_identifier,
+        )
+        self.service.repository.crud.return_value = [self.parent_id]
+        self.service.app.handle.return_value = [self.random_ids[0]]
+
+        batch_result = self.batch_uploader.upload_batch(cmd)
+
+        self.expectBatchFailed(batch_result)
+        identifier_results = batch_result.parents[0].identifiers
+        assert identifier_results is not None
+        assert identifier_results[0].has_log_code("d3ac4368")
+        assert identifier_results[1].status == EtlStatus.CREATED
+        assert self.uow.rollback.called
+
+    def test_upload_batch_requires_command_id(self) -> None:
+        cmd = self.create_command_for_parents(
+            self.create_parent_for_upload()
+        ).model_copy(update={"id": None})
+
+        with pytest.raises(exc.InvalidArgumentsError, match="cmd.id must be set"):
+            self.batch_uploader.upload_batch(cmd)
+
+    def test_prepare_parent_id_without_parent_model_skips_parent_record(self) -> None:
+        parent_for_upload = self.create_parent_for_upload().model_copy(
+            update={"parent": None}
+        )
+        parent_result = FixtureParentUploadResult(status=EtlStatus.PENDING)
+        cmd = self.create_command_for_parents(parent_for_upload)
+
+        parent_id, success = self.batch_uploader._prepare_parent_id(
+            cmd, parent_for_upload, parent_result
+        )
+
+        assert parent_id is None
+        assert success
+        assert parent_result.status == EtlStatus.SKIPPED
+        assert parent_result.has_log_code("a740e288")
+
+    @pytest.mark.parametrize(
+        "action,expected_success,expected_status,error_code",
+        [
+            (UploadAction.ERROR, False, EtlStatus.FAILED, "eacd67d4"),
+            (UploadAction.SKIP, True, EtlStatus.SKIPPED, "f457324b"),
+            (UploadAction.CREATE, True, EtlStatus.PENDING, None),
+        ],
+        ids=["error-new-parent", "skip-new-parent", "create-new-parent"],
+    )
+    def test_prepare_parent_id_without_assigned_id_obeys_on_new_action(
+        self,
+        action: UploadAction,
+        expected_success: bool,
+        expected_status: EtlStatus,
+        error_code: str | None,
+    ) -> None:
+        parent_for_upload = self.create_parent_for_upload()
+        parent_result = FixtureParentUploadResult(status=EtlStatus.PENDING)
+        cmd = self.create_command_for_parents(parent_for_upload, on_new=action)
+
+        parent_id, success = self.batch_uploader._prepare_parent_id(
+            cmd, parent_for_upload, parent_result
+        )
+
+        assert parent_id is None
+        assert success is expected_success
+        assert parent_result.status == expected_status
+        if error_code:
+            assert parent_result.has_log_code(error_code)
+
+    @pytest.mark.parametrize(
+        "parent_exists,action,expected_success,expected_status,error_code",
+        [
+            (True, UploadAction.ERROR, False, EtlStatus.FAILED, "f2a13b7c"),
+            (False, UploadAction.ERROR, False, EtlStatus.FAILED, "1ca29f8e"),
+            (False, UploadAction.SKIP, True, EtlStatus.SKIPPED, "6e8ab14d"),
+        ],
+        ids=["existing-parent-error", "missing-parent-error", "missing-parent-skip"],
+    )
+    def test_inferred_parent_obeys_error_and_skip_actions(
+        self,
+        parent_exists: bool,
+        action: UploadAction,
+        expected_success: bool,
+        expected_status: EtlStatus,
+        error_code: str,
+    ) -> None:
+        parent_for_upload = self.create_parent_for_upload()
+        parent_result = FixtureParentUploadResult(status=EtlStatus.PENDING)
+        cmd = self.create_command_for_parents(
+            parent_for_upload,
+            on_exists=action if parent_exists else UploadAction.UPDATE,
+            on_new=action if not parent_exists else UploadAction.CREATE,
+        )
+        self.service.repository.crud.return_value = [parent_exists]
+
+        success = self.batch_uploader._resolve_parent_from_child_id(
+            cmd,
+            self.uow,
+            self.user.id,
+            parent_for_upload,
+            parent_result,
+            self.parent_id,
+            set(),
+        )
+
+        assert success is expected_success
+        assert parent_result.status == expected_status
+        assert parent_result.has_log_code(error_code)
+        assert parent_for_upload.id == self.parent_id
+
+    @pytest.mark.parametrize(
+        "action,expected_success,expected_status",
+        [
+            (UploadAction.ERROR, False, EtlStatus.FAILED),
+            (UploadAction.SKIP, True, EtlStatus.SKIPPED),
+            (UploadAction.UPDATE, True, EtlStatus.PENDING),
+        ],
+        ids=["error-existing", "skip-existing", "update-existing"],
+    )
+    def test_existing_child_action_outcomes(
+        self,
+        action: UploadAction,
+        expected_success: bool,
+        expected_status: EtlStatus,
+    ) -> None:
+        child = self.create_child1_for_upload(ref1_id=self.ref1_id)
+        cmd = self.create_command_for_parents(
+            self.create_parent_for_upload(), on_exists=action
+        )
+        result = UploadResult(status=EtlStatus.PENDING)
+
+        success = self.batch_uploader._apply_existing_child_action(cmd, child, result)
+
+        assert success is expected_success
+        assert result.status == expected_status
+
+    @pytest.mark.parametrize(
+        "action,child_id,expected_success,expected_status",
+        [
+            (UploadAction.ERROR, NULL_ID, False, EtlStatus.FAILED),
+            (UploadAction.SKIP, NULL_ID, True, EtlStatus.SKIPPED),
+            (UploadAction.CREATE, NULL_ID, True, EtlStatus.PENDING),
+            (
+                UploadAction.CREATE,
+                UUID("aaaaaaaa-0000-0000-0000-000000000001"),
+                True,
+                EtlStatus.PENDING,
+            ),
+        ],
+        ids=["error-new", "skip-new", "create-generated-id", "create-provided-id"],
+    )
+    def test_new_child_action_outcomes(
+        self,
+        action: UploadAction,
+        child_id: UUID,
+        expected_success: bool,
+        expected_status: EtlStatus,
+    ) -> None:
+        child = self.create_child1_for_upload(child_id=child_id, ref1_id=self.ref1_id)
+        cmd = self.create_command_for_parents(
+            self.create_parent_for_upload(), on_new=action
+        )
+        result = UploadResult(status=EtlStatus.PENDING)
+
+        success = self.batch_uploader._apply_new_child_action(
+            cmd, child, child_id, result
+        )
+
+        assert success is expected_success
+        assert result.status == expected_status
+
+    def test_existing_child_parent_link_mismatches_payload_and_storage(self) -> None:
+        child_id = self.random_ids[0]
+        parent_id = self.random_ids[1]
+        other_parent_id = self.random_ids[2]
+        parent_for_upload = self.create_parent_for_upload(parent_id=parent_id)
+        parent_result = FixtureParentUploadResult(status=EtlStatus.PENDING)
+        child = self.create_child1_for_upload(
+            child_id=child_id,
+            parent_id=other_parent_id,
+            ref1_id=self.ref1_id,
+        )
+        child_result = UploadResult(status=EtlStatus.PENDING)
+        cmd = self.create_command_for_parents(parent_for_upload)
+
+        success = self.batch_uploader._verify_child_parent_link(
+            cmd,
+            self.uow,
+            self.user.id,
+            parent_for_upload,
+            parent_result,
+            child,
+            Child1,
+            child_result,
+            "child1_id",
+            "parent_id",
+            True,
+            {child_id: other_parent_id},
+            None,
+        )
+
+        assert not success
+        assert child_result.has_log_code("13ba4246")
+        assert child_result.has_log_code("cfc3da21")
+
+    def test_prepare_child_for_creation_fails_without_resolved_parent_id(self) -> None:
+        parent_for_upload = self.create_parent_for_upload()
+        parent_result = FixtureParentUploadResult(status=EtlStatus.SKIPPED)
+        child = self.create_child1_for_upload(ref1_id=self.ref1_id)
+        child_result = UploadResult(status=EtlStatus.PENDING, is_new=True)
+        create_pairs: list[tuple[Child1, UploadResult]] = []
+        original_children: list[Child1ForUpload] = []
+
+        self.batch_uploader._prepare_child_for_creation(
+            Child1,
+            Child1ForUpload,
+            "parent_id",
+            parent_for_upload,
+            parent_result,
+            child,
+            child_result,
+            create_pairs,
+            original_children,
+        )
+
+        assert child_result.status == EtlStatus.FAILED
+        assert child_result.has_log_code("f701df83")
+        assert create_pairs == []
+
+    def test_prepare_child_for_creation_accepts_persisted_child_instance(self) -> None:
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
+        parent_result = FixtureParentUploadResult(status=EtlStatus.PENDING)
+        child = Child1(
+            child1_id=self.child1_id,
+            parent_id=NULL_ID,
+            ref1_id=self.ref1_id,
+        )
+        child_result = UploadResult(status=EtlStatus.PENDING, is_new=True)
+        create_pairs: list[tuple[Child1, UploadResult]] = []
+        original_children: list[Child1ForUpload] = []
+
+        self.batch_uploader._prepare_child_for_creation(
+            Child1,
+            Child1ForUpload,
+            "parent_id",
+            parent_for_upload,
+            parent_result,
+            child,
+            child_result,
+            create_pairs,
+            original_children,
+        )
+
+        assert create_pairs == [(child, child_result)]
+        assert child.parent_id == self.parent_id
+        assert original_children == [child]
+
+    def test_prepare_child_for_update_fails_without_resolved_parent_id(self) -> None:
+        parent_for_upload = self.create_parent_for_upload()
+        parent_result = FixtureParentUploadResult(status=EtlStatus.SKIPPED)
+        child = self.create_child1_for_upload(
+            child_id=self.child1_id, ref1_id=self.ref1_id
+        )
+        child_result = UploadResult(status=EtlStatus.PENDING, is_new=False)
+        update_pairs: list[tuple[Child1, UploadResult]] = []
+
+        self.batch_uploader._prepare_child_for_update(
+            Child1,
+            Child1ForUpload,
+            "parent_id",
+            parent_for_upload,
+            parent_result,
+            child,
+            child_result,
+            update_pairs,
+        )
+
+        assert child_result.status == EtlStatus.FAILED
+        assert child_result.has_log_code("1417de99")
+        assert update_pairs == []
+
+    def test_create_child_identifiers_skips_child_without_resolved_id(self) -> None:
+        child = self.create_child2_for_upload(
+            ref2_id=self.ref2_id,
+            identifiers=[
+                self.create_identifier_for_upload(
+                    identifier_issuer_id=self.identifier_issuer_id
+                )
+            ],
+        )
+        parent_for_upload = self.create_parent_for_upload(children2=[child])
+        cmd = self.create_command_for_parents(parent_for_upload)
+        batch_result = self.batch_uploader.init_batch_upload_result(cmd)
+
+        success = self.batch_uploader.create_child_identifiers(
+            cmd, batch_result, self.uow
+        )
+
+        assert success
+        self.service.app.handle.assert_not_called()
+
+    def test_provided_link_id_with_unknown_code_fails(self) -> None:
+        child = self.create_child1_for_upload(
+            ref1_id=self.ref1_id, ref1_code="unknown-code"
+        )
+        child_result = UploadResult(status=EtlStatus.PENDING)
+
+        success = self.batch_uploader._verify_provided_link_id(
+            child,
+            child_result,
+            self.ref1_id,
+            "unknown-code",
+            "ref1_id",
+            "ref1_code",
+            Ref1,
+            "id",
+            "code",
+            {self.ref1_id: "known-code"},
+            {"known-code": self.ref1_id},
+        )
+
+        assert not success
+        assert child_result.has_log_code("95558de7")
+
+    def test_empty_object_create_and_update_batches_are_successful_noops(self) -> None:
+        assert self.batch_uploader.create_objects(self.uow, self.user.id, Parent, [])
+        assert self.batch_uploader.update_objects(self.uow, self.user.id, Parent, [])
+        self.service.repository.crud.assert_not_called()
+
+    def test_parent_identifier_verification_only_copies_id_when_parent_is_present(
+        self,
+    ) -> None:
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id
+        ).model_copy(update={"parent": None})
+        cmd = self.create_command_for_parents(parent_for_upload)
+        batch_result = self.batch_uploader.init_batch_upload_result(cmd)
+
+        assert self.batch_uploader.verify_parents_identifiers(
+            cmd, batch_result, self.uow
+        )
+
+    def test_parent_identifier_verification_copies_resolved_id_to_parent(self) -> None:
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
+        cmd = self.create_command_for_parents(parent_for_upload)
+        batch_result = self.batch_uploader.init_batch_upload_result(cmd)
+        parent_for_upload.parent.parent_id = None
+
+        assert self.batch_uploader.verify_parents_identifiers(
+            cmd, batch_result, self.uow
+        )
+        assert parent_for_upload.parent.parent_id == self.parent_id
+
+    def test_failed_parent_is_skipped_when_preparing_parent_ids(self) -> None:
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
+        cmd = self.create_command_for_parents(parent_for_upload)
+        batch_result = self.batch_uploader.init_batch_upload_result(cmd)
+        batch_result.parents[0].add_error("test-error", "already failed")
+
+        parent_ids, has_parent_ids, success = self.batch_uploader._prepare_parent_ids(
+            cmd, batch_result
+        )
+
+        assert parent_ids == [None]
+        assert not has_parent_ids
+        assert success
+
+    def test_duplicate_parent_detection_ignores_missing_ids(self) -> None:
+        parents = [
+            self.create_parent_for_upload(),
+            self.create_parent_for_upload(parent_id=self.parent_id),
+        ]
+        cmd = self.create_command_for_parents(parents)
+        batch_result = self.batch_uploader.init_batch_upload_result(cmd)
+        parent_ids: list[UUID | None] = [None, self.parent_id]
+
+        self.batch_uploader._mark_duplicate_parent_ids(cmd, batch_result, parent_ids)
+
+        assert parent_ids == [None, self.parent_id]
+        assert all(
+            result.status == EtlStatus.PENDING for result in batch_result.parents
+        )
+
+    def test_update_parents_skips_upload_without_parent_model(self) -> None:
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id
+        ).model_copy(update={"parent": None})
+        cmd = self.create_command_for_parents(parent_for_upload)
+        batch_result = self.batch_uploader.init_batch_upload_result(cmd)
+
+        assert self.batch_uploader.update_parents(cmd, batch_result, self.uow)
+        self.service.repository.crud.assert_not_called()
+
+    def test_child_preparation_ignores_ineligible_results(self) -> None:
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
+        parent_result = FixtureParentUploadResult(status=EtlStatus.PENDING)
+        child = self.create_child1_for_upload(ref1_id=self.ref1_id)
+        create_pairs: list[tuple[Child1, UploadResult]] = []
+        create_originals: list[Child1ForUpload] = []
+
+        self.batch_uploader._prepare_child_for_creation(
+            Child1,
+            Child1ForUpload,
+            "parent_id",
+            parent_for_upload,
+            parent_result,
+            child,
+            UploadResult(status=EtlStatus.PENDING, is_new=False),
+            create_pairs,
+            create_originals,
+        )
+        self.batch_uploader._prepare_child_for_update(
+            Child1,
+            Child1ForUpload,
+            "parent_id",
+            parent_for_upload,
+            parent_result,
+            child,
+            UploadResult(status=EtlStatus.PENDING, is_new=True),
+            [],
+        )
+
+        assert create_pairs == []
+        assert create_originals == []
+
+    def test_child_preparation_skips_non_pending_and_passes_through_models(
+        self,
+    ) -> None:
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
+        parent_result = FixtureParentUploadResult(status=EtlStatus.PENDING)
+        child_for_upload = self.create_child1_for_upload(ref1_id=self.ref1_id)
+        child_result = UploadResult(status=EtlStatus.SKIPPED, is_new=True)
+        create_pairs: list[tuple[Child1, UploadResult]] = []
+        create_originals: list[Child1ForUpload] = []
+
+        self.batch_uploader._prepare_child_for_creation(
+            Child1,
+            Child1ForUpload,
+            "parent_id",
+            parent_for_upload,
+            parent_result,
+            child_for_upload,
+            child_result,
+            create_pairs,
+            create_originals,
+        )
+
+        persisted_child = Child1(
+            child1_id=self.child1_id,
+            parent_id=NULL_ID,
+            ref1_id=self.ref1_id,
+        )
+        update_pairs: list[tuple[Child1, UploadResult]] = []
+        self.batch_uploader._prepare_child_for_update(
+            Child1,
+            Child1ForUpload,
+            "parent_id",
+            parent_for_upload,
+            parent_result,
+            persisted_child,
+            UploadResult(status=EtlStatus.SKIPPED, is_new=False),
+            [],
+        )
+        update_pairs: list[tuple[Child1, UploadResult]] = []
+        self.batch_uploader._prepare_child_for_update(
+            Child1,
+            Child1ForUpload,
+            "parent_id",
+            parent_for_upload,
+            parent_result,
+            persisted_child,
+            UploadResult(status=EtlStatus.PENDING, is_new=False),
+            update_pairs,
+        )
+
+        assert create_pairs == []
+        assert create_originals == []
+        assert update_pairs[0][0] is persisted_child
+        assert persisted_child.parent_id == self.parent_id
+
+    def test_update_objects_does_not_treat_id_as_a_mutable_field(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setitem(
+            self.batch_uploader.stored_model_field_props[Parent],
+            "parent_id",
+            ModelFieldProps(is_mutable_always=True),
+        )
+        submitted = Parent(parent_id=self.parent_id)
+        existing = Parent(parent_id=self.parent_id)
+        result = UploadResult(status=EtlStatus.PENDING)
+        self.service.repository.crud.return_value = [existing]
+
+        success = self.batch_uploader.update_objects(
+            self.uow, self.user.id, Parent, [(submitted, result)]
+        )
+
+        assert success
+        assert result.status == EtlStatus.SKIPPED
+        assert self.service.repository.crud.call_count == 1
+
+    def test_default_reference_data_verification_is_a_noop(self) -> None:
+        cmd = self.create_command_for_parents(self.create_parent_for_upload())
+        batch_result = ParentBatchUploadResult(batch_id=cmd.id, parents=[])
+        default_uploader = BatchUploader(UploadParentsCommand, {}, self.service)
+
+        assert default_uploader.verify_refdata(cmd, batch_result, self.uow)
+
+    def test_create_objects_marks_only_duplicate_ids_after_repository_error(
+        self,
+    ) -> None:
+        duplicate_id = self.random_ids[0]
+        other_id = self.random_ids[1]
+        duplicate_result = UploadResult(status=EtlStatus.PENDING)
+        other_result = UploadResult(status=EtlStatus.PENDING)
+        self.service.repository.crud.side_effect = DuplicateIdsError(
+            "duplicate", "duplicate IDs", ids=[duplicate_id]
+        )
+
+        success = self.batch_uploader.create_objects(
+            self.uow,
+            self.user.id,
+            Parent,
+            [
+                (Parent(parent_id=duplicate_id), duplicate_result),
+                (Parent(parent_id=other_id), other_result),
+            ],
+        )
+
+        assert not success
+        assert duplicate_result.status == EtlStatus.FAILED
+        assert duplicate_result.has_log_code("c9d0e1f2")
+        assert other_result.status == EtlStatus.PENDING
+
+    def test_create_objects_handles_duplicate_error_without_ids(self) -> None:
+        result = UploadResult(status=EtlStatus.PENDING)
+        self.service.repository.crud.side_effect = DuplicateIdsError(
+            "duplicate", "duplicate IDs"
+        )
+
+        success = self.batch_uploader.create_objects(
+            self.uow,
+            self.user.id,
+            Parent,
+            [(Parent(parent_id=self.parent_id), result)],
+        )
+
+        assert not success
+        assert result.status == EtlStatus.PENDING
+
+    def test_update_objects_rejects_null_id_without_repository_read(self) -> None:
+        parent = Parent(parent_id=NULL_ID)
+        result = UploadResult(status=EtlStatus.PENDING)
+
+        success = self.batch_uploader.update_objects(
+            self.uow, self.user.id, Parent, [(parent, result)]
+        )
+
+        assert not success
+        assert result.status == EtlStatus.FAILED
+        assert result.has_log_code("8b7824f4")
+        self.service.repository.crud.assert_not_called()
+
+    def test_objects_exist_preserves_null_positions_and_skips_all_null_ids(
+        self,
+    ) -> None:
+        all_null = self.batch_uploader.objects_exist(
+            self.uow, self.user.id, Parent, [None, NULL_ID]
+        )
+        assert all_null == [False, False]
+        self.service.repository.crud.return_value = [True]
+
+        mixed = self.batch_uploader.objects_exist(
+            self.uow, self.user.id, Parent, [None, self.parent_id]
+        )
+
+        assert mixed == [False, True]
+
+    def test_obj_id_field_name_resolves_parent_child_wrappers_and_unknowns(
+        self,
+    ) -> None:
+        parent_for_upload = self.create_parent_for_upload()
+        child_for_upload = self.create_child1_for_upload(ref1_id=self.ref1_id)
+
+        assert (
+            self.batch_uploader._get_obj_id_field_name(parent_for_upload) == "parent_id"
+        )
+        assert (
+            self.batch_uploader._get_obj_id_field_name(
+                Child1(parent_id=self.parent_id, ref1_id=self.ref1_id)
+            )
+            == "child1_id"
+        )
+        assert (
+            self.batch_uploader._get_obj_id_field_name(child_for_upload) == "child1_id"
+        )
+        with pytest.raises(KeyError, match="Could not determine ID field"):
+            self.batch_uploader._get_obj_id_field_name(self.create_ref1(self.ref1_id))
+
+    @pytest.mark.parametrize(
+        "content,updates,expected,expected_updated",
+        [
+            ({"existing": "same"}, None, {"existing": "same"}, False),
+            (
+                {"existing": "same"},
+                {"existing": "same"},
+                {"existing": "same"},
+                False,
+            ),
+            ({"existing": "same"}, {"existing": None}, {}, True),
+            ({"existing": None}, {"existing": None}, {}, False),
+        ],
+        ids=["none-updates", "same-value", "remove-key", "remove-null-value"],
+    )
+    def test_update_sub_field_dict_noop_and_existing_key_removal(
+        self,
+        content: dict[str, str | None],
+        updates: dict[str, str | None] | None,
+        expected: dict[str, str | None],
+        expected_updated: bool,
+    ) -> None:
+        is_updated = self.batch_uploader.update_sub_field_dict(content, updates)
+
+        assert content == expected
+        assert is_updated is expected_updated
 
 
 @pytest.mark.parametrize(

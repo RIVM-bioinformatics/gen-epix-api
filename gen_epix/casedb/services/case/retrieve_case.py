@@ -262,18 +262,12 @@ def _verify_case_set_access(
 def case_service_retrieve_cases_by_id(
     self: BaseCaseService,
     cmd: command.RetrieveCasesByIdCommand,
-    on_invalid_case_id: str = "raise",
 ) -> list[model.Case]:
     """Retrieve access-filtered cases by ID subject to case-type result limits.
-
-    Inaccessible content columns are removed from returned cases. Invalid or
-    unauthorized case IDs either raise or are ignored according to
-    ``on_invalid_case_id``.
 
     Args:
         self: Case service handling the retrieval.
         cmd: Command containing case type and requested identifiers.
-        on_invalid_case_id: Whether invalid requested IDs raise or are ignored.
 
     Returns:
         Accessible cases, truncated to the configured case-type limit.
@@ -304,7 +298,6 @@ def case_service_retrieve_cases_by_id(
             case_type_id,
             case_ids=case_ids,
             filter_content=True,
-            on_invalid_case_id=on_invalid_case_id,
         )
         if not cases:
             return []

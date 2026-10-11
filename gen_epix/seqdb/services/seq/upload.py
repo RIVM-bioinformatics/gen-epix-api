@@ -52,6 +52,8 @@ class SampleBatchUploader(BatchUploader):
 
         # TODO: Check if user has WRITE access to all created in data collections
         # TODO: For each sample in the batch, verify user has WRITE access to sample.created_in_data_collection_id
+        # TODO: LSP-3893 A non-admin without WRITE access to a sample's data collection
+        # is still authorized; should upload reject when ABAC rights are unavailable?
         is_authorized = True
         if not is_authorized:
             data_collection_id = NULL_ID
