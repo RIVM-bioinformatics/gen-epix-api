@@ -17,5 +17,5 @@ Do not stage, commit, push, create a worktree, or run an operation that requires
 manual approval. Preserve unrelated worktree changes.
 
 Once a module has been processed, append the path to `./tmp/processed_modules.txt`.
-Ensure that each path is written on a new line and that the file is updated 
-atomically to prevent race conditions. If the files does not exist, create it.
+Ensure that each path is written on a new line and that the file is updated
+atomically to prevent race conditions. If the file does not exist, create it.
