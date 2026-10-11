@@ -38,7 +38,7 @@ create, update, move, or rename test files until this assessment is complete.
    input, expected versus actual behavior, and remaining uncertainty. Use the
    question tool when available; otherwise ask in the response and wait. Offer
    concrete choices such as fixing the module first, clarifying intended behavior,
-   3or explicitly authorizing a regression test of the intended behavior.
+   or explicitly authorizing a regression test of the intended behavior.
 5. Do not silently fix production code, encode a suspected bug as expected
    behavior, or hide it with a skip/xfail. Resume only after the user responds;
    implement only the authorized resolution. If source code changes, reassess
