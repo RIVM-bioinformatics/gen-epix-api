@@ -324,10 +324,14 @@ def test_cascade_reads_preserve_fk_and_attach_relationship(
 ) -> None:
     organization = _organization()
     user = _user(organization.id)
+    unlinked_user = _user()
+    unlinked_user.organization_id = None
     monkeypatch.setattr(client, "read_some", lambda *args, **kwargs: [organization])
-    client._add_linked_objs(user, model.User, [user])
+    client._add_linked_objs(user, model.User, [user, unlinked_user])
     assert user.organization_id == organization.id
     assert user.organization is organization
+    assert unlinked_user.organization_id is None
+    assert unlinked_user.organization is None
 
     calls: list[tuple[Any, ...]] = []
     monkeypatch.setattr(client, "read_some", lambda *args, **kwargs: calls.append(args))

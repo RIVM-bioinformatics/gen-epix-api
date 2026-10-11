@@ -870,6 +870,8 @@ class TestClient:
             linked_obj_map = {x.get_id(): x for x in linked_objs}
             for obj in objs:
                 linked_obj_id = getattr(obj, link_field_name)
+                if linked_obj_id is None:
+                    continue
                 setattr(
                     obj,
                     relationship_field_name,
