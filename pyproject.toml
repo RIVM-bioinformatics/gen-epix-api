@@ -41,7 +41,7 @@ dependencies = [
     "tomli-w==1.2.0",
     "PyYAML==6.0.3",
     "scipy==1.18.1",
-    "numpy==2.5.3",
+    "numpy==2.5.4",
     "biopython==1.88",
     "cachetools==7.2.1",
     "slowapi==0.1.10",

@@ -1,11 +1,11 @@
-# Graph Report - gen-epix-api  (2026-10-08)
+# Graph Report - gen-epix-api  (2026-10-11)
 
 ## Corpus Check
 - 154 files · ~1,231,867 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 21639 nodes · 44723 edges · 1549 communities (374 shown, 1175 thin omitted)
+- 21639 nodes · 44723 edges · 1559 communities (371 shown, 1188 thin omitted)
 - Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 2605 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
@@ -14,32 +14,31 @@
 - commondb/domain/enum.py
 - CachedValue
 - cache/__init__.py
-- Domain
-- CrudCommand
+- Model
+- BaseService
 - .create_parent_for_upload
 - test_fastapp_unit_cache_region.py
-- scope.py
 - BaseFilterTestCase
 - SampleForUpload
 - command/omop.py
 - TestCaseAbac
 - BatchResult
-- test_fastapp_unit_cache_decorator.py
+- model/case/__init__.py
 - OauthIdpClient
 - RetrieveSimilarProfilesCommand
 - CaseService
-- seqdb/domain/model/__init__.py
-- Enum
+- BaseRbacService
+- pytest
 - InMemoryOrganizationRepository
 - BaseSeqService
-- SystemService
+- calculate_seq_distance.py
 - BaseAbacTestCase
 - BatchUploader
 - validate_int_key_args
 - model/omop/upload.py
-- App
+- CrudEndpointSet
 - json
-- pydantic
+- seqdb/domain/model/__init__.py
 - .create_local_or_remote
 - case_service_calculate_case_date
 - OAuth Client Auth Tests
@@ -47,11 +46,10 @@
 - model/omop/__init__.py
 - test_commondb_unit_config_cfg.py
 - Any
-- AuthService
+- SeqdbClient
 - CacheRegion
 - IntervalTransformer
 - BaseUploadTestCase
-- Entity
 - HTTPException
 - TestTupleMapTransformer
 - commondb/repositories/sa_model/__init__.py
@@ -60,9 +58,9 @@
 - ClientSettings
 - ._make_user_cmd
 - CasedbTestClient
-- sa_model/case.py
+- Base
 - sa_model/omop.py
-- RowMetadataMixin
+- sa_model/util.py
 - CrudCommand
 - case_service_retrieve_case_stats
 - TransformResult
@@ -70,20 +68,20 @@
 - RegionConfig
 - TestSeqDistancePerformance
 - TestOIDCProvider
-- Model
+- DictRepository
 - _make_protocol
-- BaseCommondbClientTestCase
+- TestOAuth2Validation
 - EndpointTestClient
-- test_remote_client_local.py
+- client_factory.py
 - crud_ref_seq.py
-- Base
+- sa_model/seq/__init__.py
 - IsoTimeTransformer
 - TestTokenStore
 - Any
-- pytest
+- typing
 - Client
-- EvictionStrategy
-- BaseCaseService
+- cache/exc.py
+- .get_case_abac_from_command
 - create_abac_endpoints
 - BaseSnpUploadTestCase
 - TestCrudWithAccessFilter
@@ -98,7 +96,7 @@
 - IntEnumWithJsonSchemaMixin
 - CaseAbac
 - UserManager
-- auth_test_support.py
+- test_commondb_unit_services_user_manager.py
 - Enum
 - make_assoc
 - SeqdbTestClient
@@ -106,7 +104,7 @@
 - Any
 - RBACTestClient
 - BaseRbacService
-- sa_model/util.py
+- create_sa_type_from_field_info
 - create_organization_endpoints
 - SeqProfile
 - ServerManager
@@ -145,7 +143,7 @@
 - seq/service.py
 - TestModelBaseSeq
 - Serializer
-- OMOP CDM Entity Catalog
+- Concept (omopdb.omop / OMOP CDM entity)
 - TestToken
 - CompositeFilter
 - create_client
@@ -174,7 +172,7 @@
 - MemoryTagIndex
 - test_commondb_unit_policies_update_user_policy.py
 - Import Path Analysis
-- Case Type Metadata Docs
+- Case Type
 - server.py
 - case_service_crud_case_type
 - Case Type Update Tests
@@ -183,9 +181,9 @@
 - BaseSeqdbService
 - crud_dim.py
 - test_etl_unit_model.py
-- Organization Reference Docs
+- Case Type Set
 - Case & Case Set Models
-- Case Type Models
+- CaseType
 - Sample Protocol Models
 - CommondbDictModelModifier
 - TestModelSeq
@@ -219,6 +217,7 @@
 - StreamingPipeline
 - _crud_case_set_with_abac
 - define_edge_cases_reference.py
+- .get_session
 - Development Guide
 - test_check_docstrings.py
 - retrieve_case_type_stats_profiled
@@ -235,14 +234,14 @@
 - test_general_error_code_unicity.py
 - CalculateSeqDistancesEtlResult
 - validate_str_for_uuid_field
-- command/ontology.py
+- Ontology Commands
 - BasePolicyDecisionPoint
 - generate_benchmark_charts
 - Commondb Organization ERDs
 - TestCasedbMetadataMasking
 - BaseBatchForUpload
 - Omopdb Organization Models
-- OMOP CDM Entities
+- Person (omopdb.omop / OMOP CDM entity)
 - Omopdb Organization ERD
 - Organization Admin Policies
 - Any
@@ -258,9 +257,9 @@
 - json_logging.py
 - TestRead
 - test_commondb_unit_services_upload.py
-- OidcServerCfg
+- ReceiverApp
 - OAuth2Client
-- TestNonCrudHandlers
+- CommondbClient
 - Casedb Read Permission Tests
 - Command & Policy Architecture
 - Omopdb ERD Catalog
@@ -286,6 +285,7 @@
 - RetrieveCompleteCaseTypeCommand
 - UvicornAccessLogFilter
 - RetryPolicy
+- TestInitialization
 - test_fastapp_unit_cache_serializer.py
 - Client
 - Tree Algorithm CRUD
@@ -323,12 +323,12 @@
 - Sequence Distance CRUD
 - .get_user
 - test_repository_lifecycle
-- CommondbClient
+- BaseCommondbClientTestCase
 - PR Creation Script
 - PR Review Skill
 - OmopDB Read User Policy
 - OmopDB Update User Policy
-- Concept Reference Data
+- Ref Col
 - Auth & System ERDs
 - Sequence Profile Distances
 - .anonymize
@@ -340,7 +340,7 @@
 - _make_obj
 - CaseDictRepository
 - ReadUserPolicy
-- CaseSARepository
+- _accumulate_case_stats
 - Renovate Dependency Config
 - Domain
 - BaseOauthIdpClientTestCase
@@ -401,7 +401,7 @@
 - crud_read_set.py
 - .create_person_for_upload
 - ParentUploadResult
-- define_edge_cases_operational.py
+- EdgeCaseSpecOp
 - test_client_credential_flow.py
 - FakeResponse
 - Docker Service Stack
@@ -413,12 +413,12 @@
 - TestRouterData
 - field_validator
 - SAUnitOfWork
-- make_value
+- ConcreteRbacService
 - Release Please Config
 - TestTokenStoreIntegration
 - NoFilter
 - crud_locus_code_map.py
-- Command
+- App
 - Command Dispatch Architecture
 - ReadOrganizationResultsOnlyPolicy
 - Tree Algorithm Classes
@@ -430,7 +430,7 @@
 - BaseFileRepository
 - _ConcretePolicyDecisionPoint
 - data_access/conftest.py
-- api/case.py
+- api/system.py
 - .create_crud_endpoint_set_for_domain
 - ._execute_read_all
 - Hex Code Skill
@@ -449,7 +449,7 @@
 - DeleteAllOperationalDataResult
 - RegexFilter
 - _parse_nextclade_profile_content
-- log_parser_v2.py
+- TestRegistrationAndLookups
 - start_server.py
 - SQL Stack Startup Script
 - .attach_abac_policy
@@ -583,22 +583,22 @@
 - ReadSetForUpload
 - crud_seq_category_set.py
 - ReadUserPolicy
-- http.py
-- abac/__init__.py
+- test_fastapp_unit_cache_http.py
+- test_fastapp_repository_performance.py
 - RetrieveProtocolsCommand
 - .get_jwk_from_jwt
 - test_commondb_unit_domain_model_base.py
 - register_domain_entities
-- test_fastapp_unit_cache_http.py
+- CountMinSketch
 - test/fastapp/model.py
 - .extract_security_callable
-- ._validate_model
 - case_service_crud_case_identifier
-- _crud_cascade_delete
+- BaseCaseService
 - crud_col_set.py
 - case_service_crud_col_set_member
 - TestTupleMapTransformerCaseInsensitivity
-- command/case.py
+- test_casedb_unit_services_case_create_seq.py
+- TestUserAuthorizationBehavior
 - test_seqdb_unit_services_seq_calculate_phylogenetic_tree.py
 - TestTupleMapTransformerCaseInsensitivity
 - TestAuthHttpFlow
@@ -606,8 +606,9 @@
 - HandleNoResponseMiddleware
 - RetrieveSeqDistancesBySeqProfilesCommand
 - DummyCommand
-- PydanticBaseModel
+- case_service_crud_case_set_data_collection_link
 - create_omop_endpoints
+- V1UserJourney
 - TestChildOrderDerivation
 - TestModelIdentifier
 - TestCreateNewUserFromToken
@@ -641,13 +642,12 @@
 - get_test_client
 - Gen-EpiX Platform
 - SeqdbEndpointTestClient
-- test_fastapp_unit_app.py
 - create_custom_openapi_function
 - commondb/repositories/sa_alembic/env.py
 - omopdb/repositories/sa_alembic/env.py
 - CaseBatchForUpload
 - RetrieveSeqDistanceLastModifiedCommand
-- sa/repository.py
+- BrokenBackend
 - create_routers
 - seqdb/repositories/sa_alembic/env.py
 - _make_realistic_profiles
@@ -655,7 +655,7 @@
 - TestAnonymizeUser
 - API Version Metadata
 - TestTupleMapTransformerDefaultValues
-- RowMetadataMixin
+- .create_region
 - TestTupleMapTransformerDefaultValues
 - crud_case_type_set_category.py
 - BaseOntologyRepository
@@ -710,29 +710,31 @@
 - env
 - _RepositoryStub
 - crud_protocol_set_member.py
-- test_entry_metadata_expiry_and_staleness_boundaries
 - TestPersonBatchUploadHappyPath
 - SeqService
 - crud_taxon.py
 - create_ssl_context
 - .create_crud_cmd
 - CreateFileCommand
-- OntologyService
+- LogParser2
 - add_parent_class_docs
 - TestDelete
 - TestModelCaseOpsData
 - TestRefColStateValidation
 - test_fastapp_unit_cache_tag.py
 - etl.py
-- TestServiceInitialization
+- BaseRbacServiceTestCase
+- RetrieveOwnPermissionsCommand
 - RetrieveCasesByIdCommand
 - RefCol
+- RbacPolicy
+- Data Collection
+- CaseSARepository
+- case_service_retrieve_complete_case_type
 - RbacService
-- test_fastapp_repository_performance.py
+- TestStartup
 - User
-- TestRoleHierarchy
 - OrganizationService
-- TestCommandPermissions
 - TestColumnMatching
 - test_filter_unit_date_range.py
 - TestJWKSManager
@@ -743,7 +745,7 @@
 - test_delete_all_operational_data_route_registration
 - RetrieveCasesByQueryCommand
 - test_delete_all_operational_data_dispatches_each_model_in_order
-- scenario_ids
+- AuthTestClient
 - RbacService
 - BaseFilterTestCase
 - case_service_crud_case
@@ -760,7 +762,7 @@
 - .app
 - middleware/__init__.py
 - test_omopdb_unit_services_client.py
-- commondb/config/cfg.py
+- pathlib
 - _FakeCaseAbacPolicy
 - RetrieveSamplesByQueryCommand
 - TestOpenAPIIntegration
@@ -779,36 +781,49 @@
 - EqualsFilter
 - TestRetrieveCaseCohortLinksByCaseType
 - _FakeCaseAbacPolicy
-- ItemCreateRequest
 - seq_service_calculate_seq_distances_for_new_profiles
 - DummyLogItem
 - .make_rows_model
-- test_number_range_map_function_converts_numeric_strings
+- test_filter_unit_number_range.py
 - pipeline_with_results
 - validate_int_enum_value
+- test_commondb_unit_api_organization.py
 - DependencyDeclaration
 - DuplicateIdsError
+- TestCrudEndpointSetValidation
 - test_organization_foreign_key_schema_description
 - test_fastapp_unit_cache_version.py
 - decorator_name
 - is_exception_class
+- start_all_services.py
 - TestERM
 - RoleGenerator
+- TestCrudEndpointSetValidation
+- test_fastapp_unit_cache_transaction.py
+- RetrieveContainingRegionCommand
 - .get_keys
+- TestCrudEndpointSetUserDependency
 - crud_protocol.py
 - Person
 - TestModelCompleteCaseType
-- TestRemoteRetryPolicy
+- dict/unit_of_work.py
 - test_commondb_unit_domain_enum.py
 - test_delete_all_ref_data_reports_missing_crud_command
-- test_sketch_estimates_never_underreport
+- BaseAuthService
 - App
 - test_a_failing_subscriber_does_not_block_the_others
 - test_single_filter_matches_pydantic_and_plain_python_rows
 - test_composite_filter_pydantic_and_plain_python_class
-- test_regex_compiles_and_matches_values
-- test_string_set_match_case_sensitivity
+- test_filter_unit_regex.py
+- test_filter_unit_string_set.py
 - RetrieveIsOwnCasesCommand
+- Model1CrudCommand
+- case_service_crud_tree_algorithm_class
+- RbacService
+- ChildModel
+- gen_epix/fastapp/util.py
+- subprocess
+- DiseaseEtiologicalAgentUpdateAssociationRequestBody
 
 ## God Nodes (most connected - your core abstractions)
 1. `CasedbTestClient` - 250 edges
@@ -835,26 +850,26 @@
   test/end_to_end/casedb_seqdb_connection/logging.yaml → gen_epix/omopdb/config/logging.yaml
 
 ## Import Cycles
-- 3-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/services/client.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 3-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 3-file cycle: `gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/casedb/domain/command/case.py -> gen_epix/casedb/domain/__init__.py`
+- 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
 - 3-file cycle: `gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/casedb/domain/command/system.py -> gen_epix/casedb/domain/__init__.py`
-- 3-file cycle: `gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/model/__init__.py -> gen_epix/casedb/domain/model/ontology.py -> gen_epix/casedb/domain/__init__.py`
-- 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/env.py -> gen_epix/commondb/app_impl_details.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/model/__init__.py -> gen_epix/seqdb/domain/model/seq/__init__.py -> gen_epix/seqdb/domain/model/seq/seq.py -> gen_epix/seqdb/domain/__init__.py`
+- 3-file cycle: `gen_epix/omopdb/domain/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/omopdb/domain/command/omop.py -> gen_epix/omopdb/domain/__init__.py`
+- 3-file cycle: `gen_epix/omopdb/domain/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/omopdb/domain/command/system.py -> gen_epix/omopdb/domain/__init__.py`
+- 3-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/command/__init__.py -> gen_epix/seqdb/domain/command/seq.py -> gen_epix/seqdb/domain/__init__.py`
+- 3-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/command/__init__.py -> gen_epix/seqdb/domain/command/system.py -> gen_epix/seqdb/domain/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/policy/__init__.py -> gen_epix/casedb/domain/policy/permission.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
 - 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/service/__init__.py -> gen_epix/casedb/domain/service/geo.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/services/client.py -> gen_epix/commondb/services/__init__.py -> gen_epix/commondb/services/upload.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/services/client.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/client_factory.py -> gen_epix/casedb/services/client.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/services/client.py -> gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/services/client.py -> gen_epix/commondb/services/__init__.py -> gen_epix/commondb/services/upload.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/services/client.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
 - 4-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/model/__init__.py -> gen_epix/seqdb/domain/model/seq/__init__.py -> gen_epix/seqdb/domain/model/seq/base.py -> gen_epix/seqdb/domain/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/seqdb/env.py -> gen_epix/seqdb/policies/__init__.py -> gen_epix/commondb/policies/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/model/__init__.py -> gen_epix/seqdb/domain/model/seq/__init__.py -> gen_epix/seqdb/domain/model/seq/taxon.py -> gen_epix/seqdb/domain/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/model/__init__.py -> gen_epix/casedb/domain/model/case/__init__.py -> gen_epix/casedb/domain/model/case/non_persistable.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/model/__init__.py -> gen_epix/casedb/domain/model/case/__init__.py -> gen_epix/casedb/domain/model/case/ref_data.py -> gen_epix/casedb/domain/__init__.py`
-- 4-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/model/__init__.py -> gen_epix/seqdb/domain/model/seq/__init__.py -> gen_epix/seqdb/domain/model/seq/locus.py -> gen_epix/seqdb/domain/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/env.py -> gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/abac.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/upload.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/env.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/services/client.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/model/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/model/__init__.py -> gen_epix/commondb/domain/model/upload.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/model/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/model/__init__.py -> gen_epix/commondb/domain/model/upload.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/seqdb/domain/model/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
 
 ## Hyperedges (group relationships)
 - **Gen-EpiX code quality and test toolchain** — dev_requirements_pytest, dev_requirements_isort, dev_requirements_black, dev_requirements_pylint, dev_requirements_mypy, dev_requirements_coverage [EXTRACTED 0.90]
@@ -870,7 +885,7 @@
 - **Shared Debug File+Console Logging Pattern (casedb/commondb/omopdb/seqdb)** — gen_epix_casedb_config_logging_debug_logging, gen_epix_commondb_config_logging_debug_logging, gen_epix_omopdb_config_logging_debug_logging, gen_epix_seqdb_config_logging_debug_logging [INFERRED 0.95]
 - **Shared Non-Debug JSON Logging Pattern (casedb/commondb/omopdb/seqdb)** — gen_epix_casedb_config_logging_logging, gen_epix_commondb_config_logging_logging, gen_epix_omopdb_config_logging_logging, gen_epix_seqdb_config_logging_logging [INFERRED 0.95]
 
-## Communities (1549 total, 1175 thin omitted)
+## Communities (1559 total, 1188 thin omitted)
 
 ### Community 0 - ".__init__"
 Cohesion: 0.06
@@ -878,31 +893,27 @@ Nodes (9): OrganizationAdminPolicyCrudCommand, AnonymizeUserCommand, InviteUserC
 
 ### Community 1 - "commondb/domain/enum.py"
 Cohesion: 0.01
-Nodes (86): ApiPermission, CasedbAppCfg, AppComposer, NoAppComposer, ApiPermission, UpdateUserOwnOrganizationRequestBody, ExternalLogItem, HealthResponseBody (+78 more)
+Nodes (76): DeleteAllOperationalDataCommand, DeleteAllRefDataCommand, ApiPermission, DataCollectionSetDataCollectionUpdateAssociationRequestBody, InviteUserRequestBody, OrganizationIdentifierIssuerUpdateAssociationRequestBody, OrganizationSetOrganizationUpdateAssociationRequestBody, RetrieveOrganizationContactsRequestBody (+68 more)
 
 ### Community 3 - "CachedValue"
 Cohesion: 0.02
-Nodes (12): CacheBackend, ProxyBackend, LayeredBackend, MemoryBackend, NullBackend, Mutex, NullMutex, RefreshRunner (+4 more)
+Nodes (11): CacheBackend, ProxyBackend, LayeredBackend, MemoryBackend, NullBackend, Mutex, NullMutex, RefreshRunner (+3 more)
 
 ### Community 4 - "cache/__init__.py"
 Cohesion: 0.01
-Nodes (60): Clock, SystemClock, CacheOperation, CircuitState, ExpiryMode, FailureMode, InvalidationMode, InvalidationScope (+52 more)
+Nodes (61): Clock, SystemClock, AsyncCachedFunction, CachedFunction, make_cached_function(), CacheOperation, CircuitState, ExpiryMode (+53 more)
 
-### Community 6 - "CrudCommand"
-Cohesion: 0.02
-Nodes (27): CrudCommand, UpdateAssociationCommand, BaseService, DummyCrudCommand, ItemCrudCommand, DummyCrudCommand, BadCrudNoEntity, BadCrudNoModel (+19 more)
+### Community 5 - "Model"
+Cohesion: 0.01
+Nodes (38): Domain, Entity, CrudCommand, Model, Permission, DummyCrudCommand, DummyModel, test_app() (+30 more)
 
 ### Community 7 - ".create_parent_for_upload"
 Cohesion: 0.04
 Nodes (4): Test3ReferenceDataLinks, Test6Identifiers, Test7OnExistsAndOnNewActions, Test9Child2Identifiers
 
 ### Community 8 - "test_fastapp_unit_cache_region.py"
-Cohesion: 0.03
-Nodes (28): BrokenBackend, make_region(), test_a_backend_failure_can_be_configured_to_surface(), test_a_backend_failure_degrades_to_the_loader(), test_a_bus_delivers_an_invalidation_to_every_subscribed_region(), test_a_cached_none_is_distinguishable_from_a_miss(), test_a_configured_exception_is_cached_and_re_raised(), test_a_disabled_region_behaves_as_a_pass_through() (+20 more)
-
-### Community 9 - "scope.py"
-Cohesion: 0.06
-Nodes (5): ContextVarScopeProvider, NullScopeProvider, RequestScope, ScopeProvider, StaticScopeProvider
+Cohesion: 0.02
+Nodes (38): BrokenBackend, make_region(), test_a_backend_failure_can_be_configured_to_surface(), test_a_backend_failure_degrades_to_the_loader(), test_a_bus_delivers_an_invalidation_to_every_subscribed_region(), test_a_cached_none_is_distinguishable_from_a_miss(), test_a_configured_exception_is_cached_and_re_raised(), test_a_copying_serializer_isolates_callers_from_the_cache() (+30 more)
 
 ### Community 10 - "BaseFilterTestCase"
 Cohesion: 0.04
@@ -924,17 +935,17 @@ Nodes (5): BaseCaseAbacTestCase, TestCaseAbac, TestCaseTypeAccessAbac, TestCaseT
 Cohesion: 0.10
 Nodes (6): BatchResult, ExtractResult, LoadResult, TransformResult, _FooTransformResult, TestBatchEtlResult
 
-### Community 15 - "test_fastapp_unit_cache_decorator.py"
+### Community 15 - "model/case/__init__.py"
 Cohesion: 0.05
-Nodes (21): fixture_region(), test_a_cached_method_can_be_invalidated_through_an_instance(), test_a_cached_method_shares_entries_across_instances(), test_a_condition_bypasses_the_cache_for_selected_calls(), test_a_coroutine_function_is_cached_and_invalidated_the_same_way(), load(), scenario(), test_a_key_template_narrows_what_participates_in_the_key() (+13 more)
+Nodes (29): CompleteCaseType, BaseCaseRights, CaseCohortLink, CaseQuery, CaseQueryResult, CaseRights, CaseSetQuery, CaseSetRights (+21 more)
 
-### Community 20 - "seqdb/domain/model/__init__.py"
-Cohesion: 0.02
-Nodes (23): UserInvitationConstraints, UserNameEmail, BaseIsPermissionSubsetNewRolePolicy, BaseHasSystemOutagePolicy, BaseOrganizationService, BaseRbacService, BaseSystemService, BaseUserManager (+15 more)
+### Community 20 - "BaseRbacService"
+Cohesion: 0.09
+Nodes (3): BaseIsPermissionSubsetNewRolePolicy, BaseRbacService, BaseUserManager
 
-### Community 21 - "Enum"
-Cohesion: 0.04
-Nodes (23): _annotation_to_mermaid_type(), _field_marker(), _render_entity_block(), get_logger_fmap(), AuthProtocol, CrudEndpointType, CrudOperationSet, EventTiming (+15 more)
+### Community 21 - "pytest"
+Cohesion: 0.01
+Nodes (71): ApiPermission, get_logger_fmap(), CommondbSAMapper, CommondbSAMapperFactory, AuthProtocol, CrudEndpointType, CrudOperationSet, EventTiming (+63 more)
 
 ### Community 22 - "InMemoryOrganizationRepository"
 Cohesion: 0.14
@@ -944,9 +955,9 @@ Nodes (6): InMemoryOrganizationRepository, make_commondb_user_manager(), make_id
 Cohesion: 0.04
 Nodes (7): RetrieveSampleIdentifiersByIdCommand, TaxonSetMemberCrudCommand, BaseSeqService, seq_service_crud_taxon_set_member(), seq_service_retrieve_sample_identifiers_by_id(), seq_service_retrieve_samples_by_id(), seq_service_retrieve_samples_by_query()
 
-### Community 24 - "SystemService"
-Cohesion: 0.05
-Nodes (13): DeleteAllOperationalDataCommand, DeleteAllRefDataCommand, DeleteAllOperationalDataCommand, DeleteAllRefDataCommand, OutageCrudCommand, RetrieveFeatureFlagsCommand, RetrieveLicensesCommand, RetrieveOutagesCommand (+5 more)
+### Community 24 - "calculate_seq_distance.py"
+Cohesion: 0.08
+Nodes (4): EtlStatus, EtlStatusSet, _hamming_allele_numpy_batch(), chunk_list()
 
 ### Community 25 - "BaseAbacTestCase"
 Cohesion: 0.06
@@ -964,25 +975,25 @@ Nodes (7): validate_int_key_args(), _int_field_name(), TestValidateIntPrimaryKey
 Cohesion: 0.04
 Nodes (16): IdentifiersMixin, UploadPersonsCommand, MeasurementForUpload, ObservationForUpload, PersonBatchForUpload, PersonBatchUploadResult, PersonDataIssue, PersonForUpload (+8 more)
 
-### Community 30 - "App"
+### Community 30 - "CrudEndpointSet"
 Cohesion: 0.02
-Nodes (29): CrudEndpointGenerator, endpoint_function(), CrudEndpointSet, App, test_app(), TestCrudEndpointSetCreation, TestCrudEndpointSetFlags, TestCrudEndpointSetMultipleEndpointTypes (+21 more)
+Nodes (25): CrudEndpointGenerator, endpoint_function(), CrudEndpointSet, TestCrudEndpointSetFlags, TestCrudEndpointSetMultipleEndpointTypes, TestCrudEndpointSetUserDependency, fastapi_app(), ItemCreateRequest (+17 more)
 
 ### Community 31 - "json"
 Cohesion: 0.19
 Nodes (40): JsonFormatter, _make_record(), test_adds_exception_payload(), test_content_field_normalised_to_message_when_message_absent(), test_content_field_not_overriding_explicit_message(), test_custom_extras_key_is_used_for_extra_fields(), test_custom_sensitive_keys_are_additive_to_mandatory_keys(), test_green_formats_plain_message_and_expected_extras() (+32 more)
 
-### Community 32 - "pydantic"
+### Community 32 - "seqdb/domain/model/__init__.py"
 Cohesion: 0.01
-Nodes (95): CompleteCaseType, BaseCaseRights, CaseCohortLink, CaseQuery, CaseQueryResult, CaseRights, CaseSetQuery, CaseSetRights (+87 more)
+Nodes (93): BaseCasePolicy, OrganizationAccessCasePolicy, OrganizationShareCasePolicy, UserAccessCasePolicy, UserShareCasePolicy, Region, RegionRelation, RegionSet (+85 more)
 
 ### Community 35 - "case_service_calculate_case_date"
 Cohesion: 0.10
 Nodes (9): case_service_calculate_case_date(), case_service_get_case_date_col_mappers(), case_service_get_case_date_col_mappers_from_cols(), convert_iso_date_to_datetime(), convert_iso_month_to_first_day_datetime(), convert_iso_quarter_to_first_day_datetime(), convert_iso_week_to_first_day_datetime(), convert_iso_year_to_first_day_datetime() (+1 more)
 
 ### Community 37 - "CrudCommand"
-Cohesion: 0.08
-Nodes (10): RegionCrudCommand, RegionRelationCrudCommand, RegionSetCrudCommand, RegionSetShapeCrudCommand, RetrieveContainingRegionCommand, get_case_abac_from_command(), is_data_command(), is_metadata_command() (+2 more)
+Cohesion: 0.12
+Nodes (9): RegionCrudCommand, RegionRelationCrudCommand, RegionSetCrudCommand, RegionSetShapeCrudCommand, get_case_abac_from_command(), is_data_command(), is_metadata_command(), is_no_abac_command() (+1 more)
 
 ### Community 38 - "model/omop/__init__.py"
 Cohesion: 0.03
@@ -993,12 +1004,12 @@ Cohesion: 0.14
 Nodes (31): _assert_default_import_payload(), _assert_string_override_payload(), _build_app_cfg(), override_tmp_dir(), _read_config(), test_casedb_read_config_defaults(), test_casedb_read_config_string_auth_overrides(), test_commondb_read_config_with_constructor_settings_files() (+23 more)
 
 ### Community 40 - "Any"
-Cohesion: 0.08
-Nodes (13): _execute(), _execute(), _execute(), _make_obj(), test_create_read_update_upsert_delete_and_exists(), test_create_some_exact_batch_without_flush(), test_crud_return_ids_pagination_and_object_filter(), test_mutating_batches_reject_duplicate_ids() (+5 more)
+Cohesion: 0.09
+Nodes (10): _execute(), _execute(), _execute(), _execute(), _execute(), _execute(), test_create_read_update_upsert_delete_and_exists(), test_create_some_and_upsert_some_validation() (+2 more)
 
-### Community 42 - "AuthService"
+### Community 42 - "SeqdbClient"
 Cohesion: 0.02
-Nodes (16): RetrievePhylogeneticTreeByProfilesCommand, BaseGeoService, GeoService, SeqdbService, UserInvitation, OrganizationService, RbacService, MockIDPClient (+8 more)
+Nodes (15): OntologyService, SeqdbService, PackageMetadata, AbacService, OrganizationService, RbacService, SystemService, BaseAbacService (+7 more)
 
 ### Community 43 - "CacheRegion"
 Cohesion: 0.04
@@ -1008,16 +1019,12 @@ Nodes (7): CachedError, CacheRegion, load(), decorate(), refresh(), _check_multi
 Cohesion: 0.07
 Nodes (4): BaseUploadTestCase, test_missing_and_unknown_read_set_links_are_distinct(), TestVerifyChildrenSeqs, TestVerifyProtocol
 
-### Community 46 - "Entity"
-Cohesion: 0.02
-Nodes (14): Entity, keys_generator(), get_keys(), DummyModel, ItemModel, DummyModel, TestDAGAndCycleBehavior, TestRegistrationAndLookups (+6 more)
-
 ### Community 47 - "HTTPException"
 Cohesion: 0.04
 Nodes (18): BadRequest400HTTPException, Forbidden403HTTPException, ForeignKeyConstraint409HTTPException, InternalServerError500HTTPException, MethodNotAllowed405HTTPException, NotImplemented501HTTPException, ResourceConflict409HTTPException, ResourceNotFound404HTTPException (+10 more)
 
 ### Community 50 - "commondb/repositories/sa_model/__init__.py"
-Cohesion: 0.07
+Cohesion: 0.06
 Nodes (30): OrganizationAdminPolicy, OrganizationAdminPolicyMixin, NoIdRowMetadataMixin, RowMetadataMixin, Contact, ContactMixin, DataCollection, DataCollectionMixin (+22 more)
 
 ### Community 53 - "Transformer"
@@ -1036,17 +1043,17 @@ Nodes (6): BaseReadUserPolicyTestCase, TestAppAdminBypass, TestOrgAdminReads, Te
 Cohesion: 0.06
 Nodes (3): CasedbTestClient, TestCreate, TestCaseUploadContentDeletion
 
-### Community 58 - "sa_model/case.py"
-Cohesion: 0.07
-Nodes (21): Case, CaseDataCollectionLink, CaseSet, CaseSetCategory, CaseSetDataCollectionLink, CaseSetMember, CaseSetStatus, CaseType (+13 more)
+### Community 58 - "Base"
+Cohesion: 0.04
+Nodes (36): Case, CaseDataCollectionLink, CaseIdentifier, CaseSet, CaseSetCategory, CaseSetDataCollectionLink, CaseSetMember, CaseSetStatus (+28 more)
 
 ### Community 59 - "sa_model/omop.py"
 Cohesion: 0.04
 Nodes (41): DataLineageMixin, CareSite, CdmSource, Cohort, CohortDefinition, Concept, ConceptAncestor, ConceptClass (+33 more)
 
-### Community 60 - "RowMetadataMixin"
-Cohesion: 0.15
-Nodes (6): Concept, ConceptRelation, ConceptSet, Disease, EtiologicalAgent, Etiology
+### Community 60 - "sa_model/util.py"
+Cohesion: 0.13
+Nodes (6): _build_sa_model_map(), create_composite_primary_key_mapper_args(), create_mapped_column(), get_mixin_mapped_column(), set_entity_repository_model_classes(), _validate_entity_fields()
 
 ### Community 61 - "CrudCommand"
 Cohesion: 0.07
@@ -1066,27 +1073,27 @@ Nodes (5): BaseRetrieveCaseTestCase, test_mapping_branches_decimal_col_type(), t
 
 ### Community 66 - "RegionConfig"
 Cohesion: 0.01
-Nodes (63): _as_scope_parts(), region_config_from_mapping(), RegionConfig, BrokenBackend, make_region(), test_a_backend_failure_can_be_configured_to_surface(), test_a_backend_failure_degrades_to_the_loader(), test_a_bus_delivers_an_invalidation_to_every_subscribed_region() (+55 more)
+Nodes (75): EntryMetadata, RegionConfig, test_the_null_backend_never_stores_anything(), make_region(), test_a_backend_failure_can_be_configured_to_surface(), test_a_backend_failure_degrades_to_the_loader(), test_a_bus_delivers_an_invalidation_to_every_subscribed_region(), test_a_cached_none_is_distinguishable_from_a_miss() (+67 more)
 
 ### Community 67 - "TestSeqDistancePerformance"
 Cohesion: 0.14
 Nodes (5): BaseSeqDistancePerformance, ensure_datasets_exist_and_valid(), get_test_client(), TestRepositoryPerformance, TestSeqDistancePerformance
 
-### Community 69 - "Model"
+### Community 69 - "DictRepository"
 Cohesion: 0.04
-Nodes (58): Model, DictRepository, child_id(), ChildModel, make_child_entity(), make_parent_entity(), _empty_keys(), _keys() (+50 more)
+Nodes (59): keys_generator(), DictRepository, get_keys(), child_id(), ChildModel, make_child_entity(), make_parent_entity(), _empty_keys() (+51 more)
 
 ### Community 70 - "_make_protocol"
 Cohesion: 0.07
 Nodes (8): _make_protocol(), _minimal_protocol_data(), TestProtocolGitCommitHash, TestProtocolGitRepositoryUri, TestProtocolHappyPaths, TestProtocolProps, TestProtocolSerializers, TestProtocolTypeDependencies
 
-### Community 73 - "test_remote_client_local.py"
-Cohesion: 0.04
-Nodes (26): create_client(), default_token_file(), _parse_app_type(), read_token_file(), resolve_token(), set_envvar(), oauth_discovery_settings_file(), oauth_server() (+18 more)
+### Community 73 - "client_factory.py"
+Cohesion: 0.09
+Nodes (11): create_client(), default_token_file(), _parse_app_type(), read_token_file(), resolve_token(), _create_client(), test_authenticated_read_all(), test_client_credentials_token_is_cached() (+3 more)
 
-### Community 75 - "Base"
-Cohesion: 0.07
-Nodes (41): CaseIdentifier, IdentifierMixin, File, ContentMixin, QualityMixin, SeqMixin, AstMeasurement, AstPrediction (+33 more)
+### Community 75 - "sa_model/seq/__init__.py"
+Cohesion: 0.09
+Nodes (35): IdentifierMixin, ContentMixin, QualityMixin, SeqMixin, AstMeasurement, AstPrediction, PcrMeasurement, ReadSet (+27 more)
 
 ### Community 76 - "IsoTimeTransformer"
 Cohesion: 0.04
@@ -1096,21 +1103,17 @@ Nodes (3): IsoTimeTransformer, TestIsoTimeTransformer, test_time_transform()
 Cohesion: 0.18
 Nodes (3): AlwaysTrueFilter, BaseTrueFilter, CompositeFilter
 
-### Community 79 - "pytest"
+### Community 79 - "typing"
 Cohesion: 0.01
-Nodes (51): ServiceType, BaseCaseAbacPolicy, BaseAbacService, BaseOntologyService, case_service_create_case_set(), Contact, DataCollection, DataCollectionSet (+43 more)
+Nodes (56): RetrieveSimilarCasesResponseBody, CaseCrudCommand, CaseDataCollectionLinkCrudCommand, CaseIdentifierCrudCommand, CaseSetCategoryCrudCommand, CaseSetDataCollectionLinkCrudCommand, CaseSetMemberCrudCommand, CaseSetStatusCrudCommand (+48 more)
 
 ### Community 81 - "Client"
 Cohesion: 0.04
 Nodes (3): Client, TestClient, TestClientStoreIntegration
 
-### Community 82 - "EvictionStrategy"
-Cohesion: 0.03
-Nodes (9): EvictionPolicyType, CountMinSketch, create_eviction_strategy(), EvictionStrategy, FIFOEviction, LFUEviction, LRUEviction, RandomEviction (+1 more)
-
-### Community 83 - "BaseCaseService"
-Cohesion: 0.05
-Nodes (7): BaseCaseService, case_service_crud_case_set_data_collection_link(), _crud_case_set_data_collection_link_with_abac(), _crud_case_set_data_collection_link_without_abac(), case_service_crud_genetic_distance_protocol(), case_service_retrieve_cases_by_id(), case_service_retrieve_is_own_cases()
+### Community 82 - "cache/exc.py"
+Cohesion: 0.02
+Nodes (37): EvictionPolicyType, create_eviction_strategy(), EvictionStrategy, FIFOEviction, LFUEviction, LRUEviction, RandomEviction, TinyLFUEviction (+29 more)
 
 ### Community 85 - "BaseSnpUploadTestCase"
 Cohesion: 0.08
@@ -1121,16 +1124,12 @@ Cohesion: 0.06
 Nodes (12): DataCmd, DummyCmd, DummyEntity, DummyLink, MetaCmd, NoAbacCmd, OtherCmd, TestCommandCategoryChecks (+4 more)
 
 ### Community 87 - "api/seq.py"
-Cohesion: 0.05
-Nodes (19): ConvertSeqFormatRequestBody, RetrieveBestSeqClassificationPerSampleRequestBody, RetrieveBestSeqPerSampleRequestBody, RetrieveBestSeqProfilePerSampleRequestBody, RetrieveSampleIdentifiersByIdsRequestBody, RetrieveSamplesByIdsRequestBody, RetrieveSeqDistancesBySeqProfilesRequestBody, RetrieveSeqFastaRequestBody (+11 more)
+Cohesion: 0.08
+Nodes (13): ConvertSeqFormatRequestBody, RetrieveBestSeqClassificationPerSampleRequestBody, RetrieveBestSeqPerSampleRequestBody, RetrieveBestSeqProfilePerSampleRequestBody, RetrieveSampleIdentifiersByIdsRequestBody, RetrieveSamplesByIdsRequestBody, RetrieveSeqDistancesBySeqProfilesRequestBody, RetrieveSeqFastaRequestBody (+5 more)
 
 ### Community 89 - "TestClient"
 Cohesion: 0.06
 Nodes (3): TestClient, TestCreate, TestCreate
-
-### Community 90 - "Any"
-Cohesion: 0.03
-Nodes (20): AsyncCachedFunction, BoundCachedFunction, CachedFunction, make_cached_function(), arg_key_generator(), generate_key(), bind_arguments(), function_namespace() (+12 more)
 
 ### Community 91 - "_retrieve_case_profile_map"
 Cohesion: 0.06
@@ -1156,9 +1155,9 @@ Nodes (14): AstResultFormat, FileFormat, IntEnumWithJsonSchemaMixin, PcrResultFo
 Cohesion: 0.06
 Nodes (3): CaseAbac, CaseTypeAccessAbac, CaseTypeShareAbac
 
-### Community 99 - "auth_test_support.py"
+### Community 99 - "test_commondb_unit_services_user_manager.py"
 Cohesion: 0.06
-Nodes (16): Organization, make_cdb_invitation(), make_cdb_organization(), claims_basic(), make_user_manager(), mock_organization_service(), mock_rbac_service(), other_org() (+8 more)
+Nodes (15): make_cdb_invitation(), make_cdb_organization(), claims_basic(), make_user_manager(), mock_organization_service(), mock_rbac_service(), other_org(), other_org_id() (+7 more)
 
 ### Community 100 - "Enum"
 Cohesion: 0.05
@@ -1176,9 +1175,9 @@ Nodes (9): ConceptAncestor, ConceptClass, ConceptRelationship, ConceptSynonym, D
 Cohesion: 0.14
 Nodes (5): BaseRbacService, get_test_client(), RBACTestClient, TestRBAC, User
 
-### Community 108 - "sa_model/util.py"
-Cohesion: 0.06
-Nodes (16): _build_sa_model_map(), create_composite_primary_key_mapper_args(), create_mapped_column(), get_mixin_mapped_column(), set_entity_repository_model_classes(), _validate_entity_fields(), _create_sa_type(), create_sa_type_from_field_info() (+8 more)
+### Community 108 - "create_sa_type_from_field_info"
+Cohesion: 0.11
+Nodes (10): _create_sa_type(), create_sa_type_from_field_info(), get_sa_type_kwargs_from_field_info(), _resolve_field_typevar(), ColumnModel, Payload, Status, test_create_sa_type_maps_primitives_enums_and_models() (+2 more)
 
 ### Community 109 - "create_organization_endpoints"
 Cohesion: 0.10
@@ -1232,6 +1231,10 @@ Nodes (3): CacheStatistics, InMemoryStatsRecorder, NullStatsRecorder
 Cohesion: 0.05
 Nodes (12): ConvertSeqFormatCommand, RetrieveSamplesByIdCommand, RetrieveSeqFastaCommand, TreeAlgorithmClassCrudCommand, TreeAlgorithmCrudCommand, test_convert_seq_format_rejects_duplicate_ids(), test_convert_seq_format_rejects_invalid_format_pairs(), test_numpy_distance_schema_description() (+4 more)
 
+### Community 134 - "Filter"
+Cohesion: 0.08
+Nodes (3): _default_validate_query_filter(), Filter, test_split_filter_and_get_where_clause()
+
 ### Community 136 - ".create_client"
 Cohesion: 0.10
 Nodes (3): TestCall, TestClientCredentialsFlow, TestInitAndConfig
@@ -1257,8 +1260,8 @@ Cohesion: 0.07
 Nodes (4): custom_openapi_function(), fix_schema_nullable_and_single_element(), TestFixSchemaNullableAndSingleElement, TestFixSchemaNullableAndSingleElement
 
 ### Community 144 - "User"
-Cohesion: 0.04
-Nodes (10): User, AuthTestClient, MockJWKAndToken, BaseRbacServiceTestCase, ConcreteRbacService, _TestCommand, _TestCommand2, TestUserAuthorizationBehavior (+2 more)
+Cohesion: 0.12
+Nodes (4): User, _TestCommand2, MockUser, UserManager
 
 ### Community 147 - "Jira Fields Documentation"
 Cohesion: 0.05
@@ -1276,9 +1279,9 @@ Nodes (24): RetrieveBestSeqClassificationPerSampleCommand, RetrieveBestSeqPerSam
 Cohesion: 0.05
 Nodes (9): _as_bytes(), CompressingSerializer, DeepCopySerializer, EncryptingSerializer, IdentitySerializer, JsonSerializer, PickleSerializer, Serializer (+1 more)
 
-### Community 152 - "OMOP CDM Entity Catalog"
-Cohesion: 0.13
-Nodes (39): CareSite (omopdb.omop / OMOP CDM entity), CdmSource (omopdb.omop / OMOP CDM entity), Cohort (omopdb.omop / OMOP CDM entity), CohortDefinition (omopdb.omop / OMOP CDM entity), Concept (omopdb.omop / OMOP CDM entity), ConceptAncestor (omopdb.omop / OMOP CDM entity), ConceptClass (omopdb.omop / OMOP CDM entity), ConceptRelationship (omopdb.omop / OMOP CDM entity) (+31 more)
+### Community 152 - "Concept (omopdb.omop / OMOP CDM entity)"
+Cohesion: 0.11
+Nodes (24): CdmSource (omopdb.omop / OMOP CDM entity), Cohort (omopdb.omop / OMOP CDM entity), CohortDefinition (omopdb.omop / OMOP CDM entity), Concept (omopdb.omop / OMOP CDM entity), ConceptAncestor (omopdb.omop / OMOP CDM entity), ConceptClass (omopdb.omop / OMOP CDM entity), ConceptRelationship (omopdb.omop / OMOP CDM entity), ConceptSynonym (omopdb.omop / OMOP CDM entity) (+16 more)
 
 ### Community 154 - "CompositeFilter"
 Cohesion: 0.07
@@ -1325,8 +1328,8 @@ Cohesion: 0.11
 Nodes (16): PolicyDecisionPoint, abac_service(), _case_set_command(), _case_set_row(), pdp(), test_column_access_empty_inputs(), test_column_access_uses_union_of_collection_rights(), test_filter_case_set_ids_allows_any_accessible_collection_and_caches() (+8 more)
 
 ### Community 170 - "service_test_client.py"
-Cohesion: 0.13
-Nodes (17): Model1_1CrudCommand, Model1_2CrudCommand, Model2_1CrudCommand, Model2_2CrudCommand, ServiceType, TestType, env(), TestRepository (+9 more)
+Cohesion: 0.17
+Nodes (13): Model1_1CrudCommand, Model1_2CrudCommand, Model2_1CrudCommand, Model2_2CrudCommand, env(), TestRepository, Model1_1, Model1_2 (+5 more)
 
 ### Community 172 - "Person"
 Cohesion: 0.09
@@ -1364,9 +1367,9 @@ Nodes (10): _make_abac_service(), _make_invite_cmd(), _make_policy(), _make_role
 Cohesion: 0.09
 Nodes (7): analyze_imports(), ImportEdge, ImportGraphAnalyzer, ModuleNode, scan_python_files(), SymbolNode, test_shortest_import_path()
 
-### Community 184 - "Case Type Metadata Docs"
-Cohesion: 0.07
-Nodes (30): ColSet, Disease, Etiology, CaseTypeSetMember (doc), ColSet (doc), ColSetMember (doc), Case Type, Case Type Set Member (+22 more)
+### Community 184 - "Case Type"
+Cohesion: 0.10
+Nodes (21): Disease, Etiology, CaseTypeSetMember (doc), Case Type, Case Type Set Member, Col, Dim, Disease (+13 more)
 
 ### Community 185 - "server.py"
 Cohesion: 0.03
@@ -1388,17 +1391,17 @@ Nodes (11): DimCrudCommand, Dim, _crud_create_dim(), _crud_dim_with_abac(), _cru
 Cohesion: 0.08
 Nodes (6): _ConcreteLogResult, _FooExtractResult, TestEtlLogItem, TestEtlResult, TestPolymorphicRoundTrip, TestResultLogHelpers
 
-### Community 194 - "Organization Reference Docs"
-Cohesion: 0.12
-Nodes (28): ColSet, DataCollection, Organization, OrganizationAdminPolicy, User, CaseTypeSet (doc), Case Type Set, Col Set (+20 more)
+### Community 194 - "Case Type Set"
+Cohesion: 0.11
+Nodes (27): ColSet, DataCollection, Organization, OrganizationAdminPolicy, User, CaseTypeCategory, ColSet, CaseTypeSet (doc) (+19 more)
 
 ### Community 195 - "Case & Case Set Models"
 Cohesion: 0.09
 Nodes (28): Case, Case, CaseAccessAbac, CaseRights, CaseSet, CaseSetAccessAbac, CaseSetForUpload, CaseSetRights (+20 more)
 
-### Community 196 - "Case Type Models"
-Cohesion: 0.08
-Nodes (28): CaseQuery, CaseQueryResult, CaseSetQuery, CaseType, CaseTypeAccessAbac, CaseTypeCategory, CaseTypeCol, Col (+20 more)
+### Community 196 - "CaseType"
+Cohesion: 0.13
+Nodes (18): CaseQuery, CaseQueryResult, CaseSetQuery, CaseType, CaseTypeAccessAbac, CaseTypeCol, Col, ColUpload (+10 more)
 
 ### Community 197 - "Sample Protocol Models"
 Cohesion: 0.12
@@ -1469,8 +1472,8 @@ Cohesion: 0.11
 Nodes (6): StreamingPipeline, _pipeline_with_results(), process_stream(), test_collect_errors_separates_successes_and_failure_results(), test_stream_raises_only_when_error_rate_exceeds_threshold(), test_stream_results_in_order_and_invokes_callbacks()
 
 ### Community 229 - "_crud_case_set_with_abac"
-Cohesion: 0.08
-Nodes (6): case_service_crud_case_set(), _crud_case_set_with_abac(), _crud_case_set_without_abac(), _retrieve_case_sets_with_content_right(), _validate_case_set_deletion(), case_service_retrieve_complete_case_type()
+Cohesion: 0.21
+Nodes (5): case_service_crud_case_set(), _crud_case_set_with_abac(), _crud_case_set_without_abac(), _retrieve_case_sets_with_content_right(), _validate_case_set_deletion()
 
 ### Community 230 - "define_edge_cases_reference.py"
 Cohesion: 0.11
@@ -1528,9 +1531,9 @@ Nodes (5): CalculateSeqDistancesForNewProfilesCommand, UpdateSeqDistancesCommand
 Cohesion: 0.05
 Nodes (3): validate_str_for_uuid_field(), TestValidateStrForUuidField, TestValidateStrForUuidField
 
-### Community 250 - "command/ontology.py"
-Cohesion: 0.12
-Nodes (8): ConceptCrudCommand, ConceptRelationCrudCommand, ConceptSetCrudCommand, DiseaseCrudCommand, DiseaseEtiologicalAgentUpdateAssociationCommand, EtiologicalAgentCrudCommand, EtiologyCrudCommand, UpdateAssociationCommand
+### Community 250 - "Ontology Commands"
+Cohesion: 0.14
+Nodes (7): ConceptCrudCommand, ConceptRelationCrudCommand, ConceptSetCrudCommand, DiseaseCrudCommand, DiseaseEtiologicalAgentUpdateAssociationCommand, EtiologicalAgentCrudCommand, EtiologyCrudCommand
 
 ### Community 251 - "BasePolicyDecisionPoint"
 Cohesion: 0.07
@@ -1548,9 +1551,9 @@ Nodes (17): Contact (commondb.organization entity), IdentifierIssuer (commondb.o
 Cohesion: 0.15
 Nodes (16): Contact, Contact (omopdb.md), Organization (omopdb.md), OrganizationAdminPolicy (omopdb.md), OrganizationSet (omopdb.md), Site (omopdb.md), User (omopdb.md), UserInvitation (omopdb.md) (+8 more)
 
-### Community 257 - "OMOP CDM Entities"
-Cohesion: 0.12
-Nodes (16): ConditionOccurrenceIdentifier (omopdb.omop / OMOP CDM entity), Death (omopdb.omop / OMOP CDM entity), DeathIdentifier (omopdb.omop / OMOP CDM entity), DeviceExposureIdentifier (omopdb.omop / OMOP CDM entity), DrugExposureIdentifier (omopdb.omop / OMOP CDM entity), MeasurementIdentifier (omopdb.omop / OMOP CDM entity), NoteIdentifier (omopdb.omop / OMOP CDM entity), NoteNlp (omopdb.omop / OMOP CDM entity) (+8 more)
+### Community 257 - "Person (omopdb.omop / OMOP CDM entity)"
+Cohesion: 0.16
+Nodes (31): CareSite (omopdb.omop / OMOP CDM entity), ConditionOccurrence (omopdb.omop / OMOP CDM entity), ConditionOccurrenceIdentifier (omopdb.omop / OMOP CDM entity), Death (omopdb.omop / OMOP CDM entity), DeathIdentifier (omopdb.omop / OMOP CDM entity), DeviceExposure (omopdb.omop / OMOP CDM entity), DeviceExposureIdentifier (omopdb.omop / OMOP CDM entity), DrugExposure (omopdb.omop / OMOP CDM entity) (+23 more)
 
 ### Community 258 - "Omopdb Organization ERD"
 Cohesion: 0.14
@@ -1597,20 +1600,24 @@ Cohesion: 0.06
 Nodes (7): _build_sensitive_re(), _normalise_sensitive_keys(), redact_nested(), _redact_nested_impl(), _safe_json_loads(), _truncate_middle(), _utc_iso()
 
 ### Community 273 - "TestRead"
-Cohesion: 0.07
-Nodes (9): TestRead, LogKey, LogKeySet, LogSourceKey, V1LogParser, to_merged_record(), to_record(), V1UserJourney (+1 more)
+Cohesion: 0.10
+Nodes (7): TestRead, LogKey, LogKeySet, LogSourceKey, V1LogParser, to_merged_record(), to_record()
 
 ### Community 274 - "test_commondb_unit_services_upload.py"
 Cohesion: 0.06
 Nodes (27): BaseUploadTestCase, Test1ObjectExistence, Test2ChildObjectProvision, Test8ParameterizedBatchSizes, TestChildInferredParentVerification, TestChildOrderCreateOrdering, TestCombinedScenarios, TestDuplicateIds (+19 more)
 
-### Community 275 - "OidcServerCfg"
-Cohesion: 0.08
-Nodes (4): OidcServerCfg, main(), ReceiverAppCLI, ReceiverApp
+### Community 275 - "ReceiverApp"
+Cohesion: 0.13
+Nodes (3): main(), ReceiverAppCLI, ReceiverApp
 
 ### Community 276 - "OAuth2Client"
 Cohesion: 0.06
 Nodes (11): demo_client_credentials_flow(), OAuth2Client, ClientCreateRequest, ClientResponse, delete_client(), get_client(), health(), health_check() (+3 more)
+
+### Community 277 - "CommondbClient"
+Cohesion: 0.07
+Nodes (3): CommondbClient, _mock_response(), TestNonCrudHandlers
 
 ### Community 281 - "Command & Policy Architecture"
 Cohesion: 0.17
@@ -1716,9 +1723,9 @@ Nodes (10): RefSeq (seqdb.seq.md), SeqTaxonomy (seqdb.seq.md), Taxon (seqdb.seq.
 Cohesion: 0.11
 Nodes (5): ExistsFilter, test_composite_construction_retains_child_filters(), test_exists_invert_coercion(), test_exists_map_function_does_not_change_na_matching(), test_exists_match()
 
-### Community 347 - "CommondbClient"
-Cohesion: 0.06
-Nodes (5): CommondbClient, DummyCommand, TestGetHeaders, TestInitialization, TestIntegration
+### Community 347 - "BaseCommondbClientTestCase"
+Cohesion: 0.08
+Nodes (4): BaseCommondbClientTestCase, DummyCommand, TestGetHeaders, TestIntegration
 
 ### Community 348 - "PR Creation Script"
 Cohesion: 0.44
@@ -1728,9 +1735,9 @@ Nodes (8): branch_title(), generated_body(), print_ready_command(), require_comm
 Cohesion: 0.22
 Nodes (7): Argument parsing, Posting approved comments, Review Invocation and Posting, Troubleshooting, Inputs, Pull Request Review, Workflow
 
-### Community 352 - "Concept Reference Data"
-Cohesion: 0.28
-Nodes (9): Concept, Concept Relation, Concept Set, Concept (doc), Concept Relation (doc), Concept, ConceptSet, Concept (doc concept) (+1 more)
+### Community 352 - "Ref Col"
+Cohesion: 0.11
+Nodes (20): Concept, Concept Relation, Concept Set, Genetic Distance Protocol, Concept (doc), Concept Relation (doc), Ref Col (doc), Ref Dim (doc) (+12 more)
 
 ### Community 353 - "Auth & System ERDs"
 Cohesion: 0.25
@@ -1763,10 +1770,6 @@ Nodes (6): Model1, Model1CreateAPI, Model1ReadAPI, Model2, Model2CreateAPI, Mode
 ### Community 363 - "_make_obj"
 Cohesion: 0.16
 Nodes (3): _fixed_factory(), _make_obj(), TestCommondbDictModelModifier
-
-### Community 366 - "CaseSARepository"
-Cohesion: 0.14
-Nodes (6): _accumulate_case_stats(), _build_case_stats_query(), CaseSARepository, session(), test_access_filters_aggregate_case_counts_and_adjusted_dates(), test_unrestricted_statistics_include_cases_without_truncating_dates()
 
 ### Community 367 - "Renovate Dependency Config"
 Cohesion: 0.22
@@ -1850,7 +1853,7 @@ Nodes (5): TestRead, TestCreate, TestRead, TestUpdate, TestUpdate
 
 ### Community 406 - "SARepository"
 Cohesion: 0.05
-Nodes (28): SARepository, repo(), RepoModel, SARepoModel, test_check_schema_matches_empty_for_matching_schema(), test_check_schema_matches_reports_missing_column(), test_check_schema_matches_reports_missing_table(), test_clear_repository_content_alembic_schema_defaults_to_noop() (+20 more)
+Nodes (32): SARepository, _make_obj(), repo(), RepoModel, SARepoModel, test_check_schema_matches_empty_for_matching_schema(), test_check_schema_matches_reports_missing_column(), test_check_schema_matches_reports_missing_table() (+24 more)
 
 ### Community 410 - "fastapi_app"
 Cohesion: 0.16
@@ -1912,10 +1915,6 @@ Nodes (14): CircuitBreaker, FailurePolicy, TimeoutGuard, test_a_breaker_opens_af
 Cohesion: 0.04
 Nodes (12): MeasurementRelationForUpload, BasePersonUploadTestCase, Test1PersonExistence, Test2ChildObjectProvision, Test4PersonLinks, Test5FieldMutability, Test6Identifiers, Test7OnExistsAndOnNewActions (+4 more)
 
-### Community 437 - "define_edge_cases_operational.py"
-Cohesion: 0.25
-Nodes (3): _build_col_lookup(), _compute_expected_cases_op(), EdgeCaseSpecOp
-
 ### Community 438 - "test_client_credential_flow.py"
 Cohesion: 0.17
 Nodes (6): oauth_server(), receiver_app(), requestor_app(), oauth_server(), ServerType, ServerTypeSet
@@ -1944,17 +1943,13 @@ Nodes (5): TreeAlgorithm (seqdb.seq.md), TreeAlgorithmClass (seqdb.seq.md), Phyl
 Cohesion: 0.09
 Nodes (8): ConcurrentModificationError, DomainException, FeatureDisabledServiceError, InitializationServiceError, RepositoryInitializationServiceError, RepositoryServiceError, ServiceException, ServiceUnavailableError
 
-### Community 452 - "make_value"
-Cohesion: 0.11
-Nodes (9): make_value(), test_a_failing_removal_listener_cannot_break_the_store(), test_capacity_is_enforced_by_weight_not_by_count(), test_clear_reports_every_entry_as_cleared(), test_expire_reclaims_entries_that_are_never_read_again(), test_expired_entries_are_removed_on_read(), test_least_recently_used_entry_is_evicted_first(), test_replacing_an_entry_reports_the_previous_one() (+1 more)
-
 ### Community 454 - "Release Please Config"
 Cohesion: 0.40
 Nodes (4): include-component-in-tag, packages, pull-request-title-pattern, $schema
 
-### Community 458 - "Command"
+### Community 458 - "App"
 Cohesion: 0.02
-Nodes (8): RetrieveGeneticSequenceByIdCommand, _walk(), Command, Policy, PolicyDecisionPoint, AbacService, DummyNonCrud, test_unimplemented_policy_methods_share_error_contract()
+Nodes (40): RetrieveGeneticSequenceByIdCommand, App, _walk(), Command, Policy, PolicyDecisionPoint, AbacService, TestCrudEndpointSetCreation (+32 more)
 
 ### Community 459 - "Command Dispatch Architecture"
 Cohesion: 0.83
@@ -1973,12 +1968,12 @@ Cohesion: 0.17
 Nodes (6): AuthException, CredentialsAuthError, RequestLimitExceededAuthError, UnauthorizedAuthError, UserAlreadyExistsAuthError, UserNotFoundAuthError
 
 ### Community 465 - "assert_models_follow_reverse_dag_order"
-Cohesion: 0.13
+Cohesion: 0.14
 Nodes (4): test_reset_model_lists_follow_reverse_dag_links(), test_reset_model_lists_follow_reverse_dag_links(), test_reset_model_lists_follow_reverse_dag_links(), assert_models_follow_reverse_dag_order()
 
 ### Community 467 - "test/conftest.py"
-Cohesion: 0.13
-Nodes (6): generate_excel_report(), pytest_collection_modifyitems(), pytest_runtest_makereport(), pytest_sessionfinish(), _remove_timezone_from_datetime(), test_ruff_docstring_formatting()
+Cohesion: 0.16
+Nodes (5): generate_excel_report(), pytest_collection_modifyitems(), pytest_runtest_makereport(), pytest_sessionfinish(), _remove_timezone_from_datetime()
 
 ### Community 468 - "BaseFileRepository"
 Cohesion: 0.23
@@ -1992,17 +1987,13 @@ Nodes (7): abac_service(), _ConcretePolicyDecisionPoint, pdp(), test_case_abac_a
 Cohesion: 0.15
 Nodes (4): setup_case_data_operational(), setup_case_data_reference(), setup_test_users_and_organizations_operational(), setup_test_users_and_organizations_reference()
 
-### Community 472 - "api/case.py"
-Cohesion: 0.07
-Nodes (18): CaseTypeSetCaseTypeUpdateAssociationRequestBody, ColSetColUpdateAssociationRequestBody, CreateCaseSetRequestBody, CreateFileForReadSetRequestBody, CreateFileForSeqRequestBody, RefColValidationRulesResponseBody, RetrieveCaseCohortLinksByCaseTypeRequestBody, RetrieveCaseRightsRequestBody (+10 more)
+### Community 472 - "api/system.py"
+Cohesion: 0.05
+Nodes (22): CaseTypeSetCaseTypeUpdateAssociationRequestBody, ColSetColUpdateAssociationRequestBody, CreateCaseSetRequestBody, CreateFileForReadSetRequestBody, CreateFileForSeqRequestBody, RefColValidationRulesResponseBody, RetrieveCaseCohortLinksByCaseTypeRequestBody, RetrieveCaseRightsRequestBody (+14 more)
 
 ### Community 473 - ".create_crud_endpoint_set_for_domain"
 Cohesion: 0.06
 Nodes (3): create_geo_endpoints(), create_ontology_endpoints(), create_file_endpoints()
-
-### Community 474 - "._execute_read_all"
-Cohesion: 0.08
-Nodes (4): _execute(), _execute(), _execute(), _execute()
 
 ### Community 477 - "App Ports And CLI"
 Cohesion: 0.67
@@ -2035,10 +2026,6 @@ Nodes (6): _create_app(), _get_route(), _handle_exception(), test_ref_data_route
 ### Community 493 - "_parse_nextclade_profile_content"
 Cohesion: 0.14
 Nodes (8): _nextclade_position_state(), _parse_nextclade_non_acgtns(), _parse_nextclade_position_token(), _parse_nextclade_profile_content(), _parse_nextclade_ranges(), _parse_nextclade_substitutions(), _ParsedNextcladeProfile, _split_nextclade_field()
-
-### Community 494 - "log_parser_v2.py"
-Cohesion: 0.17
-Nodes (5): Key, KeySet, SourcePath, UserJourneyColumn, UserJourneyColumn
 
 ### Community 495 - "start_server.py"
 Cohesion: 0.32
@@ -2105,12 +2092,12 @@ Cohesion: 0.05
 Nodes (28): CasedbAppCfgSettingsDict, CasedbServiceSectionDict, ResolvedCasedbAppCfgSettingsDict, ResolvedCasedbServiceSectionDict, SeqdbClientEntryDict, SeqdbClientLocalDict, SeqdbClientLocalUserDict, SeqdbClientPropsDict (+20 more)
 
 ### Community 649 - "case_service_crud_case_set_member"
-Cohesion: 0.18
+Cohesion: 0.24
 Nodes (3): case_service_crud_case_set_member(), _crud_case_set_member_with_abac(), _crud_case_set_member_without_abac()
 
 ### Community 650 - "V2LogParser"
-Cohesion: 0.08
-Nodes (5): LogParser2, V2LogParser, to_merged_record(), to_record(), V2UserJourney
+Cohesion: 0.11
+Nodes (4): V2LogParser, to_merged_record(), to_record(), V2UserJourney
 
 ### Community 654 - "BaseCaseService"
 Cohesion: 0.03
@@ -2120,37 +2107,29 @@ Nodes (5): UpdateCaseCreatedInDataCollectionCommand, BaseCaseService, is_app_adm
 Cohesion: 0.30
 Nodes (4): case_service_crud_col(), _crud_col_with_abac(), _crud_col_without_abac(), _validate_cols()
 
-### Community 659 - "http.py"
-Cohesion: 0.16
-Nodes (3): compute_etag(), HttpCachePolicy, matches_etag()
+### Community 659 - "test_fastapp_unit_cache_http.py"
+Cohesion: 0.08
+Nodes (9): compute_etag(), HttpCachePolicy, matches_etag(), test_a_matching_validator_allows_a_not_modified_response(), test_a_private_response_is_never_shared(), test_a_weak_validator_matches_its_strong_counterpart(), test_an_entity_tag_changes_with_the_body(), test_cache_control_reflects_the_policy() (+1 more)
 
-### Community 660 - "abac/__init__.py"
-Cohesion: 0.23
-Nodes (5): BaseCasePolicy, OrganizationAccessCasePolicy, OrganizationShareCasePolicy, UserAccessCasePolicy, UserShareCasePolicy
+### Community 660 - "test_fastapp_repository_performance.py"
+Cohesion: 0.18
+Nodes (7): env(), TestRepository, generate_hex_strings(), generate_uuids(), get_test_name(), get_test_output_dir(), get_test_root_output_dir()
 
 ### Community 665 - "register_domain_entities"
-Cohesion: 0.18
-Nodes (6): _complete_model_field_props(), complete_stored_model_field_props(), register_domain_entities(), _register_service_commands(), _register_service_models(), ModelFieldProps
-
-### Community 667 - "test_fastapp_unit_cache_http.py"
-Cohesion: 0.14
-Nodes (6): test_a_matching_validator_allows_a_not_modified_response(), test_a_private_response_is_never_shared(), test_a_weak_validator_matches_its_strong_counterpart(), test_an_entity_tag_changes_with_the_body(), test_cache_control_reflects_the_policy(), test_no_store_suppresses_every_other_directive()
+Cohesion: 0.20
+Nodes (5): _complete_model_field_props(), register_domain_entities(), _register_service_commands(), _register_service_models(), ModelFieldProps
 
 ### Community 668 - "test/fastapp/model.py"
-Cohesion: 0.39
-Nodes (5): RowMetadataMixin, SAModel1_1, SAModel1_2, SAModel2_1, SAModel2_2
-
-### Community 671 - "._validate_model"
-Cohesion: 0.05
-Nodes (3): RbacService, Model1CrudCommand, Model2CrudCommand
+Cohesion: 0.27
+Nodes (7): ServiceType, TestType, RowMetadataMixin, SAModel1_1, SAModel1_2, SAModel2_1, SAModel2_2
 
 ### Community 672 - "case_service_crud_case_identifier"
 Cohesion: 0.22
 Nodes (3): case_service_crud_case_identifier(), _crud_case_identifier_with_abac(), _crud_case_identifier_without_abac()
 
-### Community 681 - "_crud_cascade_delete"
-Cohesion: 0.08
-Nodes (15): CaseTypeSetCrudCommand, CaseTypeSetMemberCrudCommand, case_service_crud_case_set_category(), case_service_crud_case_set_status(), case_service_crud_case_type_set(), _crud_case_type_set_with_abac(), _crud_case_type_set_without_abac(), case_service_crud_case_type_set_member() (+7 more)
+### Community 681 - "BaseCaseService"
+Cohesion: 0.06
+Nodes (17): CaseTypeSetCrudCommand, CaseTypeSetMemberCrudCommand, BaseCaseService, case_service_crud_case_set_category(), case_service_crud_case_set_status(), case_service_crud_case_type_set(), _crud_case_type_set_with_abac(), _crud_case_type_set_without_abac() (+9 more)
 
 ### Community 682 - "crud_col_set.py"
 Cohesion: 0.20
@@ -2160,17 +2139,17 @@ Nodes (3): case_service_crud_col_set(), _crud_col_set_with_abac(), _crud_col_set
 Cohesion: 0.21
 Nodes (3): case_service_crud_col_set_member(), _crud_col_set_member_with_abac(), _crud_col_set_member_without_abac()
 
-### Community 685 - "command/case.py"
-Cohesion: 0.03
-Nodes (44): CaseCrudCommand, CaseDataCollectionLinkCrudCommand, CaseIdentifierCrudCommand, CaseSetCategoryCrudCommand, CaseSetDataCollectionLinkCrudCommand, CaseSetMemberCrudCommand, CaseSetStatusCrudCommand, CaseTypeCrudCommand (+36 more)
+### Community 685 - "test_casedb_unit_services_case_create_seq.py"
+Cohesion: 0.12
+Nodes (20): CreateFileForReadSetCommand, CreateFileForSeqCommand, case_service_create_file_for_read_set_or_seq(), _create_file(), _get_hash_uuid(), _update_read_set_with_file(), _update_seq_with_file(), _configure_column_type() (+12 more)
 
 ### Community 687 - "test_seqdb_unit_services_seq_calculate_phylogenetic_tree.py"
 Cohesion: 0.13
 Nodes (7): seq_service_calculate_phylogenetic_tree(), _make_protocol(), _make_seq_distance(), _mock_uow(), _RepositoryStub, _SeqServiceStub, test_calculated_tree_returns_only_leaves_with_distances()
 
-### Community 695 - "PydanticBaseModel"
-Cohesion: 0.15
-Nodes (6): DataCollectionSetDataCollectionUpdateAssociationRequestBody, InviteUserRequestBody, OrganizationIdentifierIssuerUpdateAssociationRequestBody, OrganizationSetOrganizationUpdateAssociationRequestBody, RetrieveOrganizationContactsRequestBody, UpdateUserRequestBody
+### Community 695 - "case_service_crud_case_set_data_collection_link"
+Cohesion: 0.22
+Nodes (3): case_service_crud_case_set_data_collection_link(), _crud_case_set_data_collection_link_with_abac(), _crud_case_set_data_collection_link_without_abac()
 
 ### Community 700 - "create_omop_endpoints"
 Cohesion: 0.19
@@ -2181,8 +2160,8 @@ Cohesion: 0.04
 Nodes (36): UploadSamplesCommand, SampleBatchUploadResult, SeqProfileForUpload, SampleBatchUploader, seq_service_upload_samples(), _create_sample_refdata(), _update_profile_distances(), _add_invalid_protocol_errors() (+28 more)
 
 ### Community 733 - "Command"
-Cohesion: 0.04
-Nodes (6): CaseAbacPolicy, RetrieveOrganizationsUnderAdminCommand, Command, RetrieveOwnPermissionsCommand, RetrieveSubRolesCommand, RbacPolicy
+Cohesion: 0.07
+Nodes (5): CaseAbacPolicy, RetrieveOrganizationsUnderAdminCommand, Command, UpdateAssociationCommand, RetrieveSubRolesCommand
 
 ### Community 738 - "case_service_crud_ref_col"
 Cohesion: 0.23
@@ -2208,10 +2187,6 @@ Nodes (5): RetrieveGeneticSequenceFastaByIdCommand, test_retrieve_genetic_sequen
 Cohesion: 0.22
 Nodes (4): _configure_url(), run_migrations_offline(), run_migrations_online(), _get_target_metadata()
 
-### Community 778 - "test_fastapp_unit_app.py"
-Cohesion: 0.06
-Nodes (30): _CacheCommand, _LargeListCommand, _make_user(), _OtherCacheCommand, test_app_starts_with_empty_cache_registries(), test_auto_invalidation_runs_after_success_only(), test_auto_invalidation_runs_for_nested_commands(), handle_outer() (+22 more)
-
 ### Community 779 - "create_custom_openapi_function"
 Cohesion: 0.07
 Nodes (3): create_custom_openapi_function(), TestCreateCustomOpenAPIFunction, TestCreateCustomOpenAPIFunction
@@ -2224,10 +2199,6 @@ Nodes (4): _configure_url(), run_migrations_offline(), run_migrations_online(), 
 Cohesion: 0.22
 Nodes (4): _configure_url(), run_migrations_offline(), run_migrations_online(), _get_target_metadata()
 
-### Community 794 - "sa/repository.py"
-Cohesion: 0.06
-Nodes (11): CommondbSAMapper, CommondbSAMapperFactory, FieldTypeSet, BaseSAMapperFactory, SAMapperFactory, create_seq(), expected_fasta(), test_retrieve_seq_fasta_decodes_compressed_contig() (+3 more)
-
 ### Community 802 - "seqdb/repositories/sa_alembic/env.py"
 Cohesion: 0.22
 Nodes (4): _configure_url(), run_migrations_offline(), run_migrations_online(), _get_target_metadata()
@@ -2239,10 +2210,6 @@ Nodes (12): _extract_protocol_info(), _extract_segments(), _walk(), get_test_cli
 ### Community 819 - "OrganizationAccessCasePolicy"
 Cohesion: 0.22
 Nodes (4): OrganizationAccessCasePolicy, OrganizationShareCasePolicy, UserAccessCasePolicy, UserShareCasePolicy
-
-### Community 828 - "RowMetadataMixin"
-Cohesion: 0.22
-Nodes (4): Region, RegionRelation, RegionSet, RegionSetShape
 
 ### Community 832 - "BaseOntologyRepository"
 Cohesion: 0.24
@@ -2316,9 +2283,21 @@ Nodes (3): test_retagging_a_key_drops_its_previous_tags(), test_tag_templates_re
 Cohesion: 0.08
 Nodes (18): _connect_args(), main(), _parse_mode(), _repository_cfg(), _require_repository_cfg(), _resolved_cfg_for_app(), _restore_env(), run_load_demodata() (+10 more)
 
-### Community 951 - "test_fastapp_repository_performance.py"
-Cohesion: 0.10
-Nodes (8): parse_stats(), TestRead, TestStartup, generate_hex_strings(), generate_uuids(), get_test_name(), get_test_output_dir(), get_test_root_output_dir()
+### Community 933 - "BaseRbacServiceTestCase"
+Cohesion: 0.07
+Nodes (5): BaseRbacServiceTestCase, TestCommandPermissions, TestRbacPolicyRegistration, TestRoleHierarchy, TestServiceInitialization
+
+### Community 945 - "Data Collection"
+Cohesion: 0.33
+Nodes (9): Data Collection, Data Collection Set, Data Collection Set Member, Data Collection (doc), DataCollection, DataCollection, DataCollectionSet, DataCollectionSetMember (+1 more)
+
+### Community 946 - "CaseSARepository"
+Cohesion: 0.25
+Nodes (4): CaseSARepository, session(), test_access_filters_aggregate_case_counts_and_adjusted_dates(), test_unrestricted_statistics_include_cases_without_truncating_dates()
+
+### Community 951 - "TestStartup"
+Cohesion: 0.14
+Nodes (3): parse_stats(), TestRead, TestStartup
 
 ### Community 974 - "test_filter_unit_date_range.py"
 Cohesion: 0.25
@@ -2356,6 +2335,10 @@ Nodes (23): create_case_endpoints(), case_type_sets__put__case_types(), col_sets
 Cohesion: 0.53
 Nodes (4): _fake_app_init(), _make_app(), test_registers_person_retrieval_routes_and_handlers(), test_retrieve_persons_by_query_posts_query_body()
 
+### Community 1065 - "pathlib"
+Cohesion: 0.06
+Nodes (10): main(), generate_hash_for_domain_models(), _annotation_to_mermaid_type(), _field_marker(), _render_entity_block(), CI: Static Analysis and Testing Workflow, Key, KeySet (+2 more)
+
 ### Community 1096 - "crud_case_data_collection_link.py"
 Cohesion: 0.19
 Nodes (3): case_service_crud_case_data_collection_link(), _crud_case_data_collection_link_with_abac(), _crud_case_data_collection_link_without_abac()
@@ -2364,9 +2347,29 @@ Nodes (3): case_service_crud_case_data_collection_link(), _crud_case_data_collec
 Cohesion: 0.09
 Nodes (14): seq_service_calculate_seq_distances_for_new_profiles(), _CrudRecorder, _make_allele_profile(), _make_crud_side_effect(), _crud(), _make_mlva_profile(), _make_nextclade_content(), _make_seq_distance() (+6 more)
 
+### Community 1139 - "test_filter_unit_number_range.py"
+Cohesion: 0.25
+Nodes (3): test_number_range_construction_and_validation(), test_number_range_map_function_converts_numeric_strings(), test_number_range_matches_censor_operators()
+
+### Community 1223 - "test_commondb_unit_api_organization.py"
+Cohesion: 0.36
+Nodes (3): _create_anonymize_endpoint(), test_anonymize_endpoint_accepts_none_result(), test_anonymize_endpoint_reports_non_none_result()
+
+### Community 1262 - "start_all_services.py"
+Cohesion: 0.04
+Nodes (16): CasedbAppCfg, AppComposer, NoAppComposer, AppComposer, NoAppComposer, OmopdbAppCfg, AppComposer, NoAppComposer (+8 more)
+
+### Community 1272 - "test_fastapp_unit_cache_transaction.py"
+Cohesion: 0.25
+Nodes (3): test_a_closed_transaction_refuses_further_requests(), test_identical_requests_collapse_inside_a_transaction(), test_namespace_bumps_with_different_generations_are_both_kept()
+
 ### Community 1280 - "crud_protocol.py"
 Cohesion: 0.11
 Nodes (10): ProtocolCrudCommand, seq_service_crud_protocol(), _validate_protocol_creation(), _validate_protocol_updates(), _protocol(), _service(), test_protocol_creation_allows_same_hash_for_different_types(), test_protocol_creation_rejects_duplicate_hash_in_existing_protocols() (+2 more)
+
+### Community 1354 - "test_filter_unit_string_set.py"
+Cohesion: 0.22
+Nodes (3): test_string_set_construction_normalizes_members(), test_string_set_match_case_sensitivity(), test_string_set_match_enum_names()
 
 ## Ambiguous Edges - Review These
 - `Case` → `CaseRights`  [AMBIGUOUS]
@@ -2385,24 +2388,28 @@ Nodes (10): ProtocolCrudCommand, seq_service_crud_protocol(), _validate_protocol
   docs/erm/seqdb.detailed.md · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **516 isolated node(s):** `OrganismType`, `TestPersonUpload`, `UnsupportedModel`, `DataCmd`, `MetaCmd` (+511 more)
+- **386 isolated node(s):** `casedb CASE Simplified ERD`, `casedb SEQDB Simplified ERD`, `casedb SUBJECT Simplified ERD`, `TreeAlgorithm (seqdb entity)`, `config:best-practices` (+381 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 10105 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **1175 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1188 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **What is the exact relationship between `Case` and `CaseRights`?**
-  _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
-- **Why does `App` connect `App` to `SeqdbEndpointTestClient`, `commondb/domain/enum.py`, `Domain`, `CrudCommand`, `AuthEnv`, `test_fastapp_unit_app.py`, `User`, `test_commondb_unit_services_upload.py`, `seqdb/domain/model/__init__.py`, `InMemoryOrganizationRepository`, `SystemService`, `create_routers`, `.create_local_or_remote`, `.app`, `BaseOmopService`, `AuthService`, `service_test_client.py`, `BaseUploadTestCase`, `.__init__`, `HandleNoResponseMiddleware`, `Client`, `.create_person_for_upload`, `Model`, `Command`, `pytest`, `HandleAuthExceptionMiddleware`, `BaseSnpUploadTestCase`, `.create_crud_endpoint_set_for_domain`, `CommondbClient`, `BaseRemoteService`, `create_routers`, `BaseAppComposer`, `BaseSimilarCasesTestCase`, `auth_test_support.py`, `_create_app`, `DeleteAllOperationalDataResult`, `.__init__`, `.__init__`, `create_routers`?**
+- **Why does `App` connect `App` to `SeqdbEndpointTestClient`, `commondb/domain/enum.py`, `Model`, `BaseService`, `AuthEnv`, `test_commondb_unit_services_upload.py`, `BaseRbacService`, `pytest`, `CommondbClient`, `InMemoryOrganizationRepository`, `create_routers`, `CrudEndpointSet`, `TestCrudEndpointSetUserDependency`, `seqdb/domain/model/__init__.py`, `.create_local_or_remote`, `.app`, `BaseOmopService`, `SeqdbClient`, `service_test_client.py`, `BaseUploadTestCase`, `HandleNoResponseMiddleware`, `.create_person_for_upload`, `Client`, `.crud`, `typing`, `HandleAuthExceptionMiddleware`, `BaseSnpUploadTestCase`, `api/system.py`, `.create_crud_endpoint_set_for_domain`, `BaseRemoteService`, `BaseAppComposer`, `create_routers`, `BaseSimilarCasesTestCase`, `TestCrudEndpointSetValidation`, `_create_app`, `DeleteAllOperationalDataResult`, `TestCrudEndpointSetValidation`, `AuthTestClient`, `create_routers`?**
   _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **Are the 35 inferred relationships involving `CasedbTestClient` (e.g. with `AppComposer` and `Role`) actually correct?**
   _`CasedbTestClient` has 35 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `OrganismType`, `TestPersonUpload`, `UnsupportedModel` to the rest of the system?**
-  _516 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `casedb CASE Simplified ERD`, `casedb SEQDB Simplified ERD`, `casedb SUBJECT Simplified ERD` to the rest of the system?**
+  _386 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `.__init__` be split into smaller, more focused modules?**
   _Cohesion score 0.059379217273954114 - nodes in this community are weakly interconnected._
+- **Why does `CasedbTestClient` connect `CasedbTestClient` to `commondb/domain/enum.py`, `TestRead`, `TestCasedbModelProcessMetadata`, `Casedb Read Permission Tests`, `TestcasedbEdgeCasesRefDataAccess`, `TestStartup`, `Case Type Update Tests`, `typing`, `data_access/conftest.py`, `.get_obj`, `Casedb Delete Permission Tests`, `create_routers`, `retrieve_case_type_stats_profiled`, `Case Upload Test Setup`, `start_all_services.py`, `get_test_client`, `TestCasedbEdgeCasesAccess`, `get_test_client`, `TestCasedbMetadataMasking`?**
+  _High betweenness centrality (0.041) - this node is a cross-community bridge._
+
+### Low-confidence Hints
+_AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._
+
+- **What is the exact relationship between `Case` and `CaseRights`?**
+  _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **What is the exact relationship between `CaseSet` and `CaseSetRights`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
-- **Why does `CasedbTestClient` connect `CasedbTestClient` to `commondb/domain/enum.py`, `Casedb Read Permission Tests`, `get_test_client`, `retrieve_case_type_stats_profiled`, `Case Upload Test Setup`, `pytest`, `TestcasedbEdgeCasesRefDataAccess`, `TestRead`, `get_test_client`, `TestCasedbModelProcessMetadata`, `data_access/conftest.py`, `test_fastapp_repository_performance.py`, `.get_obj`, `TestCasedbEdgeCasesAccess`, `Case Type Update Tests`, `Casedb Delete Permission Tests`, `TestCasedbMetadataMasking`, `create_routers`?**
-  _High betweenness centrality (0.041) - this node is a cross-community bridge._
