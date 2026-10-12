@@ -267,13 +267,19 @@ def create_organization_endpoints(
         "/user_me",
         operation_id="user_me__get_one",
         name="UserMe",
-        description=user_class.__doc__,
+        description=command.RetrieveOwnUserCommand.__doc__,
     )
     async def user_me__get_one(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> user_class:  # type: ignore[valid-type]
         """See router description."""
-        return user
+        try:
+            retval: user_class = app.handle(  # type: ignore[valid-type]
+                command.RetrieveOwnUserCommand(user=user)
+            )
+        except Exception as exception:
+            handle_exception("5d0e7a41", user, exception)
+        return retval
 
     @router.get(
         "/user_me/permissions",

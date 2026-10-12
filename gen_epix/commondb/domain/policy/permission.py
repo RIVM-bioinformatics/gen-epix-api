@@ -118,6 +118,7 @@ class RoleGenerator:
         Role.GUEST: {
             # organization
             (command.RetrieveOwnPermissionsCommand, PermissionTypeSet.E),
+            (command.RetrieveOwnUserCommand, PermissionTypeSet.E),
             # rbac
             (command.RetrieveSubRolesCommand, PermissionTypeSet.E),
         },
