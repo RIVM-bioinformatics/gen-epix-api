@@ -328,7 +328,17 @@ completed `HTTP 200 GET /v1/health` from the launched instance. Select `casedb`,
   --idp-mode NONE --repository-mode DICT_EMPTY --kind both
 .venv/bin/python -m scripts.startup_benchmark report RESULTS_JSON \
   --diagnostics DIAGNOSTICS_JSON --output REPORT_DIRECTORY
+.venv/bin/python -m scripts.startup_benchmark report --input RESULTS_JSON \
+  --diagnostics DIAGNOSTICS_JSON --output report.html
 ```
+
+The positional-input report still writes Markdown, SVG, and JSON to a directory.
+The `--input` form writes one offline HTML dashboard with embedded Plotly charts,
+run filters, fixed overall statistics, and searchable import rankings. Install
+its Jinja2/Plotly dependencies from `dev-requirements.txt`, then open the HTML
+directly in a browser. Reporting reads saved JSON without starting applications
+and does not require Linux/WSL. Diagnostics are optional and must match the saved
+benchmark evidence. See the [dashboard usage guide](../scripts/startup_benchmark/README.md#offline-html-dashboard).
 
 `NONE` and `DICT_EMPTY` are local examples, not a reference deployment. The
 harness requires Python 3.14+ and Linux/WSL. It uses the invoking interpreter,
