@@ -1,6 +1,7 @@
 """Provide seqdb persistence behavior for repositories.organization_dict."""
 
 from collections.abc import Hashable, Iterable
+from typing import Any
 
 from gen_epix.commondb.repositories import (
     OrganizationDictRepository as CommonOrganizationDictRepository,
