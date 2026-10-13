@@ -605,6 +605,9 @@ class Domain:
                 service_type_dependencies[service_type].add(linked_service_type)
                 service_type_dependencies.setdefault(linked_service_type, set())
 
+        service_types_in_entity_order = list(
+            dict.fromkeys(self._service_type_for_entity[x] for x in entities)
+        )
         try:
             sorted_service_types = list(
                 TopologicalSorter(service_type_dependencies).static_order()
@@ -619,9 +622,7 @@ class Domain:
                     "f8b2c94d",
                     f"Service type {cyclic_service_type} is part of a cycle in the entity DAG",
                 ) from error
-            sorted_service_types = list(
-                dict.fromkeys(self._service_type_for_entity[x] for x in entities)
-            )
+            sorted_service_types = service_types_in_entity_order
 
         if reverse:
             return list(reversed(sorted_service_types))
