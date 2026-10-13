@@ -191,6 +191,8 @@ class Run:
                 "test/seqdb/integration",
                 "test/omopdb/unit",
                 "test/omopdb/integration",
+                "test/general/unit/startup_benchmark",
+                "test/general/integration/startup_benchmark",
                 "test/general/docs",
                 "test/general/migrations",
             ]
@@ -268,6 +270,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
+                "test/general/unit/startup_benchmark",
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
@@ -285,6 +288,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
+                "test/general/integration/startup_benchmark",
                 "test/fastapp/integration",
                 "test/commondb/integration",
                 "test/casedb/integration",
