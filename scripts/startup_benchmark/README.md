@@ -195,7 +195,9 @@ Use a separate diagnostic command with the same application settings:
   --idp-mode IDPS --repository-mode DICT_DEMO --kind both
 ```
 
-Diagnostics run once per selected kind by default. Use `--kind imports` to
+Diagnostics run 30 times per selected kind by default, matching the benchmark's
+default sample count. For a smoke check, explicitly add `--runs 1`; with
+`--kind both`, this starts the application twice. Use `--kind imports` to
 look at loading Python code, `--kind phases` to look at application setup
 steps, or `--kind both` for both views. `--runs` changes the number of runs
 for each selected kind.

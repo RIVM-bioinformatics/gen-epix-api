@@ -1,4 +1,4 @@
-# Casedb startup benchmark with SQL Server and IDPS
+# Casedb startup benchmark and diagnostics with SQL Server and IDPS
 
 The benchmark cannot attach to an existing Compose API. `runner.launch_command`
 starts `python run.py api casedb IDPS SA_SQL --noreload` for every attempt,
@@ -22,12 +22,14 @@ Run all commands in the **same Bash session in Linux/WSL**, from this checkout:
 
 ```bash
 cd /home/streevdm/gen-epix/gen-epix-api
-source .venv/bin/activate
+source /home/streevdm/miniforge3/etc/profile.d/conda.sh
+conda activate /home/streevdm/miniforge3/envs/api
 set -euo pipefail
 set +x
 umask 077
 python --version
 python -m scripts.startup_benchmark benchmark --help
+python -m scripts.startup_benchmark diagnose --help
 docker compose version
 docker info >/dev/null 2>&1 || { echo 'Start Docker and enable access from this WSL distribution.'; exit 1; }
 python - <<'PY'
@@ -39,8 +41,9 @@ print('Linux, Python and ODBC prerequisites OK')
 PY
 ```
 
-If the environment is missing, install Python 3.14+, create `.venv`, and install
-`requirements.txt` and `dev-requirements.txt` per the repository development guide.
+The prepared conda environment above is suitable for this checkout. Alternatively,
+activate a project `.venv` with Python 3.14+ and `requirements.txt` and
+`dev-requirements.txt` installed per the repository development guide.
 The host also needs unixODBC, Microsoft's ODBC Driver 18, and `pyodbc` (the Docker
 image installs these separately; installing a Python package alone is insufficient).
 Docker must be able to pull the pinned SQL image and build `Dockerfile.dev`.
@@ -72,6 +75,9 @@ tracing disabled. Discovery/JWKS checks below establish startup connectivity, no
 a successful user login or token grant. The health probe does not require a token.
 
 ## Start only the database and migration jobs
+
+If the database is already running and initialized, skip these commands and use
+the connection and migration-head checks in the next section to verify it.
 
 ```bash
 compose=(sudo docker compose -f docker-compose.sql.yml)
@@ -204,44 +210,98 @@ first. A Windows-host IP is not automatically reachable for a port published onl
 on Windows loopback. The checks must pass in the same Linux environment as the
 benchmark; Windows-only connectivity does not prove this.
 
-## Run and verify
+## Run diagnostics, benchmark, and verify the combined report
+
+The diagnostic command is `python -m scripts.startup_benchmark diagnose casedb
+--idp-mode IDPS --repository-mode SA_SQL --kind both`. It uses the same SQL,
+LOCAL seqdb, IDPS, and TLS settings as the benchmark. `--kind both` collects
+Python import timings and application setup phases in **separate starts**.
+`--runs` is the number of starts **per kind**, and defaults to 30 for both
+commands: diagnostics therefore make 60 starts, followed by 32 benchmark starts
+(two warmups and 30 measured starts). Diagnostic durations never enter the normal
+benchmark statistics.
+
+For an initial smoke check, set `benchmark_runs=1`, `diagnostic_runs=1`, and
+`benchmark_warmups=0` in the block below. That executes the diagnostic command
+once (one import start and one phase start), then collects one benchmark sample.
+The assertions use these counts automatically. Use a fresh output directory for
+any subsequent full series. The defaults below describe the full series; they
+do not need to be executed to verify the smoke check.
 
 ```bash
 mkdir -p test/output
 benchmark_output="$(mktemp -d "$PWD/test/output/startup-sql-idps-XXXXXXXX")"
+benchmark_runs=30
+diagnostic_runs=30
+benchmark_warmups=2
 tls_args=()
 if [[ -f cert/key.pem && -f cert/cert.pem ]]; then
     read -r -p 'CA PEM path that validates the API certificate for 127.0.0.1: ' benchmark_ca
     tls_args=(--ca-file "$benchmark_ca")
 fi
+python -m scripts.startup_benchmark diagnose casedb \
+    --idp-mode IDPS --repository-mode SA_SQL --kind both \
+    --runs "$diagnostic_runs" --readiness-timeout 180 \
+    --output "$benchmark_output/diagnose" "${tls_args[@]}"
+python - "$benchmark_output/diagnose/diagnostics.json" "$diagnostic_runs" <<'PY'
+import collections, json, sys
+data = json.load(open(sys.argv[1]))
+runs = int(sys.argv[2])
+assert data['series_exit_code'] == 0
+assert data['configuration_valid'] and data['series_completed']
+assert len(data['records']) == 2 * runs
+assert all(r['status'] == 'success' and r['cleanup'] == 'ok' for r in data['records'])
+expected = {'imports': runs, 'phases': runs}
+assert collections.Counter(r['kind'] for r in data['records']) == expected
+assert collections.Counter(d['kind'] for d in data['diagnostics']) == expected
+for detail in data['diagnostics']:
+    analysis = detail['analysis']
+    assert analysis['records' if detail['kind'] == 'imports' else 'spans']
+print('Import and phase diagnostics succeeded; child processes cleaned up.')
+PY
 python -m scripts.startup_benchmark benchmark casedb \
     --idp-mode IDPS --repository-mode SA_SQL \
-    --runs 30 --warmups 2 --readiness-timeout 180 \
+    --runs "$benchmark_runs" --warmups "$benchmark_warmups" --readiness-timeout 180 \
     --output "$benchmark_output" "${tls_args[@]}"
-python - "$benchmark_output/results.json" <<'PY'
+python - "$benchmark_output/results.json" "$benchmark_runs" "$benchmark_warmups" <<'PY'
 import json, sys
 data = json.load(open(sys.argv[1]))
 assert data['series_exit_code'] == 0
 assert data['configuration_valid'] and data['series_completed']
-assert len(data['records']) == 32
+assert len(data['records']) == int(sys.argv[2]) + int(sys.argv[3])
 assert all(r['status'] == 'success' and r['cleanup'] == 'ok' for r in data['records'])
 print('All warmup and measured runs succeeded; child processes cleaned up.')
 PY
 python -m scripts.startup_benchmark report \
-    --input "$benchmark_output/results.json" --output "$benchmark_output/report.html"
+    "$benchmark_output/results.json" \
+    --diagnostics "$benchmark_output/diagnose/diagnostics.json" \
+    --output "$benchmark_output"
+python -m scripts.startup_benchmark report \
+    --input "$benchmark_output/results.json" \
+    --diagnostics "$benchmark_output/diagnose/diagnostics.json" \
+    --output "$benchmark_output/report.html"
 printf 'Results directory: %s\n' "$benchmark_output"
 ```
 
-Create `test/output` first if it does not exist (`mkdir -p test/output`). For an
-initial smoke run use `--runs 1 --warmups 0` and change the record count assertion
-to 1; choose a new output directory for the full series. With neither certificate
-file present, the launcher uses HTTP. A partial certificate pair is rejected.
+With neither certificate file present, the launcher uses HTTP. A partial
+certificate pair is rejected.
 For local self-signed API certificates, `--insecure` is also supported instead of
 `--ca-file`; it affects the benchmark's health probe, not IDP HTTPS verification.
 
-The output contains `results.json`, `report.md`, configuration snapshots and logs,
-and per-attempt stdout/stderr logs; the final command creates `report.html`.
-Without `--output`, the default is
+The output contains benchmark `results.json`, configuration snapshots and logs,
+and per-attempt stdout/stderr logs. The `diagnose/` subdirectory holds separate
+diagnostic results, `diagnostics.json`, and raw import/phase logs. The two report
+commands attach these diagnostics to the benchmark: `report.md` includes both
+import and phase sections and charts, and `report.html` includes the benchmark
+and an interactive import table. Phase charts are available in `report.md`.
+The combined directory also receives a copy of `diagnostics.json`.
+
+Run both commands in the same environment and Git revision, without changing
+configuration files or certificates between them. Report generation checks
+application, commit, and configuration fingerprints before attaching diagnostics;
+it only reads saved artifacts and starts no applications. Regenerate either
+report with `--diagnostics` to retain the import analysis.
+For `benchmark` and `diagnose`, omitting `--output` selects
 `test/output/startup_benchmark/casedb-<UTC timestamp>-<random suffix>/`.
 Metadata/snapshots redact credentials, but raw application logs are not universally
 redacted: keep artifacts private and review them before sharing. No commands here
@@ -291,13 +351,18 @@ this guide preserves existing local edits. This is production-like SQL/Alembic
 behavior, not a reproduction of production's authentication, permissions, data,
 remote-service topology, or resource limits.
 
-Validation on 2026-10-14: all Bash blocks passed `bash -n`; embedded Python
-snippets compiled; the real benchmark CLI help ran under WSL Python 3.14.3.
-Both apps' resolved repository configurations supported the preflight traversal.
-ODBC Driver 18 was installed and Compose rendered the six expected SQL/job
-services. The external configured IDP's discovery and JWKS were reachable.
-Docker's daemon was unreachable; localhost ports 1433 and 5443 were unavailable
-and 8000 was free. The local mock IDP discovery failed with ConnectError.
-No image build, container startup, initialization, migration, authenticated SQL
-connection, or full benchmark was executed. Start Docker and provision or replace
-the unavailable mock IDP before running this guide.
+Validation on 2026-10-14 used the prepared conda environment (Python 3.14.8 and
+ODBC Driver 18), the existing running SQL database, both configured IDPs, and
+`--insecure` for the local API certificate. Authenticated SQL connections,
+migration heads, and both IDPs' discovery/JWKS checks passed for both apps.
+Exactly one `diagnose --kind both --runs 1` invocation succeeded: import startup
+3.828 seconds (2,301 import records) and phase startup 3.362 seconds (57 complete
+spans), with no parser warnings. Exactly one benchmark sample succeeded with
+`--runs 1 --warmups 0` (3.307 seconds). All three children cleaned up successfully.
+Both combined Markdown and HTML reports were generated from these real artifacts
+under `test/output/startup-sql-idps-validation-20261014/combined/`.
+No full 30-run series, database initialization, migration, or container restart
+was performed. A single benchmark sample does not satisfy the performance target's
+minimum sample count.
+All Bash blocks passed `bash -n`, embedded Python snippets compiled, and the
+focused startup-benchmark unit suite passed (118 tests). Formatting checks passed.

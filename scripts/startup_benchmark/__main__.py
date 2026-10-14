@@ -41,7 +41,10 @@ def parser() -> argparse.ArgumentParser:
             "--repository-mode", required=True, type=str.upper, choices=REPOSITORY_MODES
         )
         command.add_argument(
-            "--runs", type=int, default=30 if name == "benchmark" else 1
+            "--runs",
+            type=int,
+            default=30,
+            help="Number of measured starts, or starts per diagnostic kind (default: 30)",
         )
         if name == "benchmark":
             command.add_argument("--warmups", type=int, default=0)
