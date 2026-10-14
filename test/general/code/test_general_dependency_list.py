@@ -35,14 +35,20 @@ def _read_pyproject_dependencies(pyproject_file_path: Path) -> set[str]:
     if not pyproject_file_path.exists():
         return set()
     data = tomllib.loads(pyproject_file_path.read_text(encoding="utf-8"))
-    deps: list[str] = data.get("project", {}).get("dependencies", [])
+    project = data.get("project", {})
+    # requirements.txt describes a complete server installation: the base
+    # dependencies plus the server extra
+    deps: list[str] = [
+        *project.get("dependencies", []),
+        *project.get("optional-dependencies", {}).get("server", []),
+    ]
     dependencies: set[str] = {_parse_pyproject_dependency(x) for x in deps}
     return dependencies
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-08")
 def test_dependency_list_matches() -> None:
-    """Ensure requirements.txt and pyproject.toml dependencies are identical."""
+    """Ensure requirements.txt equals the pyproject.toml base and server dependencies."""
     root_dir = get_package_root()
 
     reqs = _read_requirements(root_dir / "requirements.txt")

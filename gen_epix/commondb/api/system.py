@@ -10,58 +10,27 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import exc
+
+# The request and response models stay importable from this module
+# pylint: disable=useless-import-alias, unused-import
+from gen_epix.commondb.api.system_schema import ExternalLogItem as ExternalLogItem
+from gen_epix.commondb.api.system_schema import (
+    FeatureFlagsResponseBody as FeatureFlagsResponseBody,
+)
+from gen_epix.commondb.api.system_schema import HealthResponseBody as HealthResponseBody
+from gen_epix.commondb.api.system_schema import HealthStatus as HealthStatus
+from gen_epix.commondb.api.system_schema import (
+    LicensesResponseBody as LicensesResponseBody,
+)
+from gen_epix.commondb.api.system_schema import LogRequestBody as LogRequestBody
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.command.base import Command
-from gen_epix.commondb.domain.model.system import PackageMetadata
-from gen_epix.fastapp import App, LogLevel
+from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.fastapp.middleware.limiter import limiter
 
 external_logger_fmap = exc.get_logger_fmap(logging.getLogger("commondb.external"))
-
-
-class HealthStatus(Enum):
-    """Encapsulates the externally reported application health state."""
-
-    HEALTHY = "HEALTHY"
-    UNHEALTHY = "UNHEALTHY"
-
-
-class HealthResponseBody(PydanticBaseModel):
-    """Represents the current application health state."""
-
-    status: HealthStatus
-
-
-class FeatureFlagsResponseBody(PydanticBaseModel):
-    """Represents configured feature flags keyed by their public names."""
-
-    feature_flags: dict[str, bool]
-
-
-class ExternalLogItem(PydanticBaseModel):
-    """Represents one externally submitted structured application log item."""
-
-    level: LogLevel
-    command_id: str
-    timestamp: str
-    duration: float | None = None
-    software_version: str
-    topic: str
-    detail: str | dict | None = None
-
-
-class LogRequestBody(PydanticBaseModel):
-    """Represents structured log items submitted to the commondb logging endpoint."""
-
-    log_items: list[ExternalLogItem]
-
-
-class LicensesResponseBody(PydanticBaseModel):
-    """Represents metadata for application and dependency package licenses."""
-
-    packages: list[PackageMetadata]
 
 
 def _handle_system_command(
