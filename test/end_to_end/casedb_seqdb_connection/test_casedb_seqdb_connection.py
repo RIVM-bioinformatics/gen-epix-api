@@ -258,7 +258,10 @@ def test_casedb_seqdb_connection(
         case_ids = [
             case.id
             for case in cases
-            if case.case_type_id == col.case_type_id and case.id is not None
+            if col.id is not None
+            and case.case_type_id == col.case_type_id
+            and case.id is not None
+            and case.content.get(col.id)
         ][:10]
         if len(case_ids) < 2:
             continue
