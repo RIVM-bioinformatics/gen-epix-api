@@ -1,5 +1,9 @@
 # Application startup benchmark
 
+For casedb with IDPS and a Compose-hosted SQL Server, follow the
+[database-only SQL/IDPS guide](SQL_IDPS.md). It includes migration sequencing,
+host-side connection checks, benchmark commands, and cleanup that preserves data.
+
 ## What it measures
 
 This tool measures how long `casedb`, `seqdb`, or `omopdb` takes to start and
