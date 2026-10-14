@@ -14,8 +14,8 @@ from gen_epix.fastapp.cache.exc import (
     CantDeserializeError,
     KeyRejectedError,
 )
-from gen_epix.fastapp.cache.lock import InlineRefreshRunner
 from gen_epix.fastapp.cache.invalidation import Invalidation, LocalInvalidationBus
+from gen_epix.fastapp.cache.lock import InlineRefreshRunner
 from gen_epix.fastapp.cache.model import NO_VALUE, CachedValue, RegionConfig
 from gen_epix.fastapp.cache.region import CacheRegion
 from gen_epix.fastapp.cache.resilience import FailurePolicy

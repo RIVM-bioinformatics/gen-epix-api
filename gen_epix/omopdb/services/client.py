@@ -17,6 +17,7 @@ class OmopdbClient(CommondbClient):
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
     ROUTE_MAP: dict[type[Command], str] = {
+        command.DeleteAllOperationalDataCommand: "/operational_data",
         command.DeleteAllRefDataCommand: "/ref_data",
         command.UploadPersonsCommand: "/upload/persons",
         command.RetrievePersonsByQueryCommand: "/retrieve/person_ids_by_query",

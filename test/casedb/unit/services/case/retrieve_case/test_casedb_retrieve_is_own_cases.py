@@ -5,11 +5,11 @@ Tests follow the style and conventions of test_retrieve_case.py,
 using typed variables, explicit mocking, and the 1-2-3-4 section structure.
 """
 
+from test.util.mock_compat import Mock
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from test.util.mock_compat import Mock
 
 from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.model.abac.rights import CaseTypeAccessAbac
