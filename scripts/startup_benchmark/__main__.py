@@ -65,7 +65,8 @@ def parser() -> argparse.ArgumentParser:
                 "--kind", choices=("imports", "phases", "both"), default="both"
             )
     report = sub.add_parser("report")
-    report.add_argument("results", type=Path)
+    report.add_argument("results", nargs="?", type=Path)
+    report.add_argument("--input", type=Path, help="Generate a standalone HTML report")
     report.add_argument("--diagnostics", type=Path)
     report.add_argument("--output", required=True, type=Path)
     return root
@@ -95,6 +96,8 @@ def execute(args: Any) -> int:
     )
     options.validate()
     if sys.version_info < (3, 14) or not sys.platform.startswith("linux"):
+        print("Python version:", sys.version_info)
+        print("Platform:", sys.platform)
         raise ValueError("Startup benchmarking requires Python 3.14+ on Linux/WSL")
     env = dict(os.environ)
     if args.command == "benchmark" and (
@@ -270,6 +273,35 @@ def main() -> int:
     args = parser().parse_args()
     try:
         if args.command == "report":
+            if (args.results is None) == (args.input is None):
+                raise ValueError(
+                    "Provide exactly one positional results path or --input"
+                )
+            source = args.input if args.input is not None else args.results
+            for path in (source, args.diagnostics):
+                if path is not None and (
+                    args.output.resolve() == path.resolve()
+                    or (
+                        args.output.exists()
+                        and path.exists()
+                        and args.output.samefile(path)
+                    )
+                ):
+                    raise ValueError("Report output must not overwrite an input file")
+            if args.input is not None:
+                from .html_reporting import generate_html
+
+                try:
+                    data = load_json(source)
+                    diagnostics = (
+                        load_json(args.diagnostics) if args.diagnostics else None
+                    )
+                except (AttributeError, TypeError) as error:
+                    raise ValueError(
+                        "Invalid startup benchmark JSON artifact"
+                    ) from error
+                print(generate_html(data, args.output, diagnostics))
+                return 0
             print(
                 generate(
                     load_json(args.results),

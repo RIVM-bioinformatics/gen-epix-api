@@ -1,4 +1,7 @@
+import dataclasses
 import json
+import subprocess
+import sys
 
 import pytest
 
@@ -8,6 +11,8 @@ from scripts.startup_benchmark.models import RunRecord
 
 @pytest.fixture
 def series(tmp_path, monkeypatch):
+    # Process operations are mocked; exercise the supported platform on any host.
+    monkeypatch.setattr(cli.sys, "platform", "linux")
     monkeypatch.setattr(
         cli,
         "capture",
@@ -149,3 +154,165 @@ def test_interruption_after_final_measurement_invalidates_gate(series, monkeypat
     assert saved["statistics"]["successes"] == 30
     assert not saved["statistics"]["target_pass"]
     assert not saved["series_completed"]
+
+
+@pytest.fixture
+def report_inputs(tmp_path):
+    data = {
+        "schema_version": 1,
+        "application": "seqdb",
+        "command": "benchmark",
+        "options": {"idp_mode": "NONE", "repository_mode": "DICT_EMPTY"},
+        "metadata": {"commit": "abc"},
+        "configuration_valid": True,
+        "configuration_fingerprint": "same",
+        "records": [
+            dataclasses.asdict(
+                RunRecord(1, "measured", status="success", seconds=2, cleanup="ok")
+            )
+        ],
+    }
+    source = tmp_path / "results.json"
+    source.write_text(json.dumps(data))
+    diagnostics = tmp_path / "diagnostics.json"
+    diagnostics.write_text(json.dumps({**data, "command": "diagnose"}))
+    return source, diagnostics
+
+
+def invoke_report(monkeypatch, *arguments):
+    monkeypatch.setattr(
+        sys, "argv", ["benchmark_startup", "report", *map(str, arguments)]
+    )
+    return cli.main()
+
+
+@pytest.mark.parametrize("attach", [False, True])
+def test_html_report_dispatch_without_measurement(
+    report_inputs, tmp_path, monkeypatch, capsys, attach
+):
+    source, diagnostics = report_inputs
+    original = (source.read_bytes(), diagnostics.read_bytes())
+
+    def forbidden(*args):
+        pytest.fail("Reporting must not collect measurements")
+
+    monkeypatch.setattr(cli, "execute", forbidden)
+    output = tmp_path / "report.html"
+    arguments = ["--input", source, "--output", output]
+    if attach:
+        arguments += ["--diagnostics", diagnostics]
+    assert invoke_report(monkeypatch, *arguments) == 0
+    assert output.read_text().startswith("<!doctype html>")
+    assert str(output) in capsys.readouterr().out
+    assert (source.read_bytes(), diagnostics.read_bytes()) == original
+
+
+def test_legacy_directory_report_unchanged(report_inputs, tmp_path, monkeypatch):
+    source, diagnostics = report_inputs
+    output = tmp_path / "directory"
+    assert (
+        invoke_report(
+            monkeypatch, source, "--diagnostics", diagnostics, "--output", output
+        )
+        == 0
+    )
+    assert {p.name for p in output.iterdir()} == {
+        "report.md",
+        "startup.svg",
+        "results.json",
+        "diagnostics.json",
+    }
+
+
+@pytest.mark.parametrize("both", [False, True])
+def test_report_requires_exactly_one_input(
+    report_inputs, tmp_path, monkeypatch, capsys, both
+):
+    source, _ = report_inputs
+    arguments = [source, "--input", source] if both else []
+    output = tmp_path / "report.html"
+    assert invoke_report(monkeypatch, *arguments, "--output", output) == 2
+    assert "exactly one" in capsys.readouterr().err
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("overwrite", ["results", "diagnostics", "symlink", "hardlink"])
+def test_report_rejects_input_overwrite(
+    report_inputs, tmp_path, monkeypatch, capsys, overwrite
+):
+    source, diagnostics = report_inputs
+    original = (source.read_bytes(), diagnostics.read_bytes())
+    output = source if overwrite == "results" else diagnostics
+    if overwrite in ("symlink", "hardlink"):
+        output = tmp_path / "alias.html"
+        if overwrite == "symlink":
+            output.symlink_to(source)
+        else:
+            output.hardlink_to(source)
+    assert (
+        invoke_report(
+            monkeypatch,
+            "--input",
+            source,
+            "--diagnostics",
+            diagnostics,
+            "--output",
+            output,
+        )
+        == 2
+    )
+    assert "overwrite" in capsys.readouterr().err
+    assert (source.read_bytes(), diagnostics.read_bytes()) == original
+
+
+@pytest.mark.parametrize("contents", ["[]", "null", "{", '{"schema_version": 90}'])
+def test_html_report_invalid_json_exits_two(
+    report_inputs, tmp_path, monkeypatch, contents
+):
+    source, _ = report_inputs
+    source.write_text(contents)
+    output = tmp_path / "report.html"
+    assert invoke_report(monkeypatch, "--input", source, "--output", output) == 2
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("failure", ["suffix", "missing", "write", "incompatible"])
+def test_html_report_errors_exit_two(report_inputs, tmp_path, monkeypatch, failure):
+    source, diagnostics = report_inputs
+    output = tmp_path / "report.html"
+    arguments = []
+    if failure == "suffix":
+        output = tmp_path / "directory"
+    elif failure == "missing":
+        source = tmp_path / "missing.json"
+    elif failure == "write":
+        parent = tmp_path / "file"
+        parent.write_text("blocking file")
+        output = parent / "report.html"
+    else:
+        data = json.loads(diagnostics.read_text())
+        data["configuration_fingerprint"] = "different"
+        diagnostics.write_text(json.dumps(data))
+        arguments = ["--diagnostics", diagnostics]
+    assert (
+        invoke_report(monkeypatch, "--input", source, *arguments, "--output", output)
+        == 2
+    )
+    assert not output.exists()
+
+
+def test_dashboard_dependencies_not_loaded_by_entrypoint():
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; import scripts.startup_benchmark.__main__; "
+                'assert not any(k.split(".")[0] in ("jinja2", "plotly", "gen_epix") '
+                "for k in sys.modules)"
+            ),
+        ],
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr

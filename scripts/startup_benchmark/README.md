@@ -1,5 +1,9 @@
 # Application startup benchmark
 
+For casedb with IDPS and a Compose-hosted SQL Server, follow the
+[database-only SQL/IDPS guide](SQL_IDPS.md). It includes migration sequencing,
+host-side connection checks, benchmark commands, and cleanup that preserves data.
+
 ## What it measures
 
 This tool measures how long `casedb`, `seqdb`, or `omopdb` takes to start and
@@ -298,6 +302,52 @@ Replace the capitalized directory names with your saved output locations.
 Leave out `--diagnostics` if you only want the benchmark report. Diagnostic
 results must match the benchmark's application, Git commit, and saved
 configuration checks.
+
+### Offline HTML dashboard
+
+Generate a single interactive HTML file with `--input`. This leaves the existing
+positional-input directory report above unchanged:
+
+```bash
+.venv/bin/python -m scripts.startup_benchmark report \
+  --input BENCHMARK_DIRECTORY/results.json \
+  --output report.html
+
+.venv/bin/python -m scripts.startup_benchmark report \
+  --input BENCHMARK_DIRECTORY/results.json \
+  --diagnostics DIAGNOSTIC_DIRECTORY/diagnostics.json \
+  --output report.html
+```
+
+Install the dashboard dependencies with `python -m pip install -r
+dev-requirements.txt`. Jinja2 and Plotly are loaded only for HTML reports; the
+measurement and existing directory-report commands do not need them. Report
+generation does not launch applications and can run outside Linux/WSL.
+
+Open `report.html` directly in a browser. All data, JavaScript, and styles are
+embedded, so the file works offline and can be shared by itself. The embedded
+Plotly library makes the file several megabytes in size. Use either a positional
+input or `--input`, not both. HTML output must end in `.html` or `.htm` and must
+not overwrite an input file.
+
+The dashboard shows individual measured runs, a five-sample trailing average,
+the overall p95, the 15-second target, and an adjustable histogram. Run-range
+filters update both charts and the attempts table. Kind/status filters and table
+sorting affect the attempts table only. Overall statistics and the official
+target result remain fixed when filtering. Failed or unattempted measured runs
+have separate status markers without assigned durations.
+
+Normal benchmark JSON does not include import timings. Attach compatible saved
+diagnostics, or use a saved diagnose artifact as `--input`, to explore all import
+occurrences. Select a diagnostic run, search modules, sort self or cumulative
+time, and page through the full table. Repeated modules remain separate, and
+cumulative costs must not be added together. Phase charts remain in the existing
+directory report.
+
+The optional [browser regression tests](../../test/general/integration/startup_benchmark/test_general_integration_startup_benchmark_html_reporting.py)
+use Playwright with networking disabled. Install it with `python -m pip install
+playwright` and `python -m playwright install chromium`, then run the test file
+with pytest. These tests skip when Playwright or its browser is unavailable.
 
 ## Compare results fairly
 
