@@ -1,7 +1,7 @@
-# Graph Report - gen-epix-api  (2026-10-13)
+# Graph Report - gen-epix-api  (2026-10-15)
 
 ## Corpus Check
-- 158 files · ~1,232,435 words
+- 157 files · ~1,232,699 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -773,38 +773,38 @@
 10. `DictRepository` - 123 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `execute()` --calls--> `Result`  [INFERRED]
-  test/general/migrations/test_alembic_migrations.py → gen_epix/etl/model.py
+- `test_base_policy_decision_point_remains_abstract()` --uses--> `BasePolicyDecisionPoint`  [INFERRED]
+  test/commondb/unit/domain/policy/test_commondb_unit_domain_policy_pdp.py → gen_epix/commondb/domain/policy/pdp.py
 - `process_stream()` --calls--> `TransformResult`  [INFERRED]
   test/transform/unit/conftest.py → gen_epix/etl/model.py
 - `process_stream()` --calls--> `TransformResult`  [INFERRED]
   test/transform/unit/test_transform_unit_streaming.py → gen_epix/etl/model.py
-- `test_base_policy_decision_point_remains_abstract()` --uses--> `BasePolicyDecisionPoint`  [INFERRED]
-  test/commondb/unit/domain/policy/test_commondb_unit_domain_policy_pdp.py → gen_epix/commondb/domain/policy/pdp.py
+- `execute()` --calls--> `Result`  [INFERRED]
+  test/general/migrations/test_alembic_migrations.py → gen_epix/etl/model.py
 - `casedb-seqdb-omopdb E2E Connection Test Logging Config` --semantically_similar_to--> `casedb Logging Config`  [INFERRED] [semantically similar]
   test/end_to_end/casedb_seqdb_connection/logging.yaml → gen_epix/casedb/config/logging.yaml
 
 ## Import Cycles
-- 3-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/commondb/domain/command/system.py -> gen_epix/commondb/domain/__init__.py`
 - 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/services/client.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
 - 3-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
 - 3-file cycle: `gen_epix/__init__.py -> gen_epix/seqdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/commondb/domain/command/abac.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/__init__.py`
-- 4-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/commondb/domain/command/base.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/__init__.py`
-- 4-file cycle: `gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/commondb/domain/command/system.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/__init__.py`
+- 3-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/services/client.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/services/client.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/env.py -> gen_epix/commondb/app_impl_details.py -> gen_epix/__init__.py`
+- 3-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/env.py -> gen_epix/commondb/policies/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/seqdb/domain/__init__.py -> gen_epix/seqdb/domain/model/__init__.py -> gen_epix/seqdb/domain/model/seq/__init__.py -> gen_epix/seqdb/domain/model/seq/locus.py -> gen_epix/seqdb/domain/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/env.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/env.py -> gen_epix/commondb/env.py -> gen_epix/commondb/app_impl_details.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/env.py -> gen_epix/commondb/env.py -> gen_epix/commondb/policies/__init__.py -> gen_epix/__init__.py`
 - 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/env.py -> gen_epix/commondb/app_impl_details.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/env.py -> gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/__init__.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/domain/service/__init__.py -> gen_epix/casedb/domain/service/abac.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/env.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/services/client.py -> gen_epix/casedb/domain/command/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/casedb/services/__init__.py -> gen_epix/commondb/services/rbac.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/client_factory.py -> gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/client_factory.py -> gen_epix/commondb/services/client.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
-- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/services/client.py -> gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/abac.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/commondb/domain/model/__init__.py -> gen_epix/commondb/domain/model/upload.py -> gen_epix/commondb/domain/model/organization.py -> gen_epix/__init__.py`
 - 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/omopdb/domain/command/omop.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/command/__init__.py -> gen_epix/omopdb/domain/command/system.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/omopdb/domain/policy/__init__.py -> gen_epix/commondb/domain/policy/__init__.py -> gen_epix/commondb/domain/policy/permission.py -> gen_epix/__init__.py`
+- 4-file cycle: `gen_epix/__init__.py -> gen_epix/seqdb/domain/command/__init__.py -> gen_epix/commondb/domain/__init__.py -> gen_epix/commondb/domain/command/__init__.py -> gen_epix/__init__.py`
 
 ## Hyperedges (group relationships)
 - **Gen-EpiX code quality and test toolchain** — dev_requirements_pytest, dev_requirements_isort, dev_requirements_black, dev_requirements_pylint, dev_requirements_mypy, dev_requirements_coverage [EXTRACTED 0.90]
@@ -2287,15 +2287,15 @@ Nodes (3): register_factory(), register_transformer(), Registry
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `App` connect `App` to `seqdb/domain/command/__init__.py`, `Domain`, `BaseService`, `Policy`, `AuthEnv`, `commondb/domain/enum.py`, `test_commondb_unit_services_upload.py`, `gen_epix/fastapp/__init__.py`, `InMemoryOrganizationRepository`, `test_remote_client_local.py`, `test_app`, `.app`, `HandleNoResponseMiddleware`, `service_test_client.py`, `BaseUploadTestCase`, `upload_verify_batch.py`, `Client`, `create_routers`, `Command`, `Model`, `casedb/domain/model/__init__.py`, `SeqdbEndpointTestClient`, `test_omopdb_unit_services_omop_upload.py`, `api/system.py`, `BaseSnpUploadTestCase`, `.__init__`, `person_validator.py`, `.__init__`, `create_geo_endpoints`, `UserManager`, `BaseSimilarCasesTestCase`, `HandleAuthExceptionMiddleware`, `SystemService`, `pytest`, `auth_test_client.py`, `start_all_services.py`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+  _High betweenness centrality (0.048) - this node is a cross-community bridge._
 - **Are the 35 inferred relationships involving `CasedbTestClient` (e.g. with `AppComposer` and `Role`) actually correct?**
   _`CasedbTestClient` has 35 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `casedb CASE Simplified ERD`, `casedb SEQDB Simplified ERD`, `casedb SUBJECT Simplified ERD` to the rest of the system?**
   _386 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `OrganizationService` be split into smaller, more focused modules?**
   _Cohesion score 0.03879781420765027 - nodes in this community are weakly interconnected._
-- **Why does `UserManager` connect `UserManager` to `OrganizationService`, `seqdb/domain/command/__init__.py`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `CrudCommand` connect `gen_epix/fastapp/__init__.py` to `seqdb/domain/command/__init__.py`, `command/seq.py`, `crud_sample_identifier.py`, `BaseService`, `crud_locus.py`, `crud_taxon.py`, `.create_crud_cmd`, `CaseService`, `ReadUserPolicy`, `BaseSeqService`, `._serialize_permission_type`, `case/crud_common.py`, `crud_seq_identifier.py`, `command/case.py`, `crud_read_set.py`, `Command`, `DimCrudCommand`, `Filter`, `crud_allele.py`, `crud_seq_profile.py`, `crud_ast_prediction.py`, `crud_locus_code_map.py`, `App`, `crud_locus_set.py`, `crud_protocol_set.py`, `crud_ref_seq.py`, `crud_read_set_identifier.py`, `crud_ref_allele.py`, `crud_taxon_set.py`, `crud_sample_data_collection_link.py`, `BaseCaseService`, `test_casedb_unit_domain_policy_pdp.py`, `._validate_state`, `read_association_with_valid_ids.py`, `crud_ast_measurement.py`, `crud_taxon_set_member.py`, `crud_pcr_measurement.py`, `RBACTestClient`, `crud_protocol_set_member.py`, `crud_sample.py`, `crud_seq.py`, `crud_seq_taxonomy.py`, `crud_genetic_distance_protocol.py`, `crud_seq_category.py`, `crud_seq_classification.py`, `crud_seq_category_set.py`, `crud_seq_distance.py`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._
