@@ -9,7 +9,7 @@ from typing import Any, TypeVar, cast
 from uuid import UUID
 
 import sqlalchemy as sa
-from pydantic import BaseModel, Json
+from pydantic import BaseModel, JsonValue
 from pydantic.fields import ComputedFieldInfo, FieldInfo
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
@@ -84,7 +84,7 @@ PYTHON_SQL_TYPE_MAP = {
     set: sa.JSON,
     frozenset: sa.JSON,
     tuple: sa.JSON,
-    Json: sa.JSON,
+    JsonValue: sa.JSON,
 }
 
 
@@ -201,7 +201,7 @@ def create_sa_type_from_field_info(
         type_ = field_info.return_type
     type_ = _resolve_field_typevar(type_)
 
-    if issubclass(type_, Enum):
+    if isinstance(type_, type) and issubclass(type_, Enum):
         # Special case: construct from type itself
         return sa.Enum(type_)
     if type_ in PYTHON_SQL_TYPE_MAP:
