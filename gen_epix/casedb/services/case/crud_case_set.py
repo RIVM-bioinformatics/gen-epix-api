@@ -154,6 +154,9 @@ def _retrieve_case_sets_with_content_right(
             return_id=True,
         )
 
+    if not case_set_ids:
+        return []
+
     # Get dict[case_set_id, frozenset[data_collection_ids]]
     case_set_data_collection_ids = self._retrieve_case_set_data_collections_map(
         uow,
@@ -162,15 +165,15 @@ def _retrieve_case_sets_with_content_right(
     )
 
     # Get dict[case_set_id, case_type_id]
-    assert case_set_ids is not None
-    case_type_ids: list[UUID] = self.repository.read_fields(  # type: ignore[assignment]
-        uow,
-        user_id,
-        model.CaseSet,
-        ["case_type_id"],
-        filter=UuidSetFilter(key="id", members=frozenset(case_set_ids)),
+    case_set_case_type_ids: dict[UUID, UUID] = dict(
+        self.repository.read_fields(
+            uow,
+            user_id,
+            model.CaseSet,
+            ["id", "case_type_id"],
+            filter=UuidSetFilter(key="id", members=frozenset(case_set_ids)),
+        )
     )
-    case_set_case_type_ids: dict[UUID, UUID] = dict(zip(case_set_ids, case_type_ids))
 
     # Create Iterable of tuples (case_set, frozenset[data_collection_ids])
     abac_iterable: list[tuple[UUID, UUID, frozenset[UUID]]] = [
