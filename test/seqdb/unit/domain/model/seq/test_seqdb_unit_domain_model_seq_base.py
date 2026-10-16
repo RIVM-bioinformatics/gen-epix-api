@@ -266,3 +266,31 @@ class TestModelBaseSeq:
         """Reject alignment gaps when the selected format is gapless DNA."""
         with pytest.raises(ValidationError, match="invalid characters"):
             model.BaseSeq(seq="AT-CG", seq_format=model.enum.SeqFormat.STR_DNA)
+
+
+class TestQualityMixinQcReport:
+    """Test cases for the qc_report field of QualityMixin."""
+
+    REPORT = {"coverage": 31.5, "flags": ["low_depth"], "nested": {"ok": True}}
+
+    @pytest.mark.parametrize(
+        "value", [REPORT, json.dumps(REPORT), None], ids=["object", "string", "none"]
+    )
+    def test_accepts_object_or_json_string(self, value: Any) -> None:
+        """Test that qc_report accepts a JSON object or its string form."""
+        contig = model.Contig(seq="ATCGATCG", qc_report=value)
+        expected = json.loads(value) if isinstance(value, str) else value
+        assert contig.qc_report == expected
+
+    def test_model_dump_json_round_trip(self) -> None:
+        """Test that a dumped model can be validated again unchanged."""
+        contig = model.Contig(seq="ATCGATCG", qc_report=self.REPORT)
+        dumped = contig.model_dump_json()
+        assert json.loads(dumped)["qc_report"] == self.REPORT
+        restored = model.Contig.model_validate_json(dumped)
+        assert restored.qc_report == self.REPORT
+
+    def test_rejects_invalid_json_string(self) -> None:
+        """Test that a string that is not valid JSON is rejected."""
+        with pytest.raises(ValidationError):
+            model.Contig(seq="ATCGATCG", qc_report="{not json")
