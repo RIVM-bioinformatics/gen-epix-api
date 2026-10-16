@@ -5,7 +5,7 @@
 fastapi[standard]>=0.143.0,<0.144.0 
 # fastapi[standard]==0.141.1
 gunicorn==26.2.*
-starlette==1.7.*
+starlette==1.8.*
 httpx==0.28.1
 urllib3==2.8.0
 pyjwt==2.15.1
@@ -16,7 +16,7 @@ sqlalchemy_utils==0.42.1
 alembic==1.20.0
 
 # Data models/handling
-pydantic==2.14.0
+pydantic==2.14.1
 ulid-py==1.1.0
 
 # configuration handling
