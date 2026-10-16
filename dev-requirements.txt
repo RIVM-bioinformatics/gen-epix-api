@@ -17,6 +17,10 @@ mypy==2.4.*
 oauthlib==4.0.0
 coverage==7.16.2
 
+# Offline startup benchmark dashboard (loaded only by HTML reporting)
+Jinja2>=3.1.6,<4
+plotly>=6,<8
+
 
 # stubs
 pandas-stubs==3.0.*
