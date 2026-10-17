@@ -50,6 +50,8 @@ class NoFilter(Filter):
         """Return the pass-through result for a row."""
         return not self.invert
 
+    # TODO: LSP-3893 With invert=True and non-empty rows, should this yield one False per
+    # row like match_column and Filter.match_rows, rather than yielding no results?
     def match_rows(
         self,
         rows: Iterable[dict[Hashable, Any | None] | BaseModel],

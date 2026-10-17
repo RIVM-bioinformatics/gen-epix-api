@@ -17,11 +17,13 @@ _GET_OPEN_API_DEFAULTS: dict[str, Any] = {
 
 
 def create_custom_openapi_function(
-    get_open_api_kwargs: dict[str, Any] = {},
+    get_open_api_kwargs: dict[str, Any] | None = None,
     fix_schema: bool = True,
     auth_service: AuthService | None = None,
 ) -> Callable[[], dict[str, Any]]:
     """Create a cached OpenAPI schema factory with optional schema fixes."""
+    if get_open_api_kwargs is None:
+        get_open_api_kwargs = {}
 
     def custom_openapi_function(
         default_kwargs: dict[str, Any],
@@ -89,19 +91,23 @@ def fix_schema_nullable_and_single_element(schema: dict) -> None:
                 ),
                 None,
             )
-            if null_index is None:
-                continue
-            # Remove type: null from list
-            del schema[key][null_index]
+            if null_index is not None:
+                # Remove type: null from list
+                del schema[key][null_index]
 
-            # In case only 1 remaining item in list,
-            # move it one level higher and remove anyOf key
-            if len(schema[key]) == 1:
-                key2 = list(schema[key][0].keys())[0]
-                schema[key2] = schema[key][0][key2]
-                del schema[key]
-            # Set nullable property
-            schema["nullable"] = True
+                # In case only 1 remaining item in list,
+                # move it one level higher and remove anyOf key
+                if len(schema[key]) == 1:
+                    remaining_schema = schema[key][0]
+                    fix_schema_nullable_and_single_element(remaining_schema)
+                    schema.update(remaining_schema)
+                    del schema[key]
+                # Set nullable property
+                schema["nullable"] = True
+            if key in schema:
+                for item in schema[key]:
+                    if isinstance(item, dict):
+                        fix_schema_nullable_and_single_element(item)
         elif isinstance(schema[key], dict):
             # Continue recursively
             fix_schema_nullable_and_single_element(schema[key])

@@ -1057,7 +1057,7 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> None:
             """Execute the requested value."""
-            is_existing = self.exists_some(model_class, row_ids)
+            is_existing = self.exists_some(model_class, row_ids, session=session)
             if not all(is_existing):
                 invalid_ids = [x for x, y in zip(row_ids, is_existing) if not y]
                 invalid_ids_str = ", ".join([str(x) for x in invalid_ids])

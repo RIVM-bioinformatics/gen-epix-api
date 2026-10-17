@@ -31,6 +31,7 @@ from gen_epix.filter.uuid_set import UuidSetFilter
 
 _INVALID_COMMAND_TYPE = "Invalid command type"
 _INVALID_RETURN_VALUE_TYPE = "Invalid return value type"
+_INCONSISTENT_SAMPLE_ID_MAPPING_CODE = "81bd9ed7"
 
 
 class CaseBatchUploader(BatchUploader):
@@ -880,13 +881,13 @@ class CaseBatchUploader(BatchUploader):
         if not samples_for_upload:
             return True, None, child_index_map
         batch_id = UUID(sha256(cmd.id.bytes).digest()[:16].hex())
-        upload_samples_cmd = seqdb_command.UploadSamplesCommand(  # type: ignore[call-arg]
+        upload_samples_cmd = seqdb_command.UploadSamplesCommand(
             user=cmd.user,
             sample_batch=seqdb_model.SampleBatchForUpload(
                 id=batch_id, samples=samples_for_upload
             ),
-            on_exists=cmd.on_exists,
-            on_new=cmd.on_new,
+            on_exists=cmd.on_exists,  # type: ignore[call-arg]
+            on_new=cmd.on_new,  # type: ignore[call-arg]
         )
         return success, upload_samples_cmd, child_index_map
 
@@ -908,6 +909,7 @@ class CaseBatchUploader(BatchUploader):
         child_index_map: dict[
             type[model.Model], dict[tuple[int, int], tuple[int, int]]
         ] = defaultdict(dict)
+        identity_errors: list[str] = []
         # Process cases to extract samples for upload
         for case_index, (case_for_upload, case_result) in enumerate(
             zip(cmd.case_batch.cases, batch_result.cases)
@@ -922,7 +924,13 @@ class CaseBatchUploader(BatchUploader):
                 sample_external_id_to_index_map,
                 sample_case_index_map,
                 child_index_map,
+                identity_errors,
             )
+            if identity_errors:
+                batch_result.add_error(
+                    _INCONSISTENT_SAMPLE_ID_MAPPING_CODE, identity_errors[0]
+                )
+                return False, [], {}
             success &= self._append_seqs_for_sample_upload(
                 cmd,
                 case_index,
@@ -933,7 +941,13 @@ class CaseBatchUploader(BatchUploader):
                 sample_external_id_to_index_map,
                 sample_case_index_map,
                 child_index_map,
+                identity_errors,
             )
+            if identity_errors:
+                batch_result.add_error(
+                    _INCONSISTENT_SAMPLE_ID_MAPPING_CODE, identity_errors[0]
+                )
+                return False, [], {}
         return success, samples_for_upload, child_index_map
 
     def _get_or_create_sample_for_upload(
@@ -946,17 +960,51 @@ class CaseBatchUploader(BatchUploader):
         sample_id_to_index_map: dict[UUID, int],
         sample_external_id_to_index_map: dict[IdentifierForUpload, int],
         sample_case_index_map: dict[int, int],
-    ) -> int:
-        """Return a deduplicated sample index, creating the sample if needed."""
-        # Functionality to get/create new sample for upload
+        identity_errors: list[str],
+    ) -> int | None:
+        """Find or create a sample, reporting identity conflicts through the output list."""
         has_id = not self.is_null(sample_id)
         has_external_id = external_sample_id is not None
-        if has_id and sample_id in sample_id_to_index_map:
-            assert sample_id is not None
-            return sample_id_to_index_map[sample_id]
-        if has_external_id and external_sample_id in sample_external_id_to_index_map:
-            return sample_external_id_to_index_map[external_sample_id]
-        # New sample for upload: create
+        sample_index_by_id = sample_id_to_index_map.get(sample_id) if has_id else None
+        sample_index_by_external_id = (
+            sample_external_id_to_index_map.get(external_sample_id)
+            if has_external_id
+            else None
+        )
+        if (
+            sample_index_by_id is not None
+            and sample_index_by_external_id is not None
+            and sample_index_by_id != sample_index_by_external_id
+        ):
+            identity_errors.append(
+                f"Inconsistent mapping of external sample identifier {external_sample_id} "
+                f"to sample ID {sample_id}."
+            )
+            return None
+        if sample_index_by_id is not None:
+            return sample_index_by_id
+        if sample_index_by_external_id is not None:
+            assert external_sample_id is not None
+            existing_sample = samples_for_upload[sample_index_by_external_id]
+            if (
+                has_id
+                and not self.is_null(existing_sample.id)
+                and existing_sample.id != sample_id
+            ):
+                identity_errors.append(
+                    f"Inconsistent mapping of external sample identifier {external_sample_id} "
+                    f"to sample ID {sample_id}; it was already mapped to {existing_sample.id}."
+                )
+                return None
+            if has_id and self.is_null(existing_sample.id):
+                assert sample_id is not None
+                # An identifier-only sample can be upgraded when a later child supplies its UUID.
+                existing_sample.id = sample_id
+                assert existing_sample.sample is not None
+                existing_sample.sample.id = sample_id
+                sample_id_to_index_map[sample_id] = sample_index_by_external_id
+            return sample_index_by_external_id
+        # Create a sample only after neither supplied identity resolves to an existing one.
         sample_for_upload_id = sample_id if has_id else NULL_ID
         sample_for_upload = seqdb_model.SampleForUpload(
             id=sample_for_upload_id,
@@ -969,7 +1017,7 @@ class CaseBatchUploader(BatchUploader):
             seqs=[],
         )
         sample_index = len(samples_for_upload)
-        #  Add to list and maps
+        # Register both identities to keep later read-set and sequence children grouped.
         samples_for_upload.append(sample_for_upload)
         if has_id:
             assert sample_id is not None
@@ -993,6 +1041,7 @@ class CaseBatchUploader(BatchUploader):
         child_index_map: dict[
             type[model.Model], dict[tuple[int, int], tuple[int, int]]
         ],
+        identity_errors: list[str],
     ) -> bool:
         """Append read sets and record their source-case indices."""
         success = True
@@ -1007,7 +1056,10 @@ class CaseBatchUploader(BatchUploader):
                 sample_id_to_index_map,
                 sample_external_id_to_index_map,
                 sample_case_index_map,
+                identity_errors,
             )
+            if sample_index is None:
+                return False
             sample_for_upload = samples_for_upload[sample_index]
             assert sample_for_upload.read_sets is not None
             # Add read set
@@ -1044,6 +1096,7 @@ class CaseBatchUploader(BatchUploader):
         child_index_map: dict[
             type[model.Model], dict[tuple[int, int], tuple[int, int]]
         ],
+        identity_errors: list[str],
     ) -> bool:
         """Append sequences and record their source-case indices."""
         success = True
@@ -1058,7 +1111,10 @@ class CaseBatchUploader(BatchUploader):
                 sample_id_to_index_map,
                 sample_external_id_to_index_map,
                 sample_case_index_map,
+                identity_errors,
             )
+            if sample_index is None:
+                return False
             sample_for_upload = samples_for_upload[sample_index]
             assert sample_for_upload.seqs is not None
             # Add sequence

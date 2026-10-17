@@ -23,6 +23,9 @@ def seq_service_crud_ref_seq(
     """
     user_id = cmd.user.id if cmd.user else None
     ref_seqs: list[model.RefSeq] = cmd.get_objs()  # type: ignore[assignment]
+    # TODO: LSP-3893 RefSeq CRUD operations currently reach only generic self.crud(cmd);
+    # confirm whether create, read, update, or delete requires operation-specific
+    # validation or referential-integrity handling before adding behavior or tests.
     if cmd.is_create():
         # TODO: Specific logic for create operation to be added
         pass

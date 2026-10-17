@@ -3,6 +3,7 @@
 import json
 from datetime import datetime
 from test.util.mock_compat import MagicMock, Mock, patch
+from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
@@ -11,6 +12,7 @@ import pytest
 
 from gen_epix.casedb.domain import enum as enum
 from gen_epix.casedb.domain import model as model
+from gen_epix.fastapp.enum import CrudOperation, HttpMethod
 from gen_epix.seqdb.api import CalculatePhylogeneticTreeRequestBody
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
@@ -365,6 +367,243 @@ class TestSeqdbClient:
     def test_locus_crud_command_has_extended_timeout(self) -> None:
         """Use the extended timeout for large Locus CRUD batches."""
         assert SeqdbClient.DEFAULT_HTTP_TIMEOUTS[seqdb_command.LocusCrudCommand] == 45.0
+
+    def test_delete_all_ref_data_route_and_timeout_are_registered(self) -> None:
+        assert (
+            SeqdbClient.ROUTE_MAP[seqdb_command.DeleteAllRefDataCommand] == "/ref_data"
+        )
+        assert (
+            SeqdbClient.DEFAULT_HTTP_TIMEOUTS[seqdb_command.DeleteAllRefDataCommand]
+            == 300.0
+        )
+
+
+class TestSeqdbClientHandlers:
+    @pytest.fixture
+    def client(self) -> SeqdbClient:
+        return SeqdbClient(host="localhost", port=8001)
+
+    def test_convert_seq_format_posts_conversion_and_returns_ids(
+        self, client: SeqdbClient
+    ) -> None:
+        seq_id = uuid4()
+        converted_id = uuid4()
+        cmd = seqdb_command.ConvertSeqFormatCommand(
+            seq_ids=[seq_id],
+            from_format=seqdb_enum.SeqFormat.STR_DNA,
+            to_format=seqdb_enum.SeqFormat.STR_DNA_GZB64,
+        )
+        with patch.object(
+            client, "request", return_value=[str(converted_id)]
+        ) as request:
+            result = client.convert_seq_format(cmd)
+
+        assert result == [converted_id]
+        request.assert_called_once()
+        assert request.call_args.args == (cmd, HttpMethod.POST)
+        body = request.call_args.kwargs["model"]
+        assert body.seq_ids == [seq_id]
+        assert body.from_format == seqdb_enum.SeqFormat.STR_DNA
+        assert body.to_format == seqdb_enum.SeqFormat.STR_DNA_GZB64
+
+    def test_retrieve_fasta_streams_sequences(self, client: SeqdbClient) -> None:
+        seq_ids = [uuid4()]
+        cmd = seqdb_command.RetrieveSeqFastaCommand(seq_ids=seq_ids, wrap=60)
+        with patch.object(
+            client, "stream", return_value=iter([">seq", "ACGT"])
+        ) as stream:
+            result = list(client.retrieve_genetic_sequence_fasta_by_id(cmd))
+
+        assert result == [">seq", "ACGT"]
+        stream.assert_called_once()
+        assert stream.call_args.args == (cmd, HttpMethod.POST)
+        body = stream.call_args.kwargs["model"]
+        assert body.seq_ids == seq_ids
+        assert body.wrap == 60
+        assert body.file_name == "dummy.fasta"
+
+    def test_create_file_base64_encodes_content(self, client: SeqdbClient) -> None:
+        file_id = uuid4()
+        cmd = seqdb_command.CreateFileCommand(
+            file=seqdb_model.File(content=b"ACGT"),
+            format=seqdb_enum.FileFormat.FASTA,
+            compression=seqdb_enum.FileCompression.GZIP,
+        )
+        with patch.object(client, "request", return_value=str(file_id)) as request:
+            result = client.create_file(cmd)
+
+        assert result == file_id
+        request.assert_called_once()
+        assert request.call_args.args == (cmd, HttpMethod.POST)
+        body = request.call_args.kwargs["json_body"]
+        assert body.content == "QUNHVA=="
+        assert body.format == seqdb_enum.FileFormat.FASTA
+        assert body.compression == seqdb_enum.FileCompression.GZIP
+
+    def test_retrieve_similar_profiles_returns_uuids(self, client: SeqdbClient) -> None:
+        protocol_id, profile_id, similar_id = uuid4(), uuid4(), uuid4()
+        cmd = seqdb_command.RetrieveSimilarProfilesCommand(
+            protocol_id=protocol_id,
+            profile_ids=[profile_id],
+            max_distance=1.5,
+        )
+        with patch.object(client, "request", return_value=[str(similar_id)]) as request:
+            result = client.retrieve_similar_profiles(cmd)
+
+        assert result == [similar_id]
+        request.assert_called_once()
+        assert request.call_args.args == (cmd, HttpMethod.POST)
+        body = request.call_args.kwargs["model"]
+        assert body.protocol_id == protocol_id
+        assert body.profile_ids == [profile_id]
+        assert body.max_distance == 1.5
+
+    def test_retrieve_samples_by_id_parses_full_sample(
+        self, client: SeqdbClient
+    ) -> None:
+        sample_id = uuid4()
+        collection_id = uuid4()
+        cmd = seqdb_command.RetrieveSamplesByIdCommand(sample_ids=[sample_id])
+        response = [{"sample": {"created_in_data_collection_id": str(collection_id)}}]
+        with patch.object(client, "request", return_value=response) as request:
+            result = client.retrieve_samples_by_id(cmd)
+
+        assert result[0].sample.created_in_data_collection_id == collection_id
+        request.assert_called_once()
+        assert request.call_args.args == (cmd, HttpMethod.POST)
+        assert request.call_args.kwargs["model"].sample_ids == [sample_id]
+
+    def test_retrieve_sample_identifiers_parses_records(
+        self, client: SeqdbClient
+    ) -> None:
+        sample_id, issuer_id = uuid4(), uuid4()
+        cmd = seqdb_command.RetrieveSampleIdentifiersByIdCommand(sample_ids=[sample_id])
+        response = [
+            {
+                "identifier_issuer_id": str(issuer_id),
+                "external_id": "external",
+                "internal_id": str(sample_id),
+            }
+        ]
+        with patch.object(client, "request", return_value=response) as request:
+            result = client.retrieve_sample_identifiers_by_id(cmd)
+
+        assert result[0].identifier_issuer_id == issuer_id
+        assert result[0].external_id == "external"
+        request.assert_called_once()
+        assert request.call_args.args == (cmd, HttpMethod.POST)
+        assert request.call_args.kwargs["model"].sample_ids == [sample_id]
+
+    def test_retrieve_samples_by_query_parses_result(self, client: SeqdbClient) -> None:
+        query = seqdb_model.SampleQuery(modified_since=datetime(2024, 1, 1))
+        sample_id = uuid4()
+        cmd = seqdb_command.RetrieveSamplesByQueryCommand(sample_query=query)
+        response = {
+            "sample_query": query.model_dump(mode="json"),
+            "sample_ids": [str(sample_id)],
+            "is_max_results_exceeded": False,
+        }
+        with patch.object(client, "request", return_value=response) as request:
+            result = client.retrieve_samples_by_query(cmd)
+
+        assert result.sample_ids == [sample_id]
+        request.assert_called_once_with(cmd, HttpMethod.POST, model=query)
+
+    def test_update_seq_distances_parses_results(self, client: SeqdbClient) -> None:
+        protocol_id, profile_id = uuid4(), uuid4()
+        cmd = seqdb_command.UpdateSeqDistancesCommand(protocol_id=protocol_id)
+        response = [{"seq_distance_profile_id": str(profile_id)}]
+        with patch.object(client, "request", return_value=response) as request:
+            result = client.update_seq_distances(cmd)
+
+        assert result[0].seq_distance_profile_id == profile_id
+        request.assert_called_once_with(
+            cmd, HttpMethod.POST, model=cmd, exclude={"user"}
+        )
+
+    def test_retrieve_seq_distance_protocol_ids_filters_protocols(
+        self, client: SeqdbClient
+    ) -> None:
+        distance_id, sequencing_id = uuid4(), uuid4()
+        protocols = [
+            SimpleNamespace(
+                id=distance_id, protocol_type=seqdb_enum.ProtocolType.SEQ_DISTANCE
+            ),
+            SimpleNamespace(
+                id=sequencing_id, protocol_type=seqdb_enum.ProtocolType.SEQUENCING
+            ),
+        ]
+        with patch.object(client, "handle", return_value=protocols) as handle:
+            result = client.retrieve_seq_distance_protocol_ids()
+
+        assert result == [distance_id]
+        cmd = handle.call_args.args[0]
+        assert isinstance(cmd, seqdb_command.ProtocolCrudCommand)
+        assert cmd.operation == CrudOperation.READ_ALL
+
+    def test_upload_samples_sends_command_and_parses_result(
+        self, client: SeqdbClient
+    ) -> None:
+        cmd = seqdb_command.UploadSamplesCommand(
+            sample_batch=seqdb_model.SampleBatchForUpload(samples=[])
+        )
+        response = {"samples": []}
+        with patch.object(client, "request", return_value=response) as request:
+            result = client.upload_samples(cmd)
+
+        assert result.samples == []
+        request.assert_called_once_with(
+            cmd, HttpMethod.POST, model=cmd, exclude={"user"}
+        )
+
+    def test_retrieve_best_seq_per_sample_converts_ids(
+        self, client: SeqdbClient
+    ) -> None:
+        sample_id, seq_id = uuid4(), uuid4()
+        cmd = seqdb_command.RetrieveBestSeqPerSampleCommand(sample_ids=[sample_id])
+        with patch.object(
+            client, "request", return_value={str(sample_id): str(seq_id)}
+        ) as request:
+            result = client.retrieve_best_seq_per_sample(cmd)
+
+        assert result == {sample_id: seq_id}
+        request.assert_called_once_with(
+            cmd, HttpMethod.POST, model=cmd, exclude={"user"}
+        )
+
+    def test_retrieve_best_seq_profile_per_sample_converts_ids(
+        self, client: SeqdbClient
+    ) -> None:
+        sample_id, profile_id, protocol_id = uuid4(), uuid4(), uuid4()
+        cmd = seqdb_command.RetrieveBestSeqProfilePerSampleCommand(
+            protocol_ids=[protocol_id], sample_ids=[sample_id]
+        )
+        with patch.object(
+            client, "request", return_value={str(sample_id): str(profile_id)}
+        ) as request:
+            result = client.retrieve_best_seq_profile_per_sample(cmd)
+
+        assert result == {sample_id: profile_id}
+        request.assert_called_once_with(
+            cmd, HttpMethod.POST, model=cmd, exclude={"user"}
+        )
+
+    def test_retrieve_best_seq_classification_per_sample_converts_ids(
+        self, client: SeqdbClient
+    ) -> None:
+        sample_id, classification_id, protocol_id = uuid4(), uuid4(), uuid4()
+        cmd = seqdb_command.RetrieveBestSeqClassificationPerSampleCommand(
+            protocol_ids=[protocol_id], sample_ids=[sample_id]
+        )
+        with patch.object(
+            client, "request", return_value={str(sample_id): str(classification_id)}
+        ) as request:
+            result = client.retrieve_best_seq_classification_per_sample(cmd)
+
+        assert result == {sample_id: classification_id}
+        request.assert_called_once_with(
+            cmd, HttpMethod.POST, model=cmd, exclude={"user"}
+        )
 
 
 class TestRetrieveSeqDistanceLastModified:

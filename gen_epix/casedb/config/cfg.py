@@ -6,7 +6,7 @@ from dynaconf import Validator
 
 from gen_epix.casedb.config import cfg_types as casedb_cfg_types
 from gen_epix.casedb.domain import enum as casedb_enum
-from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.config.cfg import AppCfg, convert_to_bool
 
 _MODULE = "gen_epix.casedb.services"
 _REPO_MODULE = "gen_epix.casedb.repositories"
@@ -123,11 +123,21 @@ class CasedbAppCfg(AppCfg):
         return settings
 
     def _get_feature_flag_validators(self) -> list[Validator]:
-        """Build validators for casedb's own `[feature_flags]` table entries, in addition to the shared ones."""
+        """Build validators for casedb's own bool-like feature flag entries."""
         return [
             *super()._get_feature_flag_validators(),
             *(
-                Validator(f"feature_flags.{flag.value}", is_type_of=bool)
+                Validator(
+                    f"feature_flags.{flag.value}",
+                    condition=lambda value: convert_to_bool(value)[0],
+                    messages={
+                        "condition": (
+                            "{name} must be a boolean or one of "
+                            '"true", "false", "1", "0", '
+                            "but it is {value!r}."
+                        )
+                    },
+                )
                 for flag in casedb_enum.FeatureFlag
             ),
         ]

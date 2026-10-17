@@ -148,6 +148,10 @@ class RequestScope:
         """
         token = _REQUEST_VALUES.set({})
         try:
+            # TODO: LSP-3893 On a fresh activation, callers mutating the yielded mapping
+            # expect to update the active scope, but `or {}` may yield a separate dict;
+            # confirm whether direct mutation of this documented backing mapping is
+            # contractual before changing the behavior.
             yield _REQUEST_VALUES.get() or {}
         finally:
             _REQUEST_VALUES.reset(token)

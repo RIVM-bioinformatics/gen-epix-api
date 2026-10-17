@@ -1,4 +1,8 @@
-"""Enumerations used to identify filters and comparison semantics."""
+"""Define enum values shared by filter models and matching logic.
+
+`FilterType` identifies serialized filter models; `LogicalOperator` and
+`ComparisonOperator` define the operations they support.
+"""
 
 from enum import Enum
 

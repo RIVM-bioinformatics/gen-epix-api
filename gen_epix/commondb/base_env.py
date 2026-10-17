@@ -110,7 +110,7 @@ class BaseAppComposer(abc.ABC):
         elif repository_type.value == "SA_SQLITE":
             assert issubclass(repository_class, SARepository)
             file: str | None = props.get("file")
-            connection_string: str | None = props.get("connection_string")
+            connection_string: str | None = props.get("connection_string") or None
             if not connection_string and file:
                 connection_string = f"sqlite:///{file}"
             repository = repository_class.create_sa_repository(

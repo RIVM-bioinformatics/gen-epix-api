@@ -6,5 +6,3 @@ from gen_epix.fastapp.repositories import DictRepository
 
 class AbacDictRepository(DictRepository, BaseAbacRepository):
     """Provide dictionary-backed persistence for casedb ABAC policy data."""
-
-    pass

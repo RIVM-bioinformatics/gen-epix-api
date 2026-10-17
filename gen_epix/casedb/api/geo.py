@@ -17,7 +17,15 @@ def create_geo_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
-    """Register geography CRUD endpoints on the given router."""
+    """Register geography CRUD endpoints on the given router.
+
+    Args:
+        router: Router or application receiving the endpoints.
+        app: Application whose `impl` provides the registered-user dependency.
+        handle_exception: Callback used by generated endpoints to translate
+            exceptions. Required.
+        **kwargs: Accepted for router-factory compatibility; ignored.
+    """
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency

@@ -5,5 +5,3 @@ from gen_epix.fastapp import BaseRepository
 
 class BaseOntologyRepository(BaseRepository):
     """Provide the shared repository base for ontology persistence."""
-
-    pass
