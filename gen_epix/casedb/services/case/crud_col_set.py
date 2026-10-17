@@ -19,14 +19,11 @@ def case_service_crud_col_set(
     """Handle CRUD operations for ColSet entities."""
     with self.repository.uow() as uow:
         assert cmd.user is not None
-        _crud_cascade_delete(self, uow, cmd)
-
-        return _crud_col_set_without_abac(self, uow, cmd)
-
-        # Currently not in use. Left here for future reference if we want to add ABAC for ColSet.
-        # if is_refdata_admin_or_above(self, cmd.user):
-        #     return _crud_col_set_without_abac(self, uow, cmd)
-        # return _crud_col_set_with_abac(self, uow, cmd)
+        pdp: PolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
+            _crud_cascade_delete(self, uow, cmd)
+            return _crud_col_set_without_abac(self, uow, cmd)
+        return _crud_col_set_with_abac(self, uow, cmd)
 
 
 def _crud_col_set_without_abac(
@@ -35,14 +32,9 @@ def _crud_col_set_without_abac(
     cmd: command.ColSetCrudCommand,
 ) -> list[model.ColSet] | model.ColSet | list[UUID] | UUID | list[bool] | bool | None:
     """ColSet admin command handling, no ABAC applied."""
-    # TODO: LSP-3893 An organization-scoped user can reach unfiltered ColSet CRUD;
-    # expected access-limited results/writes may expose unrelated columns. The
-    # visibility rule for sets with mixed-access members is unresolved.
     return self.crud(cmd)  # type: ignore[return-value]
 
 
-# Currently not in use. Left here for future reference if we want to add ABAC for ColSet.
-# Adding ABAC for ColSet would need to be complex: the user should see all ColSets that contain at least one ColSets that the organization has access to.
 def _crud_col_set_with_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,

@@ -48,10 +48,7 @@ def _crud_col_with_abac(
     """Col user command handling, ABAC applied."""
     pdp: PolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
     access_filter = pdp.get_col_id_filter(cmd, col_id_field_name="id")
-    # No cascade delete to force conscious decision to delete from other models
-    # TODO: LSP-3893 Non-exempt CREATE/UPDATE with mismatched Col/Dim case_type_id
-    # or Dim/RefCol ref_dim_id skips _validate_cols and reaches CRUD; expected an
-    # InvalidArgumentsError. Confirm whether ABAC writes share this validation contract.
+    _validate_cols(self, uow, cmd)
     return crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]
 
 

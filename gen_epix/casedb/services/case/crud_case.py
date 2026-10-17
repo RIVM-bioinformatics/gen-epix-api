@@ -22,15 +22,11 @@ def case_service_crud_case(
     """Handle CRUD operations for Case entities."""
     # Start unit of work
     with self.repository.uow() as uow:
-        _crud_cascade_delete(self, uow, cmd)
         pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
         if pdp.is_exempted(cmd):
+            _crud_cascade_delete(self, uow, cmd)
             return _crud_case_without_abac(self, uow, cmd)
-        # TODO: LSP-3893 A non-exempted CaseCrudCommand reaches this branch; expected
-        # ABAC handling via _crud_case_with_abac, but it raises AssertionError. Confirm
-        # whether Case ABAC is intentionally disabled before enabling the handler.
-        raise AssertionError("CRUD Case with ABAC not expected to be allowed")
-        # return _crud_case_with_abac(self, uow, cmd)
+        return _crud_case_with_abac(self, uow, cmd)
 
 
 def _crud_case_without_abac(
@@ -74,6 +70,8 @@ def _crud_case_with_abac(
     # Special case: no policy, allows for internal commands to retrieve all
     if case_abac is None:
         # No policy: allows for internal commands to retrieve all
+        if cmd.is_delete():
+            _crud_cascade_delete(self, uow, cmd)
         return self.crud(cmd)  # type: ignore[return-value]
 
     # Determine valid CaseTypes and data collections

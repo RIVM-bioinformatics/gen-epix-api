@@ -6,7 +6,7 @@ association, rights, caching, and content-filtering helpers.
 """
 
 import datetime
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Set
 from typing import cast
 from uuid import UUID
 
@@ -847,10 +847,7 @@ class CaseService(BaseCaseService):
 
         # Calculate case date if necessary
         if calculate_case_date and case_date_col_mappers:
-            # TODO: LSP-3893 If an inaccessible case has malformed date content,
-            # conversion can fail instead of returning accessible cases only.
-            # Confirm inaccessible records must not affect date conversion.
-            case_service_calculate_case_date(cases, case_date_col_mappers)
+            case_service_calculate_case_date(filtered_cases, case_date_col_mappers)
 
         return filtered_cases, is_max_results_exceeded
 
@@ -1235,17 +1232,24 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_ids: Iterable[UUID] | None = None,
         data_collection_ids: Iterable[UUID] | None = None,
-    ) -> dict[UUID, set[UUID]]:
-        """Retrieve data collection IDs grouped by case ID.
+        frozen: bool = False,
+    ) -> dict[UUID, Set[UUID]]:
+        """Retrieve the data collections linked to cases.
 
         Args:
-            uow: Active repository unit of work.
-            user_id: User identifier used for repository access.
-            case_ids: Optional case IDs restricting association rows.
-            data_collection_ids: Optional collection IDs restricting rows.
+            uow: Unit of work used for repository access.
+            user_id: Identifier of the user performing the retrieval.
+            case_ids: Optional case identifiers to constrain the mapping.
+            data_collection_ids: Optional collection identifiers to constrain it.
+            frozen: Whether the grouped second-endpoint IDs should be returned as
+                frozensets.
 
         Returns:
-            Data collection IDs grouped by case ID.
+            Data collection IDs grouped by Case ID. If `frozen` is True, the IDs
+                are returned as frozensets e.g. to facilitate caching.
+
+        Raises:
+            NotImplementedError: Always; subclasses must implement this operation.
         """
         return self._retrieve_association_map(
             uow,
@@ -1255,6 +1259,7 @@ class CaseService(BaseCaseService):
             "data_collection_id",
             obj_ids1=frozenset(case_ids) if case_ids else None,
             obj_ids2=frozenset(data_collection_ids) if data_collection_ids else None,
+            frozen=frozen,
         )
 
     def _retrieve_case_set_data_collections_map(
@@ -1263,7 +1268,8 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_set_ids: Iterable[UUID] | None = None,
         data_collection_ids: Iterable[UUID] | None = None,
-    ) -> dict[UUID, set[UUID]]:
+        frozen: bool = False,
+    ) -> dict[UUID, Set[UUID]]:
         """Retrieve data collection IDs grouped by case-set ID.
 
         Args:
@@ -1271,9 +1277,11 @@ class CaseService(BaseCaseService):
             user_id: User identifier used for repository access.
             case_set_ids: Optional case-set IDs restricting association rows.
             data_collection_ids: Optional collection IDs restricting rows.
+            frozen: Whether the grouped second-endpoint IDs should be returned as frozensets.
 
         Returns:
-            Data collection IDs grouped by case-set ID.
+            Data collection IDs grouped by case-set ID. If `frozen` is True, the IDs
+                are returned as frozensets e.g. to facilitate caching.
         """
         return self._retrieve_association_map(
             uow,
@@ -1322,7 +1330,8 @@ class CaseService(BaseCaseService):
         link_field_name2: str,
         obj_ids1: frozenset[UUID] | None = None,
         obj_ids2: frozenset[UUID] | None = None,
-    ) -> dict[UUID, set[UUID]]:
+        frozen: bool = False,
+    ) -> dict[UUID, Set[UUID]]:
         """Retrieve linked identifiers grouped by the first endpoint.
 
         The caller owns ``uow``. When both endpoint restrictions are present, both
@@ -1336,6 +1345,7 @@ class CaseService(BaseCaseService):
             link_field_name2: Second endpoint field name and grouped result value.
             obj_ids1: Optional accepted first-endpoint IDs.
             obj_ids2: Optional accepted second-endpoint IDs.
+            frozen: Whether the grouped second-endpoint IDs should be returned as frozensets.
 
         Returns:
             Second-endpoint IDs grouped by first-endpoint ID.
@@ -1368,7 +1378,7 @@ class CaseService(BaseCaseService):
             field_names=[link_field_name1, link_field_name2],
             filter=filter,
         )
-        association_map: dict[UUID, set[UUID]] = map_paired_elements(value_pairs_iterable, as_set=True)  # type: ignore[assignment]
+        association_map: dict[UUID, Set[UUID]] = map_paired_elements(value_pairs_iterable, as_set=True, frozen=frozen)  # type: ignore[assignment]
 
         return association_map
 

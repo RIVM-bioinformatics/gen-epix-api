@@ -6,7 +6,7 @@ by the case service implementation modules.
 """
 
 from abc import abstractmethod
-from collections.abc import Iterable
+from collections.abc import Iterable, Set
 from typing import Any, ClassVar
 from uuid import UUID
 
@@ -51,28 +51,26 @@ class BaseCaseService(DomainBaseCaseService):
         enum.ColType.ID_EVENT: lambda x: None if not x else f"{x}",
         enum.ColType.ID_GENETIC_SEQUENCE: lambda x: None if not x else f"{x}",
         enum.ColType.OTHER: lambda x: None if not x else f"{x}",
-        # TODO: LSP-3893 Numeric 0 in DECIMAL_* fields returns None instead of its
-        # precision-formatted string; confirm whether zero is valid or means missing.
         enum.ColType.DECIMAL_0: lambda x: (
-            None if not x else (x if isinstance(x, str) else f"{x:.0f}")
+            None if x is None else (x if isinstance(x, str) else f"{x:.0f}")
         ),
         enum.ColType.DECIMAL_1: lambda x: (
-            None if not x else (x if isinstance(x, str) else f"{x:.1f}")
+            None if x is None else (x if isinstance(x, str) else f"{x:.1f}")
         ),
         enum.ColType.DECIMAL_2: lambda x: (
-            None if not x else (x if isinstance(x, str) else f"{x:.2f}")
+            None if x is None else (x if isinstance(x, str) else f"{x:.2f}")
         ),
         enum.ColType.DECIMAL_3: lambda x: (
-            None if not x else (x if isinstance(x, str) else f"{x:.3f}")
+            None if x is None else (x if isinstance(x, str) else f"{x:.3f}")
         ),
         enum.ColType.DECIMAL_4: lambda x: (
-            None if not x else (x if isinstance(x, str) else f"{x:.4f}")
+            None if x is None else (x if isinstance(x, str) else f"{x:.4f}")
         ),
         enum.ColType.DECIMAL_5: lambda x: (
-            None if not x else (x if isinstance(x, str) else f"{x:.5f}")
+            None if x is None else (x if isinstance(x, str) else f"{x:.5f}")
         ),
         enum.ColType.DECIMAL_6: lambda x: (
-            None if not x else (x if isinstance(x, str) else f"{x:.6f}")
+            None if x is None else (x if isinstance(x, str) else f"{x:.6f}")
         ),
     }
 
@@ -204,7 +202,8 @@ class BaseCaseService(DomainBaseCaseService):
         user_id: UUID,
         case_ids: Iterable[UUID] | None = None,
         data_collection_ids: Iterable[UUID] | None = None,
-    ) -> dict[UUID, set[UUID]]:
+        frozen: bool = False,
+    ) -> dict[UUID, Set[UUID]]:
         """Retrieve the data collections linked to cases.
 
         Args:
@@ -212,9 +211,11 @@ class BaseCaseService(DomainBaseCaseService):
             user_id: Identifier of the user performing the retrieval.
             case_ids: Optional case identifiers to constrain the mapping.
             data_collection_ids: Optional collection identifiers to constrain it.
+            frozen: Whether the grouped second-endpoint IDs should be returned as frozensets.
 
         Returns:
-            Data collection identifiers grouped by case identifier.
+            Data collection IDs grouped by Case ID. If `frozen` is True, the IDs
+                are returned as frozensets e.g. to facilitate caching.
 
         Raises:
             NotImplementedError: Always; subclasses must implement this operation.
@@ -228,7 +229,8 @@ class BaseCaseService(DomainBaseCaseService):
         user_id: UUID,
         case_set_ids: Iterable[UUID] | None = None,
         data_collection_ids: Iterable[UUID] | None = None,
-    ) -> dict[UUID, set[UUID]]:
+        frozen: bool = False,
+    ) -> dict[UUID, Set[UUID]]:
         """Retrieve the data collections linked to case sets.
 
         Args:
@@ -236,9 +238,11 @@ class BaseCaseService(DomainBaseCaseService):
             user_id: Identifier of the user performing the retrieval.
             case_set_ids: Optional case-set identifiers to constrain the mapping.
             data_collection_ids: Optional collection identifiers to constrain it.
+            frozen: Whether the grouped second-endpoint IDs should be returned as frozensets.
 
         Returns:
-            Data collection identifiers grouped by case-set identifier.
+            Data collection identifiers grouped by case-set identifier. If `frozen` is True, the IDs
+                are returned as frozensets e.g. to facilitate caching.
 
         Raises:
             NotImplementedError: Always; subclasses must implement this operation.
@@ -279,8 +283,12 @@ class BaseCaseService(DomainBaseCaseService):
         link_field_name2: str,
         obj_ids1: frozenset[UUID] | None = None,
         obj_ids2: frozenset[UUID] | None = None,
-    ) -> dict[UUID, set[UUID]]:
+        frozen: bool = False,
+    ) -> dict[UUID, Set[UUID]]:
         """Retrieve linked identifiers grouped by the first association endpoint.
+
+        Args:
+            frozen: Whether the grouped second-endpoint IDs should be returned as frozensets.
 
         Args:
             uow: Unit of work used for repository access.
@@ -290,9 +298,11 @@ class BaseCaseService(DomainBaseCaseService):
             link_field_name2: Name of the second endpoint field.
             obj_ids1: Optional first-endpoint identifiers to constrain the mapping.
             obj_ids2: Optional second-endpoint identifiers to constrain the mapping.
+            frozen: Whether the grouped second-endpoint IDs should be returned as frozensets.
 
         Returns:
-            Second-endpoint identifiers grouped by first-endpoint identifier.
+            Second-endpoint identifiers grouped by first-endpoint identifier. If `frozen` is True, the IDs
+                are returned as frozensets e.g. to facilitate caching.
 
         Raises:
             NotImplementedError: Always; subclasses must implement this operation.

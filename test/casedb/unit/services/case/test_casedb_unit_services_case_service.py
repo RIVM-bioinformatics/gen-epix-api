@@ -787,7 +787,7 @@ def test_retrieve_cases_with_content_right_filters_and_calculates_date(
 
     assert result == (filtered_cases, False)
     assert date_filter.key == "timed_at"
-    calculate_date.assert_called_once_with(cases, mappers)
+    calculate_date.assert_called_once_with(filtered_cases, mappers)
 
 
 def test_retrieve_cases_with_content_right_rejects_invalid_date_key() -> None:

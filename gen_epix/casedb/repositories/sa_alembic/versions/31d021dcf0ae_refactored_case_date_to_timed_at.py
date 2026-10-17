@@ -23,9 +23,17 @@ def upgrade() -> None:
     op.add_column(
         "case", sa.Column("timed_at", sa.DateTime(), nullable=True), schema="case"
     )
-    # TODO: LSP-3893 Existing non-null case_date values are lost; expected: preserve
-    # them in timed_at; actual: timed_at remains NULL. Uncertain whether timed_at
-    # should instead be recomputed from case content during migration.
+    case_table = sa.table(
+        "case",
+        sa.column("case_date", sa.DateTime()),
+        sa.column("timed_at", sa.DateTime()),
+        schema="case",
+    )
+    op.execute(
+        sa.update(case_table)
+        .where(case_table.c.case_date.is_not(None))
+        .values(timed_at=case_table.c.case_date)
+    )
     op.drop_column("case", "case_date", schema="case")
     op.alter_column(
         "case_set",
@@ -69,6 +77,17 @@ def downgrade() -> None:
         "case",
         sa.Column("case_date", sa.DATETIME(), autoincrement=False, nullable=True),
         schema="case",
+    )
+    case_table = sa.table(
+        "case",
+        sa.column("case_date", sa.DateTime()),
+        sa.column("timed_at", sa.DateTime()),
+        schema="case",
+    )
+    op.execute(
+        sa.update(case_table)
+        .where(case_table.c.timed_at.is_not(None))
+        .values(case_date=case_table.c.timed_at)
     )
     op.drop_column("case", "timed_at", schema="case")
     # ### end Alembic commands ###
