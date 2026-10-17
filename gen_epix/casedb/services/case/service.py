@@ -1289,8 +1289,12 @@ class CaseService(BaseCaseService):
             model.CaseSetDataCollectionLink,
             "case_set_id",
             "data_collection_id",
-            obj_ids1=frozenset(case_set_ids) if case_set_ids else None,
-            obj_ids2=frozenset(data_collection_ids) if data_collection_ids else None,
+            obj_ids1=(frozenset(case_set_ids) if case_set_ids is not None else None),
+            obj_ids2=(
+                frozenset(data_collection_ids)
+                if data_collection_ids is not None
+                else None
+            ),
         )
 
     def _retrieve_case_case_sets_map(
@@ -1350,6 +1354,11 @@ class CaseService(BaseCaseService):
         Returns:
             Second-endpoint IDs grouped by first-endpoint ID.
         """
+        if (obj_ids1 is not None and not obj_ids1) or (
+            obj_ids2 is not None and not obj_ids2
+        ):
+            return {}
+
         # Create a filter to restrict the association objs if necessary
         filter: Filter | None
         if obj_ids1:

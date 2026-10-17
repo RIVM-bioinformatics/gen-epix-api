@@ -1,6 +1,6 @@
 """Filters that test whether values are present and non-null."""
 
-from collections.abc import Callable, Hashable, Iterable
+from collections.abc import Callable, Hashable, Iterable, Iterator
 from typing import Any, Literal
 
 from pydantic import BaseModel

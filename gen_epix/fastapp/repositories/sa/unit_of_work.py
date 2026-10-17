@@ -105,7 +105,7 @@ class SAUnitOfWork(BaseUnitOfWork):
             # Suppress context — the original SA exception includes [SQL:] and
             # [parameters:] in its str representation.
             raise ValueError(f"Statement error: {orig_msg}") from None
-        raise NotImplementedError().with_traceback(traceback)
+        raise exception_value.with_traceback(traceback)
 
     def __enter__(self) -> Self:
         """Enter the managed context."""
