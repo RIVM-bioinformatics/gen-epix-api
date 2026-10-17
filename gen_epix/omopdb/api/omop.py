@@ -59,7 +59,7 @@ def create_omop_endpoints(
         cmd.user = user
         return cast(
             model.PersonBatchUploadResult,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="d98e5b2",
@@ -81,7 +81,7 @@ def create_omop_endpoints(
         """Delegate a person-query retrieval command for the authenticated user."""
         return cast(
             model.PersonQueryResult,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="93656cdf",
@@ -106,7 +106,7 @@ def create_omop_endpoints(
         """Delegate a full-person retrieval command for the authenticated user."""
         return cast(
             list[model.FullPerson],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="e7f2d91b",
@@ -131,7 +131,7 @@ def create_omop_endpoints(
         """Delegate a cohort specimen-ID retrieval command for the user."""
         return cast(
             model.SpecimenIdsByCohortResult,
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="fac4d7a7",

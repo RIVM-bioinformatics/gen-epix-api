@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any, NoReturn
 
 from fastapi import APIRouter, FastAPI
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import exc
@@ -147,16 +148,17 @@ def create_system_endpoints(
     )
     async def retrieve__feature_flags() -> FeatureFlagsResponseBody:
         """Return the application's feature flags."""
-        feature_flags: dict[Hashable, bool] = _handle_system_command(
-            app,
-            handle_exception,
-            "f8e8c5e6",
-            command.RetrieveFeatureFlagsCommand(user=None),
-        )
-        retval = {
-            str(x.value) if isinstance(x, Enum) else str(x): y
-            for x, y in feature_flags.items()
-        }
+        try:
+            cmd = command.RetrieveFeatureFlagsCommand(user=None)
+            feature_flags: dict[Hashable, bool] = await run_in_threadpool(
+                app.handle, cmd
+            )
+            retval = {
+                str(x.value) if isinstance(x, Enum) else str(x): y
+                for x, y in feature_flags.items()
+            }
+        except Exception as exception:
+            handle_exception("f8e8c5e6", None, exception)
         return FeatureFlagsResponseBody(feature_flags=retval)
 
     # Licenses endpoint
@@ -180,12 +182,13 @@ def create_system_endpoints(
         Raises:
             HTTPException: If license retrieval raises an application exception.
         """
-        retval: list[model.PackageMetadata] = _handle_system_command(
-            app,
-            handle_exception,
-            "6ba2c4ca",
-            command.RetrieveLicensesCommand(user=None),
-        )
+        try:
+            cmd = command.RetrieveLicensesCommand(user=None)
+            retval: list[model.PackageMetadata] = await run_in_threadpool(
+                app.handle, cmd
+            )
+        except Exception as exception:
+            handle_exception("6ba2c4ca", None, exception)
         return retval
 
     # Log
@@ -208,12 +211,11 @@ def create_system_endpoints(
         idp_user: idp_user_dependency,  # type: ignore
     ) -> list[model.Outage]:
         """Retrieve configured system outage records."""
-        retval: list[model.Outage] = _handle_system_command(
-            app,
-            handle_exception,
-            "6b47b8b6",
-            command.RetrieveOutagesCommand(user=None),
-        )
+        try:
+            cmd = command.RetrieveOutagesCommand(user=None)
+            retval: list[model.Outage] = await run_in_threadpool(app.handle, cmd)
+        except Exception as exception:
+            handle_exception("6b47b8b6", None, exception)
         return retval
 
     # Optional endpoints depending on feature flags
