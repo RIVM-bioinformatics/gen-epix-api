@@ -534,12 +534,26 @@ class TestContent:
                 # profiler = pyinstrument.Profiler(async_mode="enabled")
                 # profiler.start()
 
+                requested_distance_case_ids = [
+                    case.id for case in cases if case.content.get(dist_col.id)
+                ]
+                if len(requested_distance_case_ids) != len(case_ids):
+                    with pytest.raises(exc.UnauthorizedAuthError):
+                        app.handle(
+                            command.RetrieveSeqDistancesByCasesCommand(
+                                user=org_user,
+                                case_type_id=complete_case_type.id,
+                                genetic_distance_col_id=dist_col.id,
+                                case_ids=case_ids,
+                            )
+                        )
+
                 seq_distances: list[seqdb_model.SeqDistance] = app.handle(
                     command.RetrieveSeqDistancesByCasesCommand(
-                        user=root_user,
+                        user=org_user,
                         case_type_id=complete_case_type.id,
                         genetic_distance_col_id=dist_col.id,
-                        case_ids=case_ids,
+                        case_ids=requested_distance_case_ids,
                         filter_other_cases=True,
                     )
                 )
@@ -568,11 +582,14 @@ class TestContent:
                 )
                 if seq_distances:
                     found_some_seq_distances = True
-                if first_seq_distance_case_data is None and len(case_ids) >= 2:
+                if (
+                    first_seq_distance_case_data is None
+                    and len(requested_distance_case_ids) >= 2
+                ):
                     first_seq_distance_case_data = (
                         complete_case_type,
                         dist_col,
-                        case_ids,
+                        requested_distance_case_ids,
                     )
 
             if found_similar_cases:

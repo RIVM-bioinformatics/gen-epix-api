@@ -266,7 +266,12 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
 
 
 class RetrieveSeqDistancesByCasesCommand(Command):
-    """Represents a request to retrieve sequence distances for cases."""
+    """Represents a request to execute case-linked sequence-distance retrieval.
+
+    Requested distance content must be readable and populated. Entries above the
+    configured casedb protocol storage maximum are omitted. External targets, when requested,
+    also require readable linked sequence content on a matching case.
+    """
 
     case_type_id: UUID = Field(
         description="The CaseType ID that all the cases must belong to."
