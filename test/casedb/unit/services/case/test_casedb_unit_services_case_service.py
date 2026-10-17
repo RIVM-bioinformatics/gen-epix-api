@@ -17,7 +17,6 @@ from gen_epix.filter.equals_uuid import EqualsUuidFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
 
 
-
 def _case(case_id=None, created_in_data_collection_id=None):
     return model.Case(
         id=case_id or uuid4(),

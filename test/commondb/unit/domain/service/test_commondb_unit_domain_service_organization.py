@@ -18,6 +18,7 @@ from gen_epix.fastapp.model import UpdateAssociationCommand
         "invite_user",
         "retrieve_invite_user_constraints",
         "register_invited_user",
+        "retrieve_own_user",
         "update_user",
         "anonymize_user",
     ],
@@ -50,6 +51,7 @@ def test_register_handlers_registers_expected_handlers() -> None:
     invite_handler = object()
     constraints_handler = object()
     registration_handler = object()
+    own_user_handler = object()
     update_handler = object()
     anonymize_handler = object()
 
@@ -81,6 +83,7 @@ def test_register_handlers_registers_expected_handlers() -> None:
             invite_user=invite_handler,
             retrieve_invite_user_constraints=constraints_handler,
             register_invited_user=registration_handler,
+            retrieve_own_user=own_user_handler,
             update_user=update_handler,
             anonymize_user=anonymize_handler,
         ),
@@ -95,6 +98,7 @@ def test_register_handlers_registers_expected_handlers() -> None:
         command.InviteUserCommand: invite_handler,
         command.RetrieveInviteUserConstraintsCommand: constraints_handler,
         command.RegisterInvitedUserCommand: registration_handler,
+        command.RetrieveOwnUserCommand: own_user_handler,
         command.UpdateUserCommand: update_handler,
         command.AnonymizeUserCommand: anonymize_handler,
     }
