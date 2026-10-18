@@ -66,6 +66,25 @@ class TestEtlLogItem:
 
         assert item.severity is LogLevel.INFO
 
+    def test_optional_trace_fields_default_to_none(self) -> None:
+        item = LogItem(code="code", message="message", severity=LogLevel.INFO)
+
+        assert item.source is None
+        assert item.target is None
+
+    @pytest.mark.parametrize(
+        ("severity", "expected"),
+        [("INFO", LogLevel.INFO), (LogLevel.WARN, LogLevel.WARN)],
+    )
+    def test_validate_severity_normalizes_names_and_accepts_enum(
+        self, severity: LogLevel | str, expected: LogLevel
+    ) -> None:
+        assert LogItem._validate_severity(severity) is expected
+
+    def test_validate_severity_rejects_unknown_member_name(self) -> None:
+        with pytest.raises(KeyError):
+            LogItem._validate_severity("unknown")
+
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestEtlResult:
@@ -190,6 +209,10 @@ class TestEtlResult:
             Result._deserialize({"type": "missing"})
         with pytest.raises(ValueError, match="Unknown subclass ID: missing"):
             Result(type="missing")
+
+    def test_deserialize_rejects_dictionary_without_discriminator(self) -> None:
+        with pytest.raises(KeyError, match="type"):
+            Result._deserialize({})
 
     def test_duplicate_discriminator_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="Duplicate Result subclass ID"):
@@ -495,6 +518,23 @@ class TestBatchEtlResult:
         assert isinstance(batch.transform_results[0], _FooTransformResult)
         assert batch.load_results == [load]
 
+    def test_add_results_ignores_empty_and_unsupported_values(self) -> None:
+        batch = BatchResult()
+
+        batch.add_results([])
+        batch.add_results(cast(Any, object()))
+
+        assert batch.extract_results == []
+        assert batch.transform_results == []
+        assert batch.load_results == []
+
+    def test_mixed_leaf_load_result_counts_as_failed(self) -> None:
+        batch = BatchResult(load_results=[LoadResult(status=EtlStatus.MIXED)])
+
+        batch.update_status_from_loads()
+
+        assert batch.status is EtlStatus.FAILED
+
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestRunEtlResult:
@@ -597,6 +637,24 @@ class TestRunEtlResult:
         result = JobResult(etl_name="flow")
 
         assert result.get_summary()["batch_type"] == ""
+
+    def test_summary_of_empty_job_has_zero_outcomes(self) -> None:
+        result = JobResult(etl_name="flow")
+
+        assert result.get_summary() == {
+            "etl_name": "flow",
+            "job_id": result.job_id,
+            "batch_type": "",
+            "status": EtlStatus.PENDING.value,
+            "n_batches": 0,
+            "n_stored_batches": 0,
+            "n_extracted_ok": 0,
+            "n_extracted_failed": 0,
+            "n_transformed_ok": 0,
+            "n_transformed_failed": 0,
+            "n_loaded_ok": 0,
+            "n_loaded_failed": 0,
+        }
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-02")

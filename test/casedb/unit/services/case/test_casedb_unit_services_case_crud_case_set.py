@@ -1,5 +1,6 @@
 from test.casedb.unit.services.case.base import BaseCrudTestCase
 from test.util.mock_compat import Mock, patch
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
@@ -7,8 +8,116 @@ import pytest
 from gen_epix.casedb.domain import exc as case_exc
 from gen_epix.casedb.domain import model as casedb_model
 from gen_epix.casedb.domain.enum import CaseRight
-from gen_epix.casedb.services.case.crud_case_set import case_service_crud_case_set
+from gen_epix.casedb.policies.pdp import PolicyDecisionPoint
+from gen_epix.casedb.services.case.crud_case_set import (
+    _retrieve_case_sets_with_content_right,
+    case_service_crud_case_set,
+)
 from gen_epix.fastapp import CrudOperation
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
+
+
+@pytest.fixture
+def case_set_retrieval():
+    case_set_ids = [uuid4(), uuid4()]
+    case_type_ids = [uuid4(), uuid4()]
+    collection_id = uuid4()
+    repository = Mock()
+    service = Mock(repository=repository)
+    service._retrieve_case_set_data_collections_map.return_value = {
+        case_set_id: {collection_id} for case_set_id in case_set_ids
+    }
+    repository.read_fields.return_value = iter(
+        reversed(list(zip(case_set_ids, case_type_ids)))
+    )
+    access = casedb_model.CaseTypeAccessAbac(
+        case_type_id=case_type_ids[0],
+        data_collection_id=collection_id,
+        is_private=False,
+        add_case=False,
+        remove_case=False,
+        add_case_set=False,
+        remove_case_set=False,
+        read_col_ids=set(),
+        write_col_ids=set(),
+        read_case_set=True,
+        write_case_set=False,
+    )
+    abac = casedb_model.CaseAbac(
+        is_full_access=False,
+        case_type_access_abacs={case_type_ids[0]: {collection_id: access}},
+        case_type_share_abacs={},
+    )
+    pdp = PolicyDecisionPoint(Mock())
+    pdp.get_case_abac = Mock(return_value=abac)
+    return SimpleNamespace(
+        service=service,
+        repository=repository,
+        cmd=Mock(user=Mock(id=uuid4())),
+        pdp=pdp,
+        case_set_ids=case_set_ids,
+    )
+
+
+@pytest.mark.parametrize("explicit_empty", [False, True], ids=["query", "explicit"])
+def test_retrieval_returns_empty_without_reading_unrelated_links(
+    case_set_retrieval, explicit_empty
+):
+    context = case_set_retrieval
+    context.repository.crud.return_value = []
+    date_filter = DatetimeRangeFilter(
+        key="case_set_date", upper_bound="2026-10-15", upper_bound_censor="<="
+    )
+
+    result = _retrieve_case_sets_with_content_right(
+        context.service,
+        Mock(),
+        context.cmd,
+        context.pdp,
+        CaseRight.READ_CASE_SET,
+        case_set_ids=[] if explicit_empty else None,
+        filter=date_filter,
+    )
+
+    assert result == []
+    context.service._retrieve_case_set_data_collections_map.assert_not_called()
+    context.repository.read_fields.assert_not_called()
+    if explicit_empty:
+        context.repository.crud.assert_not_called()
+    else:
+        assert context.repository.crud.call_args.kwargs["filter"] is date_filter
+
+
+def test_retrieval_pairs_case_types_by_id_and_applies_real_read_policy(
+    case_set_retrieval,
+):
+    context = case_set_retrieval
+    readable_case_set = Mock(id=context.case_set_ids[0])
+    context.repository.crud.side_effect = [context.case_set_ids, [readable_case_set]]
+
+    result = _retrieve_case_sets_with_content_right(
+        context.service, Mock(), context.cmd, context.pdp, CaseRight.READ_CASE_SET
+    )
+
+    assert result == [readable_case_set]
+    assert context.repository.crud.call_args.kwargs["obj_ids"] == [
+        context.case_set_ids[0]
+    ]
+    assert context.repository.read_fields.call_args.args[3] == ["id", "case_type_id"]
+
+
+def test_retrieval_of_explicit_denied_case_set_raises(case_set_retrieval):
+    context = case_set_retrieval
+    with pytest.raises(case_exc.UnauthorizedAuthError):
+        _retrieve_case_sets_with_content_right(
+            context.service,
+            Mock(),
+            context.cmd,
+            context.pdp,
+            CaseRight.READ_CASE_SET,
+            case_set_ids=context.case_set_ids,
+        )
+    context.repository.crud.assert_not_called()
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")

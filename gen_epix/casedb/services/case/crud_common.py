@@ -116,6 +116,7 @@ def _crud_cascade_delete(
     model_class: type[model.Model] = cmd.MODEL_CLASS  # type: ignore[assignment]
     link_model_classes = self.CASCADE_DELETE_MODEL_CLASSES.get(model_class)
     if link_model_classes is None:
+        # No direct linked model classes found, check for base class matches.
         is_found = False
         matched_link_classes: tuple[type[model.Model], ...] | None = None
         for (
@@ -123,13 +124,16 @@ def _crud_cascade_delete(
             link_model_classes,
         ) in self.CASCADE_DELETE_MODEL_CLASSES.items():
             if issubclass(model_class, model_base_class):
+                # Found a base class match for cascade delete.
                 is_found = True
                 matched_link_classes = link_model_classes
                 break
         if is_found and matched_link_classes is not None:
+            # Cache the matched link classes for the current model class.
             self.CASCADE_DELETE_MODEL_CLASSES[model_class] = matched_link_classes
             link_model_classes = matched_link_classes
         else:
+            # No base class match found for cascade delete. Cache an empty tuple.
             self.CASCADE_DELETE_MODEL_CLASSES[model_class] = ()
             link_model_classes = ()
 

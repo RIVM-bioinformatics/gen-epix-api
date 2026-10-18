@@ -266,13 +266,18 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
 
 
 class RetrieveSeqDistancesByCasesCommand(Command):
-    """Represents a request to retrieve sequence distances for cases."""
+    """Represents a request to execute case-linked sequence-distance retrieval.
+
+    Requested distance content must be readable and populated. Entries above the
+    configured casedb protocol storage maximum are omitted. External targets, when requested,
+    also require readable linked sequence content on a matching case.
+    """
 
     case_type_id: UUID = Field(
         description="The CaseType ID that all the cases must belong to."
     )
     case_ids: list[UUID] = Field(
-        description="The IDs of the cases to retrieve sequence distances for."
+        description="The IDs of the cases to retrieve sequence distances for. Must be unique."
     )
     genetic_distance_col_id: UUID = Field(
         description="The ID of the genetic distance Col to use."
@@ -281,6 +286,13 @@ class RetrieveSeqDistancesByCasesCommand(Command):
         default=True,
         description="Whether to omit distances to cases not included in case_ids.",
     )
+
+    @field_validator("case_ids", mode="after")
+    def validate_case_ids(cls, value: list[UUID]) -> list[UUID]:
+        """Require each requested case ID to occur once."""
+        if len(value) != len(set(value)):
+            raise ValueError("case_ids must be unique")
+        return value
 
 
 class RetrieveSimilarCasesCommand(Command):

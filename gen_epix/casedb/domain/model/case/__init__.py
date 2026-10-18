@@ -24,6 +24,9 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
 )
 from gen_epix.casedb.domain.model.case.non_persistable import CaseRights as CaseRights
 from gen_epix.casedb.domain.model.case.non_persistable import (
+    CaseSeqDistance as CaseSeqDistance,
+)
+from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseSetQuery as CaseSetQuery,
 )
 from gen_epix.casedb.domain.model.case.non_persistable import (

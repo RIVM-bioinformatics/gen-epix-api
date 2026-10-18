@@ -1629,6 +1629,7 @@ class BatchUploader:
                         "d3ac4368",
                         f"{identifier_class.NAME} ({identifier_for_upload.identifier_issuer_id}, {identifier_for_upload.external_id}) already exists and cannot be updated",
                     )
+                    success = False
                     continue
                 assert identifier_for_upload.identifier_issuer_id is not None
                 # Create Identifier object and add to list
@@ -2319,6 +2320,7 @@ class BatchUploader:
             None, add it to content.
         - A key from updates exists in content:
             - If the new value is None: the key is then also removed from content.
+              If the original value was None, this does not count as an update.
             - If the new value is different from the existing value.
         """
         is_updated = False
@@ -2335,6 +2337,7 @@ class BatchUploader:
                 if value is None:
                     # New value is None, remove the key
                     if orig_value is not None:
+                        # Only consider it an update if the original value was not None
                         is_updated = True
                     del content[key]
                 elif orig_value != value:

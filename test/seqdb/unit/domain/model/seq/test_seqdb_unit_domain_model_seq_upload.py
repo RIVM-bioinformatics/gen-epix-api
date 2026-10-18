@@ -18,6 +18,7 @@ from pydantic import ValidationError
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
+from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.etl.model import Result
 from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.domain.model.seq.upload import (
@@ -448,6 +449,302 @@ class TestModelSeqProfileForUpload:
             [allele_id], qc_score=0.95
         )
         assert allele_profile.qc_score == 0.95
+
+    @pytest.mark.parametrize(
+        ("field_names", "expected"),
+        [
+            (("content",), "content"),
+            (("content", "allele_ids"), "content or allele_ids"),
+            (
+                ("content", "allele_ids", "locus_allele_id_map"),
+                "content, allele_ids, or locus_allele_id_map",
+            ),
+        ],
+        ids=["one", "two", "three"],
+    )
+    def test_representation_list_formatting(
+        self, field_names: tuple[str, ...], expected: str
+    ) -> None:
+        assert model.SeqProfileForUpload._get_representation_list(field_names) == (
+            expected
+        )
+
+    @pytest.mark.parametrize(
+        ("profile_type", "profile_format", "fields"),
+        [
+            (
+                model.enum.SeqProfileType.ALLELE,
+                model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+                {},
+            ),
+            (
+                model.enum.SeqProfileType.MLVA,
+                model.enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS,
+                {},
+            ),
+            (
+                model.enum.SeqProfileType.SNP,
+                model.enum.SeqProfileFormat.NEXTCLADE,
+                {},
+            ),
+            (
+                model.enum.SeqProfileType.KMER,
+                model.enum.SeqProfileFormat.KMER_FREQUENCY_MAP,
+                {},
+            ),
+        ],
+        ids=["allele-missing", "mlva-missing", "snp-missing", "kmer-missing"],
+    )
+    def test_profile_requires_one_representation(
+        self,
+        profile_type: model.enum.SeqProfileType,
+        profile_format: model.enum.SeqProfileFormat,
+        fields: dict[str, Any],
+    ) -> None:
+        with pytest.raises(ValidationError, match="Exactly one"):
+            model.SeqProfileForUpload(  # type: ignore[call-arg]
+                protocol_code="PROTOCOL",
+                seq_profile_type=profile_type,
+                format=profile_format,
+                content_hash=NULL_ID,
+                **fields,
+            )
+
+    @pytest.mark.parametrize(
+        ("profile_type", "profile_format"),
+        [
+            ("MLVA", model.enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS),
+            (
+                float(model.enum.SeqProfileType.KMER),
+                model.enum.SeqProfileFormat.KMER_FREQUENCY_MAP,
+            ),
+        ],
+        ids=["enum-name", "integral-float"],
+    )
+    def test_missing_json_profile_representation_accepts_enum_input_forms(
+        self,
+        profile_type: str | float,
+        profile_format: model.enum.SeqProfileFormat,
+    ) -> None:
+        with pytest.raises(ValidationError, match="Exactly one"):
+            model.SeqProfileForUpload.model_validate(
+                {
+                    "protocol_code": "PROTOCOL",
+                    "seq_profile_type": profile_type,
+                    "format": profile_format,
+                    "content_hash": NULL_ID,
+                }
+            )
+
+    def test_allele_profile_rejects_conflicting_normalized_content(self) -> None:
+        content_id, alternate_id = uuid4(), uuid4()
+        content = model.SeqProfile.get_ordered_allele_ids_representation([content_id])
+        with pytest.raises(ValidationError, match="content does not match allele_ids"):
+            model.SeqProfileForUpload(  # type: ignore[call-arg]
+                protocol_code="PROTOCOL",
+                seq_profile_type=model.enum.SeqProfileType.ALLELE,
+                format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+                content=content,
+                content_hash=model.SeqProfile.get_allele_profile_hash([content_id]),
+                allele_ids=[alternate_id],
+            )
+
+    def test_allele_profile_accepts_matching_normalized_content(self) -> None:
+        allele_ids: list[UUID | None] = [uuid4(), None]
+        content = model.SeqProfile.get_ordered_allele_ids_representation(allele_ids)
+        profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
+            protocol_code="PROTOCOL",
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            format=model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+            content=content,
+            content_hash=model.SeqProfile.get_allele_profile_hash(allele_ids),
+            allele_ids=allele_ids,
+        )
+
+        assert profile.content == content
+        assert profile.allele_ids == allele_ids
+
+    @pytest.mark.parametrize(
+        (
+            "profile_type",
+            "profile_format",
+            "content",
+            "field_name",
+            "matching",
+            "different",
+        ),
+        [
+            (
+                model.enum.SeqProfileType.MLVA,
+                model.enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS,
+                "[2, 3]",
+                "repeat_numbers",
+                [2, 3],
+                [2, 4],
+            ),
+            (
+                model.enum.SeqProfileType.KMER,
+                model.enum.SeqProfileFormat.KMER_FREQUENCY_MAP,
+                '{"AAA": 0.25}',
+                "kmer_frequency_map",
+                {"AAA": 0.25},
+                {"AAA": 0.5},
+            ),
+        ],
+        ids=["mlva", "kmer"],
+    )
+    def test_normalized_json_profiles_accept_equivalent_content_and_reject_conflicts(
+        self,
+        profile_type: model.enum.SeqProfileType,
+        profile_format: model.enum.SeqProfileFormat,
+        content: str,
+        field_name: str,
+        matching: Any,
+        different: Any,
+    ) -> None:
+        if field_name == "repeat_numbers":
+            profile_hash = model.SeqProfile.get_mlva_profile_hash(matching)
+            equivalent_content = " [2, 3] "
+        else:
+            profile_hash = model.SeqProfile.get_kmer_profile_hash(matching)
+            equivalent_content = '{ "AAA" : 0.25 }'
+
+        common: dict[str, Any] = {
+            "protocol_code": "PROTOCOL",
+            "seq_profile_type": profile_type,
+            "format": profile_format,
+            "content_hash": profile_hash,
+        }
+        model.SeqProfileForUpload.model_validate(
+            {**common, "content": equivalent_content, field_name: matching}
+        )
+        with pytest.raises(ValidationError, match="content does not match"):
+            model.SeqProfileForUpload.model_validate(
+                {**common, "content": content, field_name: different}
+            )
+
+    def test_normalized_mlva_profile_rejects_third_representation(self) -> None:
+        repeat_numbers: list[int | None] = [2, 3]
+        with pytest.raises(ValidationError, match="Exactly one"):
+            model.SeqProfileForUpload(  # type: ignore[call-arg]
+                protocol_code="PROTOCOL",
+                seq_profile_type=model.enum.SeqProfileType.MLVA,
+                format=model.enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS,
+                content="[2, 3]",
+                content_hash=model.SeqProfile.get_mlva_profile_hash(repeat_numbers),
+                repeat_numbers=repeat_numbers,
+                locus_repeat_number_map={"locus": 2},
+                locus_code_map_code="MAP",
+            )
+
+    def test_profile_alternate_representations_reject_mismatched_hashes(self) -> None:
+        allele_ids = [uuid4()]
+        repeat_numbers: list[int | None] = [2, 3]
+        kmer_frequency_map = {"AAA": 0.25}
+        cases = [
+            (
+                model.enum.SeqProfileType.ALLELE,
+                model.enum.SeqProfileFormat.ORDERED_ALLELE_IDS,
+                "allele_ids",
+                allele_ids,
+            ),
+            (
+                model.enum.SeqProfileType.MLVA,
+                model.enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS,
+                "repeat_numbers",
+                repeat_numbers,
+            ),
+            (
+                model.enum.SeqProfileType.KMER,
+                model.enum.SeqProfileFormat.KMER_FREQUENCY_MAP,
+                "kmer_frequency_map",
+                kmer_frequency_map,
+            ),
+        ]
+        for profile_type, profile_format, field_name, value in cases:
+            with pytest.raises(ValidationError, match="hash does not match"):
+                model.SeqProfileForUpload.model_validate(
+                    {
+                        "protocol_code": "PROTOCOL",
+                        "seq_profile_type": profile_type,
+                        "format": profile_format,
+                        "content_hash": uuid4(),
+                        field_name: value,
+                    }
+                )
+
+    def test_mlva_map_requires_locus_code_map(self) -> None:
+        with pytest.raises(
+            ValidationError, match="locus_code_map_id or locus_code_map_code"
+        ):
+            model.SeqProfileForUpload(  # type: ignore[call-arg]
+                protocol_code="PROTOCOL",
+                seq_profile_type=model.enum.SeqProfileType.MLVA,
+                format=model.enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS,
+                content_hash=NULL_ID,
+                locus_repeat_number_map={"locus": 2},
+            )
+
+        profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
+            protocol_code="PROTOCOL",
+            seq_profile_type=model.enum.SeqProfileType.MLVA,
+            format=model.enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS,
+            content_hash=NULL_ID,
+            locus_repeat_number_map={"locus": 2},
+            locus_code_map_code="MAP",
+        )
+        assert profile.locus_repeat_number_map == {"locus": 2}
+
+    def test_locus_profile_upload_helper_requires_content(self) -> None:
+        profile = model.SeqProfileForUpload.model_construct(content="")
+        with pytest.raises(ValueError, match="content must be provided"):
+            profile._validate_locus_profile_upload()
+
+        profile.content = "locus-content"
+        assert profile._validate_locus_profile_upload() is profile
+
+    def test_snp_profile_upload_requires_content_or_aligned_sequence(self) -> None:
+        profile = model.SeqProfileForUpload.model_construct(
+            content="", aligned_nucleotide_seq=None
+        )
+        with pytest.raises(ValueError, match="content or aligned_nucleotide_seq"):
+            profile._validate_snp_profile_upload()
+
+        profile.aligned_nucleotide_seq = "ACGT"
+        assert profile._validate_snp_profile_upload() is profile
+
+        nextclade_content = json.dumps(
+            {
+                "substitutions": [],
+                "deletions": [],
+                "insertions": [],
+                "missings": "",
+                "non_acgtns": "",
+                "alignment_start": 1,
+                "alignment_end": 4,
+            }
+        )
+        valid_profile = model.SeqProfileForUpload(  # type: ignore[call-arg]
+            protocol_code="PROTOCOL",
+            seq_profile_type=model.enum.SeqProfileType.SNP,
+            format=model.enum.SeqProfileFormat.NEXTCLADE,
+            content=nextclade_content,
+            content_hash=NULL_ID,
+        )
+        assert valid_profile.content == nextclade_content
+
+    def test_seq_classification_upload_accepts_inherited_content(self) -> None:
+        classification = model.SeqClassificationForUpload.model_validate(
+            {
+                "protocol_code": "PROTOCOL",
+                "primary_category_code": "CATEGORY",
+                "format": model.enum.SeqClassificationFormat.PRIMARY_CATEGORY_ONLY,
+                "content": "classification-content",
+                "content_hash": NULL_ID,
+            }
+        )
+
+        assert classification.content == "classification-content"
 
     @staticmethod
     def _get_allele_profile_for_ids(
@@ -1353,6 +1650,7 @@ class TestSampleBatchForUploadAlleleHandling:
             samples=[self._make_sample(profile)], alleles=[allele1, allele2]
         )
 
+        assert allele1.id is not None
         batch.trim_alleles(also_exclude={allele1.id})
 
         assert batch.alleles == [allele2]
@@ -1364,6 +1662,7 @@ class TestSampleBatchForUploadAlleleHandling:
             samples=[self._make_sample(profile)], alleles=[allele]
         )
 
+        assert allele.id is not None
         batch.trim_alleles(also_exclude={allele.id})
 
         assert batch.alleles is None
@@ -1464,6 +1763,96 @@ class TestSampleBatchForUploadAlleleHandling:
         assert result.alleles is not None
         assert len(result.alleles) == 1
         assert result.alleles[0].locus_id == locus_id_a
+
+    @pytest.mark.parametrize(
+        ("children_field", "flag_name"),
+        [
+            ("read_sets", "has_read_sets"),
+            ("seqs", "has_seqs"),
+            ("seq_taxonomies", "has_seq_taxonomies"),
+            ("seq_classifications", "has_seq_classifications"),
+            ("seq_profiles", "has_seq_profiles"),
+            ("pcr_measurements", "has_pcr_measurements"),
+            ("ast_measurements", "has_ast_measurements"),
+        ],
+        ids=[
+            "read-sets",
+            "seqs",
+            "taxonomies",
+            "classifications",
+            "profiles",
+            "pcr",
+            "ast",
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("child_state", "expected"),
+        [("omitted", False), ("empty", False), ("present", True)],
+        ids=["none", "empty", "present"],
+    )
+    def test_computed_child_flags(
+        self,
+        children_field: str,
+        flag_name: str,
+        child_state: str,
+        expected: bool,
+    ) -> None:
+        children = {"omitted": None, "empty": [], "present": [object()]}[child_state]
+        sample = model.SampleForUpload.model_construct(
+            _fields_set=None, **{children_field: children}
+        )
+        batch = model.SampleBatchForUpload.model_construct(samples=[sample])
+
+        assert getattr(batch, flag_name) is expected
+
+    @pytest.mark.parametrize("alleles", [None, []], ids=["none", "empty"])
+    def test_trim_alleles_is_noop_when_alleles_are_absent(
+        self, alleles: list[model.AlleleForUpload] | None
+    ) -> None:
+        batch = model.SampleBatchForUpload.model_construct(samples=[], alleles=alleles)
+
+        batch.trim_alleles()
+
+        assert batch.alleles is alleles
+
+    def test_get_referenced_allele_ids_skips_non_allele_profiles(self) -> None:
+        profile = model.SeqProfileForUpload.model_construct(
+            seq_profile_type=model.enum.SeqProfileType.SNP
+        )
+        sample = model.SampleForUpload.model_construct(seq_profiles=[profile])
+        batch = model.SampleBatchForUpload.model_construct(samples=[sample])
+
+        assert batch.get_referenced_allele_ids() == set()
+
+    def test_get_referenced_allele_ids_rejects_unknown_representation(self) -> None:
+        profile = model.SeqProfileForUpload.model_construct(
+            seq_profile_type=model.enum.SeqProfileType.ALLELE,
+            content="",
+            allele_ids=None,
+            locus_allele_id_map=None,
+        )
+        sample = model.SampleForUpload.model_construct(seq_profiles=[profile])
+        batch = model.SampleBatchForUpload.model_construct(samples=[sample])
+
+        with pytest.raises(
+            NotImplementedError, match="none of the known allele representations"
+        ):
+            batch.get_referenced_allele_ids()
+
+    def test_sample_upload_result_collects_nested_errors_in_field_order(self) -> None:
+        read_set_result = UploadResult()
+        read_set_result.add_error("read-set-error", "Read set failed")
+        seq_result = UploadResult()
+        seq_result.add_error("seq-error", "Sequence failed")
+        result = SampleUploadResult(read_sets=[read_set_result], seqs=[seq_result])
+
+        assert [item.code for item in result.get_errors()] == [
+            "read-set-error",
+            "seq-error",
+        ]
+
+    def test_sample_upload_result_without_child_errors_is_empty(self) -> None:
+        assert SampleUploadResult().get_errors() == []
 
 
 @pytest.mark.parametrize(

@@ -67,9 +67,7 @@ class TreeAlgorithm(Base, RowMetadataMixin):
     tree_algorithm_class: Mapped[TreeAlgorithmClass] = relationship(
         TreeAlgorithmClass, foreign_keys=[tree_algorithm_class_id]
     )
-    rank: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.TreeAlgorithmClass, "rank"
-    )
+    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.TreeAlgorithm, "rank")
 
 
 class GeneticDistanceProtocol(Base, RowMetadataMixin):

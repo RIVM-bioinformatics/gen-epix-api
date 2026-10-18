@@ -162,7 +162,8 @@ class CasedbClient(CommondbClient):
     ) -> list[model.CaseCohortLink]:
         """Retrieve cohort links for a given case type."""
         request_body = api.RetrieveCaseCohortLinksByCaseTypeRequestBody(
-            case_type_id=cmd.case_type_id
+            case_type_id=cmd.case_type_id,
+            include_missing=cmd.include_missing,
         )
         response_body: list[dict[str, Any]] = self.request(  # type: ignore[assignment]
             cmd,
@@ -345,7 +346,7 @@ class CasedbClient(CommondbClient):
 
     def retrieve_seq_distances_by_cases(
         self, cmd: command.RetrieveSeqDistancesByCasesCommand
-    ) -> list[seqdb_model.SeqDistance]:
+    ) -> list[model.CaseSeqDistance]:
         """Retrieve sequence distances for cases over HTTP."""
         request_body = api.RetrieveSeqDistancesByCasesRequestBody(
             case_type_id=cmd.case_type_id,
@@ -358,7 +359,7 @@ class CasedbClient(CommondbClient):
             HttpMethod.POST,
             model=request_body,
         )
-        return [seqdb_model.SeqDistance(**x) for x in response_body]
+        return [model.CaseSeqDistance(**x) for x in response_body]
 
     def retrieve_similar_cases(
         self, cmd: command.RetrieveSimilarCasesCommand

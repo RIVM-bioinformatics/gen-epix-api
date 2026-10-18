@@ -33,6 +33,9 @@ def create_routers(
     Returns:
         Tagged routers for the commondb API surface.
     """
+    # TODO: LSP-3893 Omitting `app` or passing None is allowed by this signature,
+    # but the assertion rejects it; clarify whether `app` should be required or
+    # router creation is expected to support an absent application.
     assert app
     router_data: list[RouterData] = [
         # Common routers

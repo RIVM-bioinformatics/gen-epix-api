@@ -25,6 +25,8 @@ class Command(ServiceCommand):
     """Represents commondb user context, audit metadata, and serializable properties."""
 
     id: UUID = Field(default_factory=uuid.uuid4, description="The ID of the command")
+    # TODO: LSP-3893 When `created_at` is omitted, expected UTC-aware audit time but actual
+    # is naive host-local time; confirm whether command timestamps must match upload timestamps.
     created_at: datetime.datetime = Field(
         default_factory=datetime.datetime.now,
         description="Command creation timestamp, serialized as an ISO 8601 value.",

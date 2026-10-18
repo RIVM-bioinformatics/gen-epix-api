@@ -1,4 +1,8 @@
-"""Implement seqdb authorization policy behavior for policies.read_organization_results_only_policy."""
+"""Expose organization-scoped result filtering to SeqDB policy composition.
+
+The public ``ReadOrganizationResultsOnlyPolicy`` adapter reuses the shared
+CommDB policy's command handling and organization-scope filtering.
+"""
 
 from typing import Any
 
@@ -8,7 +12,9 @@ from gen_epix.commondb.policies import (
 from gen_epix.seqdb.domain.service import BaseAbacService
 
 
-class ReadOrganizationResultsOnlyPolicy(CommonReadOrganizationResultsOnlyPolicy):
+class ReadOrganizationResultsOnlyPolicy(  # type: ignore[abstract-method]
+    CommonReadOrganizationResultsOnlyPolicy
+):
     """Encapsulates restricting result reads to the caller's authorized organization scope."""
 
     def __init__(
