@@ -13,7 +13,7 @@ from uuid import UUID
 
 from pydantic import (
     Field,
-    Json,
+    JsonValue,
     computed_field,
     field_serializer,
     field_validator,
@@ -147,7 +147,7 @@ class QualityMixin:
         ),
     ]
     qc_report: Annotated[
-        Json | None,
+        JsonValue | None,
         Field(
             default=None,
             description="A detailed report of the quality control results, which can include any relevant information such as metrics, logs, or other data that provides insights into the quality of the result. The structure and content of this report is not defined by the application and must be determined by the user. The only condition is that the data are JSON serializable.",
@@ -163,6 +163,14 @@ class QualityMixin:
         if value is None:
             return enum.QualityControlResult.PENDING
         return validate_int_enum_value(enum.QualityControlResult, value)  # type: ignore[return-value]
+
+    @field_validator("qc_report", mode="before")
+    @classmethod
+    def _validate_qc_report(cls, value: Any) -> Any:
+        """Parse a JSON string into its value and pass any other value through."""
+        if isinstance(value, str):
+            return json.loads(value)
+        return value
 
     @field_serializer("qc_result_machine", "qc_result_human", mode="plain")
     def _serialize_qc_result(self, value: enum.QualityControlResult) -> int:
