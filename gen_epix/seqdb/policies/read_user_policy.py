@@ -4,6 +4,9 @@ from typing import Any
 
 from gen_epix.commondb.policies import ReadUserPolicy as CommonReadUserPolicy
 from gen_epix.seqdb.domain import command
+
+# TODO: LSP-3893 Importing this module fails because COMMON_ROLE_MAP is not exported
+# by the policy package; determine whether the map moved or should be re-exported.
 from gen_epix.seqdb.domain.policy import COMMON_ROLE_MAP
 from gen_epix.seqdb.domain.service import BaseAbacService
 

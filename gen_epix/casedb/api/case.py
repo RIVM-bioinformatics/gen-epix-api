@@ -115,6 +115,9 @@ class RetrieveCaseCohortLinksByCaseTypeRequestBody(PydanticBaseModel):
     case_type_id: UUID = copy_model_field(
         command.RetrieveCaseCohortLinksByCaseTypeCommand, "case_type_id"
     )
+    include_missing: bool = copy_model_field(
+        command.RetrieveCaseCohortLinksByCaseTypeCommand, "include_missing"
+    )
 
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
@@ -528,6 +531,7 @@ def create_case_endpoints(
                 input_command=command.RetrieveCaseCohortLinksByCaseTypeCommand(
                     user=user,
                     case_type_id=request_body.case_type_id,
+                    include_missing=request_body.include_missing,
                 ),
             ),
         )
@@ -647,10 +651,10 @@ def create_case_endpoints(
     async def retrieve__seq_distances_by_cases(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSeqDistancesByCasesRequestBody,
-    ) -> list[seqdb_model.SeqDistance]:
+    ) -> list[model.CaseSeqDistance]:
         """See router description."""
         return cast(
-            list[seqdb_model.SeqDistance],
+            list[model.CaseSeqDistance],
             handle_command(
                 app=app,
                 user=user,
@@ -761,6 +765,8 @@ def create_case_endpoints(
                     case_id=case_id,
                     col_id=col_id,
                     is_fwd=request_body.is_fwd,
+                    file_format=request_body.file_format,
+                    file_compression=request_body.file_compression,
                 ),
             ),
         )
@@ -790,6 +796,8 @@ def create_case_endpoints(
                     file_content=base64.b64decode(request_body.file_content),
                     case_id=case_id,
                     col_id=col_id,
+                    file_format=request_body.file_format,
+                    file_compression=request_body.file_compression,
                 ),
             ),
         )

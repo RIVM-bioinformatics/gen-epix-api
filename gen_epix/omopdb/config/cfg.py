@@ -1,4 +1,8 @@
-"""Omopdb-specific configuration, layered on top of the shared AppCfg spine."""
+"""Define OMOPDB application defaults through the shared configuration system.
+
+`OmopdbAppCfg` supplies OMOPDB-specific service and repository defaults while
+delegating settings loading and validation to `AppCfg`.
+"""
 
 from typing import Any
 

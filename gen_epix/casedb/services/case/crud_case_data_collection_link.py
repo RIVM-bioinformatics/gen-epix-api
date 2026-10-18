@@ -3,6 +3,7 @@
 Complex association entity with extensive ABAC logic.
 """
 
+from typing import cast
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -12,8 +13,11 @@ from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
+    get_case_abac_from_command,
 )
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.filter.uuid_set import UuidSetFilter
 
 
 def case_service_crud_case_data_collection_link(
@@ -29,9 +33,9 @@ def case_service_crud_case_data_collection_link(
 ):
     """Handle CRUD operations for CaseDataCollectionLink entities."""
     with self.repository.uow() as uow:
-        _crud_cascade_delete(self, uow, cmd)
         pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
         if pdp.is_exempted(cmd):
+            _crud_cascade_delete(self, uow, cmd)
             return _crud_case_data_collection_link_without_abac(self, uow, cmd)
         return _crud_case_data_collection_link_with_abac(self, uow, cmd)
 
@@ -66,11 +70,7 @@ def _crud_case_data_collection_link_with_abac(
     | bool
     | None
 ):
-    """Handle case-collection links subject to current user restrictions.
-
-    Commands without case ABAC metadata delegate directly. Otherwise, unrestricted
-    reads of all links, updates, and bulk deletes are rejected; remaining operations
-    currently delegate without additional row-level filtering.
+    """Handle CaseCollectionLink CRUD operations with ABAC applied.
 
     Args:
         self: Case service handling the command.
@@ -84,24 +84,103 @@ def _crud_case_data_collection_link_with_abac(
         UnauthorizedAuthError: If a restricted user requests an unsupported bulk
             read, update, or delete operation.
     """
-    # Read all without filter and delete all not allowed due to potential large
-    # number of case data collection links
-    if (
-        (cmd.is_read_all() and not cmd.query_filter)
-        or cmd.is_delete_all()
-        or cmd.is_update()
-    ):
+    # Only read/exists some and read/exists one allowed, other operations need to be performed through other commands
+    if not cmd.is_read() or cmd.is_read_all():
         raise exc.UnauthorizedAuthError(
             "7fe2e531",
             f"Operation {cmd.operation.value} not allowed for case data collection links for this user",
         )
 
-    # For now, delegate to the main crud method with extensive logic
-    # TODO: Implement the complex ABAC logic from the main crud.py file
-    # This includes checking case access rights, data collection rights, etc.
-    # from gen_epix.casedb.services.case.crud import _crud_data_by_non_admin
+    is_exists = cmd.is_exists()
+    requested_ids = None
+    if is_exists:
+        requested_ids = cmd.get_obj_ids()
+        assert isinstance(requested_ids, list)
+        case_data_collection_links = self.crud(
+            cmd.model_copy(
+                update={
+                    "operation": CrudOperation.READ_SOME,
+                    "obj_ids": requested_ids,
+                    "return_id": False,
+                }
+            )
+        )
+    elif cmd.return_id:
+        case_data_collection_links = self.crud(
+            cmd.model_copy(update={"return_id": False})
+        )
+    else:
+        case_data_collection_links = self.crud(cmd)
+    if not case_data_collection_links:
+        if is_exists:
+            assert requested_ids is not None
+            exists_results = [False for _ in requested_ids]
+            return (
+                exists_results[0]
+                if cmd.operation == CrudOperation.EXISTS_ONE
+                else exists_results
+            )
+        return case_data_collection_links  # type: ignore[return-value]
+    return_list = isinstance(case_data_collection_links, list)
+    if not return_list:
+        case_data_collection_links = [case_data_collection_links]
 
-    # return _crud_data_by_non_admin(self, uow, cmd)  # type: ignore[return-value]
+    # Retrieve allowed DataCollections per Case
+    all_case_ids = frozenset({x.case_id for x in case_data_collection_links})
+    case_case_type_list = self.repository.read_fields(
+        uow,
+        cmd.user.id if cmd.user else None,
+        model.Case,
+        ["id", "case_type_id"],
+        filter=UuidSetFilter(key="id", members=all_case_ids),
+    )
+    case_case_type_map: dict[UUID, UUID] = {x[0]: x[1] for x in case_case_type_list}
+    case_abac = get_case_abac_from_command(cmd)
+    if case_abac is None:
+        raise AssertionError("Case ABAC metadata is required for this operation.")
+    filtered_case_data_collection_links = []
+    for case_data_collection_link in case_data_collection_links:
+        case_id = case_data_collection_link.case_id
+        case_type_id = case_case_type_map.get(case_id)
+        data_collection_id = case_data_collection_link.data_collection_id
+        case_type_access_abac: model.CaseTypeAccessAbac | None = (
+            case_abac.case_type_access_abacs.get(case_type_id, {}).get(
+                data_collection_id
+            )
+        )
+        if case_type_access_abac is None:
+            raise exc.UnauthorizedAuthError(
+                "47d2cad9",
+                f"User is not allowed to read case data collection link for case {case_id} in data collection {data_collection_id}",
+            )
+        if not case_type_access_abac.read_col_ids:
+            raise exc.UnauthorizedAuthError(
+                "aa139569",
+                f"User is not allowed to read case data collection link for case {case_id} in data collection {data_collection_id}",
+            )
+        filtered_case_data_collection_links.append(case_data_collection_link)
 
-    # !FIXME: Temporary workaround until the complex ABAC logic is implemented
-    return self.crud(cmd)  # type: ignore[return-value]
+    if is_exists:
+        assert requested_ids is not None
+        existing_ids = {
+            (x.case_id, x.data_collection_id)
+            for x in filtered_case_data_collection_links
+        }
+        exists_results = [x in existing_ids for x in requested_ids]
+        return (
+            exists_results[0]
+            if cmd.operation == CrudOperation.EXISTS_ONE
+            else exists_results
+        )
+
+    # Return
+    if cmd.return_id:
+        retval: list[UUID] = [
+            cast(UUID, x.id) for x in filtered_case_data_collection_links
+        ]
+        return retval if return_list else retval[0]
+    return (
+        filtered_case_data_collection_links
+        if return_list
+        else filtered_case_data_collection_links[0]
+    )

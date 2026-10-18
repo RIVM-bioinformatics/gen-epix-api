@@ -48,6 +48,9 @@ def seq_service_crud_read_set_identifier(
         pass
 
     else:
+        # TODO: LSP-3893 UPSERT_ONE/UPSERT_SOME are accepted by CrudCommand and
+        # supported by repository backends, but this branch rejects them before
+        # self.crud(cmd); confirm whether read-set identifier upserts are intended.
         raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 
     return self.crud(cmd)  # type: ignore[return-value]

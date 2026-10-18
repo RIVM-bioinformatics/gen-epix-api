@@ -101,9 +101,14 @@ class RetryPolicy:
         times out before returning an HTTP response at all. Also true for a
         ``ServiceException`` wrapping such an error.
         """
-        if isinstance(exception, ServiceException) and exception.__cause__ is not None:
-            exception = exception.__cause__
-        return isinstance(exception, (httpx.TimeoutException, httpx.NetworkError))
+        seen: set[int] = set()
+        current: BaseException | None = exception
+        while current is not None and id(current) not in seen:
+            if isinstance(current, (httpx.TimeoutException, httpx.NetworkError)):
+                return True
+            seen.add(id(current))
+            current = current.__cause__
+        return False
 
     @staticmethod
     def is_auth_failure(exception: BaseException) -> bool:

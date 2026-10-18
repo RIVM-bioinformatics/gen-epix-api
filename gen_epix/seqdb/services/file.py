@@ -143,6 +143,9 @@ class FileService(BaseFileService):
             ) from e
 
         found_records: bool = False
+        # TODO: LSP-3893 A truncated FASTQ record (for example, missing quality
+        # data) raises ValueError during lazy iteration outside the parser try block,
+        # rather than InvalidArgumentsError; confirm parser errors should be normalized.
         for seq_record in seq_records:
             found_records = True
             phred_quality_scores: list[int] | None = seq_record.letter_annotations.get(

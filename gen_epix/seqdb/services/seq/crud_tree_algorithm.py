@@ -1,4 +1,8 @@
-"""Implement seqdb CRUD service operations for services.seq.crud_tree_algorithm."""
+"""Dispatch tree-algorithm CRUD commands through the sequence service.
+
+The public handler validates supported CRUD operation types and delegates persistence
+to the shared sequence service implementation.
+"""
 
 from uuid import UUID
 

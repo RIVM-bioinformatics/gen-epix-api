@@ -1,10 +1,16 @@
-"""Provide the SQLAlchemy repository implementation for commondb system models."""
+"""Provide the SQLAlchemy-backed repository for commondb system records.
+
+`SystemSARepository` combines SQLAlchemy persistence with the shared system
+repository contract.
+"""
 
 from gen_epix.commondb.domain.repository.system import BaseSystemRepository
 from gen_epix.fastapp.repositories import SARepository
 
 
 class SystemSARepository(SARepository, BaseSystemRepository):
-    """Encapsulates storage of system records using FastApp's SQLAlchemy repository backend."""
+    """Encapsulates commondb system storage with SQLAlchemy.
 
-    pass
+    Inherits persistence behavior from `SARepository` and fulfills the
+    `BaseSystemRepository` contract.
+    """

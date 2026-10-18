@@ -14,6 +14,9 @@ class DatetimeRangeFilter(RangeFilter):
 
     type: Literal[FilterType.DATETIME_RANGE.value] = FilterType.DATETIME_RANGE.value  # type: ignore[name-defined]
 
+    # TODO: LSP-3893 Mixed naive and timezone-aware bounds reach RangeFilter's
+    # ordering comparison and raise TypeError; whether to normalize or reject
+    # mixed-awareness datetimes is unresolved.
     lower_bound: datetime.datetime | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
     )

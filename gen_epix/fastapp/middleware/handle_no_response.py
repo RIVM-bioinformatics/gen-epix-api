@@ -31,6 +31,9 @@ class HandleNoResponseMiddleware(BaseHTTPMiddleware):
         """Initialize a HandleNoResponseMiddleware instance."""
         super().__init__(app)
         self._fast_app = fast_app
+        # TODO: LSP-3893 With `fast_app=None` and `logger=None`, initialization
+        # raises `AttributeError` instead of accepting the declared default;
+        # clarify whether either value is required or a missing logger is valid.
         self._logger = logger or fast_app.logger
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:

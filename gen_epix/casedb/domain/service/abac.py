@@ -100,6 +100,7 @@ class BaseAbacService(CommonAbacService):
         command.RetrieveCaseSetRightsCommand: enum.RoleSet.GE_APP_ADMIN,
         command.RetrieveCaseSetStatsCommand: enum.RoleSet.GE_APP_ADMIN,
         command.RetrieveCaseTypeStatsCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.RetrieveSeqDistancesByCasesCommand: enum.RoleSet.GE_APP_ADMIN,
         command.CaseTypeCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
         command.CaseTypeSetMemberCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,
         command.CaseTypeSetCrudCommand: enum.RoleSet.GE_REFDATA_ADMIN,

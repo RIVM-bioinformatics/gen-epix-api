@@ -27,6 +27,8 @@ def create_auth_endpoints(
         handle_exception: Exception adapter used by endpoint handlers.
         **kwargs: Unused router composition options.
     """
+    # TODO: LSP-3893 Calling with the default handle_exception=None raises here;
+    # clarify whether omission should register endpoints or be rejected by the signature.
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency

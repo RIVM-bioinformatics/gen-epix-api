@@ -362,16 +362,21 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
                 # CREATE/UPDATE/DELETE ONE/SOME: verify access through access_filter
                 obj_ids = cmd.get_obj_ids()
                 assert obj_ids is not None
+                obj_id_list: list[Hashable]
+                if not isinstance(obj_ids, list):
+                    obj_id_list = [obj_ids]  # type: ignore[assignment]
                 if cmd.is_create():
                     # For CREATE operations, filter out None object IDs i.e. where ID is assigned during creation
-                    obj_ids = [x for x in obj_ids if x is not None]
-                if obj_ids:
+                    obj_id_list = [x for x in obj_ids if x is not None]
+                else:
+                    obj_id_list = obj_ids  # type: ignore[assignment]
+                if obj_id_list:
                     objs: list[Model] = self.repository.crud(
                         uow,
                         None if cmd.user is None else cmd.user.id,
                         cmd.MODEL_CLASS,
                         CrudOperation.READ_SOME,
-                        obj_ids=cmd.get_obj_ids(),
+                        obj_ids=obj_id_list,
                     )
                     if not all(access_filter.match_rows(objs, is_model=True)):
                         raise exc.UnauthorizedAuthError(
@@ -446,7 +451,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             # Call repository CRUD operation
             for obj in cmd.association_objs:
                 if not getattr(obj, id_field_name):
-                    self.set_object_id(obj, id_field_name, "raise")
+                    self.set_object_id(obj, id_field_name, OnException.RAISE)
             self._verify_same_service_links(
                 uow, cmd, cmd.association_objs, same_service_links
             )
@@ -542,9 +547,10 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         user = cmd.user
         if user is None:
             raise exc.UnauthorizedAuthError("a621f6fc", "No user provided")
-        if self.repository is None:
+        repository = self._repository
+        if repository is None:
             raise exc.InitializationServiceError("04eaee6a", "No repository provided")
-        return user, self.repository
+        return user, repository
 
     def _verify_other_service_links(
         self,

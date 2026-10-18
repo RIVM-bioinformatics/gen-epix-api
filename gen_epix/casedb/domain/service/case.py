@@ -888,14 +888,14 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
     def retrieve_seq_distances_by_cases(
         self,
         cmd: command.RetrieveSeqDistancesByCasesCommand,
-    ) -> list[seqdb_model.SeqDistance]:
+    ) -> list[model.CaseSeqDistance]:
         """Retrieve sequence distances for specified cases.
 
         Args:
             cmd: Distance command containing case identifiers and column metadata.
 
         Returns:
-            Sequence distances whose row identifiers refer to case identifiers.
+            CaseSeqDistance for each requested Case.
 
         Raises:
             NotImplementedError: Always, until a concrete service implements the
