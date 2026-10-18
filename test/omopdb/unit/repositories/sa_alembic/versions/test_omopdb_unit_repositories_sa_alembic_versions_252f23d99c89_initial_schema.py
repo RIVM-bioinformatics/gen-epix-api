@@ -77,9 +77,7 @@ def test_upgrade_creates_tables_with_schema_and_timestamp_defaults(
         "organization",
         "system",
     }
-    created_tables = {
-        (kwargs["schema"], args[0]) for args, kwargs in table_calls
-    }
+    created_tables = {(kwargs["schema"], args[0]) for args, kwargs in table_calls}
     assert ("organization", "data_collection") in created_tables
     assert ("abac", "organization_admin_policy") in created_tables
     assert ("system", "outage") in created_tables
