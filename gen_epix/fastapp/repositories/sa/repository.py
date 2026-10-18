@@ -28,6 +28,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import (
     ComparisonOperator,
     CompositeFilter,
+    ContainsStringFilter,
     DateRangeFilter,
     DatetimeRangeFilter,
     EqualsBooleanFilter,
@@ -99,7 +100,18 @@ class SARepository(BaseRepository):
             raise ValueError("connection_string is required to clear an SARepository")
         # Get engine
         engine = EngineFactory.create_engine(connection_string, echo=False)
+        try:
+            cls._clear_repository_content(engine, entities, alembic_schema)
+        finally:
+            engine.dispose()
 
+    @staticmethod
+    def _clear_repository_content(
+        engine: Engine,
+        entities: list[Entity],
+        alembic_schema: str | None,
+    ) -> None:
+        """Drop repository tables and an optional Alembic tracking schema."""
         # Get all actual table names from the database using schema names
         inspector = inspect(engine)
         actual_tables: set[tuple[str | None, str]] = set()
@@ -213,7 +225,6 @@ class SARepository(BaseRepository):
                 except Exception:  # pylint: disable=broad-except
                     # Schema might not exist or have other issues
                     continue
-            engine.dispose()
 
         # Drop the Alembic version-tracking table and schema, if requested
         if alembic_schema:
@@ -231,7 +242,6 @@ class SARepository(BaseRepository):
                         conn.commit()
                 except Exception:  # pylint: disable=broad-except
                     pass
-            engine.dispose()
 
     @classmethod
     def check_schema_matches(cls, **kwargs: Any) -> list[str]:
@@ -1057,7 +1067,7 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> None:
             """Execute the requested value."""
-            is_existing = self.exists_some(model_class, row_ids)
+            is_existing = self.exists_some(model_class, row_ids, session=session)
             if not all(is_existing):
                 invalid_ids = [x for x, y in zip(row_ids, is_existing) if not y]
                 invalid_ids_str = ", ".join([str(x) for x in invalid_ids])
@@ -1253,6 +1263,12 @@ class SARepository(BaseRepository):
                 if not invert
                 else result_column != filter.value
             )
+        if isinstance(filter, ContainsStringFilter):
+            return (
+                result_column.contains(filter.value)
+                if not invert
+                else ~result_column.contains(filter.value)
+            )
         if isinstance(filter, RangeFilter):
             return self._get_range_where_clause(filter, result_column, invert)
         raise exc.InvalidArgumentsError(
@@ -1364,6 +1380,7 @@ class SARepository(BaseRepository):
             EqualsNumberFilter,
             EqualsStringFilter,
             EqualsUuidFilter,
+            ContainsStringFilter,
             StringSetFilter,
             NumberSetFilter,
             UuidSetFilter,

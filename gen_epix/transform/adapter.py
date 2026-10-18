@@ -221,4 +221,7 @@ class ObjectAdapter:
 
     def unwrap(self) -> Any:
         """Return the wrapped object, including any adapter-applied updates."""
+        # TODO: LSP-3893 PolarsAdapter.set replaces its internal object, but this
+        # returns the original object after ObjectAdapter.set; confirm whether unwrap
+        # should return the adapter's current Polars object to honor this contract.
         return self._obj

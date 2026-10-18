@@ -23,6 +23,10 @@ class Key:
 
         def _key_generator(field_names: tuple[str, ...], obj: BaseModel) -> str:
             """Join the configured field values into a default key."""
+            # TODO: LSP-3893 A configured Pydantic computed field is registered by
+            # Entity as a model field, but is absent from obj.__dict__, so key
+            # generation raises KeyError instead of using its value; confirm whether
+            # computed fields are intended to be valid key fields.
             return Key.DEFAULT_KEY_GENERATOR_SEPARATOR.join(
                 f"{obj.__dict__[x]}" for x in field_names
             )

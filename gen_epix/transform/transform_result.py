@@ -22,6 +22,9 @@ class TransformResult:
         """Return the status enum implied by `success` and `error`."""
         if self.success:
             return TransformResultType.SUCCESS
+        # TODO: LSP-3893 A non-None Exception subclass with __bool__ returning
+        # False is classified as SKIPPED instead of ERROR; should error presence
+        # be determined by identity with None rather than exception truthiness?
         elif self.error:
             return TransformResultType.ERROR
         else:

@@ -68,7 +68,6 @@ class RoleGenerator(CommonRoleGenerator):
                 command.RetrieveCaseCohortLinksByCaseTypeCommand,
                 PermissionTypeSet.E,
             ),
-            (command.RetrieveSeqDistancesByCasesCommand, PermissionTypeSet.E),
             # abac
             (command.OrganizationAccessCasePolicyCrudCommand, PermissionTypeSet.CUD),
             (
@@ -123,6 +122,7 @@ class RoleGenerator(CommonRoleGenerator):
         },
         Role.ORG_USER: COMMON_ROLE_PERMISSION_SETS[Role.ORG_USER]
         | {
+            (command.RetrieveSeqDistancesByCasesCommand, PermissionTypeSet.E),
             # case
             (command.CaseDataCollectionLinkCrudCommand, PermissionTypeSet.CRUD),
             (command.CaseSetCategoryCrudCommand, PermissionTypeSet.R),

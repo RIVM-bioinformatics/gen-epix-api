@@ -6,7 +6,7 @@ import re
 from collections.abc import Hashable
 from pathlib import Path
 from time import sleep
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar, cast, overload
 from uuid import UUID
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
@@ -144,10 +144,10 @@ class TestClient:
             default_route_prefix or self.DEFAULT_ROUTE_PREFIX_VALUE
         )
         self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(
-            "endpoint_test_client"
+            "endpoint_test_client", None
         )
         self.app_last_handled_exception: dict | None = kwargs.pop(
-            "app_last_handled_exception"
+            "app_last_handled_exception", None
         )
         if self.use_endpoints:
             if not self.endpoint_test_client:
@@ -162,6 +162,24 @@ class TestClient:
         # Store remainder of kwargs
         self.props = kwargs
 
+    @overload
+    def get_obj(
+        self,
+        model_class: type[model.Model],
+        obj: list[str | UUID | model.Model],
+        copy: bool = False,
+        on_missing: str = "raise",
+    ) -> list[model.Model | None]: ...
+
+    @overload
+    def get_obj(
+        self,
+        model_class: type[model.Model],
+        obj: str | UUID | model.Model | tuple[UUID, UUID],
+        copy: bool = False,
+        on_missing: str = "raise",
+    ) -> model.Model | None: ...
+
     def get_obj(
         self,
         model_class: type[model.Model],
@@ -174,7 +192,7 @@ class TestClient:
         ),
         copy: bool = False,
         on_missing: str = "raise",
-    ) -> model.Model | list[model.Model] | None:
+    ) -> model.Model | list[model.Model | None] | None:
         """Retrieve an object from the local object store by key, ID, or instance.
 
         Args:
@@ -191,7 +209,10 @@ class TestClient:
             NotImplementedError: If `on_missing` is unsupported.
         """
         if isinstance(obj, list):
-            return [cast(model.Model, self.get_obj(model_class, x)) for x in obj]
+            return [
+                self.get_obj(model_class, x, copy=copy, on_missing=on_missing)
+                for x in obj
+            ]
         if model_class not in self.db:
             self.db[model_class] = {}
         table = self.db[model_class]
@@ -863,10 +884,13 @@ class TestClient:
             linked_objs = self.read_some(user, linked_model_class, list(linked_obj_ids))
             linked_obj_map = {x.get_id(): x for x in linked_objs}
             for obj in objs:
+                linked_obj_id = getattr(obj, link_field_name)
+                if linked_obj_id is None:
+                    continue
                 setattr(
                     obj,
-                    link_field_name,
-                    [linked_obj_map[getattr(obj, link_field_name)]],
+                    relationship_field_name,
+                    linked_obj_map[linked_obj_id],
                 )
 
     def read_some(

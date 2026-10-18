@@ -17,7 +17,6 @@ from gen_epix.casedb.domain.model.case.ref_data import (
     TreeAlgorithm,
 )
 from gen_epix.commondb.domain.model.base import Model
-from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
 
 

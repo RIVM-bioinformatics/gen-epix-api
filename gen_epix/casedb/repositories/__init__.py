@@ -32,9 +32,3 @@ from gen_epix.casedb.repositories.organization_sa import (
 )
 from gen_epix.commondb.repositories import SystemDictRepository as SystemDictRepository
 from gen_epix.commondb.repositories import SystemSARepository as SystemSARepository
-from gen_epix.commondb.repositories.organization_dict import (
-    OrganizationDictRepository as OrganizationDictRepository,
-)
-from gen_epix.commondb.repositories.organization_sa import (
-    OrganizationSARepository as OrganizationSARepository,
-)

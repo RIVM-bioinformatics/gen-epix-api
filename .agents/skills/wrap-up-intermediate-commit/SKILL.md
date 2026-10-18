@@ -122,9 +122,12 @@ its staging or commit steps. Inspect the final intended diff, branch name, and
 previous two commit subjects. Use the intended chunk rather than only staged
 changes because this workflow does not stage files.
 
-Draft `type(scope): description` with a compact imperative subject and an optional
+Draft `type(<scope>): <description>` with a compact imperative subject and an optional
 short body only when useful. If the chunk contains unrelated purposes, propose
-separate messages and file groups; do not silently stage or split commits.
+separate messages and file groups; do not silently stage or split commits. For fixes
+create one `fix(scope): <description> in <path>` line per fixed issue, whereby scope is
+the name of the folder directly under the top level code folder and path is the remainder
+of the path after this folder separated by dots.
 
 Report the proposed message, code/test files prepared, any moves or launch changes,
 checks actually run and their outcomes, and remaining blockers. Distinguish this

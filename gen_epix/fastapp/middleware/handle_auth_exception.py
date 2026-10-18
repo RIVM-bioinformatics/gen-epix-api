@@ -31,6 +31,9 @@ class HandleAuthExceptionMiddleware(BaseHTTPMiddleware):
         """Log an authentication exception through the configured application logger."""
         if self._logger:
             self._logger.warning(
+                # TODO: LSP-3893 With logger set and fast_app omitted, auth errors
+                # should be logged, but _log_exception dereferences None; clarify
+                # whether logger-only construction is supported.
                 self._fast_app.create_log_message(
                     "e4cf7b23", None, exception=exception  # type: ignore[arg-type]
                 ),

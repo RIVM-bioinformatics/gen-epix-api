@@ -1,4 +1,10 @@
-"""Provide seqdb functionality for domain.enum."""
+"""Define enums and factories shared by sequence-domain components.
+
+The module groups sequence, file, protocol, profile, and distance formats with
+quality-control states, taxonomic ranks, nucleotide alphabets, and ambiguity
+maps. Timestamp and identifier factories provide configured defaults to models
+and services, while format enums add readable names to generated JSON schemas.
+"""
 
 # pylint: disable=wildcard-import, unused-import
 # because this is a package, and imported as such in other modules
@@ -7,11 +13,10 @@ from __future__ import annotations
 import datetime
 import uuid
 from enum import Enum, IntEnum
+from functools import partial
 from typing import TYPE_CHECKING, cast
 
 import ulid
-
-from gen_epix.commondb.domain.enum import RoleSet as RoleSet
 
 if TYPE_CHECKING:
     from pydantic import GetJsonSchemaHandler
@@ -19,7 +24,7 @@ if TYPE_CHECKING:
     from pydantic_core import core_schema as _cs
 
 
-class IntEnumWithJsonSchemaMixin:
+class IntEnumWithJsonSchemaMixin:  # type: ignore[too-few-public-methods]
     """Encapsulates enum member names in generated JSON schemas for readability."""
 
     @classmethod
@@ -39,14 +44,16 @@ class IntEnumWithJsonSchemaMixin:
 class TimestampFactory(Enum):
     """Encapsulates timestamp-generation strategies used by seqdb models."""
 
-    DATETIME_NOW = lambda: datetime.datetime.now(datetime.timezone.utc)
+    DATETIME_NOW = partial(
+        datetime.datetime.now, tz=datetime.timezone.utc
+    )  # lambda function not used to avoid unnecessary-lambda-assignment flag
 
 
 class IdFactory(Enum):
     """Encapsulates identifier-generation strategies used by seqdb models."""
 
     UUID4 = uuid.uuid4
-    ULID = lambda: ulid.api.new().uuid
+    ULID = lambda: ulid.api.new().uuid  # type: ignore[unnecessary-lambda-assignment]
 
 
 class ServiceType(Enum):
@@ -83,8 +90,6 @@ class Role(Enum):
 
 class FeatureFlag(Enum):
     """Encapsulates feature-flag keys specific to seqdb."""
-
-    pass
 
 
 class TreeAlgorithm(Enum):

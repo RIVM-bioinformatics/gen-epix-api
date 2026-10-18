@@ -29,8 +29,6 @@ def seq_service_crud_tree_algorithm_class(
     Raises:
         AssertionError: The command operation is unsupported.
     """
-    user_id = cmd.user.id if cmd.user else None
-    tree_algorithm_classes: list[model.TreeAlgorithmClass] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
         # TODO: Specific logic for create operation to be added
         pass
@@ -48,6 +46,9 @@ def seq_service_crud_tree_algorithm_class(
         pass
 
     else:
+        # TODO: LSP-3893 CrudCommand accepts UPSERT_ONE and UPSERT_SOME and both
+        # repository backends implement them, but this handler rejects them; confirm
+        # whether TreeAlgorithmClass upserts are intentionally unsupported.
         raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 
     return self.crud(cmd)  # type: ignore[return-value]

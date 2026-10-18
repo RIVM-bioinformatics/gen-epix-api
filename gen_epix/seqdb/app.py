@@ -20,8 +20,8 @@ SCHEMA_KWARGS = {
         "email": "ids-bioinformatics@rivm.nl",
     },
     "license_info": {
-        "name": "License to be confirmed",
-        "identifier": "Apache-2.0",
+        "name": "European Union Public Licence Version 1.2",
+        "identifier": "EUPL-1.2",
     },
 }
 

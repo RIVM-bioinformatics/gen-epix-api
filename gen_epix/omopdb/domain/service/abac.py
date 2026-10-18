@@ -1,4 +1,9 @@
-"""OmopDB attribute-based access service configuration."""
+"""Configure OmopDB commands for shared attribute-based access control.
+
+`BaseAbacService` maps shared ABAC command groups to OmopDB command types where
+the domain provides specialized commands. Shared policy registration consumes
+these groups without changing its authorization behavior.
+"""
 
 from gen_epix.commondb.services import AbacService as CommonAbacService
 from gen_epix.fastapp.model import Command
@@ -6,7 +11,11 @@ from gen_epix.omopdb.domain import command
 
 
 class BaseAbacService(CommonAbacService):
-    """Encapsulates mapping of shared ABAC command groups to their OmopDB command equivalents."""
+    """Encapsulates OmopDB command groups for shared ABAC policy registration.
+
+    Specialized shared commands are translated to their OmopDB equivalents;
+    commands without an OmopDB specialization retain their shared type.
+    """
 
     ORGANIZATION_ADMIN_WRITE_COMMANDS: set[type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
