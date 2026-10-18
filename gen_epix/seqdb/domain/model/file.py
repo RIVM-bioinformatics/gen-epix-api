@@ -1,4 +1,4 @@
-"""Define seqdb domain models for domain.model.file."""
+"""Define the seqdb File domain model and its binary content."""
 
 from typing import ClassVar
 

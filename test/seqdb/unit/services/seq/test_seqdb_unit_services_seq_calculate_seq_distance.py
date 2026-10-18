@@ -113,7 +113,7 @@ def _make_nextclade_content(
     substitutions: str = "",
     deletions: str = "",
     insertions: str = "",
-    missing: str = "",
+    missings: str = "",
     non_acgtns: str = "",
     alignment_start: int = 1,
     alignment_end: int = 1,
@@ -123,7 +123,7 @@ def _make_nextclade_content(
             "substitutions": substitutions,
             "deletions": deletions,
             "insertions": insertions,
-            "missings": missing,
+            "missings": missings,
             "non_acgtns": non_acgtns,
             "alignment_start": alignment_start,
             "alignment_end": alignment_end,
@@ -925,7 +925,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         recorder, results = self._run_snp_distance(
             _make_nextclade_content(
                 deletions="4",
-                missing="2",
+                missings="2",
                 non_acgtns="R:3",
                 alignment_end=4,
             ),

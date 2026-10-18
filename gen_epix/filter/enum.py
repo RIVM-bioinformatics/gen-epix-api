@@ -1,4 +1,8 @@
-"""Enumerations used to identify filters and comparison semantics."""
+"""Define enum values shared by filter models and matching logic.
+
+`FilterType` identifies serialized filter models; `LogicalOperator` and
+`ComparisonOperator` define the operations they support.
+"""
 
 from enum import Enum
 
@@ -39,6 +43,28 @@ class LogicalOperator(Enum):
     XNOR = "XNOR"
     IMPLIES = "IMPLIES"
     NIMPLIES = "NIMPLIES"
+
+
+class LogicalOperatorSet(Enum):
+    """Encapsulates sets of logical operators for composite filters."""
+
+    UNARY = frozenset({LogicalOperator.NOT})
+    BINARY = frozenset(
+        {
+            LogicalOperator.XOR,
+            LogicalOperator.NAND,
+            LogicalOperator.NOR,
+            LogicalOperator.XNOR,
+            LogicalOperator.IMPLIES,
+            LogicalOperator.NIMPLIES,
+        }
+    )
+    MULTARY = frozenset(
+        {
+            LogicalOperator.AND,
+            LogicalOperator.OR,
+        }
+    )
 
 
 class ComparisonOperator(Enum):

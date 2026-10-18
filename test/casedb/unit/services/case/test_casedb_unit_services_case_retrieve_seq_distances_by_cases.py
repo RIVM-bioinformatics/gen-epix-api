@@ -1,3 +1,5 @@
+"""Unit tests for case-linked sequence-distance retrieval."""
+
 import json
 from contextlib import nullcontext
 from test.util.mock_compat import Mock, patch

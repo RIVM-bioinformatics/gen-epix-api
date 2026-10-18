@@ -1,4 +1,10 @@
-"""SQLAlchemy mappings for persistable OmopDB OMOP domain models."""
+"""Map persistable OmopDB OMOP models to SQLAlchemy declarative classes.
+
+This module defines `Base` and one mapped class per OMOP domain model. Shared
+mapping helpers derive table metadata and columns from domain entities, while
+mixins supply row metadata and data lineage fields. These mappings provide
+persistence metadata to the OmopDB repository composition.
+"""
 
 from __future__ import (
     annotations,
@@ -7,7 +13,7 @@ from __future__ import (
 from datetime import date, datetime
 from uuid import UUID
 
-import sqlalchemy.orm as orm
+from sqlalchemy import orm
 from sqlalchemy.orm import Mapped, relationship
 
 from gen_epix.commondb.repositories.sa_model import (

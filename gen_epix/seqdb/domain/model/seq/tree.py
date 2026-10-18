@@ -115,6 +115,10 @@ class PhylogeneticTree(Model):
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         """Ensure tree leaf names and profile identifiers are consistent."""
+        # TODO: LSP-3893 With leaf_names=["a"] and profile_ids=[], the unequal
+        # lengths are accepted because this truthiness guard skips validation;
+        # expected a validation error, actual acceptance. Confirm whether empty
+        # supplied lists must differ from omitted None before changing the contract.
         if self.leaf_names:
             if len(set(self.leaf_names)) < len(self.leaf_names):
                 raise ValueError("Duplicate leaf_codes")

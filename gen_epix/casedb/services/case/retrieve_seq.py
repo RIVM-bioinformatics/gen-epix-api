@@ -281,5 +281,5 @@ def _get_seq_ids_from_cases(
         case_ids=case_ids,
         filter_content=True,
     )
-    retval = [x.content.get(seq_col_id) for x in cases]
-    return [UUID(x) for x in retval if x]
+    seq_ids_str_or_none = [x.content.get(seq_col_id) for x in cases]
+    return [None if x is None else UUID(x) for x in seq_ids_str_or_none]

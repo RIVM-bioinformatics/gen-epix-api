@@ -1,4 +1,9 @@
-"""Define commondb commands for organization-administration policies."""
+"""Define commands for commondb organization-administration access control.
+
+`RetrieveOrganizationsUnderAdminCommand` requests administered organization IDs,
+and `OrganizationAdminPolicyCrudCommand` manages the corresponding policies.
+Both specialize shared command types used by application dispatch.
+"""
 
 from typing import ClassVar
 

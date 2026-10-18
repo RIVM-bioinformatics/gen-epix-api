@@ -369,6 +369,24 @@ class TestRetrieveIsOwnCasesOwnership(BaseIsOwnCasesTestCase):
 class TestRetrieveIsOwnCasesEdgeCases(BaseIsOwnCasesTestCase):
     """Tests covering edge cases such as empty inputs and empty results."""
 
+    def test_cases_without_ids_are_omitted(self) -> None:
+        cmd: command.RetrieveIsOwnCasesCommand = self.create_command(
+            case_ids=[self.case_id1]
+        )
+        self.attach_abac_policy(cmd)
+        valid_case: model.Case = self.create_case(self.case_id1)
+        case_without_id: Any = Mock()
+        case_without_id.id = None
+        case_without_id.created_in_data_collection_id = self.data_collection_id
+        self.set_retrieve_cases_result([valid_case, case_without_id])
+
+        result: dict[UUID, bool] = case_service_retrieve_is_own_cases(self.service, cmd)
+
+        assert result == {self.case_id1: False}
+        self.service._retrieve_case_data_collections_map.assert_called_once_with(
+            self.uow, self.user.id, case_ids={self.case_id1}
+        )
+
     def test_empty_case_ids_returns_empty_mapping(self) -> None:
         # 1. Input: empty list of case IDs
         cmd: command.RetrieveIsOwnCasesCommand = self.create_command(case_ids=[])

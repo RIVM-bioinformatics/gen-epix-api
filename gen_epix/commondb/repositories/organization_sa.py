@@ -61,7 +61,7 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
                 self.sa_user_class.key == user_key.lower()
             )
         ).all()
-        return True if user_row else False
+        return bool(user_row)
 
     def retrieve_user_by_key(self, uow: BaseUnitOfWork, user_key: str) -> model.User:
         """Retrieve a user by a case-insensitive key.

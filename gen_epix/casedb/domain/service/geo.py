@@ -35,5 +35,10 @@ class BaseGeoService(BaseService[BaseGeoRepository]):
         Returns:
             Regions aligned with the requested locations, using ``None`` where
             no containing region is found.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the read.
         """
-        ...
+        raise NotImplementedError(
+            "retrieve_containing_region must be implemented by the concrete service."
+        )

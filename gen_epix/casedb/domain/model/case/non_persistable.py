@@ -292,7 +292,7 @@ class SimilarCase(BaseModel):
     """Represents a similar-case result with its identifier and date."""
 
     id: UUID = Field(description="The case ID.")
-    timed_at: datetime = Field(description="The case date, if any.")
+    timed_at: datetime = Field(description="The case date.")
 
 
 class CaseSeqDistance(fastapp.Model):

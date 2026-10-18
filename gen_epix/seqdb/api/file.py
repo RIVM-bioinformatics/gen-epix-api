@@ -67,6 +67,10 @@ def create_file_endpoints(
                 )
             )
         except Exception as exception:
+            # TODO: LSP-3893 If app.handle() raises, CreateFileRequestBody has no
+            # seq_ids field, so evaluating request_body.seq_ids raises AttributeError
+            # before handle_exception runs. Clarify whether request IDs belong in
+            # this request model or whether this handler should omit request_ids.
             handle_exception("a8f9d24e", user, exception, request_ids=request_body.seq_ids)  # type: ignore
         return retval
 

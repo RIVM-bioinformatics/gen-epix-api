@@ -67,6 +67,32 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
         raise NotImplementedError()
 
     @abstractmethod
+    def filter_case_ids(
+        self,
+        cmd: command.CaseCrudCommand | command.CaseIdentifierCrudCommand,
+        case_data_collection_ids: Iterable[tuple[UUID, UUID, frozenset[UUID]]],
+        right: enum.CaseRight,
+        on_filtered: Literal[OnException.SKIP, OnException.RAISE] = OnException.RAISE,
+    ) -> Iterable[UUID]:
+        """Check if the case is accessible for the specified data collections with the given right.
+
+        Args:
+            cmd: The command containing the user and operation for which accessibility is being checked.
+            case_data_collection_ids: An iterable of tuple[case_id, case_type_id, frozenset[data_collection_ids]]
+                A frozenset is used to allow caching.
+            right: The specific case right to check for each case.
+            on_filtered: The action to take when a case is filtered out (skipped or raised as an exception).
+
+        Yields:
+            UUID: The next case_id in the iterable that is accessible with the given right
+
+        Raises:
+            UnauthorizedAuthError: If on_filtered is set to RAISE and a case is not accessible with the given right.
+            NotImplementedError: If a concrete PDP does not implement the filter.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def filter_case_set_ids(
         self,
         cmd: command.CaseSetCrudCommand,
@@ -79,6 +105,7 @@ class BasePolicyDecisionPoint(CommonPolicyDecisionPoint):
         Args:
             cmd: The command containing the user and operation for which accessibility is being checked.
             case_set_data_collection_ids: An iterable of tuple[case_set_id, case_type_id, frozenset[data_collection_ids]]
+                A frozenset is used to allow caching.
             right: The specific case right to check for each case set.
             on_filtered: The action to take when a case set is filtered out (skipped or raised as an exception).
 

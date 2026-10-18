@@ -48,7 +48,7 @@ def test_retrieve_seq_distances_uses_functional_user() -> None:
     )
     service_mock = Mock(spec=SeqdbService)
     service_mock.seqdb_user = seqdb_user
-    result = [Mock()]
+    result = [Mock(spec=seqdb_model.SeqDistance)]
     service_mock.seqdb_app.handle.return_value = result
     cmd = seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand(
         user=None,
@@ -56,7 +56,12 @@ def test_retrieve_seq_distances_uses_functional_user() -> None:
         protocol_id=uuid4(),
     )
 
-    assert (
-        SeqdbService.retrieve_seq_distances_by_seq_profiles(service_mock, cmd) is result
+    retrieved_distances = SeqdbService.retrieve_seq_distances_by_seq_profiles(
+        service_mock, cmd
     )
-    assert service_mock.seqdb_app.handle.call_args.args[0].user is seqdb_user
+
+    assert retrieved_distances is result
+    forwarded_cmd = service_mock.seqdb_app.handle.call_args.args[0]
+    assert forwarded_cmd.user is seqdb_user
+    assert forwarded_cmd.seq_profile_ids == cmd.seq_profile_ids
+    assert forwarded_cmd.protocol_id == cmd.protocol_id

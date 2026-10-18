@@ -1,7 +1,7 @@
 """Named registry for transformer classes and transformer factory functions."""
 
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any, ClassVar, TypeVar
 
 from gen_epix.transform.transformer import Transformer
 
@@ -11,8 +11,8 @@ TransformerType = TypeVar("TransformerType", bound=Transformer)
 class Registry:
     """Encapsulates named constructors for configured transformers."""
 
-    _transformers: dict[str, type[Transformer]] = {}
-    _factories: dict[str, Callable[..., Transformer]] = {}
+    _transformers: ClassVar[dict[str, type[Transformer]]] = {}
+    _factories: ClassVar[dict[str, Callable[..., Transformer]]] = {}
 
     @classmethod
     def register(cls, name: str, transformer_class: type[Transformer]) -> None:

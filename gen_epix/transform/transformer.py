@@ -42,6 +42,10 @@ class Transformer(ABC):
             return TransformResult(
                 success=True,
                 original_object=obj,
+                # TODO: LSP-3893 Dataframe-like inputs updated by `obj.set(...)` are
+                # expected to expose the transformed columns, but `unwrap()` returns
+                # the original frame; confirm whether the current adapter object should
+                # be returned instead.
                 transformed_object=transformed_adapter.unwrap(),
                 transformer_name=self.name,
             )

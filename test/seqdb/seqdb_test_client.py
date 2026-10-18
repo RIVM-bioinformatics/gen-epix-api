@@ -819,7 +819,7 @@ class SeqdbTestClient(TestClient):
             locus_idx = i // settings.locus_length
             if (
                 has_locus[locus_idx]
-                and rng.random() <= settings.p_nucleotide_deletion_vec[i]
+                and rng.random() < settings.p_nucleotide_deletion_vec[i]
             ):
                 # Delete nucleotide
                 seq[i] = "-"
@@ -835,7 +835,7 @@ class SeqdbTestClient(TestClient):
             locus_idx = i // settings.locus_length
             if (
                 has_locus[locus_idx]
-                and rng.random() <= settings.p_nucleotide_substitution_vec[i]
+                and rng.random() < settings.p_nucleotide_substitution_vec[i]
             ):
                 # Substitute nucleotide
                 original_nuc = seq[i]
@@ -850,7 +850,7 @@ class SeqdbTestClient(TestClient):
         seq: list[str],
     ) -> None:
         for i in range(settings.n_loci):
-            if rng.random() <= settings.p_locus_deletion_vec[i]:
+            if rng.random() < settings.p_locus_deletion_vec[i]:
                 # Delete locus
                 has_locus[i] = False
                 # update the sequence to have all gaps for that locus.
