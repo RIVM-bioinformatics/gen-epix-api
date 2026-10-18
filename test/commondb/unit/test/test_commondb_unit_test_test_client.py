@@ -93,7 +93,7 @@ def test_get_obj_list_propagates_copy_and_missing_options(
 ) -> None:
     stored = _organization()
     client.set_obj(stored)
-    result = client.get_obj(
+    result: list[model.Model | None] = client.get_obj(
         model.Organization,
         ["Org", "Missing"],
         copy=True,

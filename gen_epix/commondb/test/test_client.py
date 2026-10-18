@@ -6,7 +6,7 @@ import re
 from collections.abc import Hashable
 from pathlib import Path
 from time import sleep
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar, cast, overload
 from uuid import UUID
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
@@ -162,6 +162,24 @@ class TestClient:
         # Store remainder of kwargs
         self.props = kwargs
 
+    @overload
+    def get_obj(
+        self,
+        model_class: type[model.Model],
+        obj: list[str | UUID | model.Model],
+        copy: bool = False,
+        on_missing: str = "raise",
+    ) -> list[model.Model | None]: ...
+
+    @overload
+    def get_obj(
+        self,
+        model_class: type[model.Model],
+        obj: str | UUID | model.Model | tuple[UUID, UUID],
+        copy: bool = False,
+        on_missing: str = "raise",
+    ) -> model.Model | None: ...
+
     def get_obj(
         self,
         model_class: type[model.Model],
@@ -174,7 +192,7 @@ class TestClient:
         ),
         copy: bool = False,
         on_missing: str = "raise",
-    ) -> model.Model | list[model.Model] | None:
+    ) -> model.Model | list[model.Model | None] | None:
         """Retrieve an object from the local object store by key, ID, or instance.
 
         Args:
@@ -192,10 +210,7 @@ class TestClient:
         """
         if isinstance(obj, list):
             return [
-                cast(
-                    model.Model,
-                    self.get_obj(model_class, x, copy=copy, on_missing=on_missing),
-                )
+                self.get_obj(model_class, x, copy=copy, on_missing=on_missing)
                 for x in obj
             ]
         if model_class not in self.db:
