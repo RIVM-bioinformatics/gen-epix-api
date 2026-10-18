@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session, declarative_base
 
 import gen_epix.fastapp.exc as exc
+import gen_epix.fastapp.repositories.sa.repository as repository_module
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
 from gen_epix.fastapp.model import Model
@@ -653,6 +654,42 @@ def test_clear_repository_content_smoke_in_memory() -> None:
         entities=[RepoModel.ENTITY],
         connection_string="sqlite:///:memory:",
     )
+
+
+def test_clear_repository_content_disposes_engine_for_default_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = sa.create_engine("sqlite:///:memory:")
+    dispose = Mock(wraps=engine.dispose)
+    monkeypatch.setattr(engine, "dispose", dispose)
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+
+    SARepository.clear_repository_content(
+        entities=[RepoModel.ENTITY], connection_string="sqlite:///:memory:"
+    )
+
+    dispose.assert_called_once_with()
+
+
+def test_clear_repository_content_disposes_engine_when_inspection_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+    monkeypatch.setattr(
+        repository_module, "inspect", Mock(side_effect=RuntimeError("inspect failed"))
+    )
+
+    with pytest.raises(RuntimeError, match="inspect failed"):
+        SARepository.clear_repository_content(
+            entities=[], connection_string="sqlite:///:memory:"
+        )
+
+    engine.dispose.assert_called_once_with()
 
 
 def test_clear_repository_content_drops_default_schema_tables(tmp_path: Path) -> None:

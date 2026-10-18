@@ -765,6 +765,8 @@ def create_case_endpoints(
                     case_id=case_id,
                     col_id=col_id,
                     is_fwd=request_body.is_fwd,
+                    file_format=request_body.file_format,
+                    file_compression=request_body.file_compression,
                 ),
             ),
         )
@@ -794,6 +796,8 @@ def create_case_endpoints(
                     file_content=base64.b64decode(request_body.file_content),
                     case_id=case_id,
                     col_id=col_id,
+                    file_format=request_body.file_format,
+                    file_compression=request_body.file_compression,
                 ),
             ),
         )

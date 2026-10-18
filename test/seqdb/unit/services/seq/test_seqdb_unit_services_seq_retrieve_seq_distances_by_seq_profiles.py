@@ -84,7 +84,16 @@ def test_retrieve_seq_distances_by_seq_profiles_returns_repository_records() -> 
         format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
         content=json.dumps({str(uuid4()): 1.5}),
     )
-    service = _ServiceStub([distance], profile_ids, protocol_id)
+    second_distance = model.SeqDistance(
+        id=uuid4(),
+        sample_id=uuid4(),
+        protocol_id=protocol_id,
+        seq_profile_id=profile_ids[1],
+        format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+        content=json.dumps({str(uuid4()): 2.5}),
+    )
+    distances = [distance, second_distance]
+    service = _ServiceStub(distances, profile_ids, protocol_id)
     cmd = command.RetrieveSeqDistancesBySeqProfilesCommand(
         seq_profile_ids=profile_ids,
         protocol_id=protocol_id,
@@ -92,7 +101,7 @@ def test_retrieve_seq_distances_by_seq_profiles_returns_repository_records() -> 
 
     result = seq_service_retrieve_seq_distances_by_seq_profiles(service, cmd)  # type: ignore[arg-type]
 
-    assert result == [distance]
+    assert result == distances
 
 
 def test_retrieve_seq_distances_by_seq_profiles_forwards_user_id() -> None:

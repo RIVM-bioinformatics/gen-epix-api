@@ -443,8 +443,6 @@ class TestNonCrudHandlers:
         case_type_id = uuid4()
         genetic_distance_col_id = uuid4()
         case_id = uuid4()
-        protocol_id = uuid4()
-        profile_id = uuid4()
         cmd = command.RetrieveSeqDistancesByCasesCommand(
             user=None,
             case_type_id=case_type_id,
@@ -452,13 +450,9 @@ class TestNonCrudHandlers:
             genetic_distance_col_id=genetic_distance_col_id,
             filter_other_cases=False,
         )
-        distance = seqdb_model.SeqDistance(
+        distance = model.CaseSeqDistance(
             id=case_id,
-            sample_id=uuid4(),
-            protocol_id=protocol_id,
-            seq_profile_id=profile_id,
-            format=seqdb_enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
-            content=json.dumps({str(profile_id): 1.5}),
+            distances={uuid4(): 1.5},
         )
         mock_client.request.return_value = _mock_response(
             [json.loads(distance.model_dump_json())]
@@ -548,6 +542,8 @@ class TestNonCrudHandlers:
             col_id=col_id,
             file_content=b"raw-bytes",
             is_fwd=True,
+            file_format=seqdb_enum.ReadsFileFormat.FASTQ,
+            file_compression=seqdb_enum.FileCompression.GZIP,
         )
         mock_client.request.return_value = _mock_response(str(file_id))
         result = app.create_file_for_read_set(cmd)
@@ -558,6 +554,8 @@ class TestNonCrudHandlers:
         assert url == f"{route}/{case_id}/{col_id}"
         assert json_body["file_content"] == base64.b64encode(b"raw-bytes").decode()
         assert json_body["is_fwd"] is True
+        assert json_body["file_format"] == cmd.file_format
+        assert json_body["file_compression"] == cmd.file_compression
         assert result == file_id
 
     def test_create_file_for_seq(self, app: CasedbClient, mock_client: Any) -> None:
@@ -565,14 +563,23 @@ class TestNonCrudHandlers:
         col_id = uuid4()
         file_id = uuid4()
         cmd = command.CreateFileForSeqCommand(
-            user=None, case_id=case_id, col_id=col_id, file_content=b"raw-bytes"
+            user=None,
+            case_id=case_id,
+            col_id=col_id,
+            file_content=b"raw-bytes",
+            file_format=seqdb_enum.SeqFileFormat.FASTA,
+            file_compression=seqdb_enum.FileCompression.GZIP,
         )
         mock_client.request.return_value = _mock_response(str(file_id))
         result = app.create_file_for_seq(cmd)
         method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
         assert method == "POST"
         route = app._routes[command.CreateFileForSeqCommand]
         assert url == f"{route}/{case_id}/{col_id}"
+        assert json_body["file_content"] == base64.b64encode(b"raw-bytes").decode()
+        assert json_body["file_format"] == cmd.file_format
+        assert json_body["file_compression"] == cmd.file_compression
         assert result == file_id
 
     def test_retrieve_protocols_sequencing(

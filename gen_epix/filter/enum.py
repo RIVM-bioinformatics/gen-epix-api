@@ -45,6 +45,28 @@ class LogicalOperator(Enum):
     NIMPLIES = "NIMPLIES"
 
 
+class LogicalOperatorSet(Enum):
+    """Encapsulates sets of logical operators for composite filters."""
+
+    UNARY = frozenset({LogicalOperator.NOT})
+    BINARY = frozenset(
+        {
+            LogicalOperator.XOR,
+            LogicalOperator.NAND,
+            LogicalOperator.NOR,
+            LogicalOperator.XNOR,
+            LogicalOperator.IMPLIES,
+            LogicalOperator.NIMPLIES,
+        }
+    )
+    MULTARY = frozenset(
+        {
+            LogicalOperator.AND,
+            LogicalOperator.OR,
+        }
+    )
+
+
 class ComparisonOperator(Enum):
     """Encapsulates boundary comparison operators supported by range filters."""
 

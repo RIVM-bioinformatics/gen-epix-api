@@ -17,6 +17,7 @@ from gen_epix.filter.enum import ComparisonOperator, FilterType, LogicalOperator
                 "EQUALS_NUMBER": "EQUALS_NUMBER",
                 "EQUALS_STRING": "EQUALS_STRING",
                 "EQUALS_UUID": "EQUALS_UUID",
+                "CONTAINS_STRING": "CONTAINS_STRING",
                 "COMPOSITE": "COMPOSITE",
                 "DATE_RANGE": "DATE_RANGE",
                 "DATETIME_RANGE": "DATETIME_RANGE",
@@ -65,3 +66,14 @@ def test_enum_members_preserve_serialized_values(enum_type, expected_members):
     assert {
         name: member.value for name, member in enum_type.__members__.items()
     } == expected_members
+
+
+@pytest.mark.parametrize(
+    "enum_type",
+    [FilterType, LogicalOperator, ComparisonOperator],
+    ids=["filter-type", "logical-operator", "comparison-operator"],
+)
+@pytest.mark.parametrize("value", ["", "UNKNOWN"])
+def test_enum_rejects_unknown_serialized_values(enum_type, value):
+    with pytest.raises(ValueError):
+        enum_type(value)

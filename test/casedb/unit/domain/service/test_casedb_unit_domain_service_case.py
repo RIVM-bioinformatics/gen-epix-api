@@ -187,12 +187,73 @@ class TestRegisterHandlers:
         "cmd_class, method_name",
         [
             (command.CaseCrudCommand, "crud_case"),
+            (command.CaseIdentifierCrudCommand, "crud_case_identifier"),
+            (
+                command.CaseDataCollectionLinkCrudCommand,
+                "crud_case_data_collection_link",
+            ),
+            (command.CaseSetCategoryCrudCommand, "crud_case_set_category"),
             (command.CaseSetCrudCommand, "crud_case_set"),
+            (
+                command.CaseSetDataCollectionLinkCrudCommand,
+                "crud_case_set_data_collection_link",
+            ),
+            (command.CaseSetMemberCrudCommand, "crud_case_set_member"),
+            (command.CaseSetStatusCrudCommand, "crud_case_set_status"),
+            (command.CaseTypeCrudCommand, "crud_case_type"),
+            (
+                command.CaseTypeSetCategoryCrudCommand,
+                "crud_case_type_set_category",
+            ),
+            (command.CaseTypeSetCrudCommand, "crud_case_type_set"),
+            (
+                command.CaseTypeSetMemberCrudCommand,
+                "crud_case_type_set_member",
+            ),
             (command.ColCrudCommand, "crud_col"),
+            (command.ColSetCrudCommand, "crud_col_set"),
+            (command.ColSetMemberCrudCommand, "crud_col_set_member"),
+            (command.DimCrudCommand, "crud_dim"),
+            (
+                command.GeneticDistanceProtocolCrudCommand,
+                "crud_genetic_distance_protocol",
+            ),
+            (command.RefColCrudCommand, "crud_ref_col"),
+            (command.RefDimCrudCommand, "crud_ref_dim"),
+            (
+                command.TreeAlgorithmClassCrudCommand,
+                "crud_tree_algorithm_class",
+            ),
+            (command.TreeAlgorithmCrudCommand, "crud_tree_algorithm"),
             (command.UploadCasesCommand, "upload_cases"),
             (command.CreateCaseSetCommand, "create_case_set"),
+            (
+                command.RetrieveCompleteCaseTypeCommand,
+                "retrieve_complete_case_type",
+            ),
+            (
+                command.RetrieveCasesByQueryCommand,
+                "retrieve_cases_by_query",
+            ),
+            (
+                command.RetrieveCaseCohortLinksByCaseTypeCommand,
+                "retrieve_case_cohort_links_by_case_type",
+            ),
             (command.RetrieveCasesByIdCommand, "retrieve_cases_by_id"),
+            (
+                command.RetrievePhylogeneticTreeByCasesCommand,
+                "retrieve_phylogenetic_tree",
+            ),
+            (
+                command.RetrieveSeqDistancesByCasesCommand,
+                "retrieve_seq_distances_by_cases",
+            ),
+            (command.RetrieveSimilarCasesCommand, "retrieve_similar_cases"),
             (command.RetrieveIsOwnCasesCommand, "retrieve_is_own_cases"),
+            (
+                command.RetrieveGeneticSequenceFastaByCaseCommand,
+                "retrieve_genetic_sequence_fasta_by_case",
+            ),
             (command.RetrieveProtocolsCommand, "retrieve_protocols"),
             (command.CreateFileForSeqCommand, "create_file_for_seq"),
             (command.CreateFileForReadSetCommand, "create_file_for_read_set"),

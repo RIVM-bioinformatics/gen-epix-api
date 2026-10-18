@@ -100,7 +100,18 @@ class SARepository(BaseRepository):
             raise ValueError("connection_string is required to clear an SARepository")
         # Get engine
         engine = EngineFactory.create_engine(connection_string, echo=False)
+        try:
+            cls._clear_repository_content(engine, entities, alembic_schema)
+        finally:
+            engine.dispose()
 
+    @staticmethod
+    def _clear_repository_content(
+        engine: Engine,
+        entities: list[Entity],
+        alembic_schema: str | None,
+    ) -> None:
+        """Drop repository tables and an optional Alembic tracking schema."""
         # Get all actual table names from the database using schema names
         inspector = inspect(engine)
         actual_tables: set[tuple[str | None, str]] = set()
@@ -214,7 +225,6 @@ class SARepository(BaseRepository):
                 except Exception:  # pylint: disable=broad-except
                     # Schema might not exist or have other issues
                     continue
-            engine.dispose()
 
         # Drop the Alembic version-tracking table and schema, if requested
         if alembic_schema:
@@ -232,7 +242,6 @@ class SARepository(BaseRepository):
                         conn.commit()
                 except Exception:  # pylint: disable=broad-except
                     pass
-            engine.dispose()
 
     @classmethod
     def check_schema_matches(cls, **kwargs: Any) -> list[str]:

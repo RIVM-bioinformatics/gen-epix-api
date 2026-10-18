@@ -53,8 +53,9 @@ class CompositeFilter(Filter):
     """Represents a filter that combines child filters using a logical operator.
 
     Model validation:
-    At least one child filter is required. `NOT` requires exactly one child, and
-    operators other than `AND` and `OR` support no more than two children.
+    At least one child filter is required. `NOT` requires exactly one child, `AND`
+    and `OR` accept any number of children, and all other operators require exactly
+    two children.
     """
 
     type: Literal[enum.FilterType.COMPOSITE.value] = enum.FilterType.COMPOSITE.value  # type: ignore[name-defined]
@@ -106,13 +107,16 @@ class CompositeFilter(Filter):
         """Validate child-filter cardinality and build matching functions."""
         if len(self.filters) == 0:
             raise AssertionError("At least one filter must be set.")
-        if self.operator == enum.LogicalOperator.NOT and len(self.filters) != 1:
+        if (
+            self.operator in enum.LogicalOperatorSet.UNARY.value
+            and len(self.filters) != 1
+        ):
             raise AssertionError("Only one filter may be set for NOT operator.")
-        if len(self.filters) > 2 and self.operator not in {
-            enum.LogicalOperator.AND,
-            enum.LogicalOperator.OR,
-        }:
-            raise AssertionError("operator must be AND or OR for more than 2 filters.")
+        elif (
+            self.operator in enum.LogicalOperatorSet.BINARY.value
+            and len(self.filters) != 2
+        ):
+            raise AssertionError("Exactly two filters must be set for this operator.")
         self._configure_match_functions()
         return self
 

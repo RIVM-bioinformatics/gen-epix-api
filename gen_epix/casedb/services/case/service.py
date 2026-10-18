@@ -1045,15 +1045,17 @@ class CaseService(BaseCaseService):
                 to cases of another case type.
         """
         cases: list[model.Case]
-        if case_ids:
+        if case_ids is not None:
+            if datetime_range_filter:
+                raise exc.InvalidArgumentsError(
+                    "271e9667", "Cannot use datetime range filter with case ids"
+                )
+            if not case_ids:
+                return [], False
             if max_n_cases > 0 and len(case_ids) > max_n_cases:
                 raise exc.RequestLimitExceededAuthError(
                     "f9c1adb2",
                     f"Number of requested cases {len(case_ids)} exceeds maximum allowed {max_n_cases}",
-                )
-            if datetime_range_filter:
-                raise exc.InvalidArgumentsError(
-                    "271e9667", "Cannot use datetime range filter with case ids"
                 )
             cases = self.repository.crud(
                 uow,

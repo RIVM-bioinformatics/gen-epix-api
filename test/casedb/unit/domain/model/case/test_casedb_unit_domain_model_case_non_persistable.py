@@ -10,6 +10,7 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseQuery,
     CaseQueryResult,
     CaseRights,
+    CaseSeqDistance,
     CaseSetQuery,
     CaseSetRights,
     CaseStats,
@@ -350,3 +351,45 @@ class TestSimilarCase:
     def test_invalid(self, kwargs: dict) -> None:
         with pytest.raises(ValidationError):
             SimilarCase(**kwargs)
+
+
+class TestCaseSeqDistance:
+    def test_empty_distances(self) -> None:
+        case_id = uuid4()
+
+        result = CaseSeqDistance(id=case_id, distances={})
+
+        assert result.id == case_id
+        assert result.distances == {}
+
+    def test_uuid_distance_keys_round_trip_through_json(self) -> None:
+        case_id = uuid4()
+        target_case_id = uuid4()
+        result = CaseSeqDistance(id=case_id, distances={target_case_id: 1.25})
+
+        serialized = result.model_dump(mode="json")
+
+        assert serialized == {
+            "id": str(case_id),
+            "distances": {str(target_case_id): 1.25},
+        }
+        assert CaseSeqDistance.model_validate(serialized) == result
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            pytest.param({"distances": {}}, id="missing-id"),
+            pytest.param({"id": uuid4()}, id="missing-distances"),
+            pytest.param(
+                {"id": uuid4(), "distances": {"not-a-uuid": 1.0}},
+                id="invalid-target-id",
+            ),
+            pytest.param(
+                {"id": uuid4(), "distances": {uuid4(): "not-a-distance"}},
+                id="invalid-distance",
+            ),
+        ],
+    )
+    def test_invalid(self, kwargs: dict) -> None:
+        with pytest.raises(ValidationError):
+            CaseSeqDistance(**kwargs)

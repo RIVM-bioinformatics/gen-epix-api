@@ -1,8 +1,10 @@
 """Regression tests for case-set association selection in CaseService."""
+
 from contextlib import nullcontext
 from datetime import datetime, timezone
 from test.util.mock_compat import MagicMock, Mock, patch
 from types import MethodType, SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -11,6 +13,7 @@ from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case import service as case_service_module
 from gen_epix.casedb.services.case.service import CaseService
+from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.filter.equals_uuid import EqualsUuidFilter
@@ -237,6 +240,40 @@ def test_retrieve_cases_by_ids_preserves_repo_results_and_validates_type() -> No
         service._retrieve_cases_by_ids_or_case_type_filter(
             object(), uuid4(), case_type_id, [case.id]
         )
+
+
+def test_retrieve_cases_by_empty_ids_returns_empty_without_repository_read() -> None:
+    service: Any = object.__new__(CaseService)
+    repository = MagicMock()
+    service._repository = repository
+
+    result = CaseService._retrieve_cases_by_ids_or_case_type_filter(
+        service, cast(BaseUnitOfWork, object()), uuid4(), uuid4(), case_ids=[]
+    )
+
+    assert result == ([], False)
+    repository.crud.assert_not_called()
+
+
+def test_retrieve_cases_by_empty_ids_rejects_date_filter() -> None:
+    service: Any = object.__new__(CaseService)
+    repository = MagicMock()
+    service._repository = repository
+    date_filter = DatetimeRangeFilter(
+        key="timed_at", lower_bound=datetime.now(timezone.utc)
+    )
+
+    with pytest.raises(exc.InvalidArgumentsError, match="Cannot use datetime range"):
+        CaseService._retrieve_cases_by_ids_or_case_type_filter(
+            service,
+            cast(BaseUnitOfWork, object()),
+            uuid4(),
+            uuid4(),
+            case_ids=[],
+            datetime_range_filter=date_filter,
+        )
+
+    repository.crud.assert_not_called()
 
 
 def test_retrieve_cases_by_type_applies_limit_and_date_filter() -> None:
@@ -861,6 +898,8 @@ def test_verify_case_set_member_case_type_accepts_match_and_rejects_mismatch() -
     service.repository.crud.side_effect = [[case_set], [case]]
     with pytest.raises(exc.InvalidArgumentsError):
         service._verify_case_set_member_case_type(None, [member])
+
+
 @pytest.fixture
 def association_service():
     service = Mock()
