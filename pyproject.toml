@@ -61,9 +61,9 @@ dependencies = [
 server = [
     "fastapi[standard]>=0.143.0,<0.144.0",
     "gunicorn==26.2.*",
-    "starlette==1.7.*",
+    "starlette==1.8.*",
     "sqlalchemy==2.0.54",
-    "sqlalchemy_utils==0.42.1",
+    "sqlalchemy_utils==0.43.0",
     "alembic==1.20.0",
     "slowapi==0.1.10",
     "cryptography==50.0.2",

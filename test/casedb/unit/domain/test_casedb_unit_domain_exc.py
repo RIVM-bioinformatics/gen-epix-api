@@ -1,5 +1,7 @@
 """Unit tests for the casedb exception re-export module."""
 
+from types import ModuleType
+
 import pytest
 
 from gen_epix.casedb.domain import exc as casedb_exc
@@ -50,8 +52,19 @@ API_EXCEPTION_NAMES = [
 ]
 
 
-def _public_names(module: object) -> set[str]:
+def _public_names(module: ModuleType) -> set[str]:
     return {name for name in vars(module) if not name.startswith("_")}
+
+
+def _defined_exception_names(module: ModuleType) -> set[str]:
+    return {
+        name
+        for name, value in vars(module).items()
+        if not name.startswith("_")
+        and isinstance(value, type)
+        and issubclass(value, BaseException)
+        and getattr(value, "__module__", None) == getattr(module, "__name__", None)
+    }
 
 
 @pytest.mark.parametrize("name", FASTAPP_EXCEPTION_NAMES)
@@ -68,8 +81,11 @@ def test_api_exceptions_are_reexported(name: str) -> None:
 
 def test_all_public_names_of_both_sources_are_reexported() -> None:
     """Every public source name, including future additions, is re-exported."""
-    expected = _public_names(fastapp_exc) | _public_names(api_exc)
-    assert expected <= _public_names(casedb_exc)
+    expected = _defined_exception_names(fastapp_exc) | _defined_exception_names(
+        api_exc
+    )
+    actual = {name for name in dir(casedb_exc) if not name.startswith("_")}
+    assert expected <= actual
 
 
 def test_source_modules_do_not_define_conflicting_names() -> None:

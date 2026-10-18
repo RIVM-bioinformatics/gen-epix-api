@@ -108,6 +108,9 @@ class RetrieveCaseCohortLinksByCaseTypeRequestBody(PydanticBaseModel):
     case_type_id: UUID = copy_model_field(
         command.RetrieveCaseCohortLinksByCaseTypeCommand, "case_type_id"
     )
+    include_missing: bool = copy_model_field(
+        command.RetrieveCaseCohortLinksByCaseTypeCommand, "include_missing"
+    )
 
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
