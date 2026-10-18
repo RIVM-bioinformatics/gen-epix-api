@@ -371,13 +371,9 @@ class TestNonCrudHandlers:
             genetic_distance_col_id=genetic_distance_col_id,
             filter_other_cases=False,
         )
-        distance = seqdb_model.SeqDistance(
+        distance = model.CaseSeqDistance(
             id=case_id,
-            sample_id=uuid4(),
-            protocol_id=protocol_id,
-            seq_profile_id=profile_id,
-            format=seqdb_enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
-            content=json.dumps({str(profile_id): 1.5}),
+            distances={str(profile_id): 1.5},
         )
         mock_client.request.return_value = _mock_response(
             [json.loads(distance.model_dump_json())]

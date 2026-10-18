@@ -2,32 +2,37 @@
 
 import json
 from collections import defaultdict
+from typing import cast
 from uuid import UUID
 
 import gen_epix.seqdb.domain.command as seqdb_command
+import gen_epix.seqdb.domain.enum as seqdb_enum
 import gen_epix.seqdb.domain.model as seqdb_model
-from gen_epix.casedb.domain import command, enum, exc, model
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.casedb.services.case.retrieve_seq import _retrieve_case_profile_map
+from gen_epix.filter.composite import CompositeFilter
+from gen_epix.filter.contains_string import ContainsStringFilter
 from gen_epix.filter.equals_uuid import EqualsUuidFilter
 
 
 def case_service_retrieve_seq_distances_by_cases(
     self: BaseCaseService, cmd: command.RetrieveSeqDistancesByCasesCommand
-) -> list[seqdb_model.SeqDistance]:
+) -> list[model.CaseSeqDistance]:
     """Return distances within the casedb protocol maximum to permitted profiles.
 
     Requested cases require a populated, readable distance column. External
-    targets additionally require sequence-column access when included. Returned
-    rows are copies, with case IDs as row IDs and profile IDs as map keys.
+    targets additionally require sequence-column access when included. Each
+    result is keyed by its requested case ID, and distances are keyed by target
+    case IDs.
 
     Args:
         self: Service handling the request.
         cmd: Requested cases, distance column, and external-target filtering flag.
 
     Returns:
-        Stored source rows for each requested case, including empty filtered maps.
+        CaseSeqDistance for each requested Case.
 
     Raises:
         InvalidArgumentsError: If the column has the wrong case or column type.
@@ -39,156 +44,167 @@ def case_service_retrieve_seq_distances_by_cases(
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
     with repository.uow() as uow:
-        dist_col: model.Col = repository.crud(
-            uow,
-            user.id,
-            model.Col,
-            CrudOperation.READ_ONE,
-            obj_ids=cmd.genetic_distance_col_id,
+        # @ABAC: Retrieve the case profile map with access control checks
+        genetic_distance_protocol, case_seq_profile_map, dist_col = (
+            _retrieve_case_profile_map(self, uow, cmd)
         )
-        if dist_col.case_type_id != cmd.case_type_id:
-            raise exc.InvalidArgumentsError(
-                "bac042b3", "The genetic-distance column belongs to another case type."
-            )
-        ref_col: model.RefCol = repository.crud(
-            uow,
-            user.id,
-            model.RefCol,
-            CrudOperation.READ_ONE,
-            obj_ids=dist_col.ref_col_id,
-        )
-        if ref_col.col_type != enum.ColType.GENETIC_DISTANCE:
-            raise exc.InvalidArgumentsError(
-                "7684d8a9", "The selected column is not a genetic-distance column."
-            )
-        protocol: model.GeneticDistanceProtocol = repository.crud(
-            uow,
-            user.id,
-            model.GeneticDistanceProtocol,
-            CrudOperation.READ_ONE,
-            obj_ids=ref_col.genetic_distance_protocol_id,
-        )
-        seq_col_id = dist_col.genetic_sequence_col_id
-        if seq_col_id is None:
-            raise exc.InitializationServiceError(
-                "0ac987fb",
-                "The genetic-distance column has no linked genetic-sequence column.",
-            )
+
+        # Special case: no case IDs provided, return an empty list
         if not cmd.case_ids:
             return []
-        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-        assert case_abac is not None
-        cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
-            uow,
-            user.id,
-            case_abac,
-            enum.CaseRight.READ_CASE,
-            cmd.case_type_id,
-            case_ids=cmd.case_ids,
-            filter_content=False,
+
+        # Special case: no accessible sequence profiles, return a list with empty distances
+        seq_profile_ids = list(
+            set(case_seq_profile_map.values())
+        )  # take unique as more than one Case may map to the same SeqProfile
+        if not seq_profile_ids:
+            return [
+                model.CaseSeqDistance(id=case_id, distances={})
+                for case_id in cmd.case_ids
+            ]
+
+        # Retrieve the SeqDistances for the accessible profiles
+        seqdb_seq_distance_protocol_id = (
+            genetic_distance_protocol.seqdb_seq_distance_protocol_id
         )
-        if is_max_results_exceeded:
-            raise exc.RequestLimitExceededAuthError(
-                "e783e7bb", "Requested cases exceed the configured result limit."
-            )
-        collections = self._retrieve_case_data_collections_map(uow, user.id)
-        rights_cache: dict[UUID, model.CaseRights] = {}
-
-        def can_read(case: model.Case, col_id: UUID) -> bool:
-            if case_abac.is_full_access:
-                return True
-            assert case.id is not None
-            if case.id not in rights_cache:
-                rights_cache[case.id] = case_abac.get_case_rights(
-                    case.id,
-                    case.case_type_id,
-                    case.created_in_data_collection_id,
-                    collections.get(case.id, set())
-                    | {case.created_in_data_collection_id},
+        seq_profile_additional_cases_map: dict[UUID, set[tuple[UUID, UUID]]] = (
+            defaultdict(set)
+        )
+        seq_profile_case_map: dict[UUID, UUID] = {}
+        for case_id, seq_profile_id in case_seq_profile_map.items():
+            if seq_profile_id in seq_profile_case_map:
+                # More than one case with this seq_profile ID exists, keep track of additional cases as well as the first case found
+                seq_profile_additional_cases_map[seq_profile_id].add(
+                    (seq_profile_case_map[seq_profile_id], case_id)
                 )
-            rights = rights_cache[case.id]
-            return rights.is_full_access or col_id in rights.read_col_ids
-
-        profile_cases: dict[UUID, list[UUID]] = defaultdict(list)
-        for case in cases:
-            profile_value = case.content.get(cmd.genetic_distance_col_id)
-            if not can_read(case, cmd.genetic_distance_col_id) or not profile_value:
-                raise exc.UnauthorizedAuthError(
-                    "a7dcb11a",
-                    "The requested genetic-distance content is not readable.",
-                )
-            assert case.id is not None
-            profile_cases[UUID(profile_value)].append(case.id)
-        if not profile_cases:
-            return []
+            else:
+                seq_profile_case_map[seq_profile_id] = case_id
         seq_distances: list[seqdb_model.SeqDistance] = self.app.handle(
             seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand(
                 user=cmd.user,
-                seq_profile_ids=list(profile_cases),
-                protocol_id=protocol.seqdb_seq_distance_protocol_id,
+                seq_profile_ids=seq_profile_ids,
+                protocol_id=seqdb_seq_distance_protocol_id,
             )
         )
-        distance_maps = [
-            {
-                target: distance
-                for target, distance in row.get_profile_distance_map().items()
-                if protocol.seqdb_max_stored_distance is None
-                or distance <= protocol.seqdb_max_stored_distance
-            }
-            for row in seq_distances
-        ]
-        allowed_profiles = set(profile_cases)
-        if not cmd.filter_other_cases:
-            external_profiles = {
-                target
-                for distances in distance_maps
-                for target in distances
-                if target not in profile_cases
-            }
-            if external_profiles:
-                all_cases: list[model.Case] = repository.crud(
-                    uow,
-                    user.id,
-                    model.Case,
-                    CrudOperation.READ_ALL,
-                    filter=EqualsUuidFilter(key="case_type_id", value=cmd.case_type_id),
-                )
-                candidates: dict[UUID, list[model.Case]] = defaultdict(list)
-                requested_ids = set(cmd.case_ids)
-                for case in all_cases:
-                    value = case.content.get(cmd.genetic_distance_col_id)
-                    if not value or case.id in requested_ids:
-                        continue
-                    profile_id = UUID(value)
-                    if profile_id in external_profiles:
-                        candidates[profile_id].append(case)
-                for profile_id, matching_cases in candidates.items():
-                    readable_cases = [
-                        case
-                        for case in matching_cases
-                        if can_read(case, cmd.genetic_distance_col_id)
-                    ]
-                    if not readable_cases:
-                        raise exc.UnauthorizedAuthError(
-                            "bc4b754d",
-                            "Matching genetic-distance content is not readable.",
-                        )
-                    if any(can_read(case, seq_col_id) for case in readable_cases):
-                        allowed_profiles.add(profile_id)
 
-        retval: list[seqdb_model.SeqDistance] = []
-        for row, distances in zip(seq_distances, distance_maps):
-            content = json.dumps(
-                {
-                    str(target): distance
-                    for target, distance in distances.items()
-                    if target in allowed_profiles
+        # Unpack content (distances) from the retrieved SeqDistances, storing them in a map keyed by seq_profile_id and removing too large distances
+        max_stored_distance = genetic_distance_protocol.seqdb_max_stored_distance
+        if max_stored_distance is None:
+            max_stored_distance = float("inf")
+        seq_profile_distances_map: dict[UUID, dict[UUID, float]] = {}
+        for seq_distance in seq_distances:
+            if seq_distance.format == seqdb_enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP:
+                seq_profile_distances_map[seq_distance.seq_profile_id] = {
+                    UUID(x): y
+                    for x, y in json.loads(seq_distance.content).items()
+                    if y is not None and y <= max_stored_distance
                 }
-            )
-            for case_id in profile_cases.get(row.seq_profile_id, []):
-                retval.append(
-                    row.model_copy(
-                        deep=True, update={"id": case_id, "content": content}
-                    )
+            else:
+                raise AssertionError(
+                    f"Unexpected SeqDistance format: {seq_distance.format}"
                 )
-        return retval
+
+        # Determine which other cases are readable, in case other cases are not to be filtered out, by adding them to seq_profile_case_map
+        all_distance_seq_profile_ids: set[UUID] = set()
+        for distances in seq_profile_distances_map.values():
+            all_distance_seq_profile_ids.update(distances)
+        all_distance_seq_profile_ids_str = {
+            str(seq_profile_id) for seq_profile_id in all_distance_seq_profile_ids
+        }
+        if not cmd.filter_other_cases:
+            # Do not filter out other cases, except those that are not readable
+            case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+            user_id = None if cmd.user is None else cmd.user.id
+            dist_col_id = cast(UUID, dist_col.id)
+            dist_col_id_str = str(dist_col_id)
+            if case_abac is None or case_abac.is_full_access:
+                # @ABAC: not applied, use more efficient query
+                for row in self.repository.read_fields(
+                    uow,
+                    user_id,
+                    model.Case,
+                    ["id", "content"],
+                    filter=CompositeFilter(
+                        filters=[
+                            EqualsUuidFilter(
+                                key="case_type_id", value=cmd.case_type_id
+                            ),
+                            ContainsStringFilter(key="content", value=dist_col_id_str),
+                        ]
+                    ),
+                ):
+                    content: dict[str, str | None] = json.loads(row[1])
+                    seq_profile_id_str = content.get(dist_col_id_str)
+                    if (
+                        seq_profile_id_str is not None
+                        and seq_profile_id_str in all_distance_seq_profile_ids_str
+                    ):
+                        # Map the sequence profile ID to the corresponding case ID
+                        seq_profile_id = UUID(seq_profile_id_str)
+                        case_id = UUID(row[0])
+                        if seq_profile_id in seq_profile_case_map:
+                            # More than one case with this seq_profile ID exists, keep track of additional cases as well as the first case found
+                            seq_profile_additional_cases_map[seq_profile_id].add(
+                                (seq_profile_case_map[seq_profile_id], case_id)
+                            )
+                        else:
+                            seq_profile_case_map[seq_profile_id] = case_id
+            else:
+                # @ABAC: remove all cases with non-readable dist_col from distances
+                assert user_id is not None
+                cases, _ = self._retrieve_cases_with_content_right(uow, user_id, case_abac, enum.CaseRight.READ_CASE, cmd.case_type_id, case_ids=None, filter_content=True, apply_max_n_cases=False)  # type: ignore[assignment]
+                for case in cases:
+                    seq_profile_id_str = case.content.get(dist_col_id)
+                    if seq_profile_id_str is not None:
+                        seq_profile_id = UUID(seq_profile_id_str)
+                        if seq_profile_id in all_distance_seq_profile_ids:
+                            if seq_profile_id in seq_profile_case_map:
+                                # More than one case with this seq_profile ID exists, keep track of additional cases as well as the first case found
+                                seq_profile_additional_cases_map[seq_profile_id].add(
+                                    (
+                                        seq_profile_case_map[seq_profile_id],
+                                        cast(UUID, case.id),
+                                    )
+                                )
+                            else:
+                                seq_profile_case_map[seq_profile_id] = cast(
+                                    UUID, case.id
+                                )
+        else:
+            # Keep only distances to requested cases, nothing to do as seq_profile_case_map is already filtered
+            pass
+
+        # Derive CaseSeqDistances
+        case_seq_distances: list[model.CaseSeqDistance] = []
+        for case_id in cmd.case_ids:
+            seq_profile_id_or_none = case_seq_profile_map.get(case_id)
+            if seq_profile_id_or_none is None:
+                # No SeqDistance existed for the requested Case ID -> add empty CaseSeqDistance
+                case_seq_distance = model.CaseSeqDistance(
+                    id=case_id,
+                    distances={},
+                )
+            else:
+                # Create CaseSeqDistance containing only distances for SeqProfiles in seq_profile_case_map, plus any additional cases mapping to the same SeqProfile
+                distances_or_none = seq_profile_distances_map.get(
+                    seq_profile_id_or_none
+                )
+                assert distances_or_none is not None
+                case_distances: dict[UUID, float] = {}
+                for target_seq_profile_id, distance in distances_or_none.items():
+                    if target_seq_profile_id not in seq_profile_case_map:
+                        continue
+                    case_distances[seq_profile_case_map[target_seq_profile_id]] = (
+                        distance
+                    )
+                    for _, additional_case_id in seq_profile_additional_cases_map.get(
+                        target_seq_profile_id, set()
+                    ):
+                        case_distances[additional_case_id] = distance
+                case_seq_distance = model.CaseSeqDistance(
+                    id=case_id,
+                    distances=case_distances,
+                )
+            case_seq_distances.append(case_seq_distance)
+
+        return case_seq_distances

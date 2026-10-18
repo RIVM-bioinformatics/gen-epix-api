@@ -277,7 +277,7 @@ class RetrieveSeqDistancesByCasesCommand(Command):
         description="The CaseType ID that all the cases must belong to."
     )
     case_ids: list[UUID] = Field(
-        description="The IDs of the cases to retrieve sequence distances for."
+        description="The IDs of the cases to retrieve sequence distances for. Must be unique."
     )
     genetic_distance_col_id: UUID = Field(
         description="The ID of the genetic distance Col to use."
@@ -286,6 +286,13 @@ class RetrieveSeqDistancesByCasesCommand(Command):
         default=True,
         description="Whether to omit distances to cases not included in case_ids.",
     )
+
+    @field_validator("case_ids", mode="after")
+    def validate_case_ids(cls, value: list[UUID]) -> list[UUID]:
+        """Require each requested case ID to occur once."""
+        if len(value) != len(set(value)):
+            raise ValueError("case_ids must be unique")
+        return value
 
 
 class RetrieveSimilarCasesCommand(Command):

@@ -647,10 +647,10 @@ def create_case_endpoints(
     async def retrieve__seq_distances_by_cases(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSeqDistancesByCasesRequestBody,
-    ) -> list[seqdb_model.SeqDistance]:
+    ) -> list[model.CaseSeqDistance]:
         """See router description."""
         return cast(
-            list[seqdb_model.SeqDistance],
+            list[model.CaseSeqDistance],
             handle_command(
                 app=app,
                 user=user,

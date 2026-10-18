@@ -439,7 +439,7 @@ class CaseService(BaseCaseService):
 
     def retrieve_seq_distances_by_cases(
         self, cmd: command.RetrieveSeqDistancesByCasesCommand
-    ) -> list[seqdb_model.SeqDistance]:
+    ) -> list[model.CaseSeqDistance]:
         """Retrieve sequence distances for accessible case profiles."""
         return case_service_retrieve_seq_distances_by_cases(self, cmd)
 
