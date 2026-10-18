@@ -38,28 +38,30 @@ def test_none_client_type_uses_no_app_composer() -> None:
 
 
 def test_retrieve_seq_distances_uses_functional_user() -> None:
-    functional_user = seqdb_model.User(
+    seqdb_user = seqdb_model.User(
         id=uuid4(),
-        key="seqdb-test@example.com",
-        email="seqdb-test@example.com",
-        name="Seqdb Test User",
+        key="functional",
+        email="functional@example.com",
+        name="functional",
         organization_id=uuid4(),
-        roles={seqdb_enum.Role.APP_ADMIN},
+        roles={seqdb_enum.Role.ORG_USER.value},
     )
-    distance = Mock(spec=seqdb_model.SeqDistance)
-    seqdb_service = Mock(spec=SeqdbService)
-    seqdb_service.seqdb_user = functional_user
-    seqdb_service.seqdb_app.handle.return_value = [distance]
+    service_mock = Mock(spec=SeqdbService)
+    service_mock.seqdb_user = seqdb_user
+    result = [Mock(spec=seqdb_model.SeqDistance)]
+    service_mock.seqdb_app.handle.return_value = result
     cmd = seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand(
         user=None,
         seq_profile_ids=[uuid4()],
         protocol_id=uuid4(),
     )
 
-    result = SeqdbService.retrieve_seq_distances_by_seq_profiles(seqdb_service, cmd)
+    retrieved_distances = SeqdbService.retrieve_seq_distances_by_seq_profiles(
+        service_mock, cmd
+    )
 
-    assert result == [distance]
-    forwarded_cmd = seqdb_service.seqdb_app.handle.call_args.args[0]
-    assert forwarded_cmd.user is functional_user
+    assert retrieved_distances is result
+    forwarded_cmd = service_mock.seqdb_app.handle.call_args.args[0]
+    assert forwarded_cmd.user is seqdb_user
     assert forwarded_cmd.seq_profile_ids == cmd.seq_profile_ids
     assert forwarded_cmd.protocol_id == cmd.protocol_id

@@ -11,6 +11,7 @@ from gen_epix.casedb.domain.command.case import (
     RetrieveGeneticSequenceFastaByCaseCommand,
     RetrieveIsOwnCasesCommand,
     RetrievePhylogeneticTreeByCasesCommand,
+    RetrieveSeqDistancesByCasesCommand,
     RetrieveSimilarCasesCommand,
 )
 from gen_epix.fastapp.enum import CrudOperation
@@ -90,3 +91,29 @@ def test_dim_update_some_does_not_apply_create_batch_rule() -> None:
     )
 
     assert command.get_objs() is not None
+
+
+@pytest.mark.parametrize("case_count", [0, 1, 3])
+def test_retrieve_seq_distances_accepts_unique_case_ids(case_count: int) -> None:
+    """Accept empty or unique case IDs and preserve their order."""
+    case_ids = [uuid4() for _ in range(case_count)]
+
+    retrieve_command = RetrieveSeqDistancesByCasesCommand(
+        case_type_id=uuid4(),
+        case_ids=case_ids,
+        genetic_distance_col_id=uuid4(),
+    )
+
+    assert retrieve_command.case_ids == case_ids
+
+
+def test_retrieve_seq_distances_rejects_duplicate_case_ids() -> None:
+    """Reject repeated case IDs before dispatch."""
+    duplicate_case_id = uuid4()
+
+    with pytest.raises(ValidationError, match="case_ids must be unique"):
+        RetrieveSeqDistancesByCasesCommand(
+            case_type_id=uuid4(),
+            case_ids=[duplicate_case_id, duplicate_case_id],
+            genetic_distance_col_id=uuid4(),
+        )

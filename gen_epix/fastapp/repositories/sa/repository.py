@@ -28,6 +28,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import (
     ComparisonOperator,
     CompositeFilter,
+    ContainsStringFilter,
     DateRangeFilter,
     DatetimeRangeFilter,
     EqualsBooleanFilter,
@@ -1253,6 +1254,12 @@ class SARepository(BaseRepository):
                 if not invert
                 else result_column != filter.value
             )
+        if isinstance(filter, ContainsStringFilter):
+            return (
+                result_column.contains(filter.value)
+                if not invert
+                else ~result_column.contains(filter.value)
+            )
         if isinstance(filter, RangeFilter):
             return self._get_range_where_clause(filter, result_column, invert)
         raise exc.InvalidArgumentsError(
@@ -1364,6 +1371,7 @@ class SARepository(BaseRepository):
             EqualsNumberFilter,
             EqualsStringFilter,
             EqualsUuidFilter,
+            ContainsStringFilter,
             StringSetFilter,
             NumberSetFilter,
             UuidSetFilter,

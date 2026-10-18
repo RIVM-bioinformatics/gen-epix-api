@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from gen_epix.filter import enum
 from gen_epix.filter.base import Filter
+from gen_epix.filter.contains_string import ContainsStringFilter
 from gen_epix.filter.date_range import DateRangeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.filter.equals_boolean import EqualsBooleanFilter
@@ -35,6 +36,7 @@ FilterUnion = (
     | EqualsNumberFilter
     | EqualsStringFilter
     | EqualsUuidFilter
+    | ContainsStringFilter
     | NumberRangeFilter
     | DateRangeFilter
     | DatetimeRangeFilter
