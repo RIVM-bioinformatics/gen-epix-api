@@ -1,4 +1,9 @@
-"""Enumerations for temporal granularity, interval mapping, and result status."""
+"""Define temporal, interval, transformation, and result enums.
+
+``TimeUnit`` and the transform-strategy enums configure temporal and interval
+mapping; ``TransformType`` and ``TransformResultType`` classify transformations
+and their outcomes for the transform package.
+"""
 
 from enum import Enum
 

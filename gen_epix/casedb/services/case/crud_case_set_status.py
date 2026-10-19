@@ -1,6 +1,7 @@
-"""Handle CRUD operations for case-set-status entities.
+"""Handle case-set-status CRUD through the case service.
 
-This is a simple metadata entity with no ABAC restrictions.
+This metadata entity has no ABAC restrictions. The public handler delegates
+linked-record cleanup and persistence to the shared case service utilities.
 """
 
 from uuid import UUID
@@ -22,7 +23,18 @@ def case_service_crud_case_set_status(
     | bool
     | None
 ):
-    """Handle CRUD operations for CaseSetStatus entities."""
+    """Execute a CaseSetStatus CRUD command in one repository unit of work.
+
+    Linked records are cascade-deleted before the command is delegated to the
+    case service's CRUD handler.
+
+    Args:
+        self: Case service handling the command.
+        cmd: CRUD command to execute.
+
+    Returns:
+        Result returned by the case service's CRUD handler.
+    """
     # CaseSetStatus entities have no ABAC restrictions, only RBAC - use direct crud
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)

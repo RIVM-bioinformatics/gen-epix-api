@@ -4,6 +4,7 @@ from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.model as model
+from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
@@ -27,13 +28,11 @@ def case_service_crud_case_type_set_member(
     """Handle CRUD operations for CaseTypeSetMember entities."""
     with self.repository.uow() as uow:
         assert cmd.user is not None
-        _crud_cascade_delete(self, uow, cmd)
-        return _crud_case_type_set_member_without_abac(self, uow, cmd)
-
-        # Currently not in use. Left here for future reference if we want to add ABAC for CaseTypeSetMember.
-        # if is_refdata_admin_or_above(self, cmd.user):
-        #     return _crud_case_type_set_member_without_abac(self, uow, cmd)
-        # return _crud_case_type_set_member_with_abac(self, uow, cmd)
+        pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
+            _crud_cascade_delete(self, uow, cmd)
+            return _crud_case_type_set_member_without_abac(self, uow, cmd)
+        return _crud_case_type_set_member_with_abac(self, uow, cmd)
 
 
 def _crud_case_type_set_member_without_abac(
@@ -53,8 +52,6 @@ def _crud_case_type_set_member_without_abac(
     return self.crud(cmd)  # type: ignore[return-value]
 
 
-# Currently not in use. Left here for future reference if we want to add ABAC for CaseTypeSetMember.
-# Adding ABAC for CaseTypeSetMember would need to be complex: the user should see all CaseTypeSetMembers that belong to CaseTypeSets that the organization has access to.
 def _crud_case_type_set_member_with_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,

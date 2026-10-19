@@ -1,6 +1,5 @@
 """Retrieve phylogenetic, FASTA, and protocol data through seqdb commands."""
 
-import json
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -58,8 +57,9 @@ def case_service_retrieve_phylogenetic_tree(
         )
 
         # Special case: zero case_ids
+        phylogenetic_tree: model.PhylogeneticTree
         if not case_ids:
-            phylogenetic_tree: model.PhylogeneticTree = self.app.handle(
+            phylogenetic_tree = self.app.handle(
                 command.RetrievePhylogeneticTreeByProfilesCommand(
                     user=user,
                     tree_algorithm_code=tree_algorithm_code,
@@ -74,7 +74,7 @@ def case_service_retrieve_phylogenetic_tree(
         # Retrieve tree
         profile_ids = list(case_profile_map.values())
         profile_case_map = {y: x for x, y in case_profile_map.items()}
-        phylogenetic_tree: model.PhylogeneticTree = self.app.handle(
+        phylogenetic_tree = self.app.handle(
             command.RetrievePhylogeneticTreeByProfilesCommand(
                 user=cmd.user,
                 tree_algorithm_code=tree_algorithm_code,
@@ -99,7 +99,11 @@ def _retrieve_case_profile_map(
         | command.RetrieveSeqDistancesByCasesCommand
     ),
 ) -> tuple[model.GeneticDistanceProtocol, dict[UUID, UUID], model.Col]:
-    """Validate a distance column and map accessible cases to seqdb profiles."""
+    """Validate a distance column and map accessible cases to seqdb profiles.
+
+    Returns a tuple containing the genetic distance protocol, a mapping of case IDs to
+    seqdb SeqProfile IDs, and the distance Col.
+    """
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
     dist_col: model.Col = repository.crud(
@@ -134,21 +138,28 @@ def _retrieve_case_profile_map(
         obj_ids=dist_ref_col.genetic_distance_protocol_id,
     )
     case_profile_map: dict[UUID, UUID] = {}
-    if cmd.case_ids:
-        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-        cases, _ = self._retrieve_cases_with_content_right(
-            uow,
-            user.id,
-            case_abac,
-            enum.CaseRight.READ_CASE,
-            cmd.case_type_id,
-            case_ids=cmd.case_ids,
-            filter_content=True,
+    if not cmd.case_ids:
+        return genetic_distance_protocol, case_profile_map, dist_col
+    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+    assert case_abac is not None
+    cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
+        uow,
+        user.id,
+        case_abac,
+        enum.CaseRight.READ_CASE,
+        cmd.case_type_id,
+        case_ids=cmd.case_ids,
+        filter_content=True,
+    )
+    if is_max_results_exceeded:
+        raise exc.RequestLimitExceededAuthError(
+            "e783e7bb", "Requested cases exceed the configured result limit."
         )
-        for case in cases:
-            profile_id = case.content.get(cmd.genetic_distance_col_id)
-            if profile_id:
-                case_profile_map[case.id] = UUID(profile_id)
+    for case in cases:
+        profile_id = case.content.get(cmd.genetic_distance_col_id)
+        if profile_id:
+            assert case.id is not None
+            case_profile_map[case.id] = UUID(profile_id)
     return genetic_distance_protocol, case_profile_map, dist_col
 
 
@@ -270,5 +281,5 @@ def _get_seq_ids_from_cases(
         case_ids=case_ids,
         filter_content=True,
     )
-    retval = [x.content.get(seq_col_id) for x in cases]
-    return [UUID(x) for x in retval if x]
+    seq_ids_str_or_none = [x.content.get(seq_col_id) for x in cases]
+    return [None if x is None else UUID(x) for x in seq_ids_str_or_none]

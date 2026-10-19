@@ -1,4 +1,4 @@
-"""Define the repository interface for commondb organization data."""
+"""Define the abstract repository contract for commondb organization lookups."""
 
 import abc
 
@@ -7,7 +7,12 @@ from gen_epix.fastapp import BaseRepository, BaseUnitOfWork
 
 
 class BaseOrganizationRepository(BaseRepository):
-    """Encapsulates organization-specific user lookup operations for services."""
+    """Encapsulates organization-specific user lookup operations for services.
+
+    Attributes:
+        user_class: Persisted model used for users.
+        user_invitation_class: Persisted model used for user invitations.
+    """
 
     def __init__(
         self,

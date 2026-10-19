@@ -768,7 +768,7 @@ class CrudEndpointGenerator:
                     objs=(
                         update_objs
                         if route.model_class is create_api_model_class
-                        else [route.model_class.to_model(x) for x in update_objs]  # type: ignore[attr-defined]
+                        else [create_api_model_class.to_model(x) for x in update_objs]  # type: ignore[attr-defined]
                     ),
                     return_id=route.put_returns_id,
                 )
@@ -856,7 +856,7 @@ class CrudEndpointGenerator:
             raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(user: user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore[valid-type]
+        async def endpoint_function(user: user_dependency) -> Any:  # type: ignore[valid-type]
             """Endpoint function."""
             obj_ids = None
             try:
@@ -864,8 +864,6 @@ class CrudEndpointGenerator:
                     user=user,
                     operation=CrudOperation.DELETE_ALL,
                     return_id=route.delete_all_returns_id,
-                    limit=limit or 0,
-                    offset=offset or 0,
                 )
                 retval = route.app.handle(cmd)
                 return retval
@@ -927,6 +925,7 @@ class CrudEndpointGenerator:
                     ),
                     request_ids=invalid_obj_ids,
                 )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -981,11 +980,11 @@ class CrudEndpointGenerator:
             include_extras=True,
         )
         if not operation_id:
-            tokens = endpoint.split("/")
+            tokens = endpoint.strip("/").split("/")
             if tokens[-1] == "{object_id}" or method.value.upper() == "POST":
-                operation_id = tokens[1] + "__" + method.value.lower() + "_one"
+                operation_id = tokens[0] + "__" + method.value.lower() + "_one"
             else:
-                operation_id = tokens[1] + "__" + method.value.lower() + "_all"
+                operation_id = tokens[0] + "__" + method.value.lower() + "_all"
 
         fast_api.add_api_route(
             "/" + endpoint,

@@ -16,6 +16,9 @@ class HashableSetFilter(Filter):
 
     def _match(self, value: Hashable) -> bool:
         """Return whether a value is a configured set member."""
+        # TODO: LSP-3893 A list candidate reaches this membership check via
+        # Filter.match_value(value: Any) and raises TypeError instead of returning
+        # a non-match; clarify whether callers must provide hashable values.
         return value in self.members
 
 

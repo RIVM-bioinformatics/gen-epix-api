@@ -58,6 +58,7 @@ class Sample(Model):
         # Strip code of whitespace
         code = values.get("code")
         if code is not None:
+            # TODO: LSP-3893 Non-string code such as 123 raises AttributeError here before Pydantic can report a type validation error; should invalid types be rejected with ValidationError, or are callers guaranteed to supply strings?
             values["code"] = code.strip()
         # Ensure props is a dict
         props = values.get("props")

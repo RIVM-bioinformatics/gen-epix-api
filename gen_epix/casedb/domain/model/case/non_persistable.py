@@ -292,4 +292,18 @@ class SimilarCase(BaseModel):
     """Represents a similar-case result with its identifier and date."""
 
     id: UUID = Field(description="The case ID.")
-    timed_at: datetime = Field(description="The case date, if any.")
+    timed_at: datetime = Field(description="The case date.")
+
+
+class CaseSeqDistance(fastapp.Model):
+    """Represents the distances from one case to other cases."""
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_seq_distances",
+        persistable=False,
+    )
+
+    id: UUID = Field(description="The case ID.")
+    distances: dict[UUID, float] = Field(
+        description="The mapping of target case IDs to distances. Case IDs not present in this list are assumed to be above the maximum stored distance or otherwise not yet computed."
+    )

@@ -31,7 +31,20 @@ def create_ontology_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
-    """Register all non-CRUD ontology endpoints on the given router."""
+    """Register all non-CRUD ontology endpoints on the given router.
+
+    Also registers the generated CRUD endpoints for the ontology service.
+
+    Args:
+        router: Router or application to register the endpoints on.
+        app: Application used to handle commands and resolve the user dependency.
+        handle_exception: Callback that converts an exception into an HTTP error;
+            it must not return. Required.
+        **kwargs: Ignored; accepted for a uniform endpoint-factory signature.
+
+    Raises:
+        AssertionError: If `handle_exception` is not provided.
+    """
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency

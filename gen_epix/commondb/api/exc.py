@@ -247,6 +247,9 @@ def handle_command(
     try:
         return app.handle(input_command)
     except Exception as exception:
+        # TODO: LSP-3893 When no callback is supplied, this fallback receives three
+        # arguments, but handle_exception requires app/logger context and five
+        # required arguments; confirm the intended default logger/context.
         if input_handle_exception is None:
             input_handle_exception = handle_exception  # type: ignore[assignment]
         input_handle_exception(exception_code, user, exception)  # type: ignore[misc]

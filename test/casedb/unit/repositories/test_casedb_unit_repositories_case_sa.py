@@ -2,7 +2,7 @@
 
 from collections.abc import Generator
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 import sqlalchemy as sa
@@ -136,3 +136,120 @@ def test_access_filters_aggregate_case_counts_and_adjusted_dates(
         case_ids=set(),
     )
     assert excluded_by_empty_case_ids.n_cases == 0
+
+
+def _insert_case_stats_matrix(
+    session: Session,
+    target_count: int,
+    is_private: bool,
+    is_date_restricted: bool,
+) -> tuple[UUID, UUID, UUID]:
+    case_type_id = uuid4()
+    public_data_collection_id = uuid4()
+    private_data_collection_id = uuid4()
+    target_case_id = uuid4()
+    cases: list[tuple[UUID, int, datetime, UUID]] = [
+        (uuid4(), 0, datetime(2020, 2, 3, 12), public_data_collection_id),
+        (uuid4(), 1, datetime(2021, 4, 5, 12), public_data_collection_id),
+        (
+            target_case_id,
+            target_count,
+            datetime(2022, 6, 7, 12),
+            public_data_collection_id,
+        ),
+    ]
+    if is_date_restricted:
+        cases.append((uuid4(), 9, datetime(2023, 8, 9, 12), uuid4()))
+    session.add_all(
+        [
+            sa_model.Case(
+                id=case_id,
+                case_type_id=case_type_id,
+                created_in_data_collection_id=created_in_data_collection_id,
+                cohort={},
+                count=count,
+                timed_at=timed_at,
+                content={},
+                code=None,
+            )
+            for case_id, count, timed_at, created_in_data_collection_id in cases
+        ]
+    )
+    if is_private:
+        session.add(
+            sa_model.CaseDataCollectionLink(
+                id=uuid4(),
+                case_id=target_case_id,
+                data_collection_id=private_data_collection_id,
+            )
+        )
+    session.flush()
+    return case_type_id, public_data_collection_id, private_data_collection_id
+
+
+@pytest.mark.parametrize(
+    "target_count",
+    [0, 1, 3],
+    ids=["zero-target-cases", "one-target-case", "multiple-target-cases"],
+)
+@pytest.mark.parametrize(
+    "is_date_restricted",
+    [False, True],
+    ids=["unrestricted-date-resolution", "year-resolution"],
+)
+@pytest.mark.parametrize("is_private", [False, True], ids=["public", "private"])
+@pytest.mark.parametrize(
+    "is_datetime_filtered",
+    [False, True],
+    ids=["without-date-filter", "with-date-filter"],
+)
+def test_retrieve_case_stats_count_access_and_private_matrix(
+    session: Session,
+    target_count: int,
+    is_date_restricted: bool,
+    is_private: bool,
+    is_datetime_filtered: bool,
+) -> None:
+    case_type_id, public_id, private_id = _insert_case_stats_matrix(
+        session, target_count, is_private, is_date_restricted
+    )
+    data_collections_by_time_unit = (
+        {
+            enum.ColType.TIME_YEAR: {public_id, private_id},
+        }
+        if is_date_restricted
+        else None
+    )
+    repository = CaseSARepository.__new__(CaseSARepository)
+    unit_of_work = SAUnitOfWork(session, context_stack=[])
+
+    stats = repository.retrieve_case_stats(
+        unit_of_work,
+        case_type_id=case_type_id,
+        data_collections_by_time_unit=data_collections_by_time_unit,
+        private_data_collection_ids={private_id} if is_private else set(),
+        datetime_range_filter=(
+            DatetimeRangeFilter(lower_bound=datetime(2022, 1, 1))
+            if is_datetime_filtered
+            else None
+        ),
+    )
+
+    expected_target_date = (
+        datetime(2022, 1, 1) if is_date_restricted else datetime(2022, 6, 7, 12)
+    )
+    expected_one_date = (
+        datetime(2021, 1, 1) if is_date_restricted else datetime(2021, 4, 5, 12)
+    )
+    expected_count = target_count if is_datetime_filtered else 1 + target_count
+    assert stats.n_cases == expected_count
+    assert stats.n_own_cases == (target_count if is_private else 0)
+    if is_datetime_filtered:
+        expected_filtered_date = expected_target_date if target_count > 0 else None
+        assert stats.first_case_date == expected_filtered_date
+        assert stats.last_case_date == expected_filtered_date
+    else:
+        assert stats.first_case_date == expected_one_date
+        assert stats.last_case_date == (
+            expected_target_date if target_count > 0 else expected_one_date
+        )

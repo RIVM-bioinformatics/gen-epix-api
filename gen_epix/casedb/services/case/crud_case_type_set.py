@@ -25,7 +25,21 @@ def case_service_crud_case_type_set(
     | bool
     | None
 ):
-    """Handle CRUD operations for CaseTypeSet entities."""
+    """Run a case-type-set command inside a unit of work.
+
+    The handler verifies that a user is attached, cascades linked-row deletion,
+    and delegates CRUD without service-level ABAC filtering.
+
+    Args:
+        self: Case service handling the command.
+        cmd: Case-type-set CRUD command to execute.
+
+    Returns:
+        The result returned by the service CRUD handler.
+
+    Raises:
+        AssertionError: If the command has no user.
+    """
     with self.repository.uow() as uow:
         assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)
@@ -70,7 +84,22 @@ def _crud_case_type_set_with_abac(
     | bool
     | None
 ):
-    """CaseTypeSet user command handling, ABAC applied."""
+    """Apply reference-data access restrictions to a case-type-set command.
+
+    Commands without access metadata or with full access delegate directly.
+    Restricted commands must be reads and are delegated with an ID filter.
+
+    Args:
+        self: Case service handling the command.
+        uow: Active unit of work used by the access-filtered CRUD helper.
+        cmd: Case-type-set CRUD command to execute.
+
+    Returns:
+        The result returned by the service CRUD handler.
+
+    Raises:
+        AssertionError: If a restricted command is not a read operation.
+    """
     ref_data_access = get_ref_data_access_from_command(cmd)
     if ref_data_access is None or ref_data_access.is_full_access:
         # Special case: no policy (implies full access) or explicit full access

@@ -1,4 +1,10 @@
-"""Define commondb commands for outages, licenses, and feature flags."""
+"""Define shared commondb commands for system-level operations.
+
+The public types cover operational and reference-data resets, outage CRUD, and
+retrieval of outage, license, and feature-flag metadata. They are dispatched
+through the application layer; transport and persistence remain outside this
+module.
+"""
 
 from typing import ClassVar
 
@@ -9,7 +15,7 @@ from gen_epix.commondb.domain.command.base import Command, CrudCommand
 
 
 class DeleteAllOperationalDataCommand(Command):
-    """Represents a request to delete all operational data in one application.
+    """Represents a request to execute deletion of one application's operational data.
 
     This is intended as a maintenance operation or for use during development, and
     should only be executable under specific conditions. Non-operational data are
@@ -22,31 +28,31 @@ class DeleteAllOperationalDataCommand(Command):
 
 
 class DeleteAllRefDataCommand(Command):
-    """Request deletion of application reference data after ops data reset.
+    """Represents a request to execute deletion of application reference data.
 
     Application domains subclass this command and provide their reference-data
-    models in deletion order. The shared command deliberately has no model list;
-    the composed application's domain determines the concrete command and model
-    set.
+    models in deletion order after the operational-data reset. The shared command
+    deliberately has no model list; application composition determines the
+    concrete command and model set.
     """
 
     SORTED_REF_DATA_MODEL_CLASSES: ClassVar[list[type[model.ModelNoId]]] = []
 
 
 class RetrieveOutagesCommand(Command):
-    """Represents a request to retrieve current and scheduled system outages for public availability status."""
+    """Represents a request to execute retrieval of system outage information."""
 
     pass
 
 
 class RetrieveLicensesCommand(Command):
-    """Represents a request to retrieve license metadata for installed application packages."""
+    """Represents a request to execute retrieval of installed-package licenses."""
 
     pass
 
 
 class RetrieveFeatureFlagsCommand(Command):
-    """Represents a request to retrieve feature flags exposed by the composed application."""
+    """Represents a request to execute retrieval of composed-application flags."""
 
     pass
 
@@ -55,6 +61,6 @@ class RetrieveFeatureFlagsCommand(Command):
 
 
 class OutageCrudCommand(CrudCommand):
-    """Represents a request to manage persisted system outage windows and visibility information."""
+    """Represents a request to execute CRUD operations on system outage windows."""
 
     MODEL_CLASS: ClassVar = model.Outage

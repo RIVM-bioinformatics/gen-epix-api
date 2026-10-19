@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.date_range import DateRangeFilter
+from gen_epix.filter.enum import LogicalOperator, LogicalOperatorSet
 from gen_epix.filter.exists import ExistsFilter
 from gen_epix.filter.number_range import NumberRangeFilter
 from gen_epix.filter.partial_date_range import PartialDateRangeFilter
@@ -53,6 +54,70 @@ def test_not_nested_composite_match() -> None:
 
     with pytest.raises(ValueError):
         CompositeFilter(filters=[sub_filter1, sub_filter2], operator="NOT")
+
+
+def test_logical_operator_sets_partition_all_operators() -> None:
+    """Classify every logical operator into exactly one arity group."""
+    unary = LogicalOperatorSet.UNARY.value
+    binary = LogicalOperatorSet.BINARY.value
+    multary = LogicalOperatorSet.MULTARY.value
+
+    assert unary == {LogicalOperator.NOT}
+    assert binary == {
+        LogicalOperator.XOR,
+        LogicalOperator.NAND,
+        LogicalOperator.NOR,
+        LogicalOperator.XNOR,
+        LogicalOperator.IMPLIES,
+        LogicalOperator.NIMPLIES,
+    }
+    assert multary == {LogicalOperator.AND, LogicalOperator.OR}
+    assert unary | binary | multary == set(LogicalOperator)
+    assert not (unary & binary or unary & multary or binary & multary)
+
+
+@pytest.mark.parametrize(
+    "operator", sorted(LogicalOperatorSet.UNARY.value, key=lambda item: item.value)
+)
+@pytest.mark.parametrize("child_count", [0, 2], ids=["too-few", "too-many"])
+def test_unary_composite_operators_require_one_child(
+    operator: LogicalOperator, child_count: int
+) -> None:
+    with pytest.raises(ValueError):
+        CompositeFilter(
+            filters=[ExistsFilter() for _ in range(child_count)],
+            operator=operator,
+        )
+
+
+@pytest.mark.parametrize(
+    "operator", sorted(LogicalOperatorSet.BINARY.value, key=lambda item: item.value)
+)
+@pytest.mark.parametrize("child_count", [1, 3], ids=["too-few", "too-many"])
+def test_binary_composite_operators_require_two_children(
+    operator: LogicalOperator, child_count: int
+) -> None:
+    with pytest.raises(ValueError, match="Exactly two filters"):
+        CompositeFilter(
+            filters=[ExistsFilter() for _ in range(child_count)],
+            operator=operator,
+        )
+
+
+@pytest.mark.parametrize(
+    "operator", sorted(LogicalOperatorSet.MULTARY.value, key=lambda item: item.value)
+)
+@pytest.mark.parametrize("child_count", [1, 2, 3])
+def test_multary_composite_operators_accept_one_or_more_children(
+    operator: LogicalOperator, child_count: int
+) -> None:
+    composite_filter = CompositeFilter(
+        filters=[ExistsFilter() for _ in range(child_count)],
+        operator=operator,
+    )
+
+    assert composite_filter.operator is operator
+    assert len(composite_filter.filters) == child_count
 
 
 def test_nested_composite_match() -> None:

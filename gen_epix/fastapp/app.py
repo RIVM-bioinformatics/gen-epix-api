@@ -947,8 +947,9 @@ class App:
 
     def __del__(self) -> None:
         """Del the requested value."""
-        if self._logger:
-            self._logger.info(self.create_log_message("aa21c54a", "STOPPING_APP"))
+        logger = getattr(self, "_logger", None)
+        if logger:
+            logger.info(self.create_log_message("aa21c54a", "STOPPING_APP"))
 
     @staticmethod
     def _get_bool_from_cfg_value(value: Any) -> bool:
