@@ -4,6 +4,7 @@ import json
 import logging
 import time
 from test.fastapp.auth_test_client import AuthTestClient
+from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any
 from uuid import UUID
@@ -418,6 +419,69 @@ class TestJwkFetching(BaseOauthIdpClientTestCase):
 @pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
 
+    def test_tokens_use_only_their_own_provider_keys(self) -> None:
+        signicat_token = MockJWKAndToken(token_expiration_minutes=10)
+        keycloak_token = MockJWKAndToken(token_expiration_minutes=10)
+        signicat_client = self.create_client()
+        keycloak_cfg = self.server_cfg.model_copy(
+            update={"client_id": "LabSentiNL-dev", "audience": "LabSentiNL-dev"}
+        )
+        keycloak_issuer = "http://127.0.0.1:8080/realms/labsentinel"
+        keycloak_client = self.create_client(
+            cfg=keycloak_cfg,
+            discovery_doc={**self.discovery_doc, "issuer": keycloak_issuer},
+        )
+        signicat_token.payload.update(
+            {"iss": signicat_client.issuer, "aud": signicat_client.audience}
+        )
+        keycloak_token.payload.update(
+            {"iss": keycloak_issuer, "aud": keycloak_client.audience}
+        )
+        keycloak_token.public_jwk_dict["kid"] = "keycloak-key"
+        signicat_client._signing_keys = {
+            signicat_token.public_jwk_dict["kid"]: jwt.PyJWK.from_dict(
+                signicat_token.public_jwk_dict
+            )
+        }
+        keycloak_client._signing_keys = {
+            "keycloak-key": jwt.PyJWK.from_dict(keycloak_token.public_jwk_dict)
+        }
+        signicat_jwt = signicat_token._get_token()
+        keycloak_jwt = keycloak_token._get_token()
+
+        with (
+            patch.object(signicat_client, "_load_keys") as signicat_keys,
+            patch.object(keycloak_client, "_load_keys") as keycloak_keys,
+        ):
+            assert (
+                asyncio.run(signicat_client.get_claims_from_jwt(keycloak_jwt)) is None
+            )
+            assert (
+                asyncio.run(keycloak_client.get_claims_from_jwt(signicat_jwt)) is None
+            )
+            signicat_claims = asyncio.run(
+                signicat_client.get_claims_from_jwt(signicat_jwt)
+            )
+            keycloak_claims = asyncio.run(
+                keycloak_client.get_claims_from_jwt(keycloak_jwt)
+            )
+            assert signicat_claims is not None
+            assert keycloak_claims is not None
+            assert signicat_claims["iss"] == signicat_client.issuer
+            assert keycloak_claims["iss"] == keycloak_issuer
+        signicat_keys.assert_not_called()
+        keycloak_keys.assert_not_called()
+
+        # A matching issuer is only a hint; a token signed by the wrong key is rejected.
+        forged_token = jwt.encode(
+            signicat_token.payload,
+            keycloak_token.private_key_pem,
+            algorithm="RS256",
+            headers={"kid": signicat_token.public_jwk_dict["kid"]},
+        )
+        with pytest.raises(exc.CredentialsAuthError):
+            asyncio.run(signicat_client.get_claims_from_jwt(forged_token))
+
     def test_get_claims_from_malformed_jwt_raises_credentials(self) -> None:
         client: OauthIdpClient = self.create_client()
 
@@ -458,7 +522,10 @@ class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
         with (
             patch(
                 "gen_epix.fastapp.services.auth.oauth_idp_client.jwt.decode",
-                side_effect=__import__("jwt").ExpiredSignatureError("expired"),
+                side_effect=[
+                    {"iss": self.discovery_doc["issuer"]},
+                    jwt.ExpiredSignatureError("expired"),
+                ],
             ),
             patch.object(
                 OauthIdpClient, "get_jwk_from_jwt", return_value=Mock()
@@ -477,7 +544,10 @@ class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
         with (
             patch(
                 "gen_epix.fastapp.services.auth.oauth_idp_client.jwt.decode",
-                side_effect=__import__("jwt").PyJWTError("invalid"),
+                side_effect=[
+                    {"iss": self.discovery_doc["issuer"]},
+                    jwt.PyJWTError("invalid"),
+                ],
             ),
             patch.object(
                 OauthIdpClient, "get_jwk_from_jwt", return_value=Mock()
@@ -496,7 +566,10 @@ class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
         with (
             patch(
                 "gen_epix.fastapp.services.auth.oauth_idp_client.jwt.decode",
-                side_effect=RuntimeError("other"),
+                side_effect=[
+                    {"iss": self.discovery_doc["issuer"]},
+                    RuntimeError("other"),
+                ],
             ),
             patch.object(
                 OauthIdpClient, "get_jwk_from_jwt", return_value=Mock()

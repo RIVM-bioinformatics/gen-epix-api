@@ -231,17 +231,22 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
         """Return validated claims from a JWT, or ``None`` for an untrusted issuer.
 
         Raises:
-            CredentialsAuthError: If the JWT header is malformed.
-            UnauthorizedAuthError: If the token cannot be verified or lacks required
-                claims.
-            InitializationServiceError: If signing keys cannot be loaded.
+            CredentialsAuthError: If the token is malformed or fails verification.
+            UnauthorizedAuthError: If the matching provider has no signing key for
+                the token's key ID.
+            ServiceUnavailableError: If signing keys cannot be loaded.
         """
         try:
             jwt.get_unverified_header(jwt_token)
+            unverified_claims = jwt.decode(
+                jwt_token, options={"verify_signature": False}
+            )
         except jwt.PyJWTError as exception:
             raise exc.CredentialsAuthError(
                 "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             ) from exception
+        if unverified_claims.get("iss") != self.issuer:
+            return None
         key = await self.get_jwk_from_jwt(jwt_token)
 
         claims = self._verify_token(jwt_token, key)
@@ -307,7 +312,8 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
                 key=key,
                 algorithms=self._allowed_signing_algorithms,
                 audience=self.audience,
-                options={
+                issuer=self.issuer,
+                options={  # type: ignore[arg-type]
                     "require": ["iss"],
                     "require_iat": True,
                     "verify_iat": True,

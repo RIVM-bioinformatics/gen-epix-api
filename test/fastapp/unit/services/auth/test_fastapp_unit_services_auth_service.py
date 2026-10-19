@@ -11,10 +11,12 @@ from test.commondb.unit.services.auth_test_support import (
     make_cdb_user,
 )
 from test.fastapp.auth_test_client import AuthTestClient
+from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 from test.util.mock_compat import AsyncMock, MagicMock, Mock, patch
 from typing import Any, cast
 from uuid import UUID, uuid4
 
+import jwt
 import pytest
 
 from gen_epix.fastapp import App, exc, model
@@ -158,6 +160,32 @@ class TestGetExistingUserFromToken(BaseAuthServiceTestCase):
         idp_client1.get_claims_from_jwt.assert_awaited_once_with(token)
         idp_client2.get_claims_from_jwt.assert_awaited_once_with(token)
 
+    def test_existing_user_from_token_continues_after_provider_rejects_token(
+        self,
+    ) -> None:
+        """A provider's validation error must not block a later valid provider."""
+        token = "jwt-token"
+        first_client = self.make_idp_client(self.idp1_id)
+        second_client = self.make_idp_client(self.idp2_id)
+        self.service._idp_clients = [first_client, second_client]
+        first_client.get_claims_from_jwt.side_effect = exc.UnauthorizedAuthError(
+            "759a2688"
+        )
+        second_client.get_claims_from_jwt.return_value = self.claims_dict
+
+        with patch.object(
+            self.service,
+            "get_existing_user_from_claims",
+            new=AsyncMock(return_value=self.user),
+        ):
+            assert (
+                self.run_async(self.service.get_existing_user_from_token(token))
+                is self.user
+            )
+
+        first_client.get_claims_from_jwt.assert_awaited_once_with(token)
+        second_client.get_claims_from_jwt.assert_awaited_once_with(token)
+
     def test_existing_user_from_token_no_valid_user_raises(self) -> None:
         """No IDP yields a valid user -> UnauthorizedAuthError."""
         # Create input
@@ -173,6 +201,19 @@ class TestGetExistingUserFromToken(BaseAuthServiceTestCase):
             self.run_async(self.service.get_existing_user_from_token(token))
         idp_client1.get_claims_from_jwt.assert_awaited_once_with(token)
         idp_client2.get_claims_from_jwt.assert_awaited_once_with(token)
+
+    def test_existing_user_from_token_preserves_credentials_error(self) -> None:
+        token = "invalid-token"
+        first_client = self.make_idp_client(self.idp1_id)
+        second_client = self.make_idp_client(self.idp2_id)
+        self.service._idp_clients = [first_client, second_client]
+        first_client.get_claims_from_jwt.side_effect = exc.CredentialsAuthError(
+            "f6ec5507"
+        )
+        second_client.get_claims_from_jwt.return_value = None
+
+        with pytest.raises(exc.CredentialsAuthError):
+            self.run_async(self.service.get_existing_user_from_token(token))
 
 
 # create_user_dependencies
@@ -659,6 +700,80 @@ class TestRetryPendingIdpClients(BaseAuthServiceTestCase):
 @pytest.fixture
 def auth_test_client() -> AuthTestClient:
     return AuthTestClient()
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-05")
+class TestMultipleOidcProviders:
+    def test_each_provider_authenticates_without_fetching_another_providers_keys(
+        self,
+    ) -> None:
+        env = AuthEnv(
+            initial_users=[make_cdb_user(user_id=MOCK_USER_ID)], with_http=False
+        )
+        signicat_client = env.auth_service.idp_clients[0]
+        assert isinstance(signicat_client, OauthIdpClient)
+        keycloak_token = MockJWKAndToken(token_expiration_minutes=10)
+        keycloak_issuer = "http://127.0.0.1:8080/realms/labsentinel"
+        keycloak_token.payload.update(
+            {
+                "iss": keycloak_issuer,
+                "aud": "LabSentiNL-dev",
+                "preferred_username": DEFAULT_USER_EMAIL,
+            }
+        )
+        keycloak_token.public_jwk_dict["kid"] = "keycloak-key"
+        keycloak_jwt = keycloak_token._get_token()
+        keycloak_cfg = signicat_client.server_cfg.model_copy(
+            update={
+                "name": "keycloak_local",
+                "label": "Local Keycloak",
+                "issuer": keycloak_issuer,
+                "client_id": "LabSentiNL-dev",
+                "audience": "LabSentiNL-dev",
+                "claim_map": {"__key__": ["preferred_username", "email"]},
+            }
+        )
+        keycloak_client = OauthIdpClient(keycloak_cfg, discovery_doc={})
+        keycloak_client._signing_keys = {
+            "keycloak-key": jwt.PyJWK.from_dict(keycloak_token.public_jwk_dict)
+        }
+        env.auth_service._idp_clients.append(keycloak_client)
+        env.auth_service._idp_client_by_id[keycloak_client.id] = keycloak_client
+
+        with (
+            patch.object(signicat_client, "_load_keys") as signicat_keys,
+            patch.object(keycloak_client, "_load_keys") as keycloak_keys,
+        ):
+            for token, expected_provider in (
+                (env.token, signicat_client),
+                (keycloak_jwt, keycloak_client),
+            ):
+                request = Mock()
+                request.headers = {"authorization": f"Bearer {token}"}
+                claims = [
+                    asyncio.run(client(request))
+                    for client in (signicat_client, keycloak_client)
+                ]
+                assert [item.idp_client_id for item in claims if item] == [
+                    expected_provider.id
+                ]
+                user = asyncio.run(env.auth_service.get_existing_user_from_token(token))
+                assert user.key == DEFAULT_USER_EMAIL
+
+            forged_token = jwt.encode(
+                env.mock_jwk_token.payload,
+                keycloak_token.private_key_pem,
+                algorithm="RS256",
+                headers={"kid": env.mock_jwk_token.public_jwk_dict["kid"]},
+            )
+            request.headers = {"authorization": f"Bearer {forged_token}"}
+            assert asyncio.run(signicat_client(request)) is None
+            assert asyncio.run(keycloak_client(request)) is None
+            with pytest.raises(exc.CredentialsAuthError):
+                asyncio.run(env.auth_service.get_existing_user_from_token(forged_token))
+
+        signicat_keys.assert_not_called()
+        keycloak_keys.assert_not_called()
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-01")
