@@ -145,15 +145,23 @@ class AuthService(BaseAuthService):
             The authenticated existing user.
 
         Raises:
-            UnauthorizedAuthError: If no configured provider can authenticate an
-                existing user from ``token``.
+            AuthException: If no configured provider can authenticate an existing
+                user from ``token``.
         """
+        auth_error: exc.AuthException | None = None
+        validated_claims = False
         for idp_client in self._idp_clients:
-            jwt_claims = await idp_client.get_claims_from_jwt(token)
+            try:
+                jwt_claims = await idp_client.get_claims_from_jwt(token)
+            except exc.AuthException as exception:
+                if auth_error is None:
+                    auth_error = exception
+                continue
             if jwt_claims:
+                validated_claims = True
                 try:
                     claims = Claims(
-                        claims=jwt_claims,
+                        claims=jwt_claims,  # type: ignore[arg-type]
                         scheme="BEARER",
                         token=token,
                         idp_client_id=idp_client.id,
@@ -164,6 +172,8 @@ class AuthService(BaseAuthService):
                 except exc.UnauthorizedAuthError:
                     continue
         # No valid user found for any of the IDP clients
+        if auth_error and not validated_claims:
+            raise auth_error
         raise exc.UnauthorizedAuthError("665ae487")
 
     async def _resolve_claims_from_dependencies(
