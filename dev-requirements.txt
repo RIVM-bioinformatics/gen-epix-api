@@ -5,7 +5,7 @@ polars==2.0.0
 xlsxwriter==3.2.9
 pytest
 pytest-asyncio
-pytest-gremlins==1.12.0
+pytest-gremlins==1.12.1
 pytest-xdist
 pytest-mock==3.17.*
 pytest-dependency==0.6.*
@@ -16,6 +16,8 @@ pylint==4.1.*
 mypy==2.4.*
 oauthlib==4.0.0
 coverage==7.16.2
+# profiling, used by gen_epix.util.profile_method
+pyinstrument==5.1.*
 
 
 # stubs

@@ -2,40 +2,23 @@
 
 from collections.abc import Callable
 from typing import Any, NoReturn, cast
-from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
-from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api.exc import handle_command
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
+
+# The request and response models stay importable from this module
+# pylint: disable=useless-import-alias, unused-import
+from gen_epix.omopdb.api.omop_schema import (
+    RetrievePersonsByIdsRequestBody as RetrievePersonsByIdsRequestBody,
+)
+from gen_epix.omopdb.api.omop_schema import (
+    RetrieveSpecimenIdsByCohortIdsRequestBody as RetrieveSpecimenIdsByCohortIdsRequestBody,
+)
 from gen_epix.omopdb.domain import command, enum, model
-from gen_epix.util import copy_model_field
-
-
-class RetrievePersonsByIdsRequestBody(PydanticBaseModel):
-    """Represents unique person identifiers for a full-person retrieval request."""
-
-    # TODO: LSP-3893 Duplicate IDs pass this request model, then command construction
-    # raises ValidationError before handle_command; expected a client validation
-    # response, but the route may return 500. Confirm the intended HTTP status and
-    # where this validation should be translated.
-    person_ids: list[UUID] = copy_model_field(
-        command.RetrievePersonsByIdCommand, "person_ids"
-    )
-
-
-class RetrieveSpecimenIdsByCohortIdsRequestBody(PydanticBaseModel):
-    """Represents cohort identifiers for a cohort-to-specimen retrieval request."""
-
-    cohort_definition_id: UUID = copy_model_field(
-        command.RetrieveSpecimenIdsByCohortIdsCommand, "cohort_definition_id"
-    )
-    cohort_ids: list[UUID] = copy_model_field(
-        command.RetrieveSpecimenIdsByCohortIdsCommand, "cohort_ids"
-    )
 
 
 def create_omop_endpoints(

@@ -5,24 +5,16 @@ from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
-from pydantic import BaseModel as PydanticBaseModel
 
+# The request and response models stay importable from this module
+# pylint: disable=useless-import-alias, unused-import
+from gen_epix.casedb.api.ontology_schema import (
+    DiseaseEtiologicalAgentUpdateAssociationRequestBody as DiseaseEtiologicalAgentUpdateAssociationRequestBody,
+)
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.commondb.domain.literal import MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
-from gen_epix.util import copy_model_field
-
-
-class DiseaseEtiologicalAgentUpdateAssociationRequestBody(PydanticBaseModel):
-    """Represents etiological agents associated with a disease."""
-
-    etiologies: list[model.Etiology] = copy_model_field(
-        command.DiseaseEtiologicalAgentUpdateAssociationCommand,
-        "association_objs",
-        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
-    )
 
 
 def create_ontology_endpoints(

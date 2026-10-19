@@ -8,8 +8,7 @@ from typing import Any, NoReturn
 
 from fastapi import HTTPException
 
-from gen_epix.casedb.domain import command, model
-from gen_epix.commondb.domain import model
+from gen_epix.commondb.domain import command, model
 from gen_epix.fastapp import App, LogLevel, exc
 from gen_epix.fastapp.api import exc as api_exc
 

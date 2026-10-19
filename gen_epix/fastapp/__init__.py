@@ -9,6 +9,9 @@ remain in their dedicated modules.
 """
 
 # pylint: disable=useless-import-alias
+from typing import TYPE_CHECKING
+
+from gen_epix._lazy import LazyExport, exports_from, lazy_exports
 from gen_epix.fastapp.app import App as App
 from gen_epix.fastapp.client import Client as Client
 from gen_epix.fastapp.client import RetryPolicy as RetryPolicy
@@ -46,8 +49,6 @@ from gen_epix.fastapp.model import User as User
 from gen_epix.fastapp.pdp import PolicyDecisionPoint as PolicyDecisionPoint
 from gen_epix.fastapp.repositories import DictRepository as DictRepository
 from gen_epix.fastapp.repositories import DictUnitOfWork as DictUnitOfWork
-from gen_epix.fastapp.repositories import SARepository as SARepository
-from gen_epix.fastapp.repositories import SAUnitOfWork as SAUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository as BaseRepository
 from gen_epix.fastapp.repository import BaseUnitOfWork as BaseUnitOfWork
 from gen_epix.fastapp.service import BaseService as BaseService
@@ -56,3 +57,17 @@ from gen_epix.fastapp.services.auth.model import IDPUser as IDPUser
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork as BaseUnitOfWork
 from gen_epix.fastapp.user_manager import BaseUserManager as BaseUserManager
 from gen_epix.fastapp.util import create_ssl_context as create_ssl_context
+
+if TYPE_CHECKING:
+    from gen_epix.fastapp.repositories import SARepository as SARepository
+    from gen_epix.fastapp.repositories import SAUnitOfWork as SAUnitOfWork
+
+# The SQLAlchemy implementations are resolved on first access, so that the
+# framework can be imported without SQLAlchemy installed
+_LAZY_EXPORTS: dict[str, LazyExport] = exports_from(
+    "gen_epix.fastapp.repositories", "SARepository", "SAUnitOfWork"
+)
+
+if not TYPE_CHECKING:
+    # Not visible to type checkers, which would otherwise accept any attribute
+    __getattr__, __dir__ = lazy_exports(__name__, _LAZY_EXPORTS)
