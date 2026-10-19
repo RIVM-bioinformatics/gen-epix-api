@@ -42,9 +42,6 @@ types-setuptools==84.0.*
 cryptography==50.0.2
 oauthlib==4.0.0
 
-# profiling
-pyinstrument==5.1.*
-
 # remote client retry and settings
 tenacity==9.2.*
 pydantic-settings==2.*
