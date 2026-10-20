@@ -7,6 +7,7 @@ import pytest
 from gen_epix.casedb.domain import exc, model
 from gen_epix.casedb.services.case import crud_case_set_data_collection_link
 from gen_epix.fastapp import CrudOperation
+from gen_epix.filter import UuidSetFilter
 
 
 class TestCaseSetDataCollectionLinkCrud(BaseCrudTestCase):
@@ -272,3 +273,28 @@ class TestCaseSetDataCollectionLinkCrud(BaseCrudTestCase):
             )
 
         self.service.crud.assert_not_called()
+
+    @pytest.mark.parametrize("read_access", [False, True])
+    def test_bounded_query_checks_link_access(self, monkeypatch, read_access):
+        cmd, abac, links = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.is_read_all.return_value = True
+        cmd.query_filter = UuidSetFilter(
+            key="case_set_id", members={links[0].case_set_id}
+        )
+        access = next(iter(next(iter(abac.case_type_access_abacs.values())).values()))
+        access.read_case_set = read_access
+        self._patch_abac(monkeypatch, abac)
+        self.service.crud.return_value = links
+        if read_access:
+            assert (
+                crud_case_set_data_collection_link.case_service_crud_case_set_data_collection_link(
+                    self.service, cmd
+                )
+                == links
+            )
+        else:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                crud_case_set_data_collection_link.case_service_crud_case_set_data_collection_link(
+                    self.service, cmd
+                )

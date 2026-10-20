@@ -4,10 +4,13 @@ from uuid import uuid4
 
 import pytest
 
-from gen_epix.casedb.domain import exc, model
+from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.enum import CaseRight
+from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
+from gen_epix.casedb.domain.service.abac import BaseAbacService
 from gen_epix.casedb.services.case import crud_case_set_member
 from gen_epix.fastapp import CrudOperation
+from gen_epix.filter import UuidSetFilter
 
 
 class TestCaseSetMemberCrud(BaseCrudTestCase):
@@ -134,19 +137,18 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
 
         self.service.crud.assert_not_called()
 
-    def test_command_without_case_abac_keeps_crud_behavior(
+    def test_command_without_case_abac_is_rejected(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         cmd, _, members, _, _ = self._configure_read()
         self._patch_case_abac(monkeypatch, None)
         self.service.crud.return_value = members
 
-        result = crud_case_set_member._crud_case_set_member_with_abac(
-            self.service, self.uow, cmd
-        )
-
-        assert result == members
-        self.service.repository.crud.assert_not_called()
+        with pytest.raises(exc.UnauthorizedAuthError):
+            crud_case_set_member._crud_case_set_member_with_abac(
+                self.service, self.uow, cmd
+            )
+        self.service.crud.assert_not_called()
 
     @pytest.mark.parametrize(
         ("access_decisions", "is_accessible"),
@@ -193,3 +195,126 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
 
         assert result == members
         get_case_abac.assert_not_called()
+
+    @pytest.mark.parametrize("key", ["case_id", "case_set_id"])
+    @pytest.mark.parametrize(
+        "decisions,expected_count",
+        [([True, True], 1), ([False], 0), ([True, False], 0)],
+    )
+    def test_bounded_query_preserves_parent_access_checks(
+        self, monkeypatch, key, decisions, expected_count
+    ):
+        cmd, abac, members, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.is_read_all.return_value = True
+        cmd.query_filter = UuidSetFilter(key=key, members={uuid4()})
+        abac.is_allowed.side_effect = decisions
+        self._patch_case_abac(monkeypatch, abac)
+        self.service.crud.return_value = members
+        result = crud_case_set_member.case_service_crud_case_set_member(
+            self.service, cmd
+        )
+        assert result == members[:expected_count]
+
+    @pytest.mark.parametrize("key,invert", [("id", False), ("case_id", True)])
+    def test_unbounded_query_still_rejected(self, monkeypatch, key, invert):
+        cmd, abac, _, _, _ = self._configure_read()
+        cmd.is_read_all.return_value = True
+        cmd.query_filter = UuidSetFilter(key=key, invert=invert, members={uuid4()})
+        self._patch_case_abac(monkeypatch, abac)
+        with pytest.raises(exc.UnauthorizedAuthError):
+            crud_case_set_member.case_service_crud_case_set_member(self.service, cmd)
+        self.service.crud.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "decisions,allowed",
+        [([True, True], True), ([False], False), ([True, False], False)],
+    )
+    def test_create_requires_readable_case_and_writable_set_before_persisting(
+        self, monkeypatch, decisions, allowed
+    ):
+        cmd, abac, members, _, _ = self._configure_read()
+        members[0].id = None
+        cmd.operation = CrudOperation.CREATE_SOME
+        cmd.is_create.return_value = True
+        cmd.is_read.return_value = False
+        cmd.get_objs.return_value = members
+        abac.is_allowed.side_effect = decisions
+        self._patch_case_abac(monkeypatch, abac)
+        self.service.crud.return_value = members
+        if allowed:
+            assert (
+                crud_case_set_member.case_service_crud_case_set_member(
+                    self.service, cmd
+                )
+                == members
+            )
+            self.service.crud.assert_called_once_with(cmd)
+            assert abac.is_allowed.call_args_list[1].args[2] == CaseRight.WRITE_CASE_SET
+        else:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                crud_case_set_member.case_service_crud_case_set_member(
+                    self.service, cmd
+                )
+            self.service.crud.assert_not_called()
+        self.service._verify_case_set_member_case_type.assert_called_once()
+
+    @pytest.mark.parametrize("shared", [False, True])
+    def test_real_query_command_and_abac_resolve_shared_private_origin_data(
+        self, shared
+    ):
+        _, _, members, cases, case_sets = self._configure_read()
+        case_type_id = cases[0].case_type_id
+        case_sets[0].case_type_id = case_type_id
+        national_id = uuid4()
+        access = model.CaseTypeAccessAbac(
+            case_type_id=case_type_id,
+            data_collection_id=national_id,
+            is_private=False,
+            add_case=False,
+            remove_case=False,
+            add_case_set=False,
+            remove_case_set=False,
+            read_col_ids={uuid4()},
+            write_col_ids=set(),
+            read_case_set=True,
+            write_case_set=False,
+        )
+        abac = model.CaseAbac(
+            is_full_access=False,
+            case_type_access_abacs={case_type_id: {national_id: access}},
+            case_type_share_abacs={},
+        )
+        cmd = command.CaseSetMemberCrudCommand(
+            user=self.user,
+            operation=CrudOperation.READ_ALL,
+            query_filter=UuidSetFilter(key="case_id", members={cases[0].id}),
+        )
+        assert type(cmd) in BaseAbacService.CASE_ABAC_COMMANDS
+        abac_service = Mock()
+        abac_service.get_case_abac.return_value = abac
+        cmd._policies.append(BaseCaseAbacPolicy(abac_service))
+        self.service.crud.return_value = members
+        self.service._retrieve_case_data_collections_map.return_value = {
+            cases[0].id: {national_id} if shared else set()
+        }
+        self.service._retrieve_case_set_data_collections_map.return_value = {
+            case_sets[0].id: {national_id}
+        }
+        assert crud_case_set_member.case_service_crud_case_set_member(
+            self.service, cmd
+        ) == (members if shared else [])
+
+    def test_mixed_create_batch_is_rejected_before_any_member_is_written(
+        self, monkeypatch
+    ):
+        cmd, abac, members, _, _ = self._configure_read(count=2)
+        cmd.operation = CrudOperation.CREATE_SOME
+        cmd.is_create.return_value = True
+        cmd.is_read.return_value = False
+        cmd.get_objs.return_value = members
+        abac.is_allowed.side_effect = [True, True, True, False]
+        self._patch_case_abac(monkeypatch, abac)
+        with pytest.raises(exc.UnauthorizedAuthError):
+            crud_case_set_member.case_service_crud_case_set_member(self.service, cmd)
+        self.service.crud.assert_not_called()
