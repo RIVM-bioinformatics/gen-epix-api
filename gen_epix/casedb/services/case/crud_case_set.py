@@ -93,7 +93,15 @@ def _crud_case_set_with_abac(
             case_set_ids=case_set_ids,
             filter=cmd.query_filter,
         )
-        return retval[0] if cmd.operation in CrudOperationSet.ANY_ONE.value else retval
+        if cmd.operation not in CrudOperationSet.ANY_ONE.value:
+            return retval
+        if not retval:
+            raise exc.InvalidIdsError(
+                "c91e6b05",
+                f"Case set does not exist: {case_set_ids}",
+                ids=case_set_ids,
+            )
+        return retval[0]
     elif cmd.is_update():
         # At least one data collection with write access is required
         _retrieve_case_sets_with_content_right(
@@ -139,6 +147,11 @@ def _retrieve_case_sets_with_content_right(
 
     Returns:
         List of case sets for which the user has the specified access right.
+
+    Raises:
+        InvalidIdsError: If an explicitly requested case set does not exist.
+        UnauthorizedAuthError: If the user lacks the right on an explicitly
+            requested case set.
     """
     user_id = pdp.get_command_user_id(cmd)
     # Determine if we are reading all (allowed) case sets or a specific subset
@@ -164,21 +177,42 @@ def _retrieve_case_sets_with_content_right(
         case_set_ids=case_set_ids,
     )
 
-    # Get dict[case_set_id, case_type_id]
-    case_set_case_type_ids: dict[UUID, UUID] = dict(
-        self.repository.read_fields(
+    # Get dict[case_set_id, (case_type_id, created_in_data_collection_id)]
+    case_set_fields: dict[UUID, tuple[UUID, UUID]] = {
+        x: (y, z)
+        for x, y, z in self.repository.read_fields(
             uow,
             user_id,
             model.CaseSet,
-            ["id", "case_type_id"],
+            ["id", "case_type_id", "created_in_data_collection_id"],
             filter=UuidSetFilter(key="id", members=frozenset(case_set_ids)),
         )
-    )
+    }
 
-    # Create Iterable of tuples (case_set, frozenset[data_collection_ids])
+    # Explicitly requested case sets must exist
+    if not is_read_all:
+        invalid_ids = [x for x in case_set_ids if x not in case_set_fields]
+        if invalid_ids:
+            raise exc.InvalidIdsError(
+                "4d7a1c2e",
+                f"Case set(s) do not exist: {', '.join(str(x) for x in invalid_ids)}",
+                ids=invalid_ids,
+            )
+
+    # Create Iterable of tuples (case_set, case_type, frozenset[data_collection_ids])
+    # for every case set, including those without data collection links. The
+    # creating data collection is not stored as a link (see CreateCaseSetCommand)
+    # but always counts for access.
     abac_iterable: list[tuple[UUID, UUID, frozenset[UUID]]] = [
-        (x, case_set_case_type_ids[x], frozenset(y))
-        for x, y in case_set_data_collection_ids.items()
+        (
+            x,
+            case_set_fields[x][0],
+            frozenset(
+                case_set_data_collection_ids.get(x, set()) | {case_set_fields[x][1]}
+            ),
+        )
+        for x in case_set_ids
+        if x in case_set_fields
     ]
 
     # @ABAC PEP: Verify rights on each case set by filtering the list of case set IDs on accessibility
