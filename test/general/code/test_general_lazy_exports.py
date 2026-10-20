@@ -8,9 +8,11 @@ These tests fail when the two get out of sync.
 import ast
 import importlib
 from pathlib import Path
+from typing import get_type_hints
 
 import pytest
 
+from gen_epix._lazy import LazyExport
 from gen_epix.util import get_package_root
 
 
@@ -67,6 +69,12 @@ def test_lazy_packages_found() -> None:
     assert "gen_epix.fastapp" in LAZY_PACKAGES
     assert "gen_epix.casedb.services" in LAZY_PACKAGES
     assert "gen_epix.commondb.domain.exc" in LAZY_PACKAGES
+
+
+def test_repository_annotation_uses_builtin_dict() -> None:
+    """Ensure the dict submodule does not shadow the lazy export mapping type."""
+    package = importlib.import_module("gen_epix.fastapp.repositories")
+    assert get_type_hints(package)["_LAZY_EXPORTS"] == dict[str, LazyExport]
 
 
 @pytest.mark.parametrize("package_name", LAZY_PACKAGES)
