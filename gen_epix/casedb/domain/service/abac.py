@@ -115,6 +115,7 @@ class BaseAbacService(CommonAbacService):
         command.CreateCaseSetCommand: enum.RoleSet.GE_APP_ADMIN,
         command.UploadCasesCommand: enum.RoleSet.GE_APP_ADMIN,
         command.CaseSetCrudCommand: enum.RoleSet.GE_APP_ADMIN,
+        command.CaseSetMemberCrudCommand: enum.RoleSet.GE_APP_ADMIN,
         # command.CaseSetCaseUpdateAssociationCommand,
         # command.CaseSetDataCollectionUpdateAssociationCommand,
         command.CaseDataCollectionLinkCrudCommand: enum.RoleSet.GE_APP_ADMIN,

@@ -1,9 +1,10 @@
 """Implement seqdb sequence service behavior for services.seq.upload."""
 
+from gen_epix.commondb.domain.enum import RoleSet
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.seqdb.domain import command, enum, exc, model
+from gen_epix.seqdb.domain import command, exc, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 from gen_epix.seqdb.services.seq.upload_upsert_batch import (
     _create_sample_refdata,
@@ -44,7 +45,7 @@ class SampleBatchUploader(BatchUploader):
         user_roles = cmd.user.roles if cmd.user else set()
 
         # If user has any of the roles in the GE_APP_ADMIN role set, they are authorized
-        if user_roles & enum.RoleSet.GE_APP_ADMIN.value:
+        if user_roles & RoleSet.GE_APP_ADMIN.value:
             return  # User is authorized
 
         # If user does not have any of the roles in the GE_APP_ADMIN role set, ABAC must be applied
