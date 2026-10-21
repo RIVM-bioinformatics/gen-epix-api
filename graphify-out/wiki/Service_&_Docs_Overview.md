@@ -1,18 +1,16 @@
 # Service & Docs Overview
 
-> 23 nodes · cohesion 0.12
+> 21 nodes · cohesion 0.12
 
 ## Key Concepts
 
 - **Gen-EpiX README** (19 connections) — `README.md`
-- **SQL + Mock OIDC Docker Compose (SEQDB/OMOPDB/CASEDB)** (6 connections) — `docker-compose.sql.idp.yml`
 - **Copilot Instructions** (6 connections) — `.github/copilot-instructions.md`
-- **CASEDB Service** (4 connections) — `README.md`
-- **SEQDB Service** (4 connections) — `README.md`
-- **PPR Test Docker Compose (Mock OIDC + CASEDB/SEQDB)** (4 connections) — `docker-compose.ppr_test.yml`
+- **SQL + Mock OIDC Docker Compose (SEQDB/OMOPDB/CASEDB)** (4 connections) — `docker-compose.sql.idp.yml`
+- **CASEDB Service** (3 connections) — `README.md`
 - **OMOPDB Service** (3 connections) — `README.md`
+- **SEQDB Service** (3 connections) — `README.md`
 - **COMMONDB Service** (2 connections) — `README.md`
-- **lsp-data Repository** (2 connections) — `docker-compose.ppr_test.yml`
 - **FASTAPP Shared Framework** (1 connections) — `README.md`
 - **docs/app_creation.md** (1 connections) — `README.md`
 - **docs/casedb/case_models_erd.md** (1 connections) — `README.md`
@@ -30,8 +28,8 @@
 
 ## Relationships
 
-- [Agent Conventions & Guides](Agent_Conventions_&_Guides.md) (2 shared connections)
-- [App Composition & ETL Setup](App_Composition_&_ETL_Setup.md) (1 shared connections)
+- Development Guide (2 shared connections)
+- seqdb/domain/model/__init__.py (1 shared connections)
 - [App Configuration & Startup](App_Configuration_&_Startup.md) (1 shared connections)
 
 ## Source Files
@@ -39,13 +37,12 @@
 - `.github/copilot-instructions.md`
 - `.github/prompts/base_prompt.md`
 - `README.md`
-- `docker-compose.ppr_test.yml`
 - `docker-compose.sql.idp.yml`
 
 ## Audit Trail
 
-- EXTRACTED: 28 (82%)
-- INFERRED: 6 (18%)
+- EXTRACTED: 26 (90%)
+- INFERRED: 3 (10%)
 - AMBIGUOUS: 0 (0%)
 
 ---

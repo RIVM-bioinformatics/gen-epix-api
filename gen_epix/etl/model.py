@@ -321,12 +321,17 @@ class LoadResult(Result):
 
 
 def _require_own_completed_code(cls: type) -> None:
-    """Raise if a subclass doesn't declare its own COMPLETED_CODE/COMPLETED_MESSAGE.
+    """Require a subclass to declare its own completion code and message.
 
-    Without this, a subclass that misspells or forgets to override these
-    silently inherits the parent's generic completion code/message instead
-    of erroring — the bug found in idsdb's and lsp-data's own subclasses
-    after the ClassVar names were changed out from under them.
+    Missing or misspelled overrides would otherwise silently inherit the
+    parent's generic COMPLETED_CODE and COMPLETED_MESSAGE.
+
+    Args:
+        cls: Result subclass whose completion metadata must be declared locally.
+
+    Raises:
+        TypeError: The subclass inherits either completion attribute instead of
+            declaring its own value.
     """
     missing = [
         name

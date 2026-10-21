@@ -35,12 +35,6 @@
     "ast_hash": "5d04df0fd5056ec0690b6b5b3f52363c",
     "semantic_hash": "5d04df0fd5056ec0690b6b5b3f52363c"
   },
-  "docker-entrypoint.sh": {
-    "mtime": 1792563040.57908,
-    "seen": 1792563061.2366118,
-    "ast_hash": "ae67dcae717caf73214130263ebfc419",
-    "semantic_hash": "ae67dcae717caf73214130263ebfc419"
-  },
   "docs/__init__.py": {
     "mtime": 1792563040.58008,
     "seen": 1792563061.2366138,
@@ -3857,12 +3851,6 @@
     "ast_hash": "27667d1a9d1ffcf3ed18832abca057d9",
     "semantic_hash": ""
   },
-  "docker-compose.ppr_test.yml": {
-    "mtime": 1787993101.981261,
-    "seen": 1789075828.4896834,
-    "ast_hash": "5731c248d88dbb8ef65ce7567d1ceb1d",
-    "semantic_hash": ""
-  },
   "docker-compose.sql.idp.yml": {
     "mtime": 1789199816.554388,
     "seen": 1789215463.4438965,
@@ -4866,10 +4854,10 @@
     "semantic_hash": "e45c13a32b8e367cd2d9cc51d4d153b6"
   },
   "gen_epix/etl/model.py": {
-    "mtime": 1792563040.7007349,
-    "seen": 1792563061.2370634,
-    "ast_hash": "cf6b954e3f08f563729d79ceab94d465",
-    "semantic_hash": "cf6b954e3f08f563729d79ceab94d465"
+    "mtime": 1792592446.9787998,
+    "seen": 1792592550.0652509,
+    "ast_hash": "eda26a467d43b2de4070310d21019a73",
+    "semantic_hash": "eda26a467d43b2de4070310d21019a73"
   },
   "gen_epix/omopdb/repositories/sa_alembic/__init__.py": {
     "mtime": 1792563040.711524,
