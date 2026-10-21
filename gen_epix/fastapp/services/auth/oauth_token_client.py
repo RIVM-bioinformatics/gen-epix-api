@@ -1,4 +1,8 @@
-"""OAuth client for obtaining tokens from an identity provider."""
+"""OAuth client for obtaining tokens from an identity provider.
+
+``OauthTokenClient`` resolves OIDC metadata and requests client-credentials tokens
+over HTTP without depending on the application's inbound authentication layer.
+"""
 
 import base64
 import logging
@@ -6,7 +10,7 @@ import math
 import ssl
 import time
 import urllib.parse
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 
@@ -23,13 +27,20 @@ class OauthTokenClient:
     Client Credentials flow. It has no dependency on the web framework, so that
     it can be used by a client that only calls a remote application.
     ``OauthIdpClient`` extends it with the validation of incoming tokens.
+
+    Attributes:
+        server_cfg: A copy of provider configuration, updated during discovery.
+        logger: Optional logger for discovery errors and token request failures.
+        ssl_context: Certificate verification settings for outbound HTTP requests.
+        scheme_name: Issuer used to identify this provider in token request logs.
     """
 
-    DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS: dict[str, str] = {
+    DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS: ClassVar[dict[str, str]] = {
         "Content-Type": "application/x-www-form-urlencoded",
     }
     DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES: int = 3
     DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY: float = 1.0  # in seconds
+    DEFAULT_DISCOVERY_TIMEOUT: float = 10.0  # seconds per HTTP timeout phase
 
     # Name under which this provider appears in log messages
     scheme_name: str
@@ -46,7 +57,24 @@ class OauthTokenClient:
         client_credential_flow_max_retries: int | None = None,
         client_credential_flow_base_delay: float | None = None,
     ):
-        """Initialize a OauthTokenClient instance."""
+        """Initialize the client and resolve the provider's discovery metadata.
+
+        Args:
+            server_cfg: Provider settings; the supplied model is copied.
+            logger: Destination for discovery errors and token request failures.
+            log_item_class: Factory for structured log entries.
+            discovery_url: Override for the configured discovery URL.
+            discovery_doc: Initial metadata applied before fetching the URL.
+            ssl_context: Certificate verification settings for outbound requests.
+            client_credential_flow_request_headers: Default token request headers.
+            client_credential_flow_max_retries: Retries after the first token
+                request; None selects the class default.
+            client_credential_flow_base_delay: Fixed delay in seconds between
+                token attempts; None selects the class default.
+
+        Raises:
+            InitializationServiceError: If discovery metadata cannot be loaded.
+        """
         self.ssl_context = ssl_context
         self._init_token_client(
             server_cfg,
@@ -101,9 +129,20 @@ class OauthTokenClient:
     ) -> None:
         """Update OIDC configuration from a discovery URL or document.
 
+        URL requests use ``DEFAULT_DISCOVERY_TIMEOUT`` seconds for HTTPX's connect,
+        read, write, and pool timeouts. This is not a total request deadline.
+        URL metadata overrides the supplied document while preserving local
+        credentials and ignoring unknown fields. Configuration updates are not
+        rolled back if validation fails.
+
+        Args:
+            url: Discovery URL override; a false value uses the configured URL.
+            doc: Metadata to apply first. Supplying a document without a URL
+                skips the HTTP request and required-field validation.
+
         Raises:
-            InitializationServiceError: If discovery data is missing, unavailable, or
-                invalid.
+            InitializationServiceError: If discovery data is missing, unavailable,
+                invalid, or the request times out.
         """
         url = url or self.server_cfg.discovery_url
         if url is None and doc is None:
@@ -123,7 +162,9 @@ class OauthTokenClient:
             return
         try:
             # Get discovery document
-            with httpx.Client(verify=self.ssl_context) as client:
+            with httpx.Client(
+                verify=self.ssl_context, timeout=self.DEFAULT_DISCOVERY_TIMEOUT
+            ) as client:
                 response = client.get(url)
                 response.raise_for_status()
                 discovery_doc = response.json()
@@ -143,8 +184,12 @@ class OauthTokenClient:
                     f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}",
                 )
         except Exception as exception:
-            msg = "Error accessing discovery URL"
-            # Add more specific error message for SSL certificate issues
+            msg = (
+                "Timed out accessing discovery URL "
+                f"(HTTP timeout: {self.DEFAULT_DISCOVERY_TIMEOUT} seconds)"
+                if isinstance(exception, httpx.TimeoutException)
+                else "Error accessing discovery URL"
+            )
             if self.logger:
                 self.logger.error(
                     self._log_item_class(
@@ -163,7 +208,23 @@ class OauthTokenClient:
         max_retries: int | None = None,
         base_delay: float | None = None,
     ) -> str:
-        """Call server to get token through OAuth Client Credentials flow."""
+        """Call server to get token through OAuth Client Credentials flow.
+
+        Args:
+            scope: Scope string to encode in the token request.
+            headers: Request headers; empty or omitted uses configured defaults.
+            max_retries: Retries after the first attempt; None uses client settings.
+            base_delay: Seconds between attempts; None uses client settings.
+
+        Returns:
+            The provider's access token, without its advertised expiry.
+
+        Raises:
+            InitializationServiceError: If missing endpoint metadata cannot be
+                refreshed from discovery.
+            ServiceUnavailableError: If the token endpoint is still missing or
+                all request attempts fail.
+        """
         token, _ = self.retrieve_jwt_with_client_credentials_flow_and_expiry(
             scope, headers, max_retries, base_delay
         )
@@ -176,7 +237,29 @@ class OauthTokenClient:
         max_retries: int | None = None,
         base_delay: float | None = None,
     ) -> tuple[str, float | None]:
-        """Return an OAuth access token and its advertised lifetime in seconds."""
+        """Return an OAuth access token and its advertised lifetime in seconds.
+
+        Each request uses HTTP Basic client authentication. Failures are retried
+        with a fixed delay. Request headers are copied before adding credentials.
+
+        Args:
+            scope: Scope string to encode in the token request.
+            headers: Request headers; empty or omitted uses configured defaults.
+            max_retries: Retries after the first attempt; zero permits one attempt,
+                and None uses client settings.
+            base_delay: Seconds between attempts; None uses client settings.
+
+        Returns:
+            A pair of access token and expiry in seconds. Missing, nonnumeric,
+            boolean, overflowing, or nonfinite expiry values become None. Finite
+            zero and negative values are preserved for callers to interpret.
+
+        Raises:
+            InitializationServiceError: If missing endpoint metadata cannot be
+                refreshed from discovery.
+            ServiceUnavailableError: If the token endpoint is still missing or
+                all request attempts fail.
+        """
         # Parse input
         headers = dict(headers or self._client_credential_flow_request_headers)
         if max_retries is None:
@@ -202,7 +285,21 @@ class OauthTokenClient:
         url: str,
         token_data: str,
     ) -> tuple[str, float | None]:
-        """Request token with retries."""
+        """Request a token, retry failures, and normalize the advertised expiry.
+
+        Args:
+            headers: Complete headers, including client authentication.
+            max_retries: Number of retries after the initial request.
+            base_delay: Fixed delay in seconds between failed attempts.
+            url: Token endpoint.
+            token_data: Encoded client-credentials request body.
+
+        Returns:
+            The access token and finite numeric expiry, or None for unknown expiry.
+
+        Raises:
+            ServiceUnavailableError: If every request attempt fails.
+        """
         last_exception: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
@@ -272,7 +369,7 @@ class OauthTokenClient:
         return token_data
 
     def _set_authorization_header(self, headers: dict[str, str]) -> None:
-        """Set authorization header."""
+        """Set HTTP Basic client authentication in the supplied headers in place."""
         headers["Authorization"] = (
             "Basic "
             + base64.b64encode(
@@ -281,7 +378,12 @@ class OauthTokenClient:
         )
 
     def _get_token_endpoint(self) -> str:
-        """Return token endpoint."""
+        """Return the token endpoint, refreshing discovery if it is absent.
+
+        Raises:
+            InitializationServiceError: If discovery cannot refresh the metadata.
+            ServiceUnavailableError: If the refreshed metadata has no endpoint.
+        """
         url = self.server_cfg.token_endpoint
         if not isinstance(url, str):
             # Try to get from discovery document
