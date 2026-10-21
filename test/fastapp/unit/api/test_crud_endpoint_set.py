@@ -6,7 +6,7 @@ from typing import ClassVar
 from uuid import UUID
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from gen_epix.fastapp.api.crud_endpoint_set import CrudEndpointSet
 from gen_epix.fastapp.app import App
@@ -222,7 +222,7 @@ class TestCrudEndpointSetValidation:
 
     def test_requires_model_class(self, test_app: App) -> None:
         """Verify model_class is required."""
-        with pytest.raises(Exception):  # Pydantic validation error
+        with pytest.raises(ValidationError):
             CrudEndpointSet(  # type: ignore[call-overload]
                 endpoint_basename="/items",
                 crud_command_class=DummyCrudCommand,
@@ -233,7 +233,7 @@ class TestCrudEndpointSetValidation:
 
     def test_requires_endpoint_basename(self, test_app: App) -> None:
         """Verify endpoint_basename is required."""
-        with pytest.raises(Exception):  # Pydantic validation error
+        with pytest.raises(ValidationError):
             CrudEndpointSet(  # type: ignore[call-overload]
                 model_class=DummyModel,
                 crud_command_class=DummyCrudCommand,

@@ -10,10 +10,10 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
+from gen_epix.casedb.policies.pdp import PolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     crud_with_access_filter,
-    get_ref_data_access_from_command,
 )
 from gen_epix.fastapp import CrudOperation
 
@@ -38,19 +38,16 @@ def case_service_crud_ref_col(
         InvalidArgumentsError: If a write uses incompatible dimension, concept-set,
             unit, or immutable-field metadata, or the operation is unsupported.
     """
-    assert cmd.user is not None and cmd.user.id is not None
-
     if cmd.is_read():
-        ref_data_access = get_ref_data_access_from_command(cmd)
-        if ref_data_access is None or ref_data_access.is_full_access:
-            # Special case: no policy (implies full access) or explicit full access
+        pdp: PolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
             return self.crud(cmd)  # type: ignore[return-value]
-        access_filter = ref_data_access.get_ref_col_filter("id")
-        # No cascade delete to force conscious decision to delete from other models
+        access_filter = pdp.get_ref_col_id_filter(cmd, ref_col_id_field_name="id")
         with self.repository.uow() as uow:
             retval = crud_with_access_filter(self, uow, cmd, access_filter)
         return retval  # type: ignore[return-value]
 
+    assert cmd.user is not None and cmd.user.id is not None
     if cmd.is_delete():
         return self.crud(cmd)  # type: ignore[return-value]
 
@@ -58,7 +55,7 @@ def case_service_crud_ref_col(
     ref_cols: list[model.RefCol] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
         with self.repository.uow() as uow:
-            # Get dims
+            # Get RefDims
             ref_dim_ids = list({x.ref_dim_id for x in ref_cols})
             ref_dims: list[model.RefDim] = self.repository.crud(
                 uow,
@@ -105,15 +102,12 @@ def case_service_crud_ref_col(
                 obj_ids=[x.id for x in ref_cols],
             )
             for field_name in model.RefCol.IMMUTABLE_FIELDS:  # type: ignore[attr-defined]
-                if any(
-                    getattr(x, field_name) != getattr(y, field_name)
+                invalid_ref_col_ids = [
+                    cast(UUID, x.id)
                     for x, y in zip(ref_cols, existing_ref_cols)
-                ):
-                    invalid_ref_col_ids = [
-                        cast(UUID, x.id)
-                        for x, y in zip(ref_cols, existing_ref_cols)
-                        if getattr(x, field_name) != getattr(y, field_name)
-                    ]
+                    if getattr(x, field_name) != getattr(y, field_name)
+                ]
+                if invalid_ref_col_ids:
                     raise exc.InvalidArgumentsError(
                         "e9033c17",
                         f"{field_name} is immutable and cannot be updated",

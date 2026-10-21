@@ -267,13 +267,19 @@ def create_organization_endpoints(
         "/user_me",
         operation_id="user_me__get_one",
         name="UserMe",
-        description=user_class.__doc__,
+        description=command.RetrieveOwnUserCommand.__doc__,
     )
     async def user_me__get_one(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> user_class:  # type: ignore[valid-type]
         """See router description."""
-        return user
+        try:
+            retval: user_class = app.handle(  # type: ignore[valid-type]
+                command.RetrieveOwnUserCommand(user=user)
+            )
+        except Exception as exception:
+            handle_exception("5d0e7a41", user, exception)
+        return retval
 
     @router.get(
         "/user_me/permissions",
@@ -307,7 +313,8 @@ def create_organization_endpoints(
         try:
             cmd = command.AnonymizeUserCommand(user=user, tgt_user_id=user_id)
             retval = app.handle(cmd)
-            assert retval is None
+            if retval is not None:
+                raise RuntimeError("AnonymizeUserCommand must not return a value")
         except Exception as exception:
             handle_exception("c8fd634f", user, exception)
 

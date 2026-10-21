@@ -605,6 +605,9 @@ class Domain:
                 service_type_dependencies[service_type].add(linked_service_type)
                 service_type_dependencies.setdefault(linked_service_type, set())
 
+        service_types_in_entity_order = list(
+            dict.fromkeys(self._service_type_for_entity[x] for x in entities)
+        )
         try:
             sorted_service_types = list(
                 TopologicalSorter(service_type_dependencies).static_order()
@@ -619,9 +622,7 @@ class Domain:
                     "f8b2c94d",
                     f"Service type {cyclic_service_type} is part of a cycle in the entity DAG",
                 ) from error
-            sorted_service_types = list(
-                dict.fromkeys(self._service_type_for_entity[x] for x in entities)
-            )
+            sorted_service_types = service_types_in_entity_order
 
         if reverse:
             return list(reversed(sorted_service_types))
@@ -697,24 +698,43 @@ class Domain:
         """Filter entities."""
         entities: list[Entity] = []
         for entity in self._dag_sorted_entities:
-            if (
-                service_type
-                and (self.get_service_type_for_entity(entity) != service_type) != invert
+            if not self._should_skip_entity(
+                entity,
+                service_type,
+                persistable,
+                url_name,
+                database_name,
+                schema_name,
+                invert,
             ):
-                continue
-            if (
-                persistable is not None
-                and (entity.persistable != persistable) != invert
-            ):
-                continue
-            if url_name and (entity.url_name != url_name) != invert:
-                continue
-            if database_name and (entity.database_name != database_name) != invert:
-                continue
-            if schema_name and (entity.schema_name != schema_name) != invert:
-                continue
-            entities.append(entity)
+                entities.append(entity)
         return entities
+
+    def _should_skip_entity(
+        self,
+        entity: Entity,
+        service_type: Hashable | None,
+        persistable: bool | None,
+        url_name: str | None,
+        database_name: str | None,
+        schema_name: str | None,
+        invert: bool,
+    ) -> bool:
+        """Apply one entity's optional filter predicates using existing semantics."""
+        if (
+            service_type
+            and (self.get_service_type_for_entity(entity) != service_type) != invert
+        ):
+            return True
+        if persistable is not None and (entity.persistable != persistable) != invert:
+            return True
+        if url_name and (entity.url_name != url_name) != invert:
+            return True
+        if database_name and (entity.database_name != database_name) != invert:
+            return True
+        if schema_name and (entity.schema_name != schema_name) != invert:
+            return True
+        return False
 
     def _update_entity_dag(
         self, entity: Entity, on_cycle: Literal[OnException.RAISE, OnException.IGNORE]

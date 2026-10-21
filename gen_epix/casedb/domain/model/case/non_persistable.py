@@ -205,15 +205,18 @@ class CaseCohortLink(Model):
     )
 
     def is_null(self) -> bool:
-        """Return whether the link is a null link, i.e. the case has no linked cohort. This is
-        indicated by NULL_ID as the cohort_id and cohort_definition_id.
+        """Return whether the case has no linked cohort.
+
+        A null link is indicated by NULL_ID as the cohort_id and
+        cohort_definition_id.
         """
         return self.cohort_id == NULL_ID and self.cohort_definition_id == NULL_ID
 
 
 class RefDataAccess(Model):
-    """Encapsulates the reference data that a user has access to. This is a lightweight
-    representation that can be cached and can e.g. be used to filter the reference
+    """Encapsulates the reference data available to a user.
+
+    This lightweight representation can be cached and used to filter the reference
     data that the user can access.
     """
 

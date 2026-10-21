@@ -79,6 +79,9 @@ from gen_epix.commondb.domain.command.organization import (
     RetrieveOrganizationContactsCommand as RetrieveOrganizationContactsCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
+    RetrieveOwnUserCommand as RetrieveOwnUserCommand,
+)
+from gen_epix.commondb.domain.command.organization import (
     SiteCrudCommand as SiteCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
@@ -101,6 +104,9 @@ from gen_epix.commondb.domain.command.rbac import (
 )
 from gen_epix.commondb.domain.command.system import (
     DeleteAllOperationalDataCommand as DeleteAllOperationalDataCommand,
+)
+from gen_epix.commondb.domain.command.system import (
+    DeleteAllRefDataCommand as DeleteAllRefDataCommand,
 )
 from gen_epix.commondb.domain.command.system import (
     OutageCrudCommand as OutageCrudCommand,
@@ -144,6 +150,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
             RetrieveInviteUserConstraintsCommand,
             RetrieveOrganizationAdminNameEmailsCommand,
             RetrieveOrganizationContactsCommand,
+            RetrieveOwnUserCommand,
             SiteCrudCommand,
             UpdateUserCommand,
             UpdateUserOwnOrganizationCommand,
@@ -160,6 +167,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
     enum.ServiceType.SYSTEM: frozenset(
         {
             DeleteAllOperationalDataCommand,
+            DeleteAllRefDataCommand,
             OutageCrudCommand,
             RetrieveFeatureFlagsCommand,
             RetrieveOutagesCommand,

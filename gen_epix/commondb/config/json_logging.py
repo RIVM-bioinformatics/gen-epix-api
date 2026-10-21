@@ -43,6 +43,7 @@ import json
 import logging
 import os
 import re
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
@@ -161,6 +162,82 @@ def _build_sensitive_re(sensitive_keys: tuple[str, ...]) -> re.Pattern[str]:
     """
     escaped = "|".join(re.escape(x) for x in sensitive_keys)
     return re.compile(rf"(?i)({escaped})=((?:Bearer\s+)?[^\s&,;]+)")
+
+
+def _redact_nested_impl(
+    value: Any,
+    sensitive_key_set: set[str],
+    sensitive_re: re.Pattern[str],
+    redacted_value: str,
+    key_name: str | None,
+) -> Any:
+    """Shared recursive redaction walk backing both JsonFormatter and redact_nested()."""
+    if key_name is not None and key_name.lower() in sensitive_key_set:
+        return redacted_value
+
+    if isinstance(value, str):
+        return sensitive_re.sub(rf"\1={redacted_value}", value)
+
+    if isinstance(value, dict):
+        return {
+            x: _redact_nested_impl(
+                y, sensitive_key_set, sensitive_re, redacted_value, str(x)
+            )
+            for x, y in value.items()
+        }
+
+    if isinstance(value, list):
+        return [
+            _redact_nested_impl(
+                x, sensitive_key_set, sensitive_re, redacted_value, None
+            )
+            for x in value
+        ]
+
+    if isinstance(value, tuple):
+        return tuple(
+            _redact_nested_impl(
+                x, sensitive_key_set, sensitive_re, redacted_value, None
+            )
+            for x in value
+        )
+
+    return value
+
+
+def redact_nested(
+    value: Any,
+    sensitive_keys: list[str] | tuple[str, ...] | set[str] | None = None,
+    redacted_value: str = _DEFAULT_REDACTED_VALUE,
+    *,
+    key_name: str | None = None,
+) -> Any:
+    """Recursively redact sensitive values in a nested dict/list/tuple payload.
+
+    Standalone entry point onto the same redaction walk JsonFormatter uses
+    for log records (see JsonFormatter._redact_nested), reusable wherever a
+    plain data structure — not a log record — needs the same key-based (a
+    key named e.g. "pwd") and pattern-based (a "pwd=..." fragment embedded
+    inside a larger string, e.g. a connection string) redaction.
+
+    Args:
+        value: The value (often a dict) to redact.
+        sensitive_keys: Extra key names to redact, in addition to
+            _DEFAULT_SENSITIVE_KEYS. Case-insensitive.
+        redacted_value: Replacement text for a redacted value.
+        key_name: The key `value` was found under, if any (drives whole-value
+            redaction when it matches a sensitive key).
+
+    Returns:
+        A redacted copy of `value`; scalars other than strings pass through
+        unchanged.
+    """
+    normalized_keys = _normalise_sensitive_keys(sensitive_keys)
+    sensitive_key_set = set(normalized_keys)
+    sensitive_re = _build_sensitive_re(normalized_keys)
+    return _redact_nested_impl(
+        value, sensitive_key_set, sensitive_re, redacted_value, key_name
+    )
 
 
 class UvicornAccessLogFilter(logging.Filter):
@@ -382,24 +459,13 @@ class JsonFormatter(logging.Formatter):
 
     def _redact_nested(self, value: Any, *, key_name: str | None = None) -> Any:
         """Recursively redact sensitive values in nested dict/list payloads."""
-        if key_name is not None and key_name.lower() in self._sensitive_key_set:
-            return self.redacted_value
-
-        if isinstance(value, str):
-            return self._redact(value)
-
-        if isinstance(value, dict):
-            return {
-                x: self._redact_nested(y, key_name=str(x)) for x, y in value.items()
-            }
-
-        if isinstance(value, list):
-            return [self._redact_nested(x) for x in value]
-
-        if isinstance(value, tuple):
-            return tuple(self._redact_nested(x) for x in value)
-
-        return value
+        return _redact_nested_impl(
+            value,
+            self._sensitive_key_set,
+            self._sensitive_re,
+            self.redacted_value,
+            key_name,
+        )
 
     @staticmethod
     def _get_app_id(payload: dict[str, Any]) -> str | None:
@@ -514,12 +580,8 @@ class JsonFormatter(logging.Formatter):
         """
         return isinstance(value, str) and value.strip() != ""
 
-    def _normalise_containerlogv2_fields(self, payload: dict[str, Any]) -> None:
-        """Add query-friendly message and identifier aliases to a log payload.
-
-        Args:
-            payload: Structured log payload updated in place.
-        """
+    def _normalise_message(self, payload: dict[str, Any]) -> None:
+        """Ensure app-style events have a usable top-level message."""
         # Ensure every app-style log event has a usable top-level message.
         if "message" not in payload:
             raw_msg = payload.get("msg")
@@ -530,26 +592,122 @@ class JsonFormatter(logging.Formatter):
                 if self._is_non_empty_string(code):
                     payload["message"] = f"event.{code}"
 
+    def _ensure_payload_alias(
+        self,
+        payload: dict[str, Any],
+        field_name: str,
+        get_value: Callable[[dict[str, Any]], str | None],
+    ) -> None:
+        """Add a payload alias when it is absent and a source value exists."""
+        if field_name not in payload:
+            value = get_value(payload)
+            if value is not None:
+                payload[field_name] = value
+
+    def _normalise_containerlogv2_fields(self, payload: dict[str, Any]) -> None:
+        """Add query-friendly message and identifier aliases to a log payload.
+
+        Args:
+            payload: Structured log payload updated in place.
+        """
+        self._normalise_message(payload)
         # Add top-level aliases for common operational IDs to simplify queries.
-        if "app_id" not in payload:
-            app_id = self._get_app_id(payload)
-            if app_id is not None:
-                payload["app_id"] = app_id
+        for field_name, get_value in (
+            ("app_id", self._get_app_id),
+            ("command_id", self._get_command_id),
+            ("user_id", self._get_user_id),
+            ("organization_id", self._get_organization_id),
+        ):
+            self._ensure_payload_alias(payload, field_name, get_value)
 
-        if "command_id" not in payload:
-            command_id = self._get_command_id(payload)
-            if command_id is not None:
-                payload["command_id"] = command_id
+    def _create_base_payload(self, record: logging.LogRecord) -> dict[str, Any]:
+        """Create the timestamp, logger, service, and filtered-field envelope."""
+        base: dict[str, Any] = {
+            "ts": _utc_iso(record.created),
+            "level": record.levelname,
+            "logger": record.name,
+        }
+        if self.service:
+            base["service"] = self.service
+        if self.environment:
+            base["environment"] = self.environment
+        # Fix 6 – hoist any structured fields injected by a filter (e.g.
+        # UvicornAccessLogFilter) to the top level of the JSON payload.
+        json_fields = getattr(record, "_json_fields", None)
+        if isinstance(json_fields, dict):
+            base.update(json_fields)
+        return base
 
-        if "user_id" not in payload:
-            user_id = self._get_user_id(payload)
-            if user_id is not None:
-                payload["user_id"] = user_id
+    def _merge_message(
+        self, base: dict[str, Any], record: logging.LogRecord, message: str
+    ) -> None:
+        """Merge a JSON message into the payload or store it as plain text."""
+        if not self.merge_message_json:
+            base["message"] = message
+            return
+        msg_obj = _safe_json_loads(message)
+        if not isinstance(msg_obj, dict):
+            base["message"] = message
+            return
+        msg_obj = self._redact_nested(msg_obj)
+        structured_service = None
+        if isinstance(msg_obj.get("service"), dict):
+            structured_service = msg_obj.pop("service")
+        base.update(msg_obj)
+        # Fix 2 – re-enforce envelope fields so a merged payload can
+        # never silently override ts / level / logger.
+        base["ts"] = _utc_iso(record.created)
+        base["level"] = record.levelname
+        base["logger"] = record.name
+        if self.service is not None:
+            base["service"] = self.service
+        if self.environment is not None:
+            base["environment"] = self.environment
+        if isinstance(structured_service, dict):
+            existing_service_meta = base.get("service_meta")
+            if isinstance(existing_service_meta, dict):
+                base["service_meta"] = {
+                    **structured_service,
+                    **existing_service_meta,
+                }
+            else:
+                base["service_meta"] = structured_service
+        # Fix 5 – normalise `content` → `message` when `message` is
+        # absent (eliminates the content/message split seen in monitoring query engines).
+        if "content" in base and "message" not in base:
+            base["message"] = base.pop("content")
+        elif "content" in base:
+            # message already present; drop the redundant content key
+            del base["content"]
 
-        if "organization_id" not in payload:
-            organization_id = self._get_organization_id(payload)
-            if organization_id is not None:
-                payload["organization_id"] = organization_id
+    def _format_exception(self, record: logging.LogRecord) -> dict[str, Any]:
+        """Format and truncate exception details for the JSON payload."""
+        if record.exc_info is None:
+            raise ValueError("record.exc_info must be set to format an exception")
+        stacktrace = self.formatException(record.exc_info)
+        if (
+            self.max_stacktrace_length is not None
+            and len(stacktrace) > self.max_stacktrace_length
+        ):
+            stacktrace = stacktrace[: self.max_stacktrace_length] + "\u2026[truncated]"
+        exc_msg = str(record.exc_info[1])
+        if self.max_exception_message_length is not None:
+            exc_msg = _truncate_middle(exc_msg, self.max_exception_message_length)
+        return {
+            "type": getattr(record.exc_info[0], "__name__", "Exception"),
+            "message": exc_msg,
+            "stacktrace": stacktrace,
+        }
+
+    def _get_extra_fields(self, record: logging.LogRecord) -> dict[str, Any]:
+        """Return redacted non-reserved fields from the log record."""
+        extras: dict[str, Any] = {
+            x: y
+            for x, y in record.__dict__.items()
+            if x not in self._reserved and not x.startswith("_")
+        }
+        # Fix 3 – redact string values inside extras (e.g. request body dict).
+        return self._redact_nested(extras)
 
     def format(self, record: logging.LogRecord) -> str:
         """Serialize a log record to a single redacted JSON line.
@@ -560,90 +718,16 @@ class JsonFormatter(logging.Formatter):
         Returns:
             JSON representation of the record, including structured extras and errors.
         """
-        base: dict[str, Any] = {
-            "ts": _utc_iso(record.created),
-            "level": record.levelname,
-            "logger": record.name,
-        }
-        if self.service:
-            base["service"] = self.service
-        if self.environment:
-            base["environment"] = self.environment
-
-        # Fix 6 – hoist any structured fields injected by a filter (e.g.
-        # UvicornAccessLogFilter) to the top level of the JSON payload.
-        json_fields = getattr(record, "_json_fields", None)
-        if isinstance(json_fields, dict):
-            base.update(json_fields)
-
         # Fix 3 – redact sensitive values before any further processing.
         message = self._redact(record.getMessage())
-
-        if self.merge_message_json:
-            msg_obj = _safe_json_loads(message)
-            if isinstance(msg_obj, dict):
-                msg_obj = self._redact_nested(msg_obj)
-                structured_service = None
-                if isinstance(msg_obj.get("service"), dict):
-                    structured_service = msg_obj.pop("service")
-                base.update(msg_obj)
-                # Fix 2 – re-enforce envelope fields so a merged payload can
-                # never silently override ts / level / logger.
-                base["ts"] = _utc_iso(record.created)
-                base["level"] = record.levelname
-                base["logger"] = record.name
-                if self.service is not None:
-                    base["service"] = self.service
-                if self.environment is not None:
-                    base["environment"] = self.environment
-                if isinstance(structured_service, dict):
-                    existing_service_meta = base.get("service_meta")
-                    if isinstance(existing_service_meta, dict):
-                        base["service_meta"] = {
-                            **structured_service,
-                            **existing_service_meta,
-                        }
-                    else:
-                        base["service_meta"] = structured_service
-                # Fix 5 – normalise `content` → `message` when `message` is
-                # absent (eliminates the content/message split seen in monitoring query engines).
-                if "content" in base and "message" not in base:
-                    base["message"] = base.pop("content")
-                elif "content" in base:
-                    # message already present; drop the redundant content key
-                    del base["content"]
-            else:
-                base["message"] = message
-        else:
-            base["message"] = message
-
+        base = self._create_base_payload(record)
+        self._merge_message(base, record, message)
         self._normalise_containerlogv2_fields(base)
 
         if record.exc_info:
-            stacktrace = self.formatException(record.exc_info)
-            if (
-                self.max_stacktrace_length is not None
-                and len(stacktrace) > self.max_stacktrace_length
-            ):
-                stacktrace = (
-                    stacktrace[: self.max_stacktrace_length] + "\u2026[truncated]"
-                )
-            exc_msg = str(record.exc_info[1])
-            if self.max_exception_message_length is not None:
-                exc_msg = _truncate_middle(exc_msg, self.max_exception_message_length)
-            base["exception"] = {
-                "type": getattr(record.exc_info[0], "__name__", "Exception"),
-                "message": exc_msg,
-                "stacktrace": stacktrace,
-            }
+            base["exception"] = self._format_exception(record)
 
-        extras: dict[str, Any] = {
-            x: y
-            for x, y in record.__dict__.items()
-            if x not in self._reserved and not x.startswith("_")
-        }
-        # Fix 3 – redact string values inside extras (e.g. request body dict).
-        extras = self._redact_nested(extras)
+        extras = self._get_extra_fields(record)
         if extras:
             base[self.extras_key] = extras
 

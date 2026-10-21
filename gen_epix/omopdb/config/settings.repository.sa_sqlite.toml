@@ -1,0 +1,17 @@
+[repository.defaults]
+type = "SA_SQLITE"
+
+[repository.defaults.props]
+dir = "./data/omopdb/demo"
+
+[repository.abac.props]
+file = "@format {this.repository.defaults.props.dir}/omopdb.sa_sqlite.abac.{this.repository.defaults.props.variant}.sqlite"
+
+[repository.organization.props]
+file = "@format {this.repository.defaults.props.dir}/omopdb.sa_sqlite.organization.{this.repository.defaults.props.variant}.sqlite"
+
+[repository.system.props]
+file = "@format {this.repository.defaults.props.dir}/omopdb.sa_sqlite.system.{this.repository.defaults.props.variant}.sqlite"
+
+[repository.omop.props]
+file = "@format {this.repository.defaults.props.dir}/omopdb.sa_sqlite.omop.{this.repository.defaults.props.variant}.sqlite"

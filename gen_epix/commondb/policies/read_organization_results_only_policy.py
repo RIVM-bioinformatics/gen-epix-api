@@ -88,31 +88,27 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
         else:
             organization_ids = {cmd.user.organization_id}
         # Filter results based on organizations
-        is_read_all = cmd.operation == CrudOperation.READ_ALL
-        is_read_one = cmd.operation == CrudOperation.READ_ONE
         msg1 = "User is not an admin for the organization and/or does not belong to it"
         msg2 = "User is not an admin for some of the organizations and/or does not belong to them"
-
         for command_class in self.has_organization_id_attr_command_classes:
             if isinstance(cmd, command_class):
-                return self._filter_results_by_organization(
-                    retval, organization_ids, is_read_all, is_read_one, msg1, msg2
+                return self._filter_on_organization_id(
+                    retval, cmd.operation, organization_ids, msg1, msg2
                 )
         for command_class in self.has_user_id_attr_command_classes:
             if isinstance(cmd, command_class):
-                return self._filter_users_by_organization(
-                    cmd, retval, organization_ids, is_read_all, is_read_one, msg1, msg2
+                return self._filter_on_user_id(
+                    retval, cmd, cmd.operation, organization_ids, msg1, msg2
                 )
         raise NotImplementedError(
             "ReadOrganizationResultsOnlyPolicy cannot filter this command type"
         )
 
-    def _filter_results_by_organization(
+    def _filter_on_organization_id(
         self,
         retval: Any,
+        operation: CrudOperation,
         organization_ids: set[UUID],
-        is_read_all: bool,
-        is_read_one: bool,
         msg1: str,
         msg2: str,
     ) -> Any:
@@ -120,9 +116,8 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
 
         Args:
             retval: Command result to filter or validate.
+            operation: CRUD operation being performed (READ_ALL, READ_ONE, etc.).
             organization_ids: Organizations visible to the requesting user.
-            is_read_all: Whether the command retrieves all results.
-            is_read_one: Whether the command retrieves one result.
             msg1: Error message for an unauthorized single result.
             msg2: Error message for unauthorized multiple results.
 
@@ -132,23 +127,23 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
         Raises:
             UnauthorizedAuthError: If a requested result is outside the visible scope.
         """
-        if is_read_all:
+        if operation == CrudOperation.READ_ALL:
+            # Filter results
             return [x for x in retval if x.organization_id in organization_ids]
-        if is_read_one and retval.organization_id not in organization_ids:
-            raise exc.UnauthorizedAuthError("73bcbbeb", msg1)
-        if not is_read_one and any(
-            x.organization_id not in organization_ids for x in retval
-        ):
-            raise exc.UnauthorizedAuthError("12ee166c", msg2)
+        if operation == CrudOperation.READ_SOME:
+            if any(x.organization_id not in organization_ids for x in retval):
+                raise exc.UnauthorizedAuthError("12ee166c", msg2)
+        elif operation == CrudOperation.READ_ONE:
+            if retval.organization_id not in organization_ids:
+                raise exc.UnauthorizedAuthError("73bcbbeb", msg1)
         return retval
 
-    def _filter_users_by_organization(
+    def _filter_on_user_id(
         self,
-        cmd: command.Command,
         retval: Any,
+        cmd: command.Command,
+        operation: CrudOperation,
         organization_ids: set[UUID],
-        is_read_all: bool,
-        is_read_one: bool,
         msg1: str,
         msg2: str,
     ) -> Any:
@@ -170,15 +165,17 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
             UnauthorizedAuthError: If a requested result is outside the visible scope.
             NotImplementedError: For a supported non-read result shape.
         """
-        users = self._get_users(cmd, is_read_all)
+        users = self._get_users(cmd, operation == CrudOperation.READ_ALL)
         valid_user_ids = {x.id for x in users if x.organization_id in organization_ids}
-        if is_read_all:
+        if operation == CrudOperation.READ_ALL:
             return [x for x in retval if x.user_id in valid_user_ids]
-        if is_read_one and retval.user_id not in valid_user_ids:
-            raise exc.UnauthorizedAuthError("35d7e912", msg1)
-        if not is_read_one and not {x.user_id for x in retval}.issubset(valid_user_ids):
-            raise exc.UnauthorizedAuthError("f84db495", msg2)
-        raise NotImplementedError
+        if operation == CrudOperation.READ_SOME:
+            if any(x.user_id not in valid_user_ids for x in retval):
+                raise exc.UnauthorizedAuthError("f84db495", msg2)
+        elif operation == CrudOperation.READ_ONE:
+            if retval.user_id not in valid_user_ids:
+                raise exc.UnauthorizedAuthError("35d7e912", msg1)
+        return retval
 
     def _get_users(self, cmd: command.Command, is_read_all: bool) -> list[model.User]:
         """Retrieve users needed to constrain organization-scoped command results.

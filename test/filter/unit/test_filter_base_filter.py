@@ -163,22 +163,27 @@ class TestColumnMatching(BaseFilterTestCase):
             [True, False, False, True] if not invert else [False, True, True, False]
         )
 
-    def test_match_column_with_na_values_branch_behavior(self) -> None:
+    @pytest.mark.parametrize(
+        ("invert", "expected"),
+        [(False, [True, False, False]), (True, [False, True, True])],
+    )
+    def test_match_column_with_na_values_applies_filter(
+        self, invert: bool, expected: list[bool]
+    ) -> None:
         # 1. Input
         values: List[Any | None] = ["x", None, "y"]
         na_values: Set[Any] = {None}
 
         # 2. Mocks/config
-        # Note: match_column ignores _match when na_values provided
-        self.eq_filter.invert = False
+        self.eq_filter.invert = invert
 
         # 3. Execute
         results: List[bool] = list(
             self.eq_filter.match_column(values, na_values=na_values)
         )
 
-        # 4. Verify (True when value not in na_values)
-        assert results == [True, False, True]
+        # 4. Verify only matching non-NA values pass before inversion
+        assert results == expected
 
     def test_filter_column_without_na_values(self) -> None:
         # 1. Input
@@ -193,21 +198,27 @@ class TestColumnMatching(BaseFilterTestCase):
         # 4. Verify
         assert matched_values == ["x", "x"]
 
-    def test_filter_column_with_na_values_branch_behavior(self) -> None:
+    @pytest.mark.parametrize(
+        ("invert", "expected"),
+        [(False, ["x"]), (True, [None, "y", None])],
+    )
+    def test_filter_column_with_na_values_applies_filter(
+        self, invert: bool, expected: list[Any | None]
+    ) -> None:
         # 1. Input
         values: List[Any | None] = ["x", None, "y", None]
         na_values: Set[Any] = {None}
 
         # 2. Mocks/config
-        self.eq_filter.invert = False
+        self.eq_filter.invert = invert
 
         # 3. Execute
         matched_values: List[Any | None] = list(
             self.eq_filter.filter_column(values, na_values=na_values)
         )
 
-        # 4. Verify (returns values not in na_values)
-        assert matched_values == ["x", "y"]
+        # 4. Verify only matching non-NA values pass before inversion
+        assert matched_values == expected
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-07")

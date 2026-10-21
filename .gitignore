@@ -167,7 +167,8 @@ cython_debug/
 # Ignore dynaconf secret files
 gen_epix/casedb/config/.ignore/*
 
-# Test output
+# Temporary output
+tmp
 test/output/*
 .gremlins_cache
 
@@ -204,5 +205,10 @@ graphify-out/????-??-??/
 
 # Ruff linter
 .ruff_cache/
+
+# Local SA_SQL repository credential overrides — copied from each app's
+# .example.secrets.repository.sa_sql.toml and filled in with this
+# deployment's own database credentials; never committed.
+gen_epix/*/config/secrets.repository.sa_sql.toml
 
 .github/docs

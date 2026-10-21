@@ -18,7 +18,7 @@ class PolicyDecisionPoint:
     - AFTER: filter the return value with each policy and return it.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize a PolicyDecisionPoint instance."""
         self._policies: dict[
             type[model.Command], dict[EventTiming, list[model.Policy]]

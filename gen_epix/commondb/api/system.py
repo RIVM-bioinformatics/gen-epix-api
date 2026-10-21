@@ -64,13 +64,43 @@ class LicensesResponseBody(PydanticBaseModel):
     packages: list[PackageMetadata]
 
 
+def _handle_system_command(
+    app: App,
+    handle_exception: Callable[[str, Any, Exception], NoReturn],
+    error_code: str,
+    cmd: Command,
+    user: Any = None,
+) -> Any:
+    """Dispatch a system command and forward failures to the API adapter."""
+    try:
+        return app.handle(cmd)
+    except Exception as exception:
+        handle_exception(error_code, user, exception)
+
+
+def _log_external_items(app: App, user: Any, request_body: LogRequestBody) -> None:
+    """Normalize and emit externally submitted log items."""
+    user_id = str(user.id)
+    for log_item in request_body.log_items:
+        if isinstance(log_item.detail, str):
+            log_item.detail = json.loads(log_item.detail)
+        content_str = app.create_log_message(
+            log_item.command_id,
+            None,
+            add_debug_info=False,
+            user_id=user_id,
+            **log_item.model_dump(exclude_none=True, exclude={"level", "command_id"}),
+        )
+        external_logger_fmap[log_item.level](content_str)
+
+
 def create_system_endpoints(
     router: APIRouter | FastAPI,
     app: App,
     service_type: enum.ServiceType = enum.ServiceType.SYSTEM,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     delete_all_operational_data_command_class: type[Command] | None = None,
-    delete_all_operational_data_result_class: type[PydanticBaseModel] | None = None,
+    delete_all_ref_data_command_class: type[Command] | None = None,
     **kwargs: Any,
 ) -> None:
     """Register system health, feature-flag, license, logging, and CRUD endpoints.
@@ -82,8 +112,9 @@ def create_system_endpoints(
         handle_exception: Exception adapter used by endpoint handlers.
         delete_all_operational_data_command_class: Command class used to delete
           operational data. Must be provided if the corresponding feature flag is enabled.
-        delete_all_operational_data_result_class: Result class returned after deleting
-          operational data. Must be provided if the corresponding feature flag is enabled.
+        delete_all_ref_data_command_class: Command class used to delete reference data.
+          Defaults to the shared command for commondb and must be provided by an
+          application domain that defines a concrete reference-data command.
         **kwargs: Unused router composition options.
     """
     assert handle_exception
@@ -116,15 +147,16 @@ def create_system_endpoints(
     )
     async def retrieve__feature_flags() -> FeatureFlagsResponseBody:
         """Return the application's feature flags."""
-        try:
-            cmd = command.RetrieveFeatureFlagsCommand(user=None)
-            feature_flags: dict[Hashable, bool] = app.handle(cmd)
-            retval = {
-                str(x.value) if isinstance(x, Enum) else str(x): y
-                for x, y in feature_flags.items()
-            }
-        except Exception as exception:
-            handle_exception("f8e8c5e6", None, exception)
+        feature_flags: dict[Hashable, bool] = _handle_system_command(
+            app,
+            handle_exception,
+            "f8e8c5e6",
+            command.RetrieveFeatureFlagsCommand(user=None),
+        )
+        retval = {
+            str(x.value) if isinstance(x, Enum) else str(x): y
+            for x, y in feature_flags.items()
+        }
         return FeatureFlagsResponseBody(feature_flags=retval)
 
     # Licenses endpoint
@@ -148,11 +180,12 @@ def create_system_endpoints(
         Raises:
             HTTPException: If license retrieval raises an application exception.
         """
-        try:
-            cmd = command.RetrieveLicensesCommand(user=None)
-            retval: list[model.PackageMetadata] = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("6ba2c4ca", None, exception)
+        retval: list[model.PackageMetadata] = _handle_system_command(
+            app,
+            handle_exception,
+            "6ba2c4ca",
+            command.RetrieveLicensesCommand(user=None),
+        )
         return retval
 
     # Log
@@ -160,20 +193,7 @@ def create_system_endpoints(
     async def log(user: registered_user_dependency, request_body: LogRequestBody) -> None:  # type: ignore
         """Log the provided log items."""
         try:
-            user_id = str(user.id)  # type: ignore[attr-defined]
-            for log_item in request_body.log_items:
-                if isinstance(log_item.detail, str):
-                    log_item.detail = json.loads(log_item.detail)
-                content_str = app.create_log_message(
-                    log_item.command_id,
-                    None,
-                    add_debug_info=False,
-                    user_id=user_id,
-                    **log_item.model_dump(
-                        exclude_none=True, exclude={"level", "command_id"}
-                    ),
-                )
-                external_logger_fmap[log_item.level](content_str)
+            _log_external_items(app, user, request_body)
         except Exception as exception:
             handle_exception("09c8e2cd", user, exception)
 
@@ -188,38 +208,61 @@ def create_system_endpoints(
         idp_user: idp_user_dependency,  # type: ignore
     ) -> list[model.Outage]:
         """Retrieve configured system outage records."""
-        try:
-            cmd = command.RetrieveOutagesCommand(user=None)
-            retval: list[model.Outage] = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("6b47b8b6", None, exception)
+        retval: list[model.Outage] = _handle_system_command(
+            app,
+            handle_exception,
+            "6b47b8b6",
+            command.RetrieveOutagesCommand(user=None),
+        )
         return retval
 
     # Optional endpoints depending on feature flags
-    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_OPERATIONAL_DATA.value):
+    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA):
         assert (
             delete_all_operational_data_command_class is not None
-        ), "delete_all_command_class must be provided"
-        assert (
-            delete_all_operational_data_result_class is not None
-        ), "delete_all_result_class must be provided"
+        ), "delete_all_operational_data_command_class must be provided"
 
         @router.delete(
             "/operational_data",
             operation_id="operational_data__delete",
             name="Delete all operational data",
             description=delete_all_operational_data_command_class.__doc__,
-            status_code=204,
+            status_code=200,
         )
         async def operational_data__delete(
             user: registered_user_dependency,  # type: ignore[valid-type]
-        ) -> delete_all_operational_data_result_class:  # type: ignore[valid-type]
+        ) -> model.DeleteAllOperationalDataResult:
             """Delete operational data using the authenticated command lifecycle."""
-            retval: delete_all_operational_data_result_class = exc.handle_command(  # type: ignore[valid-type]
+            retval: model.DeleteAllOperationalDataResult = exc.handle_command(
                 app=app,
                 user=user,
                 exception_code="12b97ab6",
                 input_command=delete_all_operational_data_command_class(user=user),
+                input_handle_exception=handle_exception,
+            )
+            return retval
+
+    if app.get_feature_flag(enum.FeatureFlag.ALLOW_DELETE_ALL_REF_DATA):
+        assert (
+            delete_all_ref_data_command_class is not None
+        ), "delete_all_ref_data_command_class must be provided"
+
+        @router.delete(
+            "/ref_data",
+            operation_id="ref_data__delete",
+            name="Delete all reference data",
+            description=delete_all_ref_data_command_class.__doc__,
+            status_code=200,
+        )
+        async def ref_data__delete(
+            user: registered_user_dependency,  # type: ignore[valid-type]
+        ) -> model.DeleteAllRefDataResult:
+            """Delete application reference data after operational data is reset."""
+            retval: model.DeleteAllRefDataResult = exc.handle_command(
+                app=app,
+                user=user,
+                exception_code="f852ea1d",
+                input_command=delete_all_ref_data_command_class(user=user),
                 input_handle_exception=handle_exception,
             )
             return retval

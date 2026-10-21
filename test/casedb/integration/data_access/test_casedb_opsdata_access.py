@@ -49,6 +49,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
 def get_test_client() -> Env:
     """
     Get a test client for casedb integration tests.
+
     This fixture initializes a test client with the appropriate configuration for casedb integration tests.
     It uses the DEV_REPOSITORY_CONFIG specified in the base_empty.py file,
     which is set to use an empty dictionary repository for testing edge cases with no data.
@@ -75,6 +76,7 @@ def get_test_client() -> Env:
 class TestCasedbEdgeCasesAccess:
     """
     Integration tests for edge cases in case access control within the CASEDB service.
+
     Covers ABAC/RBAC boundary conditions, cross-organization access, and permission escalation attempts.
     """
 
@@ -112,6 +114,7 @@ class TestCasedbEdgeCasesAccess:
     def test_root_user_can_create_case(self, setup_case_data_operational: None) -> None:
         """
         Test that a root user can create a case and that the created case is retrievable.
+
         This verifies that root users have the necessary permissions to create and access cases.
         """
         root_user = self.env.get_root_user()
@@ -158,6 +161,7 @@ class TestCasedbEdgeCasesAccess:
     ) -> None:
         """
         Test that a root user can create a case that belongs to 2 data collections and that the created case is retrievable.
+
         This verifies that root users have the necessary permissions to create and access cases that belong to multiple data collections.
         """
         root_user = self.env.get_root_user()

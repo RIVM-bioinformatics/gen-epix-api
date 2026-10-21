@@ -431,31 +431,9 @@ class SeqProfile(
         """
         if self.format == enum.SeqProfileFormat.NEXTCLADE:
             nextclade_dict: dict[str, Any] = json.loads(self.content)
-            snps: list[tuple[int, str]] = []
-            substitutions = nextclade_dict.get("substitutions")
-            if isinstance(substitutions, str):
-                for substitution in substitutions.split(","):
-                    if not substitution:
-                        continue
-                    reference_nucleotide = substitution[0]
-                    position = int(substitution[1:-1])
-                    mutated_nucleotide = substitution[-1]
-                    snps.append((position, mutated_nucleotide.lower()))
+            snps = _get_nextclade_substitution_snps(nextclade_dict)
             # TODO: 3268 check if this is correct for the non_actgn representation
-            non_actgns = nextclade_dict.get("nonACGTNs")
-            if isinstance(non_actgns, str):
-                for non_actgn in non_actgns.split(","):
-                    if not non_actgn:
-                        continue
-                    non_actgn_nucleotide = non_actgn[0]
-                    non_actgn_range = non_actgn[2:].split("-")
-                    non_actgn_start = int(non_actgn_range[0])
-                    if len(non_actgn_range) == 2:
-                        non_actgn_end = int(non_actgn_range[1])
-                    else:
-                        non_actgn_end = non_actgn_start
-                    for position in range(non_actgn_start, non_actgn_end + 1):
-                        snps.append((position, non_actgn_nucleotide.lower()))
+            snps.extend(_get_nextclade_non_acgtn_snps(nextclade_dict))
             return sorted(snps, key=lambda x: x[0])
         raise NotImplementedError(
             f"Unable to parse SNPs for SNP profile format {self.format}"
@@ -589,6 +567,40 @@ class SeqProfile(
             NotImplementedError: Always, because the profile format is unsupported.
         """
         raise NotImplementedError("Unable to compute content hash for this format")
+
+
+def _get_nextclade_substitution_snps(
+    nextclade_dict: dict[str, Any],
+) -> list[tuple[int, str]]:
+    """Extract mutated positions encoded as NextClade substitutions."""
+    snps: list[tuple[int, str]] = []
+    substitutions = nextclade_dict.get("substitutions")
+    if isinstance(substitutions, str):
+        for substitution in substitutions.split(","):
+            if substitution:
+                position = int(substitution[1:-1])
+                snps.append((position, substitution[-1].lower()))
+    return snps
+
+
+def _get_nextclade_non_acgtn_snps(
+    nextclade_dict: dict[str, Any],
+) -> list[tuple[int, str]]:
+    """Expand NextClade non-ACGTN positions and inclusive ranges."""
+    snps: list[tuple[int, str]] = []
+    non_acgtns = nextclade_dict.get("nonACGTNs")
+    if isinstance(non_acgtns, str):
+        for non_acgtn in non_acgtns.split(","):
+            if not non_acgtn:
+                continue
+            nucleotide = non_acgtn[0].lower()
+            range_bounds = non_acgtn[2:].split("-")
+            range_start = int(range_bounds[0])
+            range_end = int(range_bounds[1]) if len(range_bounds) == 2 else range_start
+            snps.extend(
+                (position, nucleotide) for position in range(range_start, range_end + 1)
+            )
+    return snps
 
 
 class SeqProfileIdentifier(BaseIdentifier):

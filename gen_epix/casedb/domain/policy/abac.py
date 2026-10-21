@@ -1,6 +1,6 @@
 """Define policy helpers for attaching Casedb ABAC data to commands."""
 
-from typing import Any
+from typing import Any, cast
 
 from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.service import BaseAbacService
@@ -54,7 +54,7 @@ class BaseCaseAbacPolicy(Policy):
                 raise exc.InitializationServiceError(
                     "3a0dbaf4", f"Multiple policies registered to retrieve CaseAbac"
                 )
-            case_abac = policy.get_content(cmd)
+            case_abac = cast(BaseCaseAbacPolicy, policy).abac_service.get_case_abac(cmd)
 
         return case_abac
 

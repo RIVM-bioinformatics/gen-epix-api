@@ -9,6 +9,7 @@ from gen_epix.commondb.domain.policy import BaseReadUserPolicy
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.fastapp import Command
 from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.model import CrudCommand
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.enum import LogicalOperator
 from gen_epix.filter.equals_boolean import EqualsBooleanFilter
@@ -60,36 +61,38 @@ class ReadUserPolicy(BaseReadUserPolicy):
             return retval
         organization_ids, is_org_admin, user_ids = self._get_org_and_user_ids(user)
         # Filter or check results
-        result_list: list[model.User]
-        if cmd.operation == CrudOperation.READ_ALL:  # type: ignore[attr-defined]
+        assert isinstance(cmd, CrudCommand)
+        if cmd.operation == CrudOperation.READ_ALL:
             # Open-ended results: filter
-            result_list = retval  # type: ignore[assignment]
-            return [
+            assert isinstance(retval, list)
+            new_retval_list = [
                 x
-                for x in result_list
+                for x in retval
                 if (x.id in user_ids or x.organization_id in organization_ids)
                 and (x.is_active or is_org_admin)
             ]
-        if cmd.operation == CrudOperation.READ_SOME:  # type: ignore[attr-defined]
+            return new_retval_list
+        if cmd.operation == CrudOperation.READ_SOME:
             # Specific users requested: check results
-            result_list = retval  # type: ignore[assignment]
-            return self._filter_read_some(
-                result_list,
-                organization_ids,
+            assert isinstance(retval, list)
+            new_retval_list = self._filter_read_some(
                 retval,
-                is_org_admin,
-                user_ids,
-            )
-        if cmd.operation == CrudOperation.READ_ONE:  # type: ignore[attr-defined]
-            # Specific user requested: check results
-            result: model.User = retval  # type: ignore[assignment]
-            return self._filter_read_one(
-                result,
                 organization_ids,
                 is_org_admin,
                 user_ids,
             )
-        raise NotImplementedError("Unsupported operation: {cmd.operation.value}")
+            return new_retval_list
+        if cmd.operation == CrudOperation.READ_ONE:
+            # Specific user requested: check results
+            assert isinstance(retval, model.User)
+            new_retval = self._filter_read_one(
+                retval,
+                organization_ids,
+                is_org_admin,
+                user_ids,
+            )
+            return new_retval
+        raise NotImplementedError(f"Unsupported operation: {cmd.operation.value}")
 
     def _is_no_abac_user(self, user: model.User) -> bool:
         """Determine whether a user is exempt from user-read ABAC filtering."""
@@ -164,7 +167,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
 
     def _filter_read_one(
         self,
-        result: model.User,
+        retval: model.User,
         organization_ids: set[UUID],
         is_org_admin: bool,
         user_ids: set[UUID],
@@ -172,7 +175,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
         """Allow or deny a single returned user according to the read scope.
 
         Args:
-            result: User returned by the command.
+            retval: User returned by the command.
             organization_ids: Organizations administered by the requester.
             is_org_admin: Whether the requester is an organization administrator.
             user_ids: Explicit user IDs visible to the requester.
@@ -184,28 +187,26 @@ class ReadUserPolicy(BaseReadUserPolicy):
             UnauthorizedAuthError: If the result is outside the requester's scope.
         """
         if (
-            result.organization_id not in organization_ids and result.id not in user_ids
-        ) or not (result.is_active or is_org_admin):
+            retval.organization_id not in organization_ids and retval.id not in user_ids
+        ) or not (retval.is_active or is_org_admin):
             # User cannot read users outside their admin organizations
             raise exc.UnauthorizedAuthError(
                 "9acec44a", "Cannot read users outside your admin organizations"
             )
-        return result
+        return retval
 
     def _filter_read_some(
         self,
-        result_list: list[model.User],
+        retval: list[model.User],
         organization_ids: set[UUID],
-        results: model.User | list[model.User],
         is_org_admin: bool,
         user_ids: set[UUID],
-    ) -> model.User | list[model.User]:
+    ) -> list[model.User]:
         """Allow or deny multiple returned users according to the read scope.
 
         Args:
-            result_list: Returned users used for permission validation.
+            retval: Returned users used for permission validation.
             organization_ids: Organizations administered by the requester.
-            results: Original command result to return when permitted.
             is_org_admin: Whether the requester is an organization administrator.
             user_ids: Explicit user IDs visible to the requester.
 
@@ -218,13 +219,13 @@ class ReadUserPolicy(BaseReadUserPolicy):
         if not all(
             (x.organization_id in organization_ids or x.id in user_ids)
             and (x.is_active or is_org_admin)
-            for x in result_list
+            for x in retval
         ):
             # User cannot read users outside their admin organizations
             raise exc.UnauthorizedAuthError(
                 "5710ba8d", "Cannot read users outside your admin organizations"
             )
-        return results
+        return retval
 
     def get_admin_user_ids_own_organization(self, user: model.User) -> set[UUID]:
         """Retrieve active organization administrator IDs for a user's organization.

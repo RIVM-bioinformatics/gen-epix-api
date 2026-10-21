@@ -12,14 +12,48 @@ from gen_epix.omopdb.domain.repository.omop import BaseOmopRepository
 class OmopDictRepository(DictRepository, BaseOmopRepository):
     """Encapsulates implementation of OMOP query operations using in-memory model collections."""
 
+    def _get_person_cohorts_by_id(
+        self, cohort_definition_id: UUID, cohort_id_set: frozenset[UUID]
+    ) -> dict[UUID, list[tuple[UUID, date, date]]]:
+        """Group selected cohort date ranges by person."""
+        person_id_to_cohorts: dict[UUID, list[tuple[UUID, date, date]]] = {}
+        for cohort in self.db[model.Cohort].values():
+            assert isinstance(cohort, model.Cohort)
+            if (
+                cohort.cohort_id is None
+                or cohort.cohort_definition_id != cohort_definition_id
+                or cohort.cohort_id not in cohort_id_set
+            ):
+                continue
+            person_id_to_cohorts.setdefault(cohort.subject_id, []).append(
+                (cohort.cohort_id, cohort.cohort_start_date, cohort.cohort_end_date)
+            )
+        return person_id_to_cohorts
+
+    def _get_specimen_ids_in_cohort_ranges(
+        self,
+        person_id_to_cohorts: dict[UUID, list[tuple[UUID, date, date]]],
+    ) -> dict[UUID, list[UUID]]:
+        """Map each cohort to specimen IDs with dates inside its range."""
+        result: dict[UUID, list[UUID]] = {}
+        for specimen in self.db[model.Specimen].values():
+            assert isinstance(specimen, model.Specimen)
+            if specimen.specimen_id is None or specimen.specimen_date is None:
+                continue
+            for cohort_id, start, end in person_id_to_cohorts.get(
+                specimen.person_id, []
+            ):
+                if start <= specimen.specimen_date <= end:
+                    result.setdefault(cohort_id, []).append(specimen.specimen_id)
+        return result
+
     def get_person_ids_modified_in_range(
         self,
         uow: BaseUnitOfWork,
         modified_since: datetime | None = None,
         modified_until: datetime | None = None,
     ) -> list[UUID]:
-        """See parent class method"""
-
+        """See parent class method."""
         modified_since = modified_since or datetime.min
         modified_until = modified_until or datetime.max
         modified_person_ids: set[UUID] = set()
@@ -40,37 +74,18 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
         cohort_definition_id: UUID,
         cohort_ids: list[UUID],
     ) -> dict[UUID, list[UUID]]:
-        """See parent class method"""
+        """See parent class method."""
         cohort_id_set = frozenset(cohort_ids)
-        person_id_to_cohorts: dict[UUID, list[tuple[UUID, date, date]]] = {}
-        for cohort in self.db[model.Cohort].values():
-            assert isinstance(cohort, model.Cohort)
-            if cohort.cohort_id is None:
-                continue
-            if cohort.cohort_definition_id != cohort_definition_id:
-                continue
-            if cohort.cohort_id not in cohort_id_set:
-                continue
-            person_id_to_cohorts.setdefault(cohort.subject_id, []).append(
-                (cohort.cohort_id, cohort.cohort_start_date, cohort.cohort_end_date)
-            )
-        result: dict[UUID, list[UUID]] = {}
-        for specimen in self.db[model.Specimen].values():
-            assert isinstance(specimen, model.Specimen)
-            if specimen.specimen_id is None or specimen.specimen_date is None:
-                continue
-            for cohort_id, start, end in person_id_to_cohorts.get(
-                specimen.person_id, []
-            ):
-                if start <= specimen.specimen_date <= end:
-                    result.setdefault(cohort_id, []).append(specimen.specimen_id)
-        return result
+        person_id_to_cohorts = self._get_person_cohorts_by_id(
+            cohort_definition_id, cohort_id_set
+        )
+        return self._get_specimen_ids_in_cohort_ranges(person_id_to_cohorts)
 
     def get_full_persons_by_person_ids(
         self,
         person_ids: list[UUID],
     ) -> list[model.FullPerson]:
-        """See parent class method"""
+        """See parent class method."""
         # Retrieve all data per person
         person_id_set = set(person_ids)
         model_classes = (
@@ -81,6 +96,16 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
         db: dict[model.Model, dict[UUID, list[model.Model]]] = {  # type: ignore[assignment]
             x: {y: [] for y in person_ids} for x in model_classes  # type: ignore[misc]
         }
+        self._group_direct_person_data(person_id_set, model_classes, db)
+        self._add_specimen_identifiers_by_person(db)
+        return self._create_full_persons(person_ids, db)
+
+    def _group_direct_person_data(
+        self,
+        person_id_set: set[UUID],
+        model_classes: list[type[model.Model]],
+        db: dict[model.Model, dict[UUID, list[model.Model]]],
+    ) -> None:
         # Group DATA_CLASSES and PersonIdentifier using their direct person_id / internal_id
         # fields, which both equal the person's UUID. IDENTIFIER_CLASSES that link via a
         # DATA_CLASS entity (e.g. SpecimenIdentifier → Specimen) need a reverse lookup
@@ -100,6 +125,9 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
                 if person_id in person_id_set:  # type: ignore[union-attr]
                     objs_by_person[person_id].append(obj)  # type: ignore[arg-type]
 
+    def _add_specimen_identifiers_by_person(
+        self, db: dict[model.Model, dict[UUID, list[model.Model]]]
+    ) -> None:
         # SpecimenIdentifier.internal_id is the specimen_id, not the person_id.
         # Build a reverse index from specimen_id → person_id using the already-grouped
         # Specimen objects, then use it to associate SpecimenIdentifiers with persons.
@@ -114,6 +142,11 @@ class OmopDictRepository(DictRepository, BaseOmopRepository):
             if person_id is not None:
                 db[model.SpecimenIdentifier][person_id].append(obj)  # type: ignore[index,arg-type]
 
+    def _create_full_persons(
+        self,
+        person_ids: list[UUID],
+        db: dict[model.Model, dict[UUID, list[model.Model]]],
+    ) -> list[model.FullPerson]:
         # Create FullPersons
         full_persons: list[model.FullPerson] = []
         class_field_map = (

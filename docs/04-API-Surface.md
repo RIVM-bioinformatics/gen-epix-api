@@ -34,7 +34,7 @@ For casedb, `docs/openapi.json` is the contract authority. It identifies itself 
 
 ## 3. How Endpoint Families Are Built
 
-Most resource endpoints follow a generated CRUD family pattern. The generator defines `/batch`, `/query`, `/query/ids`, and `/{object_id}` suffixes and emits operation IDs in a consistent `<resource>__<verb>` style. (Source: `gen_epix/fastapp/api/crud_endpoint_generator.py#L55-L58`; Source: `gen_epix/fastapp/api/crud_endpoint_generator.py#L702-L757`)
+Most resource endpoints follow a generated CRUD family pattern. The generator defines `/batch`, `/query`, `/query/ids`, `/exists`, and `/{object_id}` suffixes and emits operation IDs in a consistent `<resource>__<verb>` style. (Source: `gen_epix/fastapp/api/crud_endpoint_generator.py#L64-L67`; Source: `gen_epix/fastapp/api/crud_endpoint_generator.py#L814-L857`)
 
 The OpenAPI artifact shows this pattern for multiple families such as `users`, `case_types`, and `cases`. (Source: `docs/openapi.json#L8050-L8057`; Source: `docs/openapi.json#L28398-L28405`)
 

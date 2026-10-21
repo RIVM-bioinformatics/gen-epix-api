@@ -1,4 +1,5 @@
 """Integration test for etl.py's reset_database/load_demodata modes against a real
+
 SQL Server, verifying the Alembic cutover end to end.
 
 Requires a live SQL Server reachable at the SEQDB SA_SQL dev config (see
@@ -18,9 +19,8 @@ import pytest
 import sqlalchemy as sa
 
 import etl
-from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
-from gen_epix.commondb.domain.util import set_env_variables
+from gen_epix.commondb.domain.util import get_app_cfg_class, set_env_variables
 from gen_epix.fastapp.repositories.sa.repository import SARepository
 
 pytestmark = pytest.mark.integration
@@ -33,13 +33,15 @@ BOGUS_ALEMBIC_REVISION = "deadbeef1234"
 def _seq_connection_string() -> str:
     """Resolve the SA_SQL connection string for seqdb's SEQ service type."""
     seqdb_enum = importlib.import_module(f"{MODULE_ROOT}.domain.enum")
-    app_cfg = AppCfg(
+    app_cfg = get_app_cfg_class(AppType.SEQDB)(
         AppType.SEQDB.value,
         seqdb_enum.ServiceType,
         seqdb_enum.RepositoryType,
         log_setup=False,
     )
-    repository_cfg = app_cfg.cfg["repository"][seqdb_enum.ServiceType.SEQ.value]
+    repository_cfg = etl._require_repository_cfg(
+        AppType.SEQDB, app_cfg, seqdb_enum.ServiceType.SEQ.value
+    )
     return str(repository_cfg["props"]["connection_string"])
 
 
@@ -62,6 +64,7 @@ def test_reset_database_wipes_legacy_schema_and_migrates_to_head(
     connection_string: str,
 ) -> None:
     """A pre-existing schema (incl. stray tables and a bogus Alembic stamp) is
+
     fully wiped by reset_database, then correctly migrated to head, then
     load_demodata successfully loads demo data on top of it."""
     seqdb_enum: ModuleType = importlib.import_module(f"{MODULE_ROOT}.domain.enum")

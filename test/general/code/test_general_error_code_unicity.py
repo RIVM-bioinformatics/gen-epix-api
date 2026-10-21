@@ -100,6 +100,7 @@ def _get_reference_assignment_value_ids(tree: ast.AST) -> set[int]:
 def _extract_hex_strings_from_file(file_path: Path) -> list[tuple[str, int]]:
     """
     Parse a python file and find all string literals that match the hex criteria.
+
     Returns list of (hex_string, line_number).
     """
     results: list[tuple[str, int]] = []

@@ -61,6 +61,9 @@ from gen_epix.commondb.domain.model.organization import UserNameEmail as UserNam
 from gen_epix.commondb.domain.model.system import (
     DeleteAllOperationalDataResult as DeleteAllOperationalDataResult,
 )
+from gen_epix.commondb.domain.model.system import (
+    DeleteAllRefDataResult as DeleteAllRefDataResult,
+)
 from gen_epix.commondb.domain.model.system import Outage as Outage
 from gen_epix.commondb.domain.model.system import PackageMetadata as PackageMetadata
 from gen_epix.commondb.domain.model.upload import (
@@ -91,7 +94,12 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
         IdentityProvider,
         IDPUser,
     ],
-    enum.ServiceType.SYSTEM: [Outage, PackageMetadata, DeleteAllOperationalDataResult],
+    enum.ServiceType.SYSTEM: [
+        Outage,
+        PackageMetadata,
+        DeleteAllOperationalDataResult,
+        DeleteAllRefDataResult,
+    ],
     enum.ServiceType.ORGANIZATION: [
         Organization,
         OrganizationSet,

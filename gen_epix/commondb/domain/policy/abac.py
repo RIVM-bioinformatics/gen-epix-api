@@ -4,7 +4,7 @@ These policies depend on an ABAC service to determine organization scope before
 concrete implementations allow reads, user updates, or administration actions.
 """
 
-import abc
+from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any
 from uuid import UUID
@@ -32,7 +32,7 @@ class BaseAbacPolicy(Policy):
 class BaseIsOrganizationAdminPolicy(BaseAbacPolicy):
     """Encapsulates organization-administration scope resolution for commands."""
 
-    @abc.abstractmethod
+    @abstractmethod
     def register_retrieve_organization_ids_handler(
         self,
         command_class: type[Command],
@@ -49,7 +49,7 @@ class BaseIsOrganizationAdminPolicy(BaseAbacPolicy):
         """
         raise NotImplementedError()
 
-    @abc.abstractmethod
+    @abstractmethod
     def retrieve_organization_ids(self, cmd: Command) -> set[UUID]:
         """Resolve the organization IDs addressed by a command.
 

@@ -63,6 +63,10 @@ class BaseRbacService(BaseService):
         """No handlers to register in base implementation. Override as needed."""
         pass
 
+    def register_policies(self) -> None:
+        """No policies to register in base implementation. Override as needed."""
+        pass
+
     def register_permission_without_rbac(self, permission: Permission) -> None:
         """
         Register a permission that is not subject to RBAC. This can be used for

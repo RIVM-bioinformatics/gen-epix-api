@@ -42,6 +42,12 @@ class Role(Enum):
     ROLE1 = "OMOPDB_ROLE1"
 
 
+class FeatureFlag(Enum):
+    """Encapsulates feature-flag keys specific to omopdb."""
+
+    pass
+
+
 class AnonStrictness(Enum):
     """Encapsulates the enforcement level for anonymization requirements."""
 

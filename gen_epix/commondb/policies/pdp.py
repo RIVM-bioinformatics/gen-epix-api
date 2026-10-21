@@ -1,0 +1,42 @@
+"""Provide the commondb policy decision point implementation."""
+
+from gen_epix.commondb.domain import command
+from gen_epix.commondb.domain.policy.pdp import BasePolicyDecisionPoint
+
+
+class PolicyDecisionPoint(BasePolicyDecisionPoint):
+    """Encapsulates the Policy Decision Point (PDP) for commondb."""
+
+    def is_exempted(self, cmd: command.Command) -> bool:
+        """Check if the command is exempted from ABAC policies based on the user's roles.
+
+        Args:
+            cmd: The command to check for exemption.
+
+        Returns:
+            bool: True if the command is exempted, False otherwise.
+        """
+        user = self.get_command_user(cmd)
+        if user is None:
+            return True
+        exempted_role_set = self.abac_service.ABAC_EXEMPTED_ROLE_SET_MAP.get(type(cmd))
+        if exempted_role_set is None:
+            return False
+        has_exempted_role = bool(
+            user.roles & self.abac_service.app.impl.role_set_map[exempted_role_set]
+        )
+        return has_exempted_role
+
+    def is_allowed(self, cmd: command.Command) -> bool:
+        """Check if the command is allowed based on the ABAC policies.
+
+        Args:
+            cmd: The command to check for allowance.
+
+        Returns:
+            bool: True if the command is allowed, False otherwise.
+
+        Raises:
+            NotImplementedError: If the allowance check is not implemented for the command type.
+        """
+        raise NotImplementedError()

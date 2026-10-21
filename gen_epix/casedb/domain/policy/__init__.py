@@ -7,6 +7,9 @@ result-filtering, and user-update policy contracts for concrete adapters.
 
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy as BaseCaseAbacPolicy
+from gen_epix.casedb.domain.policy.pdp import (
+    BasePolicyDecisionPoint as BasePolicyDecisionPoint,
+)
 from gen_epix.casedb.domain.policy.permission import RoleGenerator as RoleGenerator
 from gen_epix.commondb.domain.policy import (
     BaseIsOrganizationAdminPolicy as BaseIsOrganizationAdminPolicy,

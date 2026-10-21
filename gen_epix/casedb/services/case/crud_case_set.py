@@ -6,15 +6,17 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
+from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     get_case_abac_from_command,
-    is_app_admin_or_above,
 )
 from gen_epix.fastapp import CrudOperation
-from gen_epix.fastapp.enum import CrudOperationSet
+from gen_epix.fastapp.enum import CrudOperationSet, OnException
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.filter.base import Filter
+from gen_epix.filter.uuid_set import UuidSetFilter
 
 
 def case_service_crud_case_set(
@@ -24,7 +26,8 @@ def case_service_crud_case_set(
     # Start unit of work
     with self.repository.uow() as uow:
         _crud_cascade_delete(self, uow, cmd)
-        if cmd.user is None or is_app_admin_or_above(self, cmd.user):
+        pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
             return _crud_case_set_without_abac(self, uow, cmd)
         return _crud_case_set_with_abac(self, uow, cmd)
 
@@ -66,6 +69,7 @@ def _crud_case_set_with_abac(
     case_abac: model.CaseAbac | None = get_case_abac_from_command(cmd)
 
     # Special case: no policy, allows for internal commands to retrieve all
+    pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
     if case_abac is None:
         # No policy: allows for internal commands to retrieve all
         return self.crud(cmd)  # type: ignore[return-value]
@@ -74,27 +78,37 @@ def _crud_case_set_with_abac(
     assert cmd.user is not None and cmd.user.id is not None
 
     # Determine valid CaseTypes and data collections
-    case_set_ids: list[UUID] = cmd.get_obj_ids()  # type: ignore[assignment]
+    case_set_ids: list[UUID] | None = cmd.get_obj_ids()  # type: ignore[assignment]
     if cmd.is_create():
         # Implemented through separate create case set command
         raise AssertionError("Unexpected operation")
     elif cmd.is_read():
         # At least one data collection with read access is required
-        retval = self._retrieve_case_sets_with_content_right(
+        retval = _retrieve_case_sets_with_content_right(
+            self,
             uow,
-            cmd.user.id,
-            case_abac,
+            cmd,
+            pdp,
             enum.CaseRight.READ_CASE_SET,
             case_set_ids=case_set_ids,
             filter=cmd.query_filter,
         )
-        return retval[0] if cmd.operation in CrudOperationSet.ANY_ONE.value else retval
+        if cmd.operation not in CrudOperationSet.ANY_ONE.value:
+            return retval
+        if not retval:
+            raise exc.InvalidIdsError(
+                "c91e6b05",
+                f"Case set does not exist: {case_set_ids}",
+                ids=case_set_ids,
+            )
+        return retval[0]
     elif cmd.is_update():
         # At least one data collection with write access is required
-        self._retrieve_case_sets_with_content_right(
+        _retrieve_case_sets_with_content_right(
+            self,
             uow,
-            cmd.user.id,
-            case_abac,
+            cmd,
+            pdp,
             enum.CaseRight.WRITE_CASE_SET,
             case_set_ids=case_set_ids,
         )
@@ -108,6 +122,119 @@ def _crud_case_set_with_abac(
         return self.crud(cmd)  # type: ignore[return-value]
     else:
         raise AssertionError("Unexpected operation")
+
+
+def _retrieve_case_sets_with_content_right(
+    self: BaseCaseService,
+    uow: BaseUnitOfWork,
+    cmd: command.CaseSetCrudCommand,
+    pdp: BasePolicyDecisionPoint,
+    right: enum.CaseRight,
+    case_set_ids: list[UUID] | None = None,
+    filter: Filter | None = None,
+) -> list[model.CaseSet]:
+    """Retrieve case sets for which the user has the specified access right.
+
+    Args:
+        self: Case service used for repository and association access.
+        uow: Active unit of work for all validation reads.
+        cmd: Case set CRUD command containing the acting user.
+        pdp: Policy decision point used to evaluate access rights.
+        # case_abac is derived from the command
+        right: Access right required for the retrieval.
+        case_set_ids: Explicit identifiers of case sets to retrieve.
+        filter: Optional filter to apply to the retrieval.
+
+    Returns:
+        List of case sets for which the user has the specified access right.
+
+    Raises:
+        InvalidIdsError: If an explicitly requested case set does not exist.
+        UnauthorizedAuthError: If the user lacks the right on an explicitly
+            requested case set.
+    """
+    user_id = pdp.get_command_user_id(cmd)
+    # Determine if we are reading all (allowed) case sets or a specific subset
+    is_read_all = case_set_ids is None
+    if is_read_all:
+        # Get IDs of all case sets
+        case_set_ids = self.repository.crud(
+            uow,
+            user_id,
+            model.CaseSet,
+            CrudOperation.READ_ALL,
+            filter=filter,
+            return_id=True,
+        )
+
+    if not case_set_ids:
+        return []
+
+    # Get dict[case_set_id, frozenset[data_collection_ids]]
+    case_set_data_collection_ids = self._retrieve_case_set_data_collections_map(
+        uow,
+        user_id,
+        case_set_ids=case_set_ids,
+    )
+
+    # Get dict[case_set_id, (case_type_id, created_in_data_collection_id)]
+    case_set_fields: dict[UUID, tuple[UUID, UUID]] = {
+        x: (y, z)
+        for x, y, z in self.repository.read_fields(
+            uow,
+            user_id,
+            model.CaseSet,
+            ["id", "case_type_id", "created_in_data_collection_id"],
+            filter=UuidSetFilter(key="id", members=frozenset(case_set_ids)),
+        )
+    }
+
+    # Explicitly requested case sets must exist
+    if not is_read_all:
+        invalid_ids = [x for x in case_set_ids if x not in case_set_fields]
+        if invalid_ids:
+            raise exc.InvalidIdsError(
+                "4d7a1c2e",
+                f"Case set(s) do not exist: {', '.join(str(x) for x in invalid_ids)}",
+                ids=invalid_ids,
+            )
+
+    # Create Iterable of tuples (case_set, case_type, frozenset[data_collection_ids])
+    # for every case set, including those without data collection links. The
+    # creating data collection is not stored as a link (see CreateCaseSetCommand)
+    # but always counts for access.
+    abac_iterable: list[tuple[UUID, UUID, frozenset[UUID]]] = [
+        (
+            x,
+            case_set_fields[x][0],
+            frozenset(
+                case_set_data_collection_ids.get(x, set()) | {case_set_fields[x][1]}
+            ),
+        )
+        for x in case_set_ids
+        if x in case_set_fields
+    ]
+
+    # @ABAC PEP: Verify rights on each case set by filtering the list of case set IDs on accessibility
+    case_set_ids = list(
+        pdp.filter_case_set_ids(
+            cmd,
+            abac_iterable,
+            right,
+            on_filtered=OnException.SKIP if is_read_all else OnException.RAISE,
+        )
+    )
+
+    # Read accessible case sets
+    allowed_case_sets: list[model.CaseSet] = self.repository.crud(
+        uow,
+        user_id,
+        model.CaseSet,
+        CrudOperation.READ_SOME,
+        obj_ids=case_set_ids,
+    )
+
+    return allowed_case_sets
 
 
 def _validate_case_set_deletion(
@@ -138,8 +265,8 @@ def _validate_case_set_deletion(
             "b5a9806f",
             f"Operation {cmd.operation.value} not allowed for case sets for this user",
         )
-        # Get all case sets and data collection links
     assert case_set_ids is not None
+    # Get all case sets and data collection links
     case_sets: list[model.CaseSet] = self.repository.crud(
         uow,
         cmd.user.id,  # type: ignore[union-attr]

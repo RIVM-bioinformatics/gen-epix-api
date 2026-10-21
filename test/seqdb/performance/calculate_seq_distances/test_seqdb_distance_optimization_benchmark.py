@@ -1,5 +1,6 @@
 """
 Benchmark comparing blob_original vs blob_numpy_batch vs blob_int32_vocab
+
 for LSP-3529.
 
 All three variants use the blob-per-profile SeqDistance storage layout.

@@ -98,9 +98,7 @@ class Taxon(Model):
 
 
 class TaxonSet(Model):
-    """Represents a set of taxa, for example a set of taxa that are relevant for a specific
-    analysis or application.
-    """
+    """Represents a set of taxa relevant to an analysis or application."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="taxon_sets",
@@ -113,9 +111,7 @@ class TaxonSet(Model):
 
 
 class TaxonSetMember(Model):
-    """Represents a member of a taxon set, representing the inclusion of a specific taxon
-    in a taxon set.
-    """
+    """Represents the membership of a taxon in a taxon set."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="taxon_set_members",

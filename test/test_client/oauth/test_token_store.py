@@ -87,7 +87,7 @@ class TestToken:
 
         assert token.is_expired is False
 
-    @patch("token_store.datetime")
+    @patch("test.test_client.oauth.token_store.datetime")
     def test_is_expired_true_for_expired_token(self, mock_datetime: Any) -> None:
         """Test that an expired token is marked as expired."""
         # Mock current time
@@ -207,7 +207,7 @@ class TestToken:
         token_dict = token.to_dict()
         assert token_dict["refresh_token"] is None
 
-    @patch("token_store.datetime")
+    @patch("test.test_client.oauth.token_store.datetime")
     def test_to_dict_expiration_status_dynamic(self, mock_datetime: Any) -> None:
         """Test that to_dict reflects current expiration status."""
         # Test with non-expired token

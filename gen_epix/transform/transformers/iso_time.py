@@ -27,7 +27,7 @@ class IsoTimeTransformer(Transformer):
     TRANSFORM_FN_MAP: dict[
         tuple[TimeUnit, TimeUnit, TimeUnitTransformStrategy],
         Callable[[str | None], str | None],
-    ] = {}
+    ]
 
     def __init__(
         self,

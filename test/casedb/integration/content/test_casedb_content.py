@@ -1,10 +1,11 @@
 import logging
+from copy import deepcopy
 from datetime import datetime
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import (
     EnumTestType as EnumTestType,  # to avoid PyTest warning
 )
-from typing import Iterable
+from typing import Any, Iterable, cast
 from uuid import UUID
 
 import pytest
@@ -14,11 +15,13 @@ from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
 from gen_epix.commondb.domain.enum import Role as CommonRole
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.test.util import set_log_level
 from gen_epix.fastapp import CrudOperation, PermissionType, exc
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import CompositeFilter, LogicalOperator, StringSetFilter
+from gen_epix.filter import CompositeFilter, StringSetFilter
+from gen_epix.filter.enum import LogicalOperator
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
@@ -60,6 +63,28 @@ def get_test_client() -> Env:
     )
 
 
+@pytest.fixture(name="no_seqdb_env")
+def get_no_seqdb_test_client() -> Env:
+    """Create a demo casedb client whose seqdb dependency is unavailable."""
+    app_cfg = deepcopy(
+        CASEDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"]
+    )
+    app_cfg._name = f"{app_cfg.name}__NO_SEQDB"
+    seqdb_props = cast(dict[str, Any], app_cfg.cfg)["service"]["seqdb"]["props"]
+    seqdb_props["no_client"] = {
+        "app_cfg": seqdb_props["local_client"]["app_cfg"],
+    }
+    seqdb_props["seqdb_client_type"] = "NONE"
+
+    return Env.get_test_client(  # type: ignore[return-value]
+        test_type=TEST_TYPE.value,
+        app_cfg=app_cfg,
+        verbose=VERBOSE,
+        log_level=logging.ERROR,
+        use_endpoints=not SKIP_ENDPOINTS,
+    )
+
+
 @pytest.mark.scenario_ids(
     "TC-RBAC-04-07",
     "TC-RBAC-04-20",
@@ -71,6 +96,42 @@ def get_test_client() -> Env:
     "TC-RBAC-04-09",
 )
 class TestContent:
+    def test_retrieve_protocols_without_seqdb(self, no_seqdb_env: Env) -> None:
+        """Raise ServiceUnavailableError when casedb has no seqdb application."""
+        root_user = no_seqdb_env.get_root_user()
+        cases = no_seqdb_env.handle(
+            command.CaseCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            ),
+            use_endpoint=False,
+        )
+        assert cases
+
+        with pytest.raises(
+            exc.ServiceUnavailableError,
+            match="No App available for handling commands",
+        ):
+            no_seqdb_env.handle(
+                command.RetrieveProtocolsCommand(
+                    user=root_user,
+                    protocol_type=seqdb_enum.ProtocolType.SEQUENCING,
+                ),
+                use_endpoint=False,
+            )
+
+        with pytest.raises(
+            exc.ServiceUnavailableError,
+            match="No App available for handling commands",
+        ):
+            no_seqdb_env.handle(
+                command.RetrieveProtocolsCommand(
+                    user=root_user,
+                    protocol_type=seqdb_enum.ProtocolType.SEQUENCING,
+                ),
+                use_endpoint=True,
+            )
+
     def test_update_case_created_in_data_collection_endpoint(self, env: Env) -> None:
         app = env.app
         app_impl: AppImplDetails = app.impl
@@ -319,13 +380,47 @@ class TestContent:
             for concept_set in concept_sets
         }
 
+        # Try testing for existing of some objects
+        case_types_exist: list[bool] = app.handle(
+            command.CaseTypeCrudCommand(
+                user=org_user,
+                operation=CrudOperation.EXISTS_SOME,
+                obj_ids=[cast(UUID, x.id) for x in case_types] + [NULL_ID],
+            )
+        )
+        # All existing case types should return True, and the NULL_ID should return False
+        assert case_types_exist[:-1] == [True] * (len(case_types_exist) - 1)
+        assert case_types_exist[-1] is False
+
+        # Try testing for existence of a single object
+        case_type_exists: bool = app.handle(
+            command.CaseTypeCrudCommand(
+                user=org_user,
+                operation=CrudOperation.EXISTS_ONE,
+                obj_ids=cast(UUID, case_types[0].id),
+            )
+        )
+        assert case_type_exists is True
+        case_type_exists = app.handle(
+            command.CaseTypeCrudCommand(
+                user=org_user,
+                operation=CrudOperation.EXISTS_ONE,
+                obj_ids=NULL_ID,
+            )
+        )
+        assert case_type_exists is False
+
         # Get CaseType and and case set stats
         case_stats = app.handle(command.RetrieveCaseTypeStatsCommand(user=org_user))
         case_set_stats = app.handle(command.RetrieveCaseSetStatsCommand(user=org_user))
 
         # Go over all CaseTypes with data
         found_some_similar_cases = False
+        found_some_seq_distances = False
         retrieved_some_sequences = False
+        first_seq_distance_case_data: (
+            tuple[model.CompleteCaseType, model.Col, list[UUID]] | None
+        ) = None
         has_cases_case_type_ids = {x.case_type_id for x in case_stats if x.n_cases > 0}
         for case_type in case_types:
             if VERBOSE:
@@ -436,6 +531,50 @@ class TestContent:
                     if len(similar_cases_retval.cases) > 0:
                         found_similar_cases = True
 
+                # profiler = pyinstrument.Profiler(async_mode="enabled")
+                # profiler.start()
+
+                seq_distances: list[seqdb_model.SeqDistance] = app.handle(
+                    command.RetrieveSeqDistancesByCasesCommand(
+                        user=root_user,
+                        case_type_id=complete_case_type.id,
+                        genetic_distance_col_id=dist_col.id,
+                        case_ids=case_ids,
+                        filter_other_cases=True,
+                    )
+                )
+
+                # profiler.stop()
+                # print(profiler.output_text())
+                # with open(env.test_dir / f"{uuid4()}", "w") as f:
+                #     f.write("".join(profiler.output_text()))
+
+                assert all(
+                    isinstance(seq_distance, seqdb_model.SeqDistance)
+                    for seq_distance in seq_distances
+                )
+                distance_case_ids = [seq_distance.id for seq_distance in seq_distances]
+                assert len(distance_case_ids) == len(set(distance_case_ids))
+                assert set(distance_case_ids).issubset(set(case_ids))
+                profile_ids = {
+                    UUID(case.content[dist_col.id])
+                    for case in cases
+                    if case.content.get(dist_col.id)
+                }
+                assert all(
+                    profile_id in profile_ids
+                    for seq_distance in seq_distances
+                    for profile_id in seq_distance.get_profile_distance_map()
+                )
+                if seq_distances:
+                    found_some_seq_distances = True
+                if first_seq_distance_case_data is None and len(case_ids) >= 2:
+                    first_seq_distance_case_data = (
+                        complete_case_type,
+                        dist_col,
+                        case_ids,
+                    )
+
             if found_similar_cases:
                 found_some_similar_cases = True
                 assert len(dist_cols) >= 1
@@ -515,9 +654,61 @@ class TestContent:
             raise ValueError(
                 "Did not find similar cases for any CaseType, cannot validate RetrieveSimilarCasesCommand"
             )
+        if not found_some_seq_distances:
+            raise ValueError(
+                "Did not retrieve sequence distances for any CaseType, cannot validate RetrieveSeqDistancesByCasesCommand"
+            )
         if not retrieved_some_sequences:
             raise ValueError(
                 "Did not retrieve any genetic sequences for any CaseType, cannot validate RetrieveGeneticSequenceFastaByCaseCommand"
+            )
+
+        if first_seq_distance_case_data is None:
+            raise ValueError(
+                "Did not find two cases for any CaseType, cannot validate read_max_n_cases"
+            )
+        limit_case_type, limit_dist_col, limit_case_ids = first_seq_distance_case_data
+        original_case_type: model.CaseType = app.handle(
+            command.CaseTypeCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ONE,
+                obj_ids=limit_case_type.id,
+            )
+        )
+        limited_case_type = original_case_type.model_copy(
+            update={
+                "props": original_case_type.props.model_copy(
+                    update={"read_max_n_cases": 1}
+                )
+            }
+        )
+        app.handle(
+            command.CaseTypeCrudCommand(
+                user=root_user,
+                operation=CrudOperation.UPDATE_ONE,
+                objs=limited_case_type,
+            )
+        )
+        try:
+            with pytest.raises(exc.RequestLimitExceededAuthError) as limit_error:
+                app.handle(
+                    command.RetrieveSeqDistancesByCasesCommand(
+                        user=root_user,
+                        case_type_id=limit_case_type.id,
+                        genetic_distance_col_id=limit_dist_col.id,
+                        case_ids=limit_case_ids[:2],
+                        filter_other_cases=True,
+                    )
+                )
+            if hasattr(limit_error.value, "code"):
+                assert limit_error.value.code == "f9c1adb2"
+        finally:
+            app.handle(
+                command.CaseTypeCrudCommand(
+                    user=root_user,
+                    operation=CrudOperation.UPDATE_ONE,
+                    objs=original_case_type,
+                )
             )
 
         # Go over all case sets
@@ -541,10 +732,12 @@ class TestContent:
 
         # Read all for all models with read permission
         for model_class, command_class in app._model_crud_command_map.items():
-            permissions: frozenset[fastapp.Permission] = (  # type: ignore[assignment]
+            model_permissions: frozenset[fastapp.Permission] = (  # type: ignore[assignment]
                 app.domain.get_permissions_for_command(command_class)
             )
-            if PermissionType.READ not in {x.permission_type for x in permissions}:
+            if PermissionType.READ not in {
+                x.permission_type for x in model_permissions
+            }:
                 continue
             app.handle(
                 command_class(
@@ -620,6 +813,7 @@ class TestContent:
             # Check if any case type has cases in private data collections
             found_own_cases = False
             for case_type in candidate_case_types:
+                assert case_type.id is not None
                 if case_type.id not in has_cases_ct_ids:
                     continue
                 q_result: model.CaseQueryResult = app.handle(
@@ -657,24 +851,24 @@ class TestContent:
             command.CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
         )
         case_stats = app.handle(command.RetrieveCaseTypeStatsCommand(user=org_user))
-        has_cases_ct_ids: set[UUID] = {
+        own_has_cases_ct_ids: set[UUID] = {
             x.case_type_id for x in case_stats if x.n_cases > 0
         }
 
         for own_case_type in case_types:
             assert own_case_type.id is not None
-            if own_case_type.id not in has_cases_ct_ids:
+            if own_case_type.id not in own_has_cases_ct_ids:
                 continue
-            q_result: model.CaseQueryResult = app.handle(
+            own_q_result: model.CaseQueryResult = app.handle(
                 command.RetrieveCasesByQueryCommand(
                     user=org_user,
                     case_query=model.CaseQuery(case_type_id=own_case_type.id),
                 )
             )
-            candidate_ids: list[UUID] = q_result.case_ids[:20]
+            candidate_ids: list[UUID] = own_q_result.case_ids[:20]
             if not candidate_ids:
                 continue
-            candidate_cases: list[model.Case] = app.handle(
+            own_candidate_cases: list[model.Case] = app.handle(
                 command.RetrieveCasesByIdCommand(
                     user=org_user,
                     case_type_id=own_case_type.id,
@@ -683,7 +877,7 @@ class TestContent:
             )
             own_case_ids: list[UUID] = [
                 c.id
-                for c in candidate_cases
+                for c in own_candidate_cases
                 if c.created_in_data_collection_id in private_dc_ids
                 and c.id is not None
             ]
@@ -705,7 +899,7 @@ class TestContent:
             # Test scenario: shared (non-own) cases should return False
             shared_case_ids: list[UUID] = [
                 x.id
-                for x in candidate_cases
+                for x in own_candidate_cases
                 if x.created_in_data_collection_id not in private_dc_ids
                 and x.id is not None
             ]
@@ -745,6 +939,30 @@ class TestContent:
         assert (
             env.handle(
                 command.CaseCrudCommand(
+                    user=root_user,
+                    operation=CrudOperation.READ_ALL,
+                ),
+                use_endpoint=False,
+            )
+            == []
+        )
+
+        ref_result = env.handle(
+            command.DeleteAllRefDataCommand(user=root_user),
+            use_endpoint=False,
+        )
+        assert ref_result.success, {
+            key: value[:300]
+            for key, value in ref_result.details.items()
+            if isinstance(value, str)
+        }
+        assert set(ref_result.details) == {
+            model_class.ENTITY.name
+            for model_class in command.DeleteAllRefDataCommand.SORTED_REF_DATA_MODEL_CLASSES
+        }
+        assert (
+            env.handle(
+                command.CaseTypeCrudCommand(
                     user=root_user,
                     operation=CrudOperation.READ_ALL,
                 ),

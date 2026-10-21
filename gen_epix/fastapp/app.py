@@ -112,7 +112,7 @@ class App:
         self._logger = logger
         self._log_item_class = log_item_class
         self._timestamp_factory = timestamp_factory
-        self._feature_flags = feature_flags or {}
+        self._feature_flags: dict[Hashable, bool] = feature_flags or {}
 
         # Initialize other members
         self._created_at = self.generate_timestamp()
@@ -174,6 +174,11 @@ class App:
                 "a336efaf", "Policy decision point not set"
             )
         return self._pdp
+
+    @pdp.setter
+    def pdp(self, pdp: PolicyDecisionPoint) -> None:
+        """Policy decision point."""
+        self._pdp = pdp
 
     @property
     def user_manager(self) -> BaseUserManager:
@@ -258,7 +263,9 @@ class App:
         """Set the enabled state for a feature flag.
 
         Args:
-            key: Identifier used to retrieve the feature flag.
+            key: Hashable, e.g. Enum or string, identifying the feature flag. If a
+                string, it will be treated case-insensitively by storing its uppercase
+                version.
             value: Enabled state to store for ``key``.
 
         Raises:
@@ -266,11 +273,17 @@ class App:
         """
         if not isinstance(value, bool):
             raise ValueError("Feature flag value must be a boolean")
+        if isinstance(key, str):
+            key = key.upper()
         self._feature_flags[key] = value
 
     def get_feature_flag(self, key: Hashable, default: bool = False) -> bool:
-        """Return feature flag."""
-        return self._feature_flags.get(key, default)
+        """Return a feature flag using case-insensitive string-key matching."""
+        if isinstance(key, str):
+            key = key.upper()
+        if key in self._feature_flags:
+            return self._feature_flags[key]
+        return default
 
     def register_command(
         self,
@@ -820,44 +833,54 @@ class App:
         **kwargs: Any,
     ) -> str:
         """Create log message."""
-        content = {}
         if add_debug_info:
-            content["app"] = kwargs.pop("app", {}) | {
-                "id": self._id,
-                "name": self.name,
-            }
-            if cmd:
-                is_initial_command = len(self._command_stack) < 2
-                cmd_object = json.loads(cmd.model_dump_json(exclude_none=True))
-                if self._log_summarization_enabled:
-                    cmd_object = self._summarise_command_object_for_log(cmd_object)
-                content["command"] = kwargs.pop("command", {}) | {
-                    "class": cmd.__class__.__name__,
-                    # Optionally summarize large list fields based on config.
-                    "object": cmd_object,
-                    "parent_command_id": (
-                        None if is_initial_command else f"{self._command_stack[-2].id}"
-                    ),
-                    "stack_trace": (
-                        "->".join(
-                            [f"{x.__class__.__name__}" for x in self._command_stack]
-                        )
-                    ),
-                }
-            if kwargs:
-                if self._log_summarization_enabled:
-                    kwargs = self._summarise_command_object_for_log(kwargs)
-                content = {**content, **kwargs}
+            content = self._create_debug_log_content(cmd, kwargs)
         else:
-            content = kwargs
-            if cmd:
-                content["command"] = kwargs.pop("command", {}) | {
-                    "class": cmd.__class__.__name__,
-                    "id": str(cmd.id),
-                    "user_id": cmd.user.id if cmd.user else None,
-                }
+            content = self._create_minimal_log_content(cmd, kwargs)
         log_item = self._log_item_class(code=code, msg=msg, **content)
         return log_item.dumps()
+
+    def _create_debug_log_content(
+        self, cmd: Command | None, kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Build a log payload with application and optional command diagnostics."""
+        content: dict[str, Any] = {
+            "app": kwargs.pop("app", {}) | {"id": self._id, "name": self.name}
+        }
+        if cmd:
+            is_initial_command = len(self._command_stack) < 2
+            cmd_object = json.loads(cmd.model_dump_json(exclude_none=True))
+            if self._log_summarization_enabled:
+                cmd_object = self._summarise_command_object_for_log(cmd_object)
+            content["command"] = kwargs.pop("command", {}) | {
+                "class": cmd.__class__.__name__,
+                "object": cmd_object,
+                "parent_command_id": (
+                    None if is_initial_command else f"{self._command_stack[-2].id}"
+                ),
+                "stack_trace": "->".join(
+                    [f"{item.__class__.__name__}" for item in self._command_stack]
+                ),
+            }
+        if kwargs:
+            if self._log_summarization_enabled:
+                kwargs = self._summarise_command_object_for_log(kwargs)
+            content = {**content, **kwargs}
+        return content
+
+    @staticmethod
+    def _create_minimal_log_content(
+        cmd: Command | None, kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Build a minimal payload with optional command identity metadata."""
+        content = kwargs
+        if cmd:
+            content["command"] = kwargs.pop("command", {}) | {
+                "class": cmd.__class__.__name__,
+                "id": str(cmd.id),
+                "user_id": cmd.user.id if cmd.user else None,
+            }
+        return content
 
     def _summarise_command_object_for_log(
         self,

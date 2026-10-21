@@ -19,10 +19,9 @@ class BaseOmopRepository(BaseRepository):
         modified_since: datetime | None = None,
         modified_until: datetime | None = None,
     ) -> list[UUID]:
-        """
-        Retrieve a list of person IDs for Persons, including their linked data, modified
-        in the specified range. At least one of modified_since or modified_until must be
-        provided.
+        """Retrieve person IDs with linked data modified within a time range.
+
+        At least one of ``modified_since`` or ``modified_until`` must be provided.
 
         `modified_since` is inclusive and `modified_until` is exclusive.
 
@@ -44,8 +43,7 @@ class BaseOmopRepository(BaseRepository):
         self,
         person_ids: list[UUID],
     ) -> list[model.FullPerson]:
-        """
-        Retrieve all relevant data for the specified person IDs as full persons.
+        """Retrieve all relevant data for the specified person IDs as full persons.
 
         Args:
             person_ids: Identifiers of persons to retrieve.
@@ -64,8 +62,7 @@ class BaseOmopRepository(BaseRepository):
         cohort_definition_id: UUID,
         cohort_ids: list[UUID],
     ) -> dict[UUID, list[UUID]]:
-        """
-        Return specimen IDs grouped by cohort ID for a cohort definition.
+        """Return specimen IDs grouped by cohort ID for a cohort definition.
 
         Args:
             cohort_definition_id: Cohort definition constraining the query.

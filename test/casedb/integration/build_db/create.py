@@ -1064,10 +1064,7 @@ class TestCreate:
                     "case_type_set_category1",
                 )
         # Col already exists
-        if (
-            not SKIP_CREATE_DATA
-            # and DEV_REPOSITORY_CONFIG not in DevRepositoryConfigSet.SA_SQLITE.value
-        ):
+        if not SKIP_CREATE_DATA:
             # sqlite does not enforce unique constraints on nullable columns.
             # Col.occurrence, which is part of a unique constraint, is
             # nullable, so this this test will fail for sqlite and should therefore

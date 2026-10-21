@@ -444,47 +444,58 @@ class DictRepository(BaseRepository):
         """Return all objects (or their ids) matching the optional filter/page args."""
         return_copy = kwargs.get("return_copy", True)
         df = self._db[model_class]
-        # Get any query filter
-        query_filter: Filter | None = None
-        obj_filter: Filter | None = kwargs.get("obj_filter")
-        if filter and obj_filter:
-            query_filter = CompositeFilter(
-                filters=[filter, obj_filter], operator=LogicalOperator.AND
-            )
-        elif filter:
-            query_filter = filter
-        elif obj_filter:
-            query_filter = obj_filter
-        else:
-            query_filter = None
-        # Get matching objects
-        objs: list[Model] | list[Hashable]
-        if query_filter:
-            if return_id:
-                objs = [
-                    x
-                    for x, y in zip(
-                        df.keys(), query_filter.match_rows(df.values(), is_model=True)
-                    )
-                    if y
-                ]
-            else:
-                objs = list(query_filter.filter_rows(df.values(), is_model=True))  # type: ignore[assignment]
-        elif return_id:
-            objs = list(df.keys())
-        else:
-            objs = list(df.values())
-        # Apply limit and offset
-        if limit or offset:
-            if offset >= len(objs):
-                return []
-            if limit == 0 or offset + limit >= len(objs):
-                return objs[offset:]
-            objs = objs[offset : offset + limit]
+        query_filter = DictRepository._get_read_all_filter(
+            filter, kwargs.get("obj_filter")
+        )
+        objs = DictRepository._get_read_all_objects(df, query_filter, return_id)
+        objs = DictRepository._apply_read_all_pagination(objs, limit, offset)
         # Make copy of objects for returning if necessary
         if not return_id and return_copy:
             objs = [x.model_copy() for x in objs if x]  # type: ignore[attr-defined]
         return objs
+
+    @staticmethod
+    def _get_read_all_filter(
+        filter: Filter | None, obj_filter: Filter | None
+    ) -> Filter | None:
+        """Combine query and object filters for a read_all operation."""
+        if filter and obj_filter:
+            return CompositeFilter(
+                filters=[filter, obj_filter], operator=LogicalOperator.AND
+            )
+        return filter or obj_filter
+
+    @staticmethod
+    def _get_read_all_objects(
+        df: dict[Hashable, Model], query_filter: Filter | None, return_id: bool
+    ) -> list[Model] | list[Hashable]:
+        """Select matching model objects or their ids from the in-memory table."""
+        if query_filter:
+            if return_id:
+                return [
+                    object_id
+                    for object_id, matches in zip(
+                        df.keys(), query_filter.match_rows(df.values(), is_model=True)
+                    )
+                    if matches
+                ]
+            return list(query_filter.filter_rows(df.values(), is_model=True))  # type: ignore[return-value]
+        if return_id:
+            return list(df.keys())
+        return list(df.values())
+
+    @staticmethod
+    def _apply_read_all_pagination(
+        objs: list[Model] | list[Hashable], limit: int, offset: int
+    ) -> list[Model] | list[Hashable]:
+        """Apply read_all's limit and offset semantics to selected results."""
+        if not limit and not offset:
+            return objs
+        if offset >= len(objs):
+            return []
+        if limit == 0 or offset + limit >= len(objs):
+            return objs[offset:]
+        return objs[offset : offset + limit]
 
     def read_one(
         self,
@@ -961,6 +972,51 @@ class DictRepository(BaseRepository):
         )
 
     @staticmethod
+    def _find_duplicate_key_objects(
+        objs: list[Model], obj_keys_list: list[tuple[Any, ...]], n_keys: int
+    ) -> list[Model]:
+        """Return objects with duplicate unique-key values within one batch."""
+        duplicate_objs: list[Model] = []
+        for key_index in range(n_keys):
+            curr_obj_keys = [keys[key_index] for keys in obj_keys_list]
+            if len(set(curr_obj_keys)) == len(curr_obj_keys):
+                continue
+            seen: set[Any] = set()
+            duplicate_obj_keys: set[Any] = set()
+            for obj_key in curr_obj_keys:
+                if obj_key in seen:
+                    duplicate_obj_keys.add(obj_key)
+                else:
+                    seen.add(obj_key)
+            duplicate_objs.extend(
+                obj
+                for obj, obj_key in zip(objs, curr_obj_keys)
+                if obj_key in duplicate_obj_keys
+            )
+        return duplicate_objs
+
+    @staticmethod
+    def _find_duplicate_key_objects_in_store(
+        objs: list[Model],
+        obj_keys_list: list[tuple[Any, ...]],
+        df_obj_keys: list[tuple[Any, ...]],
+        n_keys: int,
+    ) -> list[Model]:
+        """Return batch objects whose unique keys already exist in the store."""
+        duplicate_objs: list[Model] = []
+        for key_index in range(n_keys):
+            curr_df_obj_keys = {keys[key_index] for keys in df_obj_keys}
+            curr_obj_keys = [keys[key_index] for keys in obj_keys_list]
+            duplicate_obj_keys = set(curr_obj_keys) & curr_df_obj_keys
+            if duplicate_obj_keys:
+                duplicate_objs.extend(
+                    obj
+                    for obj, obj_key in zip(objs, curr_obj_keys)
+                    if obj_key in duplicate_obj_keys
+                )
+        return duplicate_objs
+
+    @staticmethod
     def _verify_duplicate_keys(
         get_id: Callable[[Model], Hashable],
         keys_generator: Callable[[Model], dict[int, str]],
@@ -978,58 +1034,35 @@ class DictRepository(BaseRepository):
             return
         key_ids = list(keys.keys())
 
-        def get_keys(obj: Any) -> Any:
+        def get_keys(obj: Any) -> tuple[str, ...]:
             """Return keys."""
             keys = keys_generator(obj)
             return tuple(keys[x] for x in key_ids)
 
         # Check for duplicate keys among objs
-        obj_keys_list = [get_keys(x) for x in objs]
+        obj_keys_list = [get_keys(obj) for obj in objs]
         n_keys = len(keys)
-        duplicate_objs: list[Model] = []
-        for i in range(n_keys):
-            curr_obj_keys_list = [x[i] for x in obj_keys_list]
-            curr_obj_keys = set(curr_obj_keys_list)
-            if len(curr_obj_keys) < len(curr_obj_keys_list):
-                seen: set[str] = set()
-                duplicate_obj_keys: set[str] = set()
-                for obj_key in curr_obj_keys_list:
-                    if obj_key in seen:
-                        duplicate_obj_keys.add(obj_key)
-                    else:
-                        seen.add(obj_key)
-                duplicate_objs += [
-                    x
-                    for x, y in zip(objs, curr_obj_keys_list)
-                    if y in duplicate_obj_keys
-                ]
+        duplicate_objs = DictRepository._find_duplicate_key_objects(
+            objs, obj_keys_list, n_keys
+        )
         if duplicate_objs:
             raise exc.UniqueConstraintViolationError(
                 "9aaac78c",
                 f"Model {model_class.__name__}: object keys are not unique",
-                duplicate_key_ids=list(set([get_id(x) for x in duplicate_objs])),
+                duplicate_key_ids=list(set([get_id(obj) for obj in duplicate_objs])),
             )
         # Check for duplicate keys between objs and df_objs, excluding those df_objs
         #  that have the same id as an obj
         if not df_objs:
             return
-        obj_ids = {get_id(x) for x in objs}
-        df_obj_keys = [get_keys(x) for x in df_objs if get_id(x) not in obj_ids]
-        duplicate_objs = []
-        for i in range(n_keys):
-            curr_df_obj_keys = {x[i] for x in df_obj_keys}
-            curr_obj_keys_list = [x[i] for x in obj_keys_list]
-            curr_obj_keys = set(curr_obj_keys_list)
-            duplicate_obj_keys = curr_obj_keys & curr_df_obj_keys
-            if duplicate_obj_keys:
-                duplicate_objs += [
-                    x
-                    for x, y in zip(objs, curr_obj_keys_list)
-                    if y in duplicate_obj_keys
-                ]
+        obj_ids = {get_id(obj) for obj in objs}
+        df_obj_keys = [get_keys(obj) for obj in df_objs if get_id(obj) not in obj_ids]
+        duplicate_objs = DictRepository._find_duplicate_key_objects_in_store(
+            objs, obj_keys_list, df_obj_keys, n_keys
+        )
         if duplicate_objs:
             raise exc.UniqueConstraintViolationError(
                 "ec20ed8b",
                 f"Model {model_class.__name__}: object keys are not unique",
-                duplicate_key_ids=list({get_id(x) for x in duplicate_objs}),
+                duplicate_key_ids=list({get_id(obj) for obj in duplicate_objs}),
             )

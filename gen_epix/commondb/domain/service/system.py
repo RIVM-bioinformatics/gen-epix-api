@@ -1,7 +1,7 @@
 """Define the commondb system service contract and command handlers."""
 
 import abc
-from collections.abc import Hashable
+from enum import Enum
 
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.enum import ServiceType
@@ -19,6 +19,7 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
         f = self.app.register_handler
         self.register_default_crud_handlers()
         f(command.DeleteAllOperationalDataCommand, self.delete_all_operational_data)
+        f(command.DeleteAllRefDataCommand, self.delete_all_ref_data)
         f(command.RetrieveOutagesCommand, self.retrieve_outages)
         f(command.RetrieveLicensesCommand, self.retrieve_licenses)
         f(command.RetrieveFeatureFlagsCommand, self.retrieve_feature_flags)
@@ -69,7 +70,7 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
     @abc.abstractmethod
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand
-    ) -> dict[Hashable, bool]:
+    ) -> dict[Enum, bool]:
         """Retrieve the application's feature-flag configuration.
 
         Args:
@@ -91,6 +92,20 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
 
         Args:
             cmd: Command requesting deletion of all operational data.
+
+        Raises:
+            NotImplementedError: Always; concrete services implement deletion.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def delete_all_ref_data(
+        self, cmd: command.DeleteAllRefDataCommand
+    ) -> model.DeleteAllRefDataResult:
+        """Delete application reference data after operational data is reset.
+
+        Args:
+            cmd: Command requesting deletion of application reference data.
 
         Raises:
             NotImplementedError: Always; concrete services implement deletion.

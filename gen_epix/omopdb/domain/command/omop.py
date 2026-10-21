@@ -12,10 +12,10 @@ from gen_epix.omopdb.domain import model
 
 # Non-CRUD commands
 class UploadPersonsCommand(Command, UploadBatchCommandMixin):
-    """
-    Represents a request to upload of a batch of persons along with their associated data.
-    The data are uploaded as a single atomic unit of work, so that
-    either all data are successfully uploaded or none are.
+    """Represents a request to upload a batch of persons and associated data.
+
+    The data are uploaded as a single atomic unit of work, so that either all
+    data are successfully uploaded or none are.
     """
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = model.PersonBatchForUpload
@@ -28,9 +28,9 @@ class UploadPersonsCommand(Command, UploadBatchCommandMixin):
 
 
 class RetrievePersonsByQueryCommand(Command):
-    """
-    Represents a request to retrieve person IDs based on a query. These IDs can then be used to retrieve the
-    actual data for these persons.
+    """Represents a request to retrieve person IDs matching a query.
+
+    The IDs can then be used to retrieve the corresponding person data.
     """
 
     person_query: model.PersonQuery = Field(
@@ -39,9 +39,9 @@ class RetrievePersonsByQueryCommand(Command):
 
 
 class RetrievePersonsByIdCommand(Command):
-    """
-    Represents a request to retrieve all data for a list of person IDs, as a list of FullPerson objects in the
-    same order.
+    """Represents a request to retrieve full person data by ID.
+
+    Results are returned in the same order as the requested identifiers.
     """
 
     person_ids: list[UUID] = Field(
@@ -57,10 +57,10 @@ class RetrievePersonsByIdCommand(Command):
 
 
 class RetrieveSpecimenIdsByCohortIdsCommand(Command):
-    """
-    Represents a request to retrieve specimen IDs (equivalent to SEQDB sample IDs)
-    for persons belonging to a set of cohort IDs (equivalent to CASEDB case IDs)
-    and a cohort definition ID.
+    """Represents a request to retrieve specimen IDs for a set of cohorts.
+
+    Specimen IDs are equivalent to SEQDB sample IDs. Cohort IDs are equivalent
+    to CASEDB case IDs, and the query is scoped by a cohort definition ID.
     """
 
     cohort_definition_id: UUID = Field(description="The cohort definition ID.")

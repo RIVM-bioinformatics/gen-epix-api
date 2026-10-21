@@ -1,19 +1,35 @@
+[repository.defaults]
+type = "DICT"
+
+[repository.defaults.props]
+dir = "./data/seqdb/demo"
+
 [repository.abac]
 module = "gen_epix.seqdb.repositories"
 class_name = "AbacDictRepository"
+[repository.abac.props]
+file = "@format {this.repository.defaults.props.dir}/seqdb.dict.abac.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.organization]
 module = "gen_epix.seqdb.repositories"
 class_name = "OrganizationDictRepository"
+[repository.organization.props]
+file = "@format {this.repository.defaults.props.dir}/seqdb.dict.organization.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.system]
 module = "gen_epix.seqdb.repositories"
 class_name = "SystemDictRepository"
+[repository.system.props]
+file = "@format {this.repository.defaults.props.dir}/seqdb.dict.system.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.seq]
 module = "gen_epix.seqdb.repositories"
 class_name = "SeqDictRepository"
+[repository.seq.props]
+file = "@format {this.repository.defaults.props.dir}/seqdb.dict.seq.{this.repository.defaults.props.variant}.pkl.gz"
 
 [repository.file]
 module = "gen_epix.seqdb.repositories"
 class_name = "FileDictRepository"
+[repository.file.props]
+file = "@format {this.repository.defaults.props.dir}/seqdb.dict.file.{this.repository.defaults.props.variant}.pkl.gz"

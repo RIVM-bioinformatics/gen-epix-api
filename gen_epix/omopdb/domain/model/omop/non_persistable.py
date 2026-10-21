@@ -58,10 +58,10 @@ class SpecimenIdsByCohortResult(Model):
 
 
 class PersonQuery(Model):
-    """
-    Represents a query for retrieving persons based on their demographic information. All
-    constraints are optional, but at least some must be provided, and the query will
-    match any person that matches all of the provided criteria.
+    """Represents a query for retrieving persons by demographic criteria.
+
+    Constraints are optional, but at least some must be provided. The query
+    matches persons that meet all provided criteria.
 
     Model validation: At least one modification-time bound must be provided to
     prevent an unbounded person retrieval.
@@ -83,10 +83,7 @@ class PersonQuery(Model):
 
     @model_validator(mode="after")
     def _validate_some_criteria(self) -> Self:
-        """
-        Validate that at least some criteria are provided, to avoid accidentally
-        retrieving all persons.
-        """
+        """Require a query criterion to prevent retrieving all persons."""
         if self.modified_since is None and self.modified_until is None:
             raise ValueError("At least one criterion must be provided")
         return self
@@ -111,10 +108,10 @@ class PersonQueryResult(Model):
 
 
 class FullPerson(Model):
-    """
-    Represents a comprehensive view of a person in the OMOP CDM, including
-    their demographic information as well as associated clinical data. It is designed to
-    facilitate access to all relevant data for a person in a single structure.
+    """Represents a person and their associated OMOP clinical data.
+
+    The model combines demographic information and related clinical data in a
+    single structure.
     """
 
     NAME: ClassVar = "FullPerson"

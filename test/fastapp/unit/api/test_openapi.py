@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from test.util.mock_compat import MagicMock
 
 from gen_epix.fastapp.api.openapi import (
     create_custom_openapi_function,
@@ -94,6 +94,14 @@ class TestFixSchemaNullableAndSingleElement:
         schema: dict = {}
         fix_schema_nullable_and_single_element(schema)
         assert schema == {}
+
+    def test_handles_empty_anyof(self) -> None:
+        """Verify an empty anyOf is left unchanged."""
+        schema = {"anyOf": []}
+
+        fix_schema_nullable_and_single_element(schema)
+
+        assert schema == {"anyOf": []}
 
     def test_handles_schema_without_anyof(self) -> None:
         """Verify schema without anyOf is not modified."""

@@ -15,6 +15,8 @@ from gen_epix.omopdb.domain import exc
 from gen_epix.omopdb.services.omop.base import BaseOmopService
 from gen_epix.omopdb.services.omop.person_validator import PersonValidator
 
+_INVALID_COMMAND_TYPE = "Invalid command type"
+
 
 class PersonBatchUploader(BatchUploader):
     """Encapsulates validation and persistence of person batches and associated data."""
@@ -48,7 +50,7 @@ class PersonBatchUploader(BatchUploader):
         """
         # Verify command type
         if not isinstance(cmd, command.UploadPersonsCommand):
-            raise exc.InvalidArgumentsError("f8dbeb8d", "Invalid command type")
+            raise exc.InvalidArgumentsError("f8dbeb8d", _INVALID_COMMAND_TYPE)
         # TODO: implement additional user rights verifications as necessary
 
     def verify_batch(
@@ -71,7 +73,7 @@ class PersonBatchUploader(BatchUploader):
             InvalidArgumentsError: If the command or batch result has an invalid type.
         """
         if not isinstance(cmd, command.UploadPersonsCommand):
-            raise exc.InvalidArgumentsError("7b3446fe", "Invalid command type")
+            raise exc.InvalidArgumentsError("7b3446fe", _INVALID_COMMAND_TYPE)
         if not isinstance(batch_result, model.PersonBatchUploadResult):
             raise exc.InvalidArgumentsError("1a93de93", "Invalid return value type")
         success = True
@@ -108,7 +110,7 @@ class PersonBatchUploader(BatchUploader):
             InvalidArgumentsError: If the command or batch result has an invalid type.
         """
         if not isinstance(cmd, command.UploadPersonsCommand):
-            raise exc.InvalidArgumentsError("94c3402c", "Invalid command type")
+            raise exc.InvalidArgumentsError("94c3402c", _INVALID_COMMAND_TYPE)
         if not isinstance(batch_result, model.PersonBatchUploadResult):
             raise exc.InvalidArgumentsError("aba133d4", "Invalid return value type")
         success = True
@@ -124,9 +126,7 @@ class PersonBatchUploader(BatchUploader):
         batch_result: model.PersonBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """
-        Verify the person content and add any derived values.
-        """
+        """Verify the person content and add any derived values."""
         success = True
         # Initialize some
         status_count_before = batch_result.get_status_count()
@@ -148,7 +148,7 @@ class PersonBatchUploader(BatchUploader):
         return success
 
     def _get_person_validator(self, user_id: UUID) -> PersonValidator:
-        """Get person validator for the given complete person type"""
+        """Get person validator for the given complete person type."""
         return PersonValidator(self.service, user_id)
 
 

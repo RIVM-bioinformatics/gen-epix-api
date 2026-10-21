@@ -29,64 +29,71 @@ def seq_service_crud_protocol(
     user_id = cmd.user.id if cmd.user else None
     protocols: list[model.Protocol] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
-        # If a git commit hash is given, it may not already exist for the same protocol_type
-        with self.repository.uow() as uow:
-            filter = StringSetFilter(
-                key="git_commit_hash",
-                members=frozenset(
-                    {
-                        x.git_commit_hash
-                        for x in protocols
-                        if x.git_commit_hash is not None
-                    }
-                ),
-            )
-            existing_protocols: list[model.Protocol] = self.repository.crud(
-                uow,
-                user_id,
-                model.Protocol,
-                CrudOperation.READ_ALL,
-                filter=filter,
-            )
-            all_protocols = existing_protocols + protocols
-            seen: set[tuple[ProtocolType, str]] = set()
-            for protocol in all_protocols:
-                if protocol.git_commit_hash is not None:
-                    identifier = (protocol.protocol_type, protocol.git_commit_hash)
-                    if identifier in seen:
-                        raise ValueError(
-                            f"Protocol with protocol_type {protocol.protocol_type} and git_commit_hash {protocol.git_commit_hash} already exists, cannot create another"
-                        )
-                    seen.add(identifier)
-
+        _validate_protocol_creation(self, user_id, protocols)
     elif cmd.is_update():
-        # protocol_type is read-only (not allowed to update)
-        protocol_ids: set[UUID] = {x.id for x in protocols if x.id is not None}
-        with self.repository.uow() as uow:
-            existing_protocols: list[model.Protocol] = self.repository.crud(
-                uow,
-                user_id,
-                model.Protocol,
-                CrudOperation.READ_SOME,
-                obj_ids=protocol_ids,
-            )
-            existing_protocol_map: dict[UUID, model.Protocol] = {
-                x.id: x for x in existing_protocols if x.id is not None
-            }
-            for protocol in protocols:
-                protocol_id = protocol.id
-                if protocol_id is not None and protocol_id in existing_protocol_map:
-                    if (
-                        protocol.protocol_type
-                        != existing_protocol_map[protocol_id].protocol_type
-                    ):
-                        raise ValueError(
-                            f"Cannot update protocol_type for Protocol {protocol_id}: immutable field"
-                        )
-
+        _validate_protocol_updates(self, user_id, protocols)
     elif cmd.is_delete():
         # verify if foreign key constraint would be violated (enforced by SQL, not by DICT)
         # TODO: Does this require a specific check? SARepository already has UniqueConstraintViolationError handling??
         pass
 
     return self.crud(cmd)  # type: ignore[return-value]
+
+
+def _validate_protocol_creation(
+    service: BaseSeqService, user_id: UUID | None, protocols: list[model.Protocol]
+) -> None:
+    """Reject duplicate protocol type and commit-hash pairs."""
+    commit_hashes = {
+        protocol.git_commit_hash
+        for protocol in protocols
+        if protocol.git_commit_hash is not None
+    }
+    with service.repository.uow() as uow:
+        existing_protocols: list[model.Protocol] = service.repository.crud(
+            uow,
+            user_id,
+            model.Protocol,
+            CrudOperation.READ_ALL,
+            filter=StringSetFilter(
+                key="git_commit_hash", members=frozenset(commit_hashes)
+            ),
+        )
+    seen: set[tuple[ProtocolType, str]] = set()
+    for protocol in existing_protocols + protocols:
+        if protocol.git_commit_hash is None:
+            continue
+        identifier = (protocol.protocol_type, protocol.git_commit_hash)
+        if identifier in seen:
+            raise ValueError(
+                f"Protocol with protocol_type {protocol.protocol_type} and git_commit_hash {protocol.git_commit_hash} already exists, cannot create another"
+            )
+        seen.add(identifier)
+
+
+def _validate_protocol_updates(
+    service: BaseSeqService, user_id: UUID | None, protocols: list[model.Protocol]
+) -> None:
+    """Reject updates that change an existing protocol's immutable type."""
+    protocol_ids: set[UUID] = {protocol.id for protocol in protocols if protocol.id}
+    with service.repository.uow() as uow:
+        existing_protocols: list[model.Protocol] = service.repository.crud(
+            uow,
+            user_id,
+            model.Protocol,
+            CrudOperation.READ_SOME,
+            obj_ids=protocol_ids,
+        )
+    existing_protocol_map: dict[UUID, model.Protocol] = {
+        protocol.id: protocol
+        for protocol in existing_protocols
+        if protocol.id is not None
+    }
+    for protocol in protocols:
+        protocol_id = protocol.id
+        if protocol_id is None or protocol_id not in existing_protocol_map:
+            continue
+        if protocol.protocol_type != existing_protocol_map[protocol_id].protocol_type:
+            raise ValueError(
+                f"Cannot update protocol_type for Protocol {protocol_id}: immutable field"
+            )

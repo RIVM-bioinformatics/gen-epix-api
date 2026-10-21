@@ -22,8 +22,9 @@ from gen_epix.seqdb.domain.model.seq.base import BaseSeq
 
 
 class Locus(Model):
-    """Represents a genetic locus, e.g. a gene or other genomic region of interest. The locus can be
-    defined on any taxonomic level, e.g. species, lineage, etc. As such, depending on
+    """Represents a genetic locus, such as a gene or other genomic region of interest.
+
+    A locus can be defined on any taxonomic level, e.g. species, lineage, etc. As such, depending on
     the analysis, two loci may actually represent the same genomic region, but defined
     for lower taxonomic levels than the one used in the analysis. This information,
     where relevant, can be captured in a LocusSet or can reside entirely outside the
@@ -87,8 +88,10 @@ class Locus(Model):
 
 
 class LocusSet(Model):
-    """Represents an ordered set of loci. This can be used to define e.g. schemes for wgMLST typing
-    or other locus-based analyses. Because the set is ordered, i.e. a list of unique
+    """Represents an ordered set of loci.
+
+    A locus set can define e.g. schemes for wgMLST typing or other locus-based
+    analyses. Because the set is ordered, i.e. a list of unique
     locus IDS, it can also be used to define the order of loci in allele profiles and
     other analyses.
 
@@ -168,8 +171,10 @@ class LocusCodeMap(Model):
 
 
 class RefAllele(BaseSeq):
-    """Represents a reference allele for a locus. This can be an actual sequence or an
-    artificial construct, typically then a consensus sequence. It can be used
+    """Represents a reference allele for a locus.
+
+    A reference allele can be an actual sequence or an artificial construct,
+    typically then a consensus sequence. It can be used
     e.g. as a reference for alignment of other alleles for the locus or for
     reducing storage requirements of alleles.
 
@@ -200,7 +205,8 @@ class RefAllele(BaseSeq):
 
 
 class Allele(BaseSeq):
-    """Represents an allele for a locus, i.e., a specific DNA sequence variant observed at that locus.
+    """Represents a specific DNA sequence variant observed at a locus.
+
     Any IUPAC ambiguity codes are allowed in the sequence. The locus only represents the
     first observed locus that the allele was observed for, but the allele can be
     observed for multiple loci, e.g. due to gene duplication or because the locus

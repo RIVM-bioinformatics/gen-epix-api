@@ -72,6 +72,7 @@ class RoleGenerator:
             ),
             # system
             (command.DeleteAllOperationalDataCommand, PermissionTypeSet.E),
+            (command.DeleteAllRefDataCommand, PermissionTypeSet.E),
             (command.OutageCrudCommand, PermissionTypeSet.CRUD),
         },
         Role.REFDATA_ADMIN: {
@@ -117,6 +118,7 @@ class RoleGenerator:
         Role.GUEST: {
             # organization
             (command.RetrieveOwnPermissionsCommand, PermissionTypeSet.E),
+            (command.RetrieveOwnUserCommand, PermissionTypeSet.E),
             # rbac
             (command.RetrieveSubRolesCommand, PermissionTypeSet.E),
         },

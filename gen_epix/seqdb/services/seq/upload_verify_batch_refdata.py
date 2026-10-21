@@ -1,6 +1,7 @@
 """Implement seqdb sequence service behavior for services.seq.upload_verify_batch_refdata."""
 
-from typing import Any
+from collections.abc import Collection
+from typing import Any, cast
 from uuid import UUID
 
 from gen_epix.commondb.domain.literal import NULL_ID
@@ -19,22 +20,50 @@ def _verify_batch_refdata_allele_profiles(
     uow: Any,
 ) -> bool:
     """Verify and complete reference data for allele profiles."""
-    success = True
     user_id = cmd.user.id if cmd.user else None
-    samples = cmd.sample_batch.samples
-    sample_results = batch_result.samples
+    profiles, profile_results = _collect_pending_allele_profiles(cmd, batch_result)
+    if not profiles:
+        # Nothing to do
+        return True
 
-    # Get all allele profiles that are to be processed
+    protocol_map, locus_set_map, reverse_locus_code_maps = _load_profile_reference_data(
+        self, uow, user_id, profiles
+    )
+    success, unique_allele_ids = _convert_allele_profiles_to_ids(
+        profiles, profile_results, protocol_map, locus_set_map, reverse_locus_code_maps
+    )
+    existing_allele_ids = _get_existing_allele_ids(
+        self, uow, user_id, unique_allele_ids
+    )
+    new_allele_ids = unique_allele_ids - existing_allele_ids
+    new_allele_locus_map = _prepare_allele_profiles_for_upload(
+        profiles, profile_results, protocol_map, locus_set_map, new_allele_ids
+    )
+    if new_allele_locus_map:
+        success &= _reconcile_provided_alleles(
+            batch_result, cmd.sample_batch, new_allele_locus_map
+        )
+    else:
+        # Every allele referenced in every profile is already stored. Any allele
+        # sequences included in the upload payload are redundant — drop them so
+        # _create_sample_refdata does not call UPSERT_SOME and trigger an
+        # expensive full-row reload of up to 3004 immutable allele records.
+        provided_alleles = cmd.sample_batch.alleles
+        if provided_alleles:
+            del provided_alleles[:]
+    return success
+
+
+def _collect_pending_allele_profiles(
+    cmd: command.UploadSamplesCommand,
+    batch_result: model.SampleBatchUploadResult,
+) -> tuple[list[model.SeqProfileForUpload], list[UploadResult]]:
+    """Collect pending allele profiles and their matching upload results."""
     profiles: list[model.SeqProfileForUpload] = []
     profile_results: list[UploadResult] = []
-    profile_indices: list[tuple[int, int]] = (
-        []
-    )  # list of (sample index, profile index) tuples to be able to assign errors to the correct profile results
-    for i, (sample, sample_result) in enumerate(zip(samples, sample_results)):
-        curr_profiles = sample.seq_profiles or []
-        curr_profile_results = sample_result.seq_profiles or []
-        for j, (profile, profile_result) in enumerate(
-            zip(curr_profiles, curr_profile_results)
+    for sample, sample_result in zip(cmd.sample_batch.samples, batch_result.samples):
+        for profile, profile_result in zip(
+            sample.seq_profiles or [], sample_result.seq_profiles or []
         ):
             if profile_result.status != EtlStatus.PENDING:
                 continue
@@ -42,13 +71,21 @@ def _verify_batch_refdata_allele_profiles(
                 continue
             profiles.append(profile)
             profile_results.append(profile_result)
-            profile_indices.append((i, j))
-    if not profiles:
-        # Nothing to do
-        return success
+    return profiles, profile_results
 
-    # Retrieve all protocols
-    uq_protocol_ids = {x.protocol_id for x in profiles}
+
+def _load_profile_reference_data(
+    self: BatchUploader,
+    uow: Any,
+    user_id: UUID | None,
+    profiles: list[model.SeqProfileForUpload],
+) -> tuple[
+    dict[UUID, model.Protocol],
+    dict[UUID, model.LocusSet],
+    dict[UUID, dict[UUID, str]],
+]:
+    """Load protocols, locus sets, and optional reverse locus-code maps."""
+    uq_protocol_ids = {profile.protocol_id for profile in profiles}
     protocols: list[model.Protocol] = self.service.repository.crud(
         uow,
         user_id,
@@ -56,10 +93,10 @@ def _verify_batch_refdata_allele_profiles(
         CrudOperation.READ_SOME,
         obj_ids=list(uq_protocol_ids),
     )
-    protocol_map = {x.id: x for x in protocols}
-
-    # Retrieve locus sets
-    locus_set_ids = {protocol_map[x.protocol_id].locus_set_id for x in profiles}
+    protocol_map = {cast(UUID, protocol.id): protocol for protocol in protocols}
+    locus_set_ids = {
+        protocol_map[profile.protocol_id].locus_set_id for profile in profiles
+    }
     locus_sets: list[model.LocusSet] = self.service.repository.crud(
         uow,
         user_id,
@@ -67,13 +104,12 @@ def _verify_batch_refdata_allele_profiles(
         CrudOperation.READ_SOME,
         obj_ids=list(locus_set_ids),
     )
-    locus_set_map = {x.id: x for x in locus_sets}
-
-    # Retrieve locus code maps
+    locus_set_map = {cast(UUID, locus_set.id): locus_set for locus_set in locus_sets}
     locus_code_map_ids = {
-        x.locus_code_map_id
-        for x in profiles
-        if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
+        profile.locus_code_map_id
+        for profile in profiles
+        if profile.locus_code_map_id is not None
+        and profile.locus_code_map_id != NULL_ID
     }
     locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(
         uow,
@@ -82,94 +118,121 @@ def _verify_batch_refdata_allele_profiles(
         CrudOperation.READ_SOME,
         obj_ids=list(locus_code_map_ids),
     )
-    locus_code_map_map = {x.id: x for x in locus_code_maps}
-
-    # Initialize some data
-    uq_allele_ids: set[UUID] = set()
-    locus_code_map_locus_codes = {
-        x.id: set(x.code_map) for x in locus_code_map_map.values()
+    reverse_locus_code_maps = {
+        cast(UUID, locus_code_map.id): {
+            locus_id: code for code, locus_id in locus_code_map.code_map.items()
+        }
+        for locus_code_map in locus_code_maps
     }
-    rev_locus_code_map_map = {
-        x.id: {z: y for y, z in x.code_map.items()} for x in locus_code_map_map.values()
-    }
-    allele_ids: list[UUID | None]
+    return protocol_map, locus_set_map, reverse_locus_code_maps
 
-    # Convert to allele_profile representation and get unique allele IDs
+
+def _convert_allele_profiles_to_ids(
+    profiles: list[model.SeqProfileForUpload],
+    profile_results: list[UploadResult],
+    protocol_map: dict[UUID, model.Protocol],
+    locus_set_map: dict[UUID, model.LocusSet],
+    reverse_locus_code_maps: dict[UUID, dict[UUID, str]],
+) -> tuple[bool, set[UUID]]:
+    """Normalize allele profile inputs and collect referenced allele IDs."""
+    success = True
+    unique_allele_ids: set[UUID] = set()
     for profile, profile_result in zip(profiles, profile_results):
         if profile_result.status != EtlStatus.PENDING:
             continue
         locus_ids = locus_set_map[
             protocol_map[profile.protocol_id].locus_set_id
         ].locus_ids
-        n_loci = len(locus_ids)
-        locus_allele_id_map = profile.locus_allele_id_map
-        if locus_allele_id_map is not None:
-            # Convert locus_allele_id_map representation to allele_ids
-            locus_code_map_id = profile.locus_code_map_id
-            rev_locus_code_map = rev_locus_code_map_map[locus_code_map_id]
-            allele_ids = [
-                locus_allele_id_map.get(rev_locus_code_map[x]) for x in locus_ids
-            ]
-            profile.allele_ids = allele_ids
-            profile.locus_allele_id_map = None
-        elif len(profile.content):
-            # Convert content representation to allele_ids
-            if profile.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
-                allele_ids = profile.get_allele_ids()
-            else:
-                success = False
-                profile_result.add_error(
-                    "a6097022",
-                    f"Allele profile format {profile.format} is not supported for upload",
-                )
-                continue
-        elif profile.allele_ids is not None:
-            allele_ids = profile.allele_ids
-        else:
+        allele_ids = _get_allele_ids_for_profile(
+            profile, profile_result, locus_ids, reverse_locus_code_maps
+        )
+        if allele_ids is None:
             success = False
-            profile_result.add_error(
-                "b4cb2ea0",
-                "Allele profile must provide one of: content, allele_ids, or locus_allele_id_map",
-            )
             continue
-        # Verify allele_ids representation
-        assert allele_ids is not None
-        if len(allele_ids) != n_loci:
+        if len(allele_ids) != len(locus_ids):
             success = False
             profile_result.add_error(
                 "b29dcaf6",
                 f"Length of allele_ids ({len(allele_ids)}) does not match number of loci in locus set ({len(locus_ids)})",
             )
             continue
-        uq_allele_ids.update(x for x in allele_ids if x is not None and x != NULL_ID)
+        unique_allele_ids.update(
+            allele_id
+            for allele_id in allele_ids
+            if allele_id is not None and allele_id != NULL_ID
+        )
+    return success, unique_allele_ids
 
-    # Retrieve existing allele IDs in chunks to avoid hitting parameter limits in the database
-    uq_allele_ids_list = list(uq_allele_ids)
+
+def _get_allele_ids_for_profile(
+    profile: model.SeqProfileForUpload,
+    profile_result: UploadResult,
+    locus_ids: list[UUID],
+    reverse_locus_code_maps: dict[UUID, dict[UUID, str]],
+) -> list[UUID | None] | None:
+    """Resolve one allele profile's supported input representation to IDs."""
+    if profile.locus_allele_id_map is not None:
+        # Convert locus_allele_id_map representation to allele_ids.
+        reverse_locus_code_map = reverse_locus_code_maps[profile.locus_code_map_id]
+        allele_ids = [
+            profile.locus_allele_id_map.get(reverse_locus_code_map[locus_id])
+            for locus_id in locus_ids
+        ]
+        profile.allele_ids = allele_ids
+        profile.locus_allele_id_map = None
+        return allele_ids
+    if profile.content:
+        if profile.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
+            return profile.get_allele_ids()
+        profile_result.add_error(
+            "a6097022",
+            f"Allele profile format {profile.format} is not supported for upload",
+        )
+        return None
+    if profile.allele_ids is not None:
+        return profile.allele_ids
+    profile_result.add_error(
+        "b4cb2ea0",
+        "Allele profile must provide one of: content, allele_ids, or locus_allele_id_map",
+    )
+    return None
+
+
+def _get_existing_allele_ids(
+    self: BatchUploader,
+    uow: Any,
+    user_id: UUID | None,
+    allele_ids: set[UUID],
+) -> set[UUID]:
+    """Retrieve existing allele IDs in bounded chunks."""
+    allele_id_list = list(allele_ids)
     chunk_size = 1000  # TODO: make configurable
     existing_allele_ids: set[UUID] = set()
-    # existing_allele_locus_map: dict[UUID, UUID] = {}
-    for i in range(0, len(uq_allele_ids_list), chunk_size):
-        curr_allele_ids = uq_allele_ids_list[
-            i : min(i + chunk_size, len(uq_allele_ids_list))
-        ]
+    for start in range(0, len(allele_id_list), chunk_size):
+        current_ids = allele_id_list[start : start + chunk_size]
         is_existing: list[bool] = self.service.repository.crud(
             uow,
             user_id,
             model.Allele,
             CrudOperation.EXISTS_SOME,
-            obj_ids=curr_allele_ids,
+            obj_ids=current_ids,
         )
         existing_allele_ids.update(
-            allele_id
-            for allele_id, exists in zip(curr_allele_ids, is_existing)
-            if exists
+            allele_id for allele_id, exists in zip(current_ids, is_existing) if exists
         )
-    new_allele_ids = uq_allele_ids - existing_allele_ids
+    return existing_allele_ids
 
-    # Convert to content represent as ORDERED_ALLELE_IDS if not already the case
-    # Record the first observed locus ID for each new allele ID to be able to set the locus ID for any new alleles
+
+def _prepare_allele_profiles_for_upload(
+    profiles: list[model.SeqProfileForUpload],
+    profile_results: list[UploadResult],
+    protocol_map: dict[UUID, model.Protocol],
+    locus_set_map: dict[UUID, model.LocusSet],
+    new_allele_ids: set[UUID],
+) -> dict[UUID, UUID]:
+    """Record loci for new alleles and normalize profile content for storage."""
     new_allele_locus_map: dict[UUID, UUID] = {}
-    for i, (profile, profile_result) in enumerate(zip(profiles, profile_results)):
+    for profile, profile_result in zip(profiles, profile_results):
         if profile_result.status != EtlStatus.PENDING:
             continue
         locus_ids = locus_set_map[
@@ -177,14 +240,11 @@ def _verify_batch_refdata_allele_profiles(
         ].locus_ids
         assert profile.allele_ids is not None
         allele_ids = profile.allele_ids
-        # Record the first observed locus ID for each new allele ID
         for allele_id, locus_id in zip(allele_ids, locus_ids):
             if allele_id not in new_allele_ids or allele_id in new_allele_locus_map:
-                # Not a new allele or already observed
                 continue
             assert allele_id is not None
             new_allele_locus_map[allele_id] = locus_id
-        # Convert to allele profile representation if not already the case
         if profile.content != "":
             continue
         profile.content = model.SeqProfile.get_ordered_allele_ids_representation(
@@ -194,97 +254,85 @@ def _verify_batch_refdata_allele_profiles(
         if profile.content_hash == NULL_ID:
             profile.content_hash = model.SeqProfile.get_allele_profile_hash(allele_ids)
         profile.allele_ids = None
+    return new_allele_locus_map
 
-    # Verify that any new alleles have been provided and set their locus IDs from the alleles in the sample data
-    if new_allele_locus_map:
-        provided_alleles = cmd.sample_batch.alleles or []
-        # Deduplicate alleles in-place (keep first occurrence per ID). The
-        # batch constructor may emit the same content-addressed allele once
-        # per sample; the repository requires unique IDs.
-        _seen_allele_ids: set[UUID] = set()
-        _dup_allele_indexes: list[int] = []
-        for _i, _allele in enumerate(provided_alleles):
-            assert _allele.id is not None
-            if _allele.id in _seen_allele_ids:
-                _dup_allele_indexes.append(_i)
-            else:
-                _seen_allele_ids.add(_allele.id)
-        for _index in sorted(_dup_allele_indexes, reverse=True):
-            del provided_alleles[_index]
-        provided_allele_ids = _seen_allele_ids
-        # Determine if any missing alleles
-        missing_allele_ids = set(new_allele_locus_map.keys()) - provided_allele_ids
-        if missing_allele_ids:
-            # Some new alleles are missing
-            success = False
-            missing_allele_ids_list = sorted(missing_allele_ids)
-            if len(missing_allele_ids_list) <= 5:
-                missing_alleles_str = ", ".join(
-                    [str(x) for x in missing_allele_ids_list]
-                )
-            else:
-                missing_alleles_str = (
-                    ", ".join([str(x) for x in missing_allele_ids_list[:5]])
-                    + f", ... (and {len(missing_allele_ids_list) - 5} more)"
-                )
-            batch_result.add_error(
-                "7eeced9e",
-                f"Missing new alleles: {missing_alleles_str}",
-            )
-        # Determine if any extra alleles
-        extra_allele_ids: set[UUID] = provided_allele_ids - set(
-            new_allele_locus_map.keys()
-        )  # type: ignore[assignment]
-        if extra_allele_ids:
-            # Some extra (superfluous) alleles provided
-            extra_allele_ids_list = sorted(extra_allele_ids)
-            if len(extra_allele_ids_list) <= 5:
-                extra_alleles_str = ", ".join([str(x) for x in extra_allele_ids_list])
-            else:
-                extra_alleles_str = (
-                    ", ".join([str(x) for x in extra_allele_ids_list[:5]])
-                    + f", ... (and {len(extra_allele_ids_list) - 5} more)"
-                )
-            batch_result.add_warning(
-                "dda74ae0",
-                f"Superfluous new alleles provided: {extra_alleles_str}",
-            )
-        # Verify locus IDs of provided alleles
-        extra_allele_indexes: list[int] = []
-        for i, allele in enumerate(provided_alleles):
-            assert allele.id is not None
-            if allele.id in extra_allele_ids:
-                # Superfluous allele: flag for deletion
-                extra_allele_indexes.append(i)
-                continue
-            # Set allele locus ID if not already set
-            expected_locus_id = new_allele_locus_map[allele.id]
-            locus_id = allele.locus_id
-            if locus_id is None or locus_id == NULL_ID:
-                allele.locus_id = expected_locus_id
-                continue
-            if locus_id != expected_locus_id:
-                # Different locus ID: override with the one derived from the
-                # profile and emit a warning (not a hard failure).
-                allele.locus_id = expected_locus_id
-                batch_result.add_warning(
-                    "e401b1bd",
-                    f"Different locus ID for new allele {allele.id}: expected {expected_locus_id}, got {locus_id}, used the former",
-                )
-        # Remove any extra alleles
-        for index in sorted(extra_allele_indexes, reverse=True):
-            del provided_alleles[index]
 
-    else:
-        # Every allele referenced in every profile is already stored. Any allele
-        # sequences included in the upload payload are redundant — drop them so
-        # _create_sample_refdata does not call UPSERT_SOME and trigger an
-        # expensive full-row reload of up to 3004 immutable allele records.
-        provided_alleles = cmd.sample_batch.alleles
-        if provided_alleles:
-            del provided_alleles[:]
+def _reconcile_provided_alleles(
+    batch_result: model.SampleBatchUploadResult,
+    sample_batch: model.SampleBatchForUpload,
+    new_allele_locus_map: dict[UUID, UUID],
+) -> bool:
+    """Validate provided allele records and assign their expected locus IDs."""
+    success = True
+    provided_alleles = sample_batch.alleles or []
+    # Deduplicate alleles in-place (keep first occurrence per ID). The batch
+    # constructor may emit the same content-addressed allele once per sample;
+    # the repository requires unique IDs.
+    seen_allele_ids: set[UUID] = set()
+    duplicate_indexes: list[int] = []
+    for index, allele in enumerate(provided_alleles):
+        assert allele.id is not None
+        if allele.id in seen_allele_ids:
+            duplicate_indexes.append(index)
+        else:
+            seen_allele_ids.add(allele.id)
+    for index in sorted(duplicate_indexes, reverse=True):
+        del provided_alleles[index]
 
+    missing_allele_ids = set(new_allele_locus_map) - seen_allele_ids
+    if missing_allele_ids:
+        success = False
+        missing_alleles_str = _format_allele_ids(missing_allele_ids)
+        batch_result.add_error(
+            "7eeced9e", f"Missing new alleles: {missing_alleles_str}"
+        )
+    extra_allele_ids = seen_allele_ids - set(new_allele_locus_map)
+    if extra_allele_ids:
+        extra_alleles_str = _format_allele_ids(extra_allele_ids)
+        batch_result.add_warning(
+            "dda74ae0", f"Superfluous new alleles provided: {extra_alleles_str}"
+        )
+    _set_provided_allele_loci(
+        batch_result, provided_alleles, new_allele_locus_map, extra_allele_ids
+    )
+    provided_alleles[:] = [
+        allele for allele in provided_alleles if allele.id not in extra_allele_ids
+    ]
     return success
+
+
+def _format_allele_ids(allele_ids: set[UUID]) -> str:
+    """Format a bounded list of allele IDs for upload diagnostics."""
+    sorted_ids = sorted(allele_ids)
+    formatted_ids = ", ".join(str(allele_id) for allele_id in sorted_ids[:5])
+    if len(sorted_ids) > 5:
+        formatted_ids += f", ... (and {len(sorted_ids) - 5} more)"
+    return formatted_ids
+
+
+def _set_provided_allele_loci(
+    batch_result: model.SampleBatchUploadResult,
+    provided_alleles: list[model.AlleleForUpload],
+    new_allele_locus_map: dict[UUID, UUID],
+    extra_allele_ids: set[UUID],
+) -> None:
+    """Set provided alleles' loci and warn when the supplied locus disagrees."""
+    for allele in provided_alleles:
+        assert allele.id is not None
+        if allele.id in extra_allele_ids:
+            continue
+        expected_locus_id = new_allele_locus_map[allele.id]
+        locus_id = allele.locus_id
+        if locus_id is None or locus_id == NULL_ID:
+            allele.locus_id = expected_locus_id
+            continue
+        if locus_id != expected_locus_id:
+            # The profile determines the locus ID; this is a warning, not a failure.
+            allele.locus_id = expected_locus_id
+            batch_result.add_warning(
+                "e401b1bd",
+                f"Different locus ID for new allele {allele.id}: expected {expected_locus_id}, got {locus_id}, used the former",
+            )
 
 
 def _handle_locus_allele_pair_mismatch(
@@ -323,107 +371,30 @@ def _verify_batch_refdata_mlva_profiles(
     """Verify MLVA profile-specific rules."""
     success = True
     user_id = cmd.user.id if cmd.user else None
-    samples = cmd.sample_batch.samples
-    sample_results = batch_result.samples
-
-    profiles: list[model.SeqProfileForUpload] = []
-    profile_results: list[UploadResult] = []
-    for sample, sample_result in zip(samples, sample_results):
-        curr_profiles = sample.seq_profiles or []
-        curr_profile_results = sample_result.seq_profiles or []
-        for profile, profile_result in zip(curr_profiles, curr_profile_results):
-            if profile_result.status != EtlStatus.PENDING:
-                continue
-            if profile.seq_profile_type not in enum.SeqProfileTypeSet.MLVA.value:
-                continue
-            profiles.append(profile)
-            profile_results.append(profile_result)
+    profiles, profile_results = _collect_pending_profiles(
+        cmd, batch_result, enum.SeqProfileTypeSet.MLVA.value
+    )
     if not profiles:
         return success
-
-    protocol_ids = {x.protocol_id for x in profiles}
-    protocols: list[model.Protocol] = self.service.repository.crud(
-        uow,
-        user_id,
-        model.Protocol,
-        CrudOperation.READ_SOME,
-        obj_ids=list(protocol_ids),
+    protocol_map, locus_set_map, reverse_locus_code_maps = _load_profile_reference_data(
+        self, uow, user_id, profiles
     )
-    protocol_map = {x.id: x for x in protocols}
-
-    locus_set_ids = {protocol_map[x.protocol_id].locus_set_id for x in profiles}
-    locus_sets: list[model.LocusSet] = self.service.repository.crud(
-        uow,
-        user_id,
-        model.LocusSet,
-        CrudOperation.READ_SOME,
-        obj_ids=list(locus_set_ids),
-    )
-    locus_set_map = {x.id: x for x in locus_sets}
-
-    locus_code_map_ids = {
-        x.locus_code_map_id
-        for x in profiles
-        if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
-    }
-    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(
-        uow,
-        user_id,
-        model.LocusCodeMap,
-        CrudOperation.READ_SOME,
-        obj_ids=list(locus_code_map_ids),
-    )
-    rev_locus_code_map_map = {
-        x.id: {z: y for y, z in x.code_map.items()} for x in locus_code_maps
-    }
-
-    repeat_numbers: list[int | None]
     for profile, profile_result in zip(profiles, profile_results):
         if profile_result.status != EtlStatus.PENDING:
             continue
         locus_ids = locus_set_map[
             protocol_map[profile.protocol_id].locus_set_id
         ].locus_ids
-        n_loci = len(locus_ids)
-        locus_repeat_number_map = profile.locus_repeat_number_map
-
-        if locus_repeat_number_map is not None:
-            locus_code_map_id = profile.locus_code_map_id
-            rev_locus_code_map = rev_locus_code_map_map[locus_code_map_id]
-            repeat_numbers = [
-                locus_repeat_number_map.get(rev_locus_code_map[locus_id])
-                for locus_id in locus_ids
-            ]
-            profile.repeat_numbers = repeat_numbers
-            profile.locus_repeat_number_map = None
-        elif len(profile.content):
-            if profile.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
-                repeat_numbers = [
-                    (
-                        None
-                        if repeat_number == MLVA_NO_LOCUS_REPEAT_NUMBER
-                        else repeat_number
-                    )
-                    for repeat_number in profile.get_repeat_numbers()
-                ]
-            else:
-                success = False
-                profile_result.add_error(
-                    "d5e6f7a8",
-                    f"MLVA profile format {profile.format} is not supported for upload",
-                )
-                continue
-        elif profile.repeat_numbers is not None:
-            repeat_numbers = profile.repeat_numbers
-        else:
+        repeat_numbers = _get_repeat_numbers_for_profile(
+            profile,
+            profile_result,
+            locus_ids,
+            reverse_locus_code_maps,
+        )
+        if repeat_numbers is None:
             success = False
-            profile_result.add_error(
-                "e6f7a8b9",
-                "MLVA profile must provide one of: content, repeat_numbers, or locus_repeat_number_map",
-            )
             continue
-
-        if len(repeat_numbers) != n_loci:
+        if len(repeat_numbers) != len(locus_ids):
             success = False
             profile_result.add_error(
                 "f4b6a1c8",
@@ -442,6 +413,63 @@ def _verify_batch_refdata_mlva_profiles(
     return success
 
 
+def _collect_pending_profiles(
+    cmd: command.UploadSamplesCommand,
+    batch_result: model.SampleBatchUploadResult,
+    profile_types: Collection[enum.SeqProfileType],
+) -> tuple[list[model.SeqProfileForUpload], list[UploadResult]]:
+    """Collect pending profiles of the requested types and their results."""
+    profiles: list[model.SeqProfileForUpload] = []
+    profile_results: list[UploadResult] = []
+    for sample, sample_result in zip(cmd.sample_batch.samples, batch_result.samples):
+        for profile, profile_result in zip(
+            sample.seq_profiles or [], sample_result.seq_profiles or []
+        ):
+            if (
+                profile_result.status == EtlStatus.PENDING
+                and profile.seq_profile_type in profile_types
+            ):
+                profiles.append(profile)
+                profile_results.append(profile_result)
+    return profiles, profile_results
+
+
+def _get_repeat_numbers_for_profile(
+    profile: model.SeqProfileForUpload,
+    profile_result: UploadResult,
+    locus_ids: list[UUID],
+    reverse_locus_code_maps: dict[UUID, dict[UUID, str]],
+) -> list[int | None] | None:
+    """Resolve a profile's supported MLVA representation to repeat numbers."""
+    if profile.locus_repeat_number_map is not None:
+        reverse_locus_code_map = reverse_locus_code_maps[profile.locus_code_map_id]
+        repeat_numbers = [
+            profile.locus_repeat_number_map.get(reverse_locus_code_map[locus_id])
+            for locus_id in locus_ids
+        ]
+        profile.repeat_numbers = repeat_numbers
+        profile.locus_repeat_number_map = None
+        return repeat_numbers
+    if profile.content:
+        if profile.format == enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS:
+            return [
+                None if repeat_number == MLVA_NO_LOCUS_REPEAT_NUMBER else repeat_number
+                for repeat_number in profile.get_repeat_numbers()
+            ]
+        profile_result.add_error(
+            "d5e6f7a8",
+            f"MLVA profile format {profile.format} is not supported for upload",
+        )
+        return None
+    if profile.repeat_numbers is not None:
+        return profile.repeat_numbers
+    profile_result.add_error(
+        "e6f7a8b9",
+        "MLVA profile must provide one of: content, repeat_numbers, or locus_repeat_number_map",
+    )
+    return None
+
+
 def _verify_batch_refdata_snp_profiles(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
@@ -454,104 +482,87 @@ def _verify_batch_refdata_snp_profiles(
     #   - Handle aligned_nucleotide_seq form.
     #   - Rebuild the full aligned sequence via nextclade_get_ref_alignment().
 
-    success = True
     user_id = cmd.user.id if cmd.user else None
-    samples = cmd.sample_batch.samples
-    sample_results = batch_result.samples
-
-    # Collect PENDING SNP profiles
-    profiles: list[model.SeqProfileForUpload] = []
-    profile_results: list[UploadResult] = []
-    for sample, sample_result in zip(samples, sample_results):
-        curr_profiles = sample.seq_profiles or []
-        curr_profile_results = sample_result.seq_profiles or []
-        for profile, profile_result in zip(curr_profiles, curr_profile_results):
-            if profile_result.status != EtlStatus.PENDING:
-                continue
-            if profile.seq_profile_type not in enum.SeqProfileTypeSet.SNP.value:
-                continue
-            profiles.append(profile)
-            profile_results.append(profile_result)
+    profiles, profile_results = _collect_pending_profiles(
+        cmd, batch_result, enum.SeqProfileTypeSet.SNP.value
+    )
     if not profiles:
-        return success
-
-    # Retrieve protocols
-    uq_protocol_ids = {x.protocol_id for x in profiles}
-    protocols: list[model.Protocol] = (
-        self.service.repository.crud(  # type: ignore[assignment]
-            uow,
-            user_id,
-            model.Protocol,
-            CrudOperation.READ_SOME,
-            obj_ids=list(uq_protocol_ids),
-        )
+        return True
+    protocols = self.service.repository.crud(
+        uow,
+        user_id,
+        model.Protocol,
+        CrudOperation.READ_SOME,
+        obj_ids=list({profile.protocol_id for profile in profiles}),
     )
     protocol_map = {x.id: x for x in protocols}
-
-    # Verify ref_seq exists for each protocol
-    ref_seq_ids = {
-        protocol_map[x.protocol_id].ref_seq_id
-        for x in profiles
-        if protocol_map[x.protocol_id].ref_seq_id is not None
-    }
-    if ref_seq_ids:
-        ref_seq_exists: list[bool] = (
-            self.service.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model.RefSeq,
-                CrudOperation.EXISTS_SOME,
-                obj_ids=list(ref_seq_ids),
-            )
-        )
-        missing_ref_seqs = {
-            ref_seq_id
-            for ref_seq_id, exists in zip(ref_seq_ids, ref_seq_exists)
-            if not exists
-        }
-        if missing_ref_seqs:
-            success = False
-            batch_result.add_error(
-                "b7c6d5e4",
-                f"Reference sequences not found:" f" {sorted(missing_ref_seqs)}",
-            )
-
+    success = _verify_snp_reference_sequences(
+        self, uow, user_id, profiles, protocol_map, batch_result
+    )
     for profile, profile_result in zip(profiles, profile_results):
         if profile_result.status != EtlStatus.PENDING:
             continue
-
-        protocol = protocol_map[profile.protocol_id]
-        ref_seq_id = protocol.ref_seq_id
-        if ref_seq_id is None:
-            success = False
-            profile_result.add_error(
-                "a6b5c4d3",
-                "Protocol has no ref_seq_id for SNP profile",
-            )
-            continue
-
-        content = profile.content
-        if not content:
-            success = False
-            profile_result.add_error(
-                "d3e2f1a0",
-                "SNP profile content is empty",
-            )
-            continue
-
-        if content is None or content == "":
-            success = False
-            profile_result.add_error(
-                "c5d4e3f2",
-                "SNP profile content is empty",
-            )
-            continue
-        else:
-            if profile.format == enum.SeqProfileFormat.NEXTCLADE:
-                # TODO: Add more specific SNP profile validations as needed
-                pass
-
+        success &= _verify_one_snp_profile(profile, profile_result, protocol_map)
     return success
+
+
+def _verify_snp_reference_sequences(
+    self: BatchUploader,
+    uow: Any,
+    user_id: UUID | None,
+    profiles: list[model.SeqProfileForUpload],
+    protocol_map: dict[UUID, model.Protocol],
+    batch_result: model.SampleBatchUploadResult,
+) -> bool:
+    """Verify all non-null reference-sequence IDs used by SNP profiles."""
+    ref_seq_ids = {
+        protocol_map[profile.protocol_id].ref_seq_id
+        for profile in profiles
+        if protocol_map[profile.protocol_id].ref_seq_id is not None
+    }
+    if not ref_seq_ids:
+        return True
+    ref_seq_exists: list[bool] = self.service.repository.crud(
+        uow,
+        user_id,
+        model.RefSeq,
+        CrudOperation.EXISTS_SOME,
+        obj_ids=list(ref_seq_ids),
+    )
+    missing_ref_seqs = {
+        ref_seq_id
+        for ref_seq_id, exists in zip(ref_seq_ids, ref_seq_exists)
+        if not exists
+    }
+    if not missing_ref_seqs:
+        return True
+    batch_result.add_error(
+        "b7c6d5e4",
+        f"Reference sequences not found: {sorted(missing_ref_seqs)}",
+    )
+    return False
+
+
+def _verify_one_snp_profile(
+    profile: model.SeqProfileForUpload,
+    profile_result: UploadResult,
+    protocol_map: dict[UUID, model.Protocol],
+) -> bool:
+    """Validate one pending SNP profile against its protocol and content."""
+    ref_seq_id = protocol_map[profile.protocol_id].ref_seq_id
+    if ref_seq_id is None:
+        profile_result.add_error(
+            "a6b5c4d3", "Protocol has no ref_seq_id for SNP profile"
+        )
+        return False
+    content = profile.content
+    if not content:
+        profile_result.add_error("d3e2f1a0", "SNP profile content is empty")
+        return False
+    if profile.format == enum.SeqProfileFormat.NEXTCLADE:
+        # TODO: Add more specific SNP profile validations as needed.
+        pass
+    return True
 
 
 def _verify_batch_refdata_kmer_profiles(

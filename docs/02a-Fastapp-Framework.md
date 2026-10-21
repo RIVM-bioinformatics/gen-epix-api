@@ -464,8 +464,8 @@ The generated endpoints:
 | Enum | Notable values |
 |------|----------------|
 | `PermissionType` | CREATE, READ, UPDATE, DELETE, EXECUTE |
-| `CrudOperation` | 20 variants: CREATE_ONE, READ_ALL, UPSERT_SOME, DELETE_ALL … |
-| `CrudEndpointType` | 12 HTTP endpoint shapes (POST_ONE, GET_ALL, POST_QUERY …) |
+| `CrudOperation` | 17 variants: CREATE_ONE, READ_ALL, UPSERT_SOME, DELETE_ALL, EXISTS_ONE … |
+| `CrudEndpointType` | 14 HTTP endpoint shapes (POST_ONE, GET_ALL, POST_QUERY, GET_EXISTS_ONE, GET_EXISTS_SOME …) |
 | `FieldType` / `FieldTypeSet` | ID, LINK, VALUE, COMPUTED, RELATIONSHIP … |
 | `IsolationLevel` | Maps to SQL isolation levels for SAUnitOfWork |
 | `AuthProtocol` | NONE, OAUTH2, OIDC |

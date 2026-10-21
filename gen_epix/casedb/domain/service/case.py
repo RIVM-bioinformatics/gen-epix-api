@@ -169,6 +169,10 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
             command.RetrievePhylogeneticTreeByCasesCommand,
             self.retrieve_phylogenetic_tree,
         )
+        f(
+            command.RetrieveSeqDistancesByCasesCommand,
+            self.retrieve_seq_distances_by_cases,
+        )
         f(command.RetrieveSimilarCasesCommand, self.retrieve_similar_cases)
         f(command.RetrieveIsOwnCasesCommand, self.retrieve_is_own_cases)
         f(
@@ -873,6 +877,25 @@ class BaseCaseService(BaseService[BaseCaseRepository]):
 
         Returns:
             The phylogenetic tree generated from accessible case sequences.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements the
+                operation.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_seq_distances_by_cases(
+        self,
+        cmd: command.RetrieveSeqDistancesByCasesCommand,
+    ) -> list[seqdb_model.SeqDistance]:
+        """Retrieve sequence distances for specified cases.
+
+        Args:
+            cmd: Distance command containing case identifiers and column metadata.
+
+        Returns:
+            Sequence distances whose row identifiers refer to case identifiers.
 
         Raises:
             NotImplementedError: Always, until a concrete service implements the

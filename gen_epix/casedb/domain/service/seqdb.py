@@ -43,6 +43,10 @@ class BaseSeqdbService(BaseService):
         f(seqdb_command.ReadSetCrudCommand, self.crud)
         f(seqdb_command.FileCrudCommand, self.crud)
         f(seqdb_command.SeqCrudCommand, self.crud)
+        f(
+            seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand,
+            self.retrieve_seq_distances_by_seq_profiles,
+        )
         f(seqdb_command.RetrieveSimilarProfilesCommand, self.retrieve_similar_profiles)
 
     @abc.abstractmethod
@@ -137,6 +141,25 @@ class BaseSeqdbService(BaseService):
 
         Returns:
             Identifiers of matching profiles.
+
+        Raises:
+            NotImplementedError: Always, until a concrete service implements
+                the query.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_seq_distances_by_seq_profiles(
+        self,
+        cmd: seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand,
+    ) -> list[seqdb_model.SeqDistance]:
+        """Retrieve sequence distances for the requested profiles and protocol.
+
+        Args:
+            cmd: Distance retrieval command to forward to Seqdb.
+
+        Returns:
+            Distance records returned by Seqdb.
 
         Raises:
             NotImplementedError: Always, until a concrete service implements

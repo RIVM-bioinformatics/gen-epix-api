@@ -23,6 +23,7 @@ def _configure_url() -> None:
 
 
 def run_migrations_offline() -> None:
+    """Run migrations using a configured URL without a live connection."""
     _configure_url()
     context.configure(
         url=config.get_main_option("sqlalchemy.url"),
@@ -39,6 +40,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    """Run migrations through a live SQLAlchemy connection."""
     _configure_url()
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),

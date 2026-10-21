@@ -9,6 +9,7 @@ guards against route/model drift between the API and the Client handler.
 from __future__ import annotations
 
 import base64
+import datetime
 import json
 from test.util.mock_compat import MagicMock, Mock, patch
 from typing import Any
@@ -18,6 +19,7 @@ import pytest
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.services.client import CasedbClient
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
@@ -214,6 +216,33 @@ class TestNonCrudHandlers:
         }
         assert result == [model.CaseStats(**data[0])]
 
+    def test_retrieve_case_stats_by_case_set_forwards_datetime_filter(
+        self, app: CasedbClient, mock_client: Any
+    ) -> None:
+        case_set_id = uuid4()
+        datetime_range_filter = DatetimeRangeFilter(
+            lower_bound=datetime.datetime(2024, 1, 1, tzinfo=datetime.UTC),
+            upper_bound=datetime.datetime(2024, 2, 1, tzinfo=datetime.UTC),
+        )
+        cmd = command.RetrieveCaseSetStatsCommand(
+            user=None,
+            case_set_ids={case_set_id},
+            datetime_range_filter=datetime_range_filter,
+        )
+        data: list[dict[str, str]] = []
+        mock_client.request.return_value = _mock_response(data)
+
+        result = app.retrieve_case_set_stats(cmd)
+
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert json_body == {
+            "case_set_ids": [str(case_set_id)],
+            "datetime_range_filter": json.loads(
+                datetime_range_filter.model_dump_json()
+            ),
+        }
+        assert result == []
+
     def test_retrieve_cases_by_id(self, app: CasedbClient, mock_client: Any) -> None:
         case_type_id = uuid4()
         case_id = uuid4()
@@ -326,6 +355,47 @@ class TestNonCrudHandlers:
             "case_ids": [str(case_id)],
         }
         assert result == model.PhylogeneticTree(**data)
+
+    def test_retrieve_seq_distances_by_cases(
+        self, app: CasedbClient, mock_client: Any
+    ) -> None:
+        case_type_id = uuid4()
+        genetic_distance_col_id = uuid4()
+        case_id = uuid4()
+        protocol_id = uuid4()
+        profile_id = uuid4()
+        cmd = command.RetrieveSeqDistancesByCasesCommand(
+            user=None,
+            case_type_id=case_type_id,
+            case_ids=[case_id],
+            genetic_distance_col_id=genetic_distance_col_id,
+            filter_other_cases=False,
+        )
+        distance = seqdb_model.SeqDistance(
+            id=case_id,
+            sample_id=uuid4(),
+            protocol_id=protocol_id,
+            seq_profile_id=profile_id,
+            format=seqdb_enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+            content=json.dumps({str(profile_id): 1.5}),
+        )
+        mock_client.request.return_value = _mock_response(
+            [json.loads(distance.model_dump_json())]
+        )
+
+        result = app.retrieve_seq_distances_by_cases(cmd)
+
+        method, url = mock_client.request.call_args.args
+        json_body = mock_client.request.call_args.kwargs["json"]
+        assert method == "POST"
+        assert url == app._routes[command.RetrieveSeqDistancesByCasesCommand]
+        assert json_body == {
+            "case_type_id": str(case_type_id),
+            "genetic_distance_col_id": str(genetic_distance_col_id),
+            "case_ids": [str(case_id)],
+            "filter_other_cases": False,
+        }
+        assert result == [distance]
 
     def test_retrieve_similar_cases(self, app: CasedbClient, mock_client: Any) -> None:
         case_type_id = uuid4()

@@ -7,6 +7,186 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import CompositeFilter, Filter, LogicalOperator, UuidSetFilter
 
+_UNEXPECTED_CASE = "Unexpected case"
+
+
+def _validate_read_association_args(
+    return_type: str, match_all1: bool, match_all2: bool
+) -> tuple[bool, bool]:
+    # Parse arguments
+    if return_type not in {"objects", "ids1", "ids2", "id_map12", "id_map21"}:
+        raise ValueError(f"Invalid return_type: {return_type}")
+    if match_all1 and match_all2:
+        raise ValueError("match_all1 and match_all2 cannot both be True")
+    id_map12 = return_type == "id_map12"
+    id_map21 = return_type == "id_map21"
+    if id_map12 and match_all1:
+        raise ValueError("match_all1 must be False if id_map12 is True")
+    if id_map21 and match_all2:
+        raise ValueError("match_all2 must be False if id_map21 is True")
+    if return_type == "ids1" and match_all1:
+        raise ValueError("match_all1 must be False if return_type is ids1")
+    if return_type == "ids2" and match_all2:
+        raise ValueError("match_all2 must be False if return_type is ids2")
+    return id_map12, id_map21
+
+
+def _empty_association_result(
+    return_type: str,
+) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
+    if return_type in {"id_map12", "id_map21"}:
+        return {}
+    return []
+
+
+def _create_association_filter(
+    field_name1: str,
+    field_name2: str,
+    valid_ids1: set[UUID] | frozenset[UUID] | None,
+    valid_ids2: set[UUID] | frozenset[UUID] | None,
+    match_all1: bool,
+    match_all2: bool,
+    return_type: str,
+) -> tuple[
+    Filter | None,
+    list[model.Model] | list[UUID] | dict[UUID, set[UUID]] | None,
+]:
+    # Create filter
+    ids1 = frozenset(valid_ids1) if valid_ids1 is not None else None
+    ids2 = frozenset(valid_ids2) if valid_ids2 is not None else None
+    if ids1 is not None:
+        if not ids1:
+            # Empty set of valid values -> no matches
+            return None, _empty_association_result(return_type)
+        if ids2 is not None:
+            if not ids2:
+                # Empty set of valid values -> no matches
+                return None, _empty_association_result(return_type)
+            return (
+                CompositeFilter(
+                    filters=[
+                        UuidSetFilter(key=field_name1, members=ids1),
+                        UuidSetFilter(key=field_name2, members=ids2),
+                    ],
+                    operator=LogicalOperator.AND,
+                ),
+                None,
+            )
+        if match_all2:
+            raise ValueError("match_all2 must be False if valid_ids2 is None")
+        return UuidSetFilter(key=field_name1, members=ids1), None
+    if ids2 is not None:
+        if not ids2:
+            # Empty set of valid values -> no matches
+            return None, _empty_association_result(return_type)
+        if match_all1:
+            raise ValueError("match_all1 must be False if valid_ids1 is None")
+        return UuidSetFilter(key=field_name2, members=ids2), None
+    if match_all1 or match_all2:
+        raise ValueError(
+            "match_all1 and match_all2 must be False if valid_ids1 and valid_ids2 are None"
+        )
+    return None, None
+
+
+def _group_association_ids(
+    key_ids: list[UUID], value_ids: list[UUID]
+) -> dict[UUID, set[UUID]]:
+    # Create dict[id1, set[id2]]
+    grouped_ids: dict[UUID, set[UUID]] = {}
+    for key_id, value_id in zip(key_ids, value_ids):
+        grouped_ids.setdefault(key_id, set()).add(value_id)
+    return grouped_ids
+
+
+def _get_mapped_association_result(
+    objs: list[model.Model],
+    endpoint_ids: list[UUID],
+    id_map: dict[UUID, set[UUID]],
+    return_type: str,
+    id_return_type: str,
+) -> list[model.Model] | list[UUID]:
+    if return_type == "objects":
+        return [
+            obj for obj, endpoint_id in zip(objs, endpoint_ids) if endpoint_id in id_map
+        ]
+    if return_type == id_return_type:
+        return list(id_map)
+    raise AssertionError(_UNEXPECTED_CASE)
+
+
+def _get_directional_association_result(
+    objs: list[model.Model],
+    key_ids: list[UUID],
+    value_ids: list[UUID],
+    return_type: str,
+    map_return_type: str,
+    ids_return_type: str,
+    match_all: bool,
+    valid_ids: set[UUID] | frozenset[UUID] | None,
+) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
+    """Build one directional ID map, optionally requiring every valid link."""
+    id_map = _group_association_ids(key_ids, value_ids)
+    if match_all:
+        expected_count = len(valid_ids or ())
+        id_map = {
+            key_id: linked_ids
+            for key_id, linked_ids in id_map.items()
+            if len(linked_ids) == expected_count
+        }
+        if return_type == map_return_type:
+            return id_map
+        return _get_mapped_association_result(
+            objs, key_ids, id_map, return_type, ids_return_type
+        )
+    if return_type == map_return_type:
+        return id_map
+    raise AssertionError(_UNEXPECTED_CASE)
+
+
+def _format_association_result(
+    objs: list[model.Model],
+    ids1: list[UUID],
+    ids2: list[UUID],
+    return_type: str,
+    id_map12: bool,
+    id_map21: bool,
+    match_all1: bool,
+    match_all2: bool,
+    valid_ids1: set[UUID] | frozenset[UUID] | None,
+    valid_ids2: set[UUID] | frozenset[UUID] | None,
+) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
+    """Shape association objects and endpoint IDs into the requested result."""
+    if id_map12 or match_all2:
+        return _get_directional_association_result(
+            objs,
+            ids1,
+            ids2,
+            return_type,
+            "id_map12",
+            "ids1",
+            match_all2,
+            valid_ids2,
+        )
+    if id_map21 or match_all1:
+        return _get_directional_association_result(
+            objs,
+            ids2,
+            ids1,
+            return_type,
+            "id_map21",
+            "ids2",
+            match_all1,
+            valid_ids1,
+        )
+    if return_type == "objects":
+        return objs
+    if return_type == "ids1":
+        return ids1
+    if return_type == "ids2":
+        return ids2
+    raise AssertionError(f"Unexpected return_type: {return_type}")
+
 
 def case_service_read_association_with_valid_ids(
     self: BaseCaseService,
@@ -47,69 +227,20 @@ def case_service_read_association_with_valid_ids(
         AssertionError: If a validated return mode reaches an unexpected branch.
     """
     # TODO: this can be a generic service/repository method (ids should be Hashable instead of UUID)
-    # Parse arguments
-    if return_type not in {"objects", "ids1", "ids2", "id_map12", "id_map21"}:
-        raise ValueError(f"Invalid return_type: {return_type}")
-    if match_all1 and match_all2:
-        raise ValueError("match_all1 and match_all2 cannot both be True")
-    id_map12 = return_type == "id_map12"
-    id_map21 = return_type == "id_map21"
-    if id_map12 and match_all1:
-        raise ValueError("match_all1 must be False if id_map12 is True")
-    if id_map21 and match_all2:
-        raise ValueError("match_all2 must be False if id_map21 is True")
-    if return_type == "ids1" and match_all1:
-        raise ValueError("match_all1 must be False if return_type is ids1")
-    if return_type == "ids2" and match_all2:
-        raise ValueError("match_all2 must be False if return_type is ids2")
-    # Create filter
-    filter: Filter | None
-    if valid_ids1 is not None:
-        if not isinstance(valid_ids1, frozenset):
-            valid_ids1 = frozenset(valid_ids1)
-        if not valid_ids1:
-            # Empty set of valid values -> no matches
-            if return_type in {"id_map12", "id_map21"}:
-                return dict()
-            return []
-        if valid_ids2 is not None:
-            if not valid_ids2:
-                # Empty set of valid values -> no matches
-                if return_type in {"id_map12", "id_map21"}:
-                    return dict()
-                return []
-            if not isinstance(valid_ids2, frozenset):
-                valid_ids2 = frozenset(valid_ids2)
-            filter = CompositeFilter(
-                filters=[
-                    UuidSetFilter(key=field_name1, members=valid_ids1),
-                    UuidSetFilter(key=field_name2, members=valid_ids2),
-                ],
-                operator=LogicalOperator.AND,
-            )
-        else:
-            if match_all2:
-                raise ValueError("match_all2 must be False if valid_ids2 is None")
-            if not isinstance(valid_ids1, frozenset):
-                valid_ids2 = frozenset(valid_ids2)
-            filter = UuidSetFilter(key=field_name1, members=valid_ids1)
-    elif valid_ids2 is not None:
-        if not valid_ids2:
-            # Empty set of valid values -> no matches
-            if return_type in {"id_map12", "id_map21"}:
-                return dict()
-            return []
-        if match_all1:
-            raise ValueError("match_all1 must be False if valid_ids1 is None")
-        if not isinstance(valid_ids2, frozenset):
-            valid_ids2 = frozenset(valid_ids2)
-        filter = UuidSetFilter(key=field_name2, members=valid_ids2)
-    else:
-        if match_all1 or match_all2:
-            raise ValueError(
-                "match_all1 and match_all2 must be False if valid_ids1 and valid_ids2 are None"
-            )
-        filter = None
+    id_map12, id_map21 = _validate_read_association_args(
+        return_type, match_all1, match_all2
+    )
+    filter, empty_result = _create_association_filter(
+        field_name1,
+        field_name2,
+        valid_ids1,
+        valid_ids2,
+        match_all1,
+        match_all2,
+        return_type,
+    )
+    if empty_result is not None:
+        return empty_result
     # Query repository
     cmd = command_class(
         user=user, operation=CrudOperation.READ_ALL, query_filter=filter
@@ -122,60 +253,15 @@ def case_service_read_association_with_valid_ids(
             objs = self.crud_repository(uow, cmd)  # type: ignore[assignment]
     ids1 = [getattr(x, field_name1) for x in objs]
     ids2 = [getattr(x, field_name2) for x in objs]
-    # Apply id_map12/id_map21 and match_all1/match_all2 if necessary
-    if id_map12 or id_map21 or match_all1 or match_all2:
-        id_map: dict[UUID, set[UUID]] = {}
-        if id_map12 or match_all2:
-            # Create dict[id1, set[id2]]
-            for id1, id2 in zip(ids1, ids2):
-                if id1 in id_map:
-                    id_map[id1].add(id2)
-                else:
-                    id_map[id1] = {id2}
-            if match_all2:
-                # Keep only ids1 linked to all valid ids2
-                id_map = {
-                    x: y for x, y in id_map.items() if len(y) == len(valid_ids2)  # type: ignore[arg-type]
-                }
-                if id_map12:
-                    return id_map
-                elif return_type == "objects":
-                    return [x for x, y in zip(objs, ids1) if y in id_map]
-                elif return_type == "ids1":
-                    return list(id_map.keys())
-            elif id_map12:
-                return id_map
-            else:
-                raise AssertionError("Unexpected case")
-        elif id_map21 or match_all1:
-            # Create dict[id2, set[id1]]
-            for id1, id2 in zip(ids1, ids2):
-                if id2 in id_map:
-                    id_map[id2].add(id1)
-                else:
-                    id_map[id2] = {id1}
-            if match_all1:
-                # Keep only ids2 linked to all valid ids1
-                id_map = {
-                    x: y for x, y in id_map.items() if len(y) == len(valid_ids1)  # type: ignore[arg-type]
-                }
-                if id_map21:
-                    return id_map
-                elif return_type == "objects":
-                    return [x for x, y in zip(objs, ids2) if y in id_map]
-                elif return_type == "ids2":
-                    return list(id_map.keys())
-            elif id_map21:
-                return id_map
-            else:
-                raise AssertionError("Unexpected case")
-        else:
-            raise AssertionError("Unexpected case")
-    # Return objs or IDs for remaining cases
-    if return_type == "objects":
-        return objs
-    if return_type == "ids1":
-        return ids1
-    if return_type == "ids2":
-        return ids2
-    raise AssertionError(f"Unexpected return_type: {return_type}")
+    return _format_association_result(
+        objs,
+        ids1,
+        ids2,
+        return_type,
+        id_map12,
+        id_map21,
+        match_all1,
+        match_all2,
+        valid_ids1,
+        valid_ids2,
+    )

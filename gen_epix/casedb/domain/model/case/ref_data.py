@@ -28,6 +28,9 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain.literal import NCBI_TAXID_PATTERN
 from gen_epix.util import copy_model_field
 
+_DIMENSION_ID_DESCRIPTION = "The ID of the dimension. FOREIGN KEY"
+_DIMENSION_DESCRIPTION = "The dimension"
+
 
 class GeneticDistanceProtocol(Model):
     """Represents a protocol for calculating and storing genetic distances."""
@@ -269,8 +272,8 @@ class RefCol(Model):
         "unit",
     }
 
-    ref_dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
-    ref_dim: RefDim | None = Field(default=None, description="The dimension")
+    ref_dim_id: UUID = Field(description=_DIMENSION_ID_DESCRIPTION)
+    ref_dim: RefDim | None = Field(default=None, description=_DIMENSION_DESCRIPTION)
     code_suffix: str | None = Field(
         default=None,
         description=(
@@ -387,6 +390,12 @@ class RefCol(Model):
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         """Validate column-type requirements and prohibited linked metadata."""
+        self._validate_unit_requirement()
+        self._validate_set_requirements()
+        self._validate_protocol_regex_schema_requirements()
+        return self
+
+    def _validate_unit_requirement(self) -> None:
         if self.col_type in enum.ColTypeSet.HAS_UNIT.value:
             if self.unit is None:
                 raise exc.InvalidArgumentsError(
@@ -398,6 +407,8 @@ class RefCol(Model):
                 "29bdfe0d",
                 f"RefCol {self.code}: unit not allowed for col_type {self.col_type.value}",
             )
+
+    def _validate_set_requirements(self) -> None:
         if self.col_type in enum.ColTypeSet.HAS_CONCEPT_SET.value:
             if self.concept_set_id is None:
                 raise exc.InvalidArgumentsError(
@@ -420,6 +431,8 @@ class RefCol(Model):
                 "902946f9",
                 f"RefCol {self.code}: region_set_id not allowed for col_type {self.col_type.value}",
             )
+
+    def _validate_protocol_regex_schema_requirements(self) -> None:
         if self.col_type in enum.ColTypeSet.HAS_GENETIC_DISTANCE_PROTOCOL.value:
             if self.genetic_distance_protocol_id is None:
                 raise exc.InvalidArgumentsError(
@@ -463,7 +476,6 @@ class RefCol(Model):
                 "4dd65d8e",
                 f"RefCol {self.code}: only one of schema_definition or schema_uri can be set",
             )
-        return self
 
     @field_serializer("col_type", mode="plain")
     def _serialize_col_type(self, value: enum.ColType) -> str:
@@ -642,8 +654,8 @@ class Dim(Model):
     )
     case_type_id: UUID = Field(description="The ID of the CaseType. FOREIGN KEY")
     case_type: CaseType | None = Field(default=None, description="The CaseType")
-    ref_dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
-    ref_dim: RefDim | None = Field(default=None, description="The dimension")
+    ref_dim_id: UUID = Field(description=_DIMENSION_ID_DESCRIPTION)
+    ref_dim: RefDim | None = Field(default=None, description=_DIMENSION_DESCRIPTION)
     occurrence: int = Field(
         default=0,
         description=(
@@ -706,8 +718,8 @@ class Col(Model):
     )
     case_type_id: UUID = copy_model_field(Dim, "case_type_id")
     case_type: CaseType | None = copy_model_field(Dim, "case_type")
-    dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
-    dim: Dim | None = Field(default=None, description="The dimension")
+    dim_id: UUID = Field(description=_DIMENSION_ID_DESCRIPTION)
+    dim: Dim | None = Field(default=None, description=_DIMENSION_DESCRIPTION)
     ref_col_id: UUID = Field(description="The ID of the column. FOREIGN KEY")
     ref_col: RefCol | None = Field(default=None, description="The column")
     code: str = Field(

@@ -4,7 +4,7 @@ from enum import IntEnum
 from uuid import UUID
 
 import sqlalchemy as sa
-from pydantic import Json
+from pydantic import JsonValue
 from sqlalchemy.orm import Mapped
 from sqlalchemy_utils.types.uuid import UUIDType
 
@@ -42,7 +42,7 @@ class QualityMixin:
     qc_score: Mapped[float] = get_mixin_mapped_column(
         model.QualityMixin, "qc_score", sa.Float
     )
-    qc_report: Mapped[Json | None] = get_mixin_mapped_column(
+    qc_report: Mapped[JsonValue | None] = get_mixin_mapped_column(
         model.QualityMixin, "qc_report", sa.JSON, nullable=True
     )
 

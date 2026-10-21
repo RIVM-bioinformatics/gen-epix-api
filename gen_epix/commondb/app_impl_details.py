@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validat
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain.policy.pdp import BasePolicyDecisionPoint
+from gen_epix.commondb.domain.service.abac import BaseAbacService
 from gen_epix.fastapp import BaseUserManager
 from gen_epix.fastapp.services.rbac import BaseRbacService
 
@@ -64,8 +66,14 @@ class AppImplDetails(BaseModel):
     rbac_service_class: type[BaseRbacService] = Field(
         description="Class used for RBAC service"
     )
+    abac_service_class: type[BaseAbacService] = Field(
+        description="Class used for ABAC service"
+    )
     user_manager_class: type[BaseUserManager] = Field(
         description="Class used for user management"
+    )
+    pdp_class: type[BasePolicyDecisionPoint] = Field(
+        description="Class used for the Policy Decision Point (PDP)"
     )
     role_map: dict[enum.Role | Enum, str] = Field(
         description="Mapping of roles to unique string representations; an enum class is expanded to this mapping.",

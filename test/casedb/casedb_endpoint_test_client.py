@@ -7,6 +7,8 @@ from fastapi import FastAPI, Response
 from gen_epix.casedb.domain import command, model
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.fastapp.app import App
+from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.domain import model as seqdb_model
 
 
 class CasedbEndpointTestClient(EndpointTestClient):
@@ -32,6 +34,9 @@ class CasedbEndpointTestClient(EndpointTestClient):
             self.handle_update_case_created_in_data_collection,
         )
         self.register_handler(command.CreateCaseSetCommand, self.handle_case_set_create)
+        self.register_handler(
+            command.RetrieveProtocolsCommand, self.handle_retrieve_protocols
+        )
 
     def handle_update_user_own_organization(
         self,
@@ -133,4 +138,18 @@ class CasedbEndpointTestClient(EndpointTestClient):
             json=json.loads(request_body.model_dump_json()),
         )
         retval = self._content_to_obj(response, model.CaseSet)
+        return retval, response
+
+    def handle_retrieve_protocols(
+        self,
+        cmd: command.RetrieveProtocolsCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        if cmd.protocol_type == seqdb_enum.ProtocolType.SEQUENCING:
+            route = "/retrieve/sequencing_protocols"
+        else:
+            route = "/retrieve/assembly_protocols"
+        response = self.test_client.get(route_prefix + route, headers=headers)
+        retval = self._content_to_obj(response, seqdb_model.Protocol, is_list=True)
         return retval, response

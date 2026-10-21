@@ -7,13 +7,14 @@ import pytest
 
 from gen_epix.fastapp.cache.backend.base import CacheBackend
 from gen_epix.fastapp.cache.clock import ManualClock
-from gen_epix.fastapp.cache.enum import CacheOperation, FailureMode
+from gen_epix.fastapp.cache.enum import CacheOperation, FailureMode, InvalidationMode
 from gen_epix.fastapp.cache.exc import (
     CacheBackendError,
     CacheConfigurationError,
     CantDeserializeError,
     KeyRejectedError,
 )
+from gen_epix.fastapp.cache.invalidation import Invalidation, LocalInvalidationBus
 from gen_epix.fastapp.cache.lock import InlineRefreshRunner
 from gen_epix.fastapp.cache.model import NO_VALUE, CachedValue, RegionConfig
 from gen_epix.fastapp.cache.region import CacheRegion
@@ -493,3 +494,117 @@ def test_contradictory_configurations_are_rejected() -> None:
         RegionConfig(name="", ttl=5.0)
     with pytest.raises(CacheConfigurationError):
         RegionConfig(name="test", jitter_ratio=1.5)
+
+
+def test_deleting_a_known_key_removes_only_that_entry() -> None:
+    """The narrowest invalidation must leave neighbouring keys intact."""
+    region = CacheRegion(RegionConfig(name="test"))
+    region.set("a", 1)
+    region.set("b", 2)
+
+    region.invalidate_keys("a")
+
+    assert region.get("a") is NO_VALUE
+    assert region.get("b") == 2
+
+
+def test_a_tag_invalidates_every_entry_that_declared_it() -> None:
+    """A tag removes every entry that declared the changed entity."""
+    region = CacheRegion(RegionConfig(name="test"))
+    region.set("summary", "s", tags=["case:1"])
+    region.set("detail", "d", tags=["case:1"])
+    region.set("other", "o", tags=["case:2"])
+
+    removed = region.invalidate_tags("case:1")
+
+    assert removed == 1
+    assert region.get("summary") is NO_VALUE
+    assert region.get("detail") is NO_VALUE
+    assert region.get("other") == "o"
+
+
+def test_bumping_the_generation_orphans_every_key_at_once() -> None:
+    """Generation bumps invalidate an arbitrarily large key set at once."""
+    region = CacheRegion(RegionConfig(name="test"))
+    for index in range(50):
+        region.set(f"k{index}", index)
+    before = region.generation
+
+    after = region.bump_generation()
+
+    assert after == before + 1
+    assert all(region.get(f"k{index}") is NO_VALUE for index in range(50))
+
+
+def test_a_hard_region_invalidation_forces_regeneration() -> None:
+    """A hard invalidation prevents the old value from being served."""
+    clock = ManualClock()
+    region = CacheRegion(RegionConfig(name="test", ttl=100.0), clock=clock)
+    calls: list[int] = []
+
+    def load() -> int:
+        """Count invocations and return the invocation number."""
+        calls.append(1)
+        return len(calls)
+
+    assert region.get_or_create("k", load) == 1
+    clock.advance(1)
+    region.invalidate(InvalidationMode.HARD)
+
+    assert region.get_or_create("k", load) == 2
+
+
+def test_a_soft_region_invalidation_serves_the_old_value_once_more() -> None:
+    """Soft invalidation serves stale data while an inline refresh runs."""
+    clock = ManualClock()
+    region = CacheRegion(
+        RegionConfig(name="test", ttl=100.0),
+        clock=clock,
+        refresh_runner=InlineRefreshRunner(),
+    )
+    calls: list[int] = []
+
+    def load() -> int:
+        """Count invocations and return the invocation number."""
+        calls.append(1)
+        return len(calls)
+
+    assert region.get_or_create("k", load) == 1
+    clock.advance(1)
+    region.invalidate(InvalidationMode.SOFT)
+
+    assert region.get_or_create("k", load) == 1
+    assert region.get_or_create("k", load) == 2
+
+
+def test_clearing_a_region_removes_everything_in_it() -> None:
+    """The broadest invalidation removes all entries from one region."""
+    region = CacheRegion(RegionConfig(name="test"))
+    region.set("a", 1)
+
+    region.clear()
+
+    assert region.get("a") is NO_VALUE
+
+
+def test_an_invalidation_aimed_at_another_region_is_ignored() -> None:
+    """A region ignores invalidation requests addressed elsewhere."""
+    region = CacheRegion(RegionConfig(name="test"))
+    region.set("a", 1)
+
+    region.apply(Invalidation.for_all(region="other"))
+
+    assert region.get("a") == 1
+
+
+def test_a_bus_delivers_an_invalidation_to_every_subscribed_region() -> None:
+    """Invalidation in one worker reaches other regions sharing the bus."""
+    bus = LocalInvalidationBus()
+    first = CacheRegion(RegionConfig(name="test"), bus=bus)
+    second = CacheRegion(RegionConfig(name="test"), backend=first.backend, bus=bus)
+    first.set("k", "value", tags=["case:1"])
+    second.set("k", "value", tags=["case:1"])
+
+    second.invalidate_tags("case:1")
+
+    assert first.get("k") is NO_VALUE

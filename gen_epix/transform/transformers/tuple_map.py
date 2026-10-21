@@ -114,6 +114,7 @@ class TupleMapTransformer(Transformer):
         Raises:
             KeyError: Raised when a mapping row is missing a configured field or
                 duplicate source keys point to different target values.
+            ValueError: Raised when an active-field value is not a boolean.
         """
         tuple_map: dict[tuple, tuple] = {}
         # Extract source and target tuples
@@ -123,11 +124,15 @@ class TupleMapTransformer(Transformer):
                     raise KeyError(
                         f"Transformer {self.name}: Missing field {field} in map row: {row}"
                     )
-            if self._is_active_map_field is not None and not row.get(
-                self._is_active_map_field, True
-            ):
-                # Skip inactive mapping
-                continue
+            if self._is_active_map_field is not None:
+                is_active = row.get(self._is_active_map_field, True)
+                if not isinstance(is_active, bool):
+                    raise ValueError(
+                        f"Transformer {self.name}: Active field "
+                        f"{self._is_active_map_field} must be boolean"
+                    )
+                if not is_active:
+                    continue
             key = self._normalize_key(tuple(row[x] for x in self._map_src_fields))
             value = tuple(row[x] for x in self._map_tgt_fields)
             if key in tuple_map:

@@ -174,6 +174,18 @@ class TestTupleMapTransformer:
         result = transformer.transform(adapter)
         assert result.get("tgt") == 3
 
+    @pytest.mark.parametrize("active_value", [0, 1, "false", None])
+    def test_is_active_map_field_rejects_non_boolean_values(
+        self, active_value: object
+    ) -> None:
+        with pytest.raises(ValueError, match="must be boolean"):
+            TupleMapTransformer(
+                map_rows=[{"src": "A", "tgt": 1, "active": active_value}],
+                row_src_fields=["src"],
+                row_tgt_fields=["tgt"],
+                is_active_map_field="active",
+            )
+
     def test_transform_no_match_raises(self) -> None:
         """Test that transform raises ValueError when no mapping is found."""
         map_rows = [

@@ -18,6 +18,7 @@ round-trip as the base class.
 """
 
 import uuid
+from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from typing import Annotated, Any, ClassVar, Self, TypeVar
 from uuid import UUID
@@ -85,9 +86,12 @@ class Result(BaseModel):
     ``source_id`` stores whichever source-system identifier is most
     relevant for the concrete subclass as a string; ``SOURCE_ID_FIELD`` records
     its origin as ``"ClassName.field_name"`` so the value is always traceable.
+
+    Model validation: The ``type`` discriminator is set from the concrete class's
+    ``RESULT_ID``.
     """
 
-    ID: ClassVar[str] = "f2b8e4a1"
+    RESULT_ID: ClassVar[str] = "f2b8e4a1"
     COMPLETED_CODE: ClassVar[str] = ""
     COMPLETED_MESSAGE: ClassVar[str] = ""
     SOURCE_ID_FIELD: ClassVar[str] = ""
@@ -95,7 +99,7 @@ class Result(BaseModel):
 
     type: str = Field(
         default="",
-        description="The class ID representing the specific ETL result subclass. This allows polymorphic deserialization of ETL results. The value is set equal to the ID class variable.",
+        description="The class ID representing the specific ETL result subclass. This allows polymorphic deserialization of ETL results. The value is set equal to the RESULT_ID class variable.",
     )
     status: EtlStatus = Field(
         default=EtlStatus.PENDING,
@@ -284,10 +288,11 @@ class Result(BaseModel):
 
     @model_validator(mode="after")
     def _validate_type(self) -> Self:
-        self.type = self.ID
+        self.type = self.RESULT_ID
         return self
 
     def __new__(cls, **data: Any) -> Any:
+        """Instantiate the registered result subclass named by the input type."""
         if cls is Result and "type" in data:
             class_id = data["type"]
             subclass = cls._SUBCLASS_REGISTRY.get(class_id)
@@ -298,18 +303,19 @@ class Result(BaseModel):
 
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+        """Register the subclass under its unique result type identifier."""
         super().__pydantic_init_subclass__(**kwargs)
-        if cls.ID in Result._SUBCLASS_REGISTRY:
+        if cls.RESULT_ID in Result._SUBCLASS_REGISTRY:
             raise ValueError(
-                f"Duplicate {Result.__name__} subclass ID: {cls.ID} - possibly the subclass ID was not set for class with name {cls.__name__}"
+                f"Duplicate {Result.__name__} subclass ID: {cls.RESULT_ID} - possibly the subclass ID was not set for class with name {cls.__name__}"
             )
-        Result._SUBCLASS_REGISTRY[cls.ID] = cls
+        Result._SUBCLASS_REGISTRY[cls.RESULT_ID] = cls
 
 
 class LoadResult(Result):
     """Represents a load ETL result."""
 
-    ID: ClassVar[str] = "7c2e9a5f"
+    RESULT_ID: ClassVar[str] = "7c2e9a5f"
     COMPLETED_CODE: ClassVar[str] = "a5b6c7d8"
     COMPLETED_MESSAGE: ClassVar[str] = "Load completed."
 
@@ -337,7 +343,7 @@ def _require_own_completed_code(cls: type) -> None:
 class TransformResult(Result):
     """Represents a transform ETL result."""
 
-    ID: ClassVar[str] = "a1f6b3c9"
+    RESULT_ID: ClassVar[str] = "a1f6b3c9"
     COMPLETED_CODE: ClassVar[str] = "3c4f5e6f"
     COMPLETED_MESSAGE: ClassVar[str] = "Transform completed."
     TARGET_ID_FIELD: ClassVar[str] = ""
@@ -347,6 +353,7 @@ class TransformResult(Result):
     )
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Require each transform-result subclass to define completion metadata."""
         super().__init_subclass__(**kwargs)
         _require_own_completed_code(cls)
 
@@ -354,11 +361,12 @@ class TransformResult(Result):
 class ExtractResult(Result):
     """Represents an extract ETL result."""
 
-    ID: ClassVar[str] = "e5d2f8a6"
+    RESULT_ID: ClassVar[str] = "e5d2f8a6"
     COMPLETED_CODE: ClassVar[str] = "d3ca1f37"
     COMPLETED_MESSAGE: ClassVar[str] = "Extract completed."
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Require each extract-result subclass to define completion metadata."""
         super().__init_subclass__(**kwargs)
         _require_own_completed_code(cls)
 
@@ -379,11 +387,12 @@ AnyLoadResult = Annotated[
 
 
 class BatchResult(Result):
-    """Represents a single ETL batch result, consisting of extract, transform, and load
-    results.
+    """Represents the combined ETL result for a single batch.
+
+    The result consists of extract, transform, and load results.
     """
 
-    ID: ClassVar[str] = "b9c3e7d1"
+    RESULT_ID: ClassVar[str] = "b9c3e7d1"
     COMPLETED_CODE: ClassVar[str] = "4d5e6f7a"
     COMPLETED_MESSAGE: ClassVar[str] = "Batch completed."
     SOURCE_ID_FIELD: ClassVar[str] = "BatchResult.batch_id"
@@ -580,7 +589,7 @@ class BatchResult(Result):
 class JobResult(Result):
     """Represents a top-level ETL job result consisting of multiple batches."""
 
-    ID: ClassVar[str] = "7c1c2cce"
+    RESULT_ID: ClassVar[str] = "7c1c2cce"
     COMPLETED_CODE: ClassVar[str] = "fd6d5984"
     COMPLETED_MESSAGE: ClassVar[str] = "Job completed."
 
@@ -657,21 +666,21 @@ class JobResult(Result):
         n_transformed_ok = n_transformed_failed = 0
         n_loaded_ok = n_loaded_failed = 0
         for batch in batches:
-            for extract in batch.extract_results:
-                if extract.is_success():
-                    n_extracted_ok += 1
-                else:
-                    n_extracted_failed += 1
-            for transform in batch.transform_results:
-                if transform.is_success():
-                    n_transformed_ok += 1
-                else:
-                    n_transformed_failed += 1
-            for load in batch.load_results:
-                if load.status in not_failed_load:
-                    n_loaded_ok += 1
-                else:
-                    n_loaded_failed += 1
+            extracted = self._count_result_outcomes(
+                batch.extract_results, lambda result: result.is_success()
+            )
+            transformed = self._count_result_outcomes(
+                batch.transform_results, lambda result: result.is_success()
+            )
+            loaded = self._count_result_outcomes(
+                batch.load_results, lambda result: result.status in not_failed_load
+            )
+            n_extracted_ok += extracted[0]
+            n_extracted_failed += extracted[1]
+            n_transformed_ok += transformed[0]
+            n_transformed_failed += transformed[1]
+            n_loaded_ok += loaded[0]
+            n_loaded_failed += loaded[1]
         return {
             "etl_name": self.etl_name,
             "job_id": self.job_id,
@@ -686,3 +695,16 @@ class JobResult(Result):
             "n_loaded_ok": n_loaded_ok,
             "n_loaded_failed": n_loaded_failed,
         }
+
+    @staticmethod
+    def _count_result_outcomes(
+        results: Iterable[Any], is_success: Callable[[Any], bool]
+    ) -> tuple[int, int]:
+        """Return the successful and failed counts for a result collection."""
+        successes = failures = 0
+        for result in results:
+            if is_success(result):
+                successes += 1
+            else:
+                failures += 1
+        return successes, failures

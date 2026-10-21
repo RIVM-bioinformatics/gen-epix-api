@@ -48,6 +48,7 @@ def case_service_retrieve_complete_case_type(
 
         # @ABAC
         # Get allowed Cols with any CRUD permission
+        # TODO: use PDP for ABAC
         case_abac: model.CaseAbac | None
         case_type_access_abacs: dict[UUID, model.CaseTypeAccessAbac]
         case_type_share_abacs: dict[UUID, model.CaseTypeShareAbac]

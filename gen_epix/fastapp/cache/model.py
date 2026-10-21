@@ -195,19 +195,36 @@ class RegionConfig:
         """
         if not self.name:
             raise CacheConfigurationError("A region requires a non-empty name")
+        self._validate_durations()
+        self._validate_ratios()
+        self._validate_soft_ttl()
+        self._validate_capacity()
+
+    def _validate_durations(self) -> None:
+        """Require configured duration values to be positive."""
         for attribute in ("ttl", "soft_ttl", "negative_ttl", "operation_timeout"):
             value = getattr(self, attribute)
             if value is not None and value <= 0:
                 raise CacheConfigurationError(f"{attribute} must be positive")
+
+    def _validate_ratios(self) -> None:
+        """Require jitter and early-refresh ratios to be within [0, 1)."""
         for attribute in ("jitter_ratio", "early_refresh_ratio"):
             value = getattr(self, attribute)
             if not 0.0 <= value < 1.0:
                 raise CacheConfigurationError(f"{attribute} must be in [0, 1)")
-        if self.soft_ttl is not None and self.ttl is not None:
-            if self.soft_ttl > self.ttl:
-                raise CacheConfigurationError("soft_ttl must not exceed ttl")
-        if self.soft_ttl is not None and self.ttl is None:
+
+    def _validate_soft_ttl(self) -> None:
+        """Ensure the soft TTL is configured and bounded by the hard TTL."""
+        if self.soft_ttl is None:
+            return
+        if self.ttl is None:
             raise CacheConfigurationError("soft_ttl requires a ttl")
+        if self.soft_ttl > self.ttl:
+            raise CacheConfigurationError("soft_ttl must not exceed ttl")
+
+    def _validate_capacity(self) -> None:
+        """Require positive cache capacity and a supported schema version."""
         if self.max_weight <= 0:
             raise CacheConfigurationError("max_weight must be positive")
         if self.schema_version < 1:

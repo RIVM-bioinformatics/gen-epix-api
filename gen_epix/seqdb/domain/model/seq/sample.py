@@ -13,9 +13,11 @@ from gen_epix.fastapp.domain.util import create_links
 
 
 class Sample(Model):
-    """Represents the original physical sample (specimen) on which all measurements were performed
-    either directly or through some derived samples. Derived samples such as cultures
-    or library preps for sequencing are not modelled.
+    """Represents the original physical sample used for measurements.
+
+    Measurements may be performed directly on the sample or through derived
+    samples. Derived samples such as cultures or sequencing library preparations
+    are not modelled.
 
     Model validation: Codes are stripped of surrounding whitespace. Properties may
     be supplied as JSON and are normalized to a dictionary.
@@ -80,8 +82,10 @@ class HasSampleMixin:
 
 
 class SampleDataCollectionLink(Model):
-    """Represents an association between a sample and a data collection. A sample can thus be part
-    of multiple data collections."""
+    """Represents a sample's membership in a data collection.
+
+    A sample can be part of multiple data collections.
+    """
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sample_data_collection_links",

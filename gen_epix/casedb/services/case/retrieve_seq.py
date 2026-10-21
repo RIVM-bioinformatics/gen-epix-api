@@ -1,5 +1,6 @@
 """Retrieve phylogenetic, FASTA, and protocol data through seqdb commands."""
 
+import json
 from collections.abc import Iterable
 from uuid import UUID
 
@@ -34,41 +35,15 @@ def case_service_retrieve_phylogenetic_tree(
             type.
         UnauthorizedAuthError: If the selected tree algorithm is not allowed.
     """
-    case_type_id = cmd.case_type_id
-    dist_col_id = cmd.genetic_distance_col_id
     tree_algorithm_code = cmd.tree_algorithm
     case_ids = cmd.case_ids
     user: model.User
     user, repository = self._get_user_and_repository(cmd)  # type: ignore[assignment]
     assert isinstance(user, model.User) and user.id is not None
-    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-    assert case_abac is not None
     with repository.uow() as uow:
-        # Get distance column data
-        dist_col: model.Col = repository.crud(
-            uow,
-            user.id,
-            model.Col,
-            CrudOperation.READ_ONE,
-            obj_ids=dist_col_id,
+        genetic_distance_protocol, case_profile_map, dist_col = (
+            _retrieve_case_profile_map(self, uow, cmd)
         )
-        if dist_col.case_type_id != case_type_id:
-            raise exc.InvalidArgumentsError(
-                "b081c000",
-                f"Col {dist_col_id} does not belong to CaseType {case_type_id}",
-            )
-        dist_ref_col: model.RefCol = repository.crud(
-            uow,
-            user.id,
-            model.RefCol,
-            CrudOperation.READ_ONE,
-            obj_ids=dist_col.ref_col_id,
-        )
-        if dist_ref_col.col_type != enum.ColType.GENETIC_DISTANCE:
-            raise exc.InvalidArgumentsError(
-                "b8f2c28c",
-                f"Col {dist_col} is not of type {enum.ColType.GENETIC_DISTANCE.value}",
-            )
 
         # @ABAC
         assert dist_col.tree_algorithm_codes is not None
@@ -78,14 +53,6 @@ def case_service_retrieve_phylogenetic_tree(
                 f"User {user.id} has no read access to tree algorithm {tree_algorithm_code}",
             )
 
-        # Get protocol
-        genetic_distance_protocol: model.GeneticDistanceProtocol = self.repository.crud(
-            uow,
-            user.id,
-            model.GeneticDistanceProtocol,
-            CrudOperation.READ_ONE,
-            obj_ids=dist_ref_col.genetic_distance_protocol_id,
-        )
         seqdb_seq_distance_protocol_id = (
             genetic_distance_protocol.seqdb_seq_distance_protocol_id
         )
@@ -103,24 +70,6 @@ def case_service_retrieve_phylogenetic_tree(
             )
             phylogenetic_tree.protocol_id = genetic_distance_protocol.id
             return phylogenetic_tree
-
-        # @ABAC: Get cases
-        cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
-            uow,
-            user.id,
-            case_abac,
-            enum.CaseRight.READ_CASE,
-            case_type_id,
-            case_ids=case_ids,
-            filter_content=True,
-        )
-
-        # Get profile_ids from dist_col
-        case_profile_map = {}
-        for case in cases:
-            profile_id = case.content.get(dist_col_id)
-            if profile_id:
-                case_profile_map[case.id] = UUID(profile_id)
 
         # Retrieve tree
         profile_ids = list(case_profile_map.values())
@@ -140,6 +89,67 @@ def case_service_retrieve_phylogenetic_tree(
         phylogenetic_tree.protocol_id = genetic_distance_protocol.id
 
     return phylogenetic_tree
+
+
+def _retrieve_case_profile_map(
+    self: BaseCaseService,
+    uow: BaseUnitOfWork,
+    cmd: (
+        command.RetrievePhylogeneticTreeByCasesCommand
+        | command.RetrieveSeqDistancesByCasesCommand
+    ),
+) -> tuple[model.GeneticDistanceProtocol, dict[UUID, UUID], model.Col]:
+    """Validate a distance column and map accessible cases to seqdb profiles."""
+    user, repository = self._get_user_and_repository(cmd)
+    assert isinstance(user, model.User) and user.id is not None
+    dist_col: model.Col = repository.crud(
+        uow,
+        user.id,
+        model.Col,
+        CrudOperation.READ_ONE,
+        obj_ids=cmd.genetic_distance_col_id,
+    )
+    if dist_col.case_type_id != cmd.case_type_id:
+        raise exc.InvalidArgumentsError(
+            "b081c000",
+            f"Col {cmd.genetic_distance_col_id} does not belong to CaseType {cmd.case_type_id}",
+        )
+    dist_ref_col: model.RefCol = repository.crud(
+        uow,
+        user.id,
+        model.RefCol,
+        CrudOperation.READ_ONE,
+        obj_ids=dist_col.ref_col_id,
+    )
+    if dist_ref_col.col_type != enum.ColType.GENETIC_DISTANCE:
+        raise exc.InvalidArgumentsError(
+            "b8f2c28c",
+            f"Col {dist_col} is not of type {enum.ColType.GENETIC_DISTANCE.value}",
+        )
+    genetic_distance_protocol: model.GeneticDistanceProtocol = repository.crud(
+        uow,
+        user.id,
+        model.GeneticDistanceProtocol,
+        CrudOperation.READ_ONE,
+        obj_ids=dist_ref_col.genetic_distance_protocol_id,
+    )
+    case_profile_map: dict[UUID, UUID] = {}
+    if cmd.case_ids:
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        cases, _ = self._retrieve_cases_with_content_right(
+            uow,
+            user.id,
+            case_abac,
+            enum.CaseRight.READ_CASE,
+            cmd.case_type_id,
+            case_ids=cmd.case_ids,
+            filter_content=True,
+        )
+        for case in cases:
+            profile_id = case.content.get(cmd.genetic_distance_col_id)
+            if profile_id:
+                case_profile_map[case.id] = UUID(profile_id)
+    return genetic_distance_protocol, case_profile_map, dist_col
 
 
 def case_service_retrieve_genetic_sequence_fasta_by_case(

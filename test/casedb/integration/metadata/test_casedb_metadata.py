@@ -1,5 +1,6 @@
 """
 Integration tests for metadata field stamping (created_at, modified_at, modified_by)
+
 in casedb on create and update operations.
 
 Parametrized for both the SQLite and dictionary backends.
@@ -98,6 +99,7 @@ def setup_reference_data(env: Env) -> None:
 class TestCasedbModelProcessMetadata:
     """
     Verifies that the CommondbSAMapper (SA backend) and CommondbDictModelModifier
+
     (dict backend) correctly stamp metadata fields on CaseType create and update.
     """
 

@@ -26,9 +26,7 @@ def reuse_labels(G, communities):
         try:
             saved = {
                 int(k): v
-                for k, v in json.loads(
-                    labels_path.read_text(encoding="utf-8")
-                ).items()
+                for k, v in json.loads(labels_path.read_text(encoding="utf-8")).items()
                 if int(k) in communities and v != f"Community {int(k)}"
             }
         except Exception as e:
@@ -290,7 +288,10 @@ def main():
         _cleared = _dispatched - _stamped
         _scan = {f for fl in incremental["files"].values() for f in fl}
         save_manifest(
-            _manifest_files, root=".", scan_corpus=_scan, clear_semantic=_cleared or None
+            _manifest_files,
+            root=".",
+            scan_corpus=_scan,
+            clear_semantic=_cleared or None,
         )
         print("✓ Manifest saved")
     except Exception as e:

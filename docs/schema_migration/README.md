@@ -56,6 +56,25 @@ The database URL is not stored in `alembic.ini`. Pass it through
 Treat generated revisions as production code. Do not edit a revision that may
 already have run in a shared environment. Add a new corrective revision instead.
 
+## Downgrade a migration
+
+Use the same `SERVICE` and `ALEMBIC_URL` settings shown above. To downgrade to a
+specific earlier revision, find its ID in the service's history:
+
+```sh
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" history
+REVISION='<revision-id>'
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" downgrade "$REVISION"
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" current
+```
+
+To downgrade one revision from the current database revision instead:
+
+```sh
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" downgrade -1
+alembic -c "gen_epix/$SERVICE/repositories/alembic.ini" current
+```
+
 ## DevOps pipeline
 
 The `lsp-api` deployment pipeline automatically runs the required CaseDB,

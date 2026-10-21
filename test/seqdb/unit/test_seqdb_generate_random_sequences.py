@@ -8,6 +8,17 @@ from gen_epix.seqdb.domain import model
 @pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestGenerateRandomSequences:
 
+    def test_generate_zero_sequences_returns_empty_batch(self) -> None:
+        settings = SeqGenerationSettings(n_loci=5, locus_length=20)
+
+        batch = SeqdbTestClient.generate_random_sequences(
+            n_seqs=0,
+            settings=settings,
+        )
+
+        assert batch.samples == []
+        assert batch.alleles == []
+
     def test_generate_sequences_happy_flow(self) -> None:
         settings = SeqGenerationSettings(
             n_loci=5,

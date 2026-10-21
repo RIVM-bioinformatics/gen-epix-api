@@ -35,179 +35,212 @@ def case_service_retrieve_case_stats(
     assert isinstance(user, model.User) and user.id is not None
 
     with repository.uow() as uow:
-        # @ABAC: check READ_CASE right on CaseTypes
         case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
         assert case_abac is not None
         read_case_type_ids = case_abac.get_case_types_with_access_right(
             enum.CaseRight.READ_CASE
         )
-        if (
-            isinstance(cmd, command.RetrieveCaseTypeStatsCommand)
-            and cmd.case_type_ids is None
-        ):
-            # No CaseTypes provided -> get/use all CaseTypes with read access
-            if case_abac.is_full_access:
-                # All CaseTypes
-                case_type_ids: set[UUID] = set(
-                    self.repository.crud(
-                        uow,
-                        user.id,
-                        model.CaseType,
-                        CrudOperation.READ_ALL,
-                        return_id=True,
-                    )
-                )
-            else:
-                case_type_ids = read_case_type_ids
-        elif isinstance(cmd, command.RetrieveCaseTypeStatsCommand):
-            # CaseTypes provided: use them; access check follows below
-            case_type_ids = cmd.case_type_ids  # type: ignore[assignment]
-        else:
-            # RetrieveCaseSetStatsCommand: case_type_ids are determined from case sets
-            if case_abac.is_full_access:
-                # All CaseTypes
-                case_type_ids: set[UUID] = set(
-                    self.repository.crud(
-                        uow,
-                        user.id,
-                        model.CaseType,
-                        CrudOperation.READ_ALL,
-                        return_id=True,
-                    )
-                )
-            else:
-                case_type_ids = read_case_type_ids
-        if not case_abac.is_full_access:
-            unauthorized_case_type_ids = case_type_ids - read_case_type_ids
-            if unauthorized_case_type_ids:
-                unauthorized_case_type_ids_str = ", ".join(
-                    str(x) for x in unauthorized_case_type_ids
-                )
-                raise exc.UnauthorizedAuthError(
-                    "e70d1344",
-                    f"User {user.id} does not have READ_CASE right for CaseTypes: {unauthorized_case_type_ids_str}",
-                )
-
-        # Retrieve case sets if applicable
-        case_type_case_set_ids_map: dict[UUID, set[UUID]] | None = None
-        if (
-            isinstance(cmd, command.RetrieveCaseSetStatsCommand)
-            and cmd.case_set_ids is not None
-        ):
-            # Get (case_set_id, case_type_id) tuples
-            case_set_case_type_tuples: list[tuple[UUID, UUID]] = list(
-                self.repository.read_fields(
-                    uow,
-                    user.id,
-                    model.CaseSet,
-                    ["id", "case_type_id"],
-                    filter=UuidSetFilter(key="id", members=frozenset(cmd.case_set_ids)),
-                )
-            )
-            # Check if all case sets are for allowed CaseTypes
-            if any(x[1] not in case_type_ids for x in case_set_case_type_tuples):
-                raise exc.UnauthorizedAuthError(
-                    "67dc2ef5",
-                    f"User {user.id} does not have READ_CASE right for all case sets provided",
-                )
-            # Map CaseType IDs to case set IDs
-            case_type_case_set_ids_map = {}
-            for case_set_id, case_type_id in case_set_case_type_tuples:
-                case_type_case_set_ids_map.setdefault(case_type_id, set()).add(
-                    case_set_id
-                )
-            # Restrict CaseTypes to those in the case sets
-            case_type_ids = set(case_type_case_set_ids_map.keys())
-        is_by_case_set = case_type_case_set_ids_map is not None
-        if case_type_case_set_ids_map is None:
-            case_type_case_set_ids_map = {}
-
-        # Calculate case stats per CaseType or case set
+        case_type_ids = _get_accessible_case_type_ids(
+            self, uow, user.id, cmd, case_abac.is_full_access, read_case_type_ids
+        )
+        case_type_case_set_ids_map = _get_case_set_ids_by_case_type(
+            self, uow, user.id, cmd, case_type_ids
+        )
         case_stats: list[model.CaseStats] = []
         for case_type_id in case_type_ids:
-            # @ABAC: Get complete CaseType, which contains all necessary ABAC info
-            sub_cmd = command.RetrieveCompleteCaseTypeCommand(
-                user=user,
-                case_type_id=case_type_id,
+            case_stats.extend(
+                _retrieve_case_type_stats(
+                    self,
+                    uow,
+                    user,
+                    cmd,
+                    case_type_id,
+                    case_type_case_set_ids_map,
+                )
             )
-            sub_cmd._policies.extend(cmd._policies)
-            complete_case_type: model.CompleteCaseType = (
-                self.retrieve_complete_case_type(sub_cmd)
-            )
-
-            # Special case: no user -> no access
-            if cmd.user is None:
-                case_stats.append(model.CaseStats(case_type_id=case_type_id))
-                continue
-
-            # Get private data collections for the user's organization for own case calculation
-            private_data_collection_ids: set[UUID] = {
-                x.data_collection_id
-                for x in complete_case_type.case_type_access_abacs.values()
-                if x.is_private
-            }
-
-            # Get readable data collections by highest resolution time unit
-            data_collections_by_time_unit: dict[enum.ColType, set[UUID]] = {}
-            is_handled_data_collection_ids: set[UUID] = set()
-            for col_type in enum.ColTypeOrder.TIME_RESOLUTION_DESC.value:
-                col_id = complete_case_type.case_date_col_type_map.get(col_type)
-                if col_id is None:
-                    # No case date column for this time unit
-                    continue
-                for (
-                    data_collection_id,
-                    case_type_access_abac,
-                ) in complete_case_type.case_type_access_abacs.items():
-                    read_col_ids = case_type_access_abac.read_col_ids
-                    if data_collection_id in is_handled_data_collection_ids:
-                        # Data collection also allows access to higher time resolution column, can be skipped here
-                        continue
-                    if col_id not in read_col_ids:
-                        # Col may not be read in this data collection
-                        continue
-                    data_collections_by_time_unit.setdefault(col_type, set()).add(
-                        data_collection_id
-                    )
-                    is_handled_data_collection_ids.add(data_collection_id)
-
-            # Retrieve case stats by case set if applicable
-            if is_by_case_set:
-                case_set_ids = case_type_case_set_ids_map.get(case_type_id, set())
-                for case_set_id in case_set_ids:
-                    # Get all cases in case set
-                    case_ids: set[UUID] = {
-                        x[0]
-                        for x in self.repository.read_fields(
-                            uow,
-                            user.id,
-                            model.CaseSetMember,
-                            ["case_id"],
-                            filter=EqualsUuidFilter(
-                                key="case_set_id", value=case_set_id
-                            ),
-                        )
-                    }
-                    case_type_stat = self.repository.retrieve_case_stats(
-                        uow,
-                        case_type_id=case_type_id,
-                        data_collections_by_time_unit=data_collections_by_time_unit,
-                        private_data_collection_ids=private_data_collection_ids,
-                        case_ids=case_ids,
-                        datetime_range_filter=cmd.datetime_range_filter,
-                    )
-                    case_type_stat.case_set_id = case_set_id
-                    case_stats.append(case_type_stat)
-                continue
-
-            # Retrieve case stats for entire CaseType
-            case_type_stat = self.repository.retrieve_case_stats(
-                uow,
-                case_type_id=case_type_id,
-                data_collections_by_time_unit=data_collections_by_time_unit,
-                private_data_collection_ids=private_data_collection_ids,
-                datetime_range_filter=cmd.datetime_range_filter,
-            )
-            case_stats.append(case_type_stat)
 
         return case_stats
+
+
+def _get_accessible_case_type_ids(
+    service: BaseCaseService,
+    uow: object,
+    user_id: UUID,
+    cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
+    is_full_access: bool,
+    read_case_type_ids: set[UUID],
+) -> set[UUID]:
+    """Resolve requested case types and enforce READ_CASE access."""
+    if (
+        isinstance(cmd, command.RetrieveCaseTypeStatsCommand)
+        and cmd.case_type_ids is not None
+    ):
+        case_type_ids = cmd.case_type_ids
+    elif is_full_access:
+        case_type_ids = set(
+            service.repository.crud(
+                uow,
+                user_id,
+                model.CaseType,
+                CrudOperation.READ_ALL,
+                return_id=True,
+            )
+        )
+    else:
+        case_type_ids = read_case_type_ids
+    if not is_full_access:
+        unauthorized_ids = case_type_ids - read_case_type_ids
+        if unauthorized_ids:
+            unauthorized_ids_str = ", ".join(str(item) for item in unauthorized_ids)
+            raise exc.UnauthorizedAuthError(
+                "e70d1344",
+                f"User {user_id} does not have READ_CASE right for CaseTypes: {unauthorized_ids_str}",
+            )
+    return case_type_ids
+
+
+def _get_case_set_ids_by_case_type(
+    service: BaseCaseService,
+    uow: object,
+    user_id: UUID,
+    cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
+    case_type_ids: set[UUID],
+) -> dict[UUID, set[UUID]] | None:
+    """Read requested case sets, enforce access, and group IDs by case type."""
+    if (
+        not isinstance(cmd, command.RetrieveCaseSetStatsCommand)
+        or cmd.case_set_ids is None
+    ):
+        return None
+    case_set_case_type_tuples: list[tuple[UUID, UUID]] = list(
+        service.repository.read_fields(
+            uow,
+            user_id,
+            model.CaseSet,
+            ["id", "case_type_id"],
+            filter=UuidSetFilter(key="id", members=frozenset(cmd.case_set_ids)),
+        )
+    )
+    if any(
+        case_type_id not in case_type_ids
+        for _, case_type_id in case_set_case_type_tuples
+    ):
+        raise exc.UnauthorizedAuthError(
+            "67dc2ef5",
+            f"User {user_id} does not have READ_CASE right for all case sets provided",
+        )
+    case_type_case_set_ids_map: dict[UUID, set[UUID]] = {}
+    for case_set_id, case_type_id in case_set_case_type_tuples:
+        case_type_case_set_ids_map.setdefault(case_type_id, set()).add(case_set_id)
+    return case_type_case_set_ids_map
+
+
+def _get_data_collections_by_time_unit(
+    complete_case_type: model.CompleteCaseType,
+) -> dict[enum.ColType, set[UUID]]:
+    """Select each data collection's highest-resolution readable date column."""
+    data_collections_by_time_unit: dict[enum.ColType, set[UUID]] = {}
+    handled_data_collection_ids: set[UUID] = set()
+    for col_type in enum.ColTypeOrder.TIME_RESOLUTION_DESC.value:
+        col_id = complete_case_type.case_date_col_type_map.get(col_type)
+        if col_id is None:
+            continue
+        for (
+            data_collection_id,
+            access_abac,
+        ) in complete_case_type.case_type_access_abacs.items():
+            if data_collection_id in handled_data_collection_ids:
+                continue
+            if col_id not in access_abac.read_col_ids:
+                continue
+            data_collections_by_time_unit.setdefault(col_type, set()).add(
+                data_collection_id
+            )
+            handled_data_collection_ids.add(data_collection_id)
+    return data_collections_by_time_unit
+
+
+def _retrieve_case_type_stats(
+    service: BaseCaseService,
+    uow: object,
+    user: model.User,
+    cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
+    case_type_id: UUID,
+    case_type_case_set_ids_map: dict[UUID, set[UUID]] | None,
+) -> list[model.CaseStats]:
+    """Retrieve statistics for one case type or its requested case sets."""
+    sub_cmd = command.RetrieveCompleteCaseTypeCommand(
+        user=user,
+        case_type_id=case_type_id,
+    )
+    sub_cmd._policies.extend(cmd._policies)
+    complete_case_type: model.CompleteCaseType = service.retrieve_complete_case_type(
+        sub_cmd
+    )
+    if cmd.user is None:
+        return [model.CaseStats(case_type_id=case_type_id)]
+
+    private_data_collection_ids = {
+        access_abac.data_collection_id
+        for access_abac in complete_case_type.case_type_access_abacs.values()
+        if access_abac.is_private
+    }
+    data_collections_by_time_unit = _get_data_collections_by_time_unit(
+        complete_case_type
+    )
+    if case_type_case_set_ids_map is not None:
+        return _retrieve_case_set_stats(
+            service,
+            uow,
+            user,
+            cmd,
+            case_type_id,
+            case_type_case_set_ids_map.get(case_type_id, set()),
+            data_collections_by_time_unit,
+            private_data_collection_ids,
+        )
+    return [
+        service.repository.retrieve_case_stats(
+            uow,
+            case_type_id=case_type_id,
+            data_collections_by_time_unit=data_collections_by_time_unit,
+            private_data_collection_ids=private_data_collection_ids,
+            datetime_range_filter=cmd.datetime_range_filter,
+        )
+    ]
+
+
+def _retrieve_case_set_stats(
+    service: BaseCaseService,
+    uow: object,
+    user: model.User,
+    cmd: command.RetrieveCaseTypeStatsCommand | command.RetrieveCaseSetStatsCommand,
+    case_type_id: UUID,
+    case_set_ids: set[UUID],
+    data_collections_by_time_unit: dict[enum.ColType, set[UUID]],
+    private_data_collection_ids: set[UUID],
+) -> list[model.CaseStats]:
+    """Retrieve statistics for each case set of a case type."""
+    case_stats = []
+    for case_set_id in case_set_ids:
+        case_ids: set[UUID] = {
+            row[0]
+            for row in service.repository.read_fields(
+                uow,
+                user.id,
+                model.CaseSetMember,
+                ["case_id"],
+                filter=EqualsUuidFilter(key="case_set_id", value=case_set_id),
+            )
+        }
+        case_type_stat = service.repository.retrieve_case_stats(
+            uow,
+            case_type_id=case_type_id,
+            data_collections_by_time_unit=data_collections_by_time_unit,
+            private_data_collection_ids=private_data_collection_ids,
+            case_ids=case_ids,
+            datetime_range_filter=cmd.datetime_range_filter,
+        )
+        case_type_stat.case_set_id = case_set_id
+        case_stats.append(case_type_stat)
+    return case_stats

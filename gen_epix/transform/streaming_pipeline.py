@@ -56,24 +56,30 @@ class StreamingPipeline:
             results = list(self.pipeline.process_stream(iter([obj])))
 
             for result in results:
-                self.total_count += 1
-
-                if result.success:
-                    if on_success:
-                        on_success(result)
-                else:
-                    self.error_count += 1
-                    if on_error:
-                        on_error(result)
-
-                    # Check error threshold
-                    error_rate = self.error_count / self.total_count
-                    if error_rate > self.error_threshold:
-                        raise RuntimeError(
-                            f"Error rate {error_rate:.2%} exceeds threshold"
-                        )
-
+                self._handle_result(result, on_success, on_error)
                 yield result
+
+    def _handle_result(
+        self,
+        result: TransformResult,
+        on_success: Callable[[TransformResult], None] | None,
+        on_error: Callable[[TransformResult], None] | None,
+    ) -> None:
+        """Update counters, invoke callbacks, and enforce the error threshold."""
+        self.total_count += 1
+        if result.success:
+            if on_success:
+                on_success(result)
+            return
+
+        self.error_count += 1
+        if on_error:
+            on_error(result)
+
+        # Check error threshold
+        error_rate = self.error_count / self.total_count
+        if error_rate > self.error_threshold:
+            raise RuntimeError(f"Error rate {error_rate:.2%} exceeds threshold")
 
     def collect_errors(
         self, stream: Iterator[Any]

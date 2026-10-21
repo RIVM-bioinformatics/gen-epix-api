@@ -5,10 +5,9 @@ set and its requested links within one case repository unit of work.
 """
 
 import gen_epix.casedb.domain.command as command
-import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
-from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
+from gen_epix.casedb.domain.policy import BasePolicyDecisionPoint
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp import CrudOperation
@@ -34,21 +33,9 @@ def case_service_create_case_set(
         UnauthorizedAuthError: If the user may not add the case set to all requested
             data collections.
     """
-    # Get CaseType and created_in data collection IDs
-    case_type_id = cmd.case_set.case_type_id
-    created_in_data_collection_id = cmd.case_set.created_in_data_collection_id
-
     # @ABAC: verify if case set or cases may be created in the given data collection(s)
-    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-    assert case_abac is not None
-    is_allowed = case_abac.is_allowed(
-        case_type_id,
-        created_in_data_collection_id,
-        enum.CaseRight.ADD_CASE_SET,
-        True,
-        tgt_data_collection_ids=cmd.data_collection_ids,
-    )
-    if not is_allowed:
+    pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+    if not pdp.is_allowed(cmd):
         assert cmd.user is not None
         raise exc.UnauthorizedAuthError(
             "806a155b",

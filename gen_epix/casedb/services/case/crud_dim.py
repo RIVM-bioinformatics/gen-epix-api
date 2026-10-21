@@ -3,16 +3,21 @@
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, exc, model
+from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
+from gen_epix.casedb.policies.pdp import PolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     _verify_is_read_operation,
     crud_with_access_filter,
-    get_ref_data_access_from_command,
-    is_refdata_admin_or_above,
 )
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+
+
+def _get_command_user_id(cmd: command.DimCrudCommand) -> UUID:
+    assert cmd.user is not None and cmd.user.id is not None
+    return cmd.user.id
 
 
 def case_service_crud_dim(
@@ -20,10 +25,11 @@ def case_service_crud_dim(
 ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for Dim entities."""
     with self.repository.uow() as uow:
-        assert cmd.user is not None and cmd.user.id is not None
         _crud_cascade_delete(self, uow, cmd)
-        if is_refdata_admin_or_above(self, cmd.user):
+        pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+        if pdp.is_exempted(cmd):
             return _crud_dim_without_abac(self, uow, cmd)
+        assert cmd.user is not None and cmd.user.id is not None
         return _crud_dim_with_abac(self, uow, cmd)
 
 
@@ -69,11 +75,11 @@ def _crud_create_dim(
 ) -> None:
     """Validate dimensions and assign deterministic occurrences for creation.
 
-    - Check if other Dims for the same CaseType and RefDim exist
-    - Check if is_time_stats_dim or is_geo_stats_dim is True
-        and that the linked RefDim is of correct type
-    - Check if another Dim for the same CaseType has
-        is_time_stats_dim or is_geo_stats_dim set to True
+    - Assign occurrences after the highest existing occurrence for each
+        CaseType and RefDim pair
+    - Require case-date Dims to link to a RefDim of type TIME
+    - Ensure each CaseType has at most one case-date Dim, unsetting any
+        existing case-date Dim when necessary
 
     Occurrence assignment is O(n log n): dims are pre-grouped by
     (case_type_id, ref_dim_id), existing dims are loaded once per group,
@@ -113,7 +119,7 @@ def _verify_one_case_date_dim(
     """
     other_time_dims: list[model.Dim] = self.repository.crud(
         uow,
-        cmd.user.id,
+        _get_command_user_id(cmd),
         model.Dim,
         CrudOperation.READ_ALL,
         filter=self._compose_id_filter(("case_type_id", {dim.case_type_id})),
@@ -126,7 +132,7 @@ def _verify_one_case_date_dim(
             other.is_case_date_dim = False
             self.repository.crud(
                 uow,
-                cmd.user.id,
+                _get_command_user_id(cmd),
                 model.Dim,
                 CrudOperation.UPDATE_ONE,
                 objs=other,
@@ -154,7 +160,7 @@ def _validate_case_date_dim(
     ref_dim: model.RefDim | None = None
     ref_dim_list: list[model.RefDim] = self.repository.crud(
         uow,
-        cmd.user.id,
+        _get_command_user_id(cmd),
         model.RefDim,
         CrudOperation.READ_SOME,
         obj_ids=[dim.ref_dim_id],
@@ -234,7 +240,7 @@ def _load_existing_dims(
     """
     existing_dims: list[model.Dim] = self.repository.crud(
         uow,
-        cmd.user.id,
+        _get_command_user_id(cmd),
         model.Dim,
         CrudOperation.READ_ALL,
         filter=self._compose_id_filter(
@@ -339,7 +345,7 @@ def _get_existing_dim(
     """
     existing_list: list[model.Dim] = self.repository.crud(
         uow,
-        cmd.user.id,
+        _get_command_user_id(cmd),
         model.Dim,
         CrudOperation.READ_SOME,
         obj_ids=[updated.id],
@@ -358,11 +364,7 @@ def _crud_dim_with_abac(
     cmd: command.DimCrudCommand,
 ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
     """Dim user command handling, ABAC applied."""
-    ref_data_access = get_ref_data_access_from_command(cmd)
-    if ref_data_access is None or ref_data_access.is_full_access:
-        # Special case: no policy (implies full access) or explicit full access
-        return self.crud(cmd)  # type: ignore[return-value]
     _verify_is_read_operation(cmd)
-    # Perform CRUD with access filter applied
-    access_filter = ref_data_access.get_dim_filter("id")
+    pdp: PolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
+    access_filter = pdp.get_dim_id_filter(cmd, dim_id_field_name="id")
     return crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]

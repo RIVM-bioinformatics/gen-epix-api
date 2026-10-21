@@ -2,14 +2,16 @@
 
 The package re-exports the application mediator, domain metadata types, command
 and model types, policy and authorization types, shared enumerations, logging,
-repository and unit-of-work implementations, remote application support, and
-identity-provider models. Applications normally import these types from
-``gen_epix.fastapp`` while implementations remain in their dedicated modules.
+repository and unit-of-work implementations, remote application support through
+``Client`` and ``RetryPolicy``, and identity-provider models. Applications
+normally import these types from ``gen_epix.fastapp`` while implementations
+remain in their dedicated modules.
 """
 
 # pylint: disable=useless-import-alias
 from gen_epix.fastapp.app import App as App
 from gen_epix.fastapp.client import Client as Client
+from gen_epix.fastapp.client import RetryPolicy as RetryPolicy
 from gen_epix.fastapp.domain import Domain as Domain
 from gen_epix.fastapp.domain import Entity as Entity
 from gen_epix.fastapp.domain import Key as Key
@@ -53,3 +55,4 @@ from gen_epix.fastapp.services.auth.model import IdentityProvider as IdentityPro
 from gen_epix.fastapp.services.auth.model import IDPUser as IDPUser
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork as BaseUnitOfWork
 from gen_epix.fastapp.user_manager import BaseUserManager as BaseUserManager
+from gen_epix.fastapp.util import create_ssl_context as create_ssl_context

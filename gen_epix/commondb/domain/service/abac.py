@@ -1,9 +1,10 @@
 """Define the commondb ABAC service contract and registered command handlers."""
 
-import abc
 import uuid
+from abc import abstractmethod
+from typing import Any
 
-from gen_epix.commondb.domain import command, model
+from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.enum import ServiceType
 from gen_epix.commondb.domain.repository import BaseAbacRepository
 from gen_epix.fastapp import BaseService
@@ -38,11 +39,18 @@ class BaseAbacService(BaseService[BaseAbacRepository]):
 
     READ_SELF_RESULTS_ONLY_COMMANDS: set[type[Command]] = set()
 
+    ABAC_EXEMPTED_ROLE_SET_MAP: dict[type[command.Command], enum.RoleSet] = {}
+
     # Property overridden to provide narrower return value to support linter
-    @property  # type: ignore
-    def repository(self) -> BaseAbacRepository:  # type: ignore
+    @property
+    def repository(self) -> BaseAbacRepository:  # type: ignore[return-type]
         """Return the ABAC repository with its concrete interface type."""
-        return super().repository  # type: ignore
+        return super().repository
+
+    @repository.setter
+    def repository(self, repository: BaseAbacRepository) -> None:
+        """Set the ABAC repository."""
+        self._repository = repository
 
     def register_handlers(self) -> None:
         """Register ABAC retrieval and self-organization update command handlers."""
@@ -61,7 +69,12 @@ class BaseAbacService(BaseService[BaseAbacRepository]):
             self.update_user_own_organization,
         )
 
-    @abc.abstractmethod
+    @abstractmethod
+    def register_policies(self, **kwargs: Any) -> None:
+        """Register ABAC policies for the service."""
+        raise NotImplementedError()
+
+    @abstractmethod
     def retrieve_organization_admin_name_emails(
         self,
         cmd: command.RetrieveOrganizationAdminNameEmailsCommand,
@@ -79,7 +92,7 @@ class BaseAbacService(BaseService[BaseAbacRepository]):
         """
         raise NotImplementedError()
 
-    @abc.abstractmethod
+    @abstractmethod
     def retrieve_organizations_under_admin(
         self, cmd: command.RetrieveOrganizationsUnderAdminCommand
     ) -> set[uuid.UUID]:

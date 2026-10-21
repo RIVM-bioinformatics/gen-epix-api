@@ -120,7 +120,9 @@ and request policy failures.
 
 - Add or update focused tests for behavior changes. Match the existing `test/`
       tree: `unit`, `integration`, `performance`, and `end_to_end`.
-- Use the repository's pytest markers: `integration`, `performance`, and `e2e`.
+- Use the repository's pytest markers: `integration`, `performance`, `e2e`, and `live`.
+      `performance` and `live` tests are skipped unless selected with `-m`; `live` tests call
+      real deployed services with real credentials (see the Development Guide).
 - For command or authorization changes, test the command lifecycle and state
       the affected policy phase and trust implications.
 - For repository changes, test or justify parity across dictionary, SQLite, and

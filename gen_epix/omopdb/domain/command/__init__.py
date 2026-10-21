@@ -66,6 +66,9 @@ from gen_epix.commondb.domain.command import (
 from gen_epix.commondb.domain.command import (
     RetrieveOwnPermissionsCommand as RetrieveOwnPermissionsCommand,
 )
+from gen_epix.commondb.domain.command import (
+    RetrieveOwnUserCommand as RetrieveOwnUserCommand,
+)
 from gen_epix.commondb.domain.command import SiteCrudCommand as SiteCrudCommand
 from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand as UpdateAssociationCommand,
@@ -247,6 +250,9 @@ from gen_epix.omopdb.domain.command.omop import (
 from gen_epix.omopdb.domain.command.system import (
     DeleteAllOperationalDataCommand as DeleteAllOperationalDataCommand,
 )
+from gen_epix.omopdb.domain.command.system import (
+    DeleteAllRefDataCommand as DeleteAllRefDataCommand,
+)
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     # Specific commands
@@ -322,8 +328,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     enum.ServiceType.SYSTEM: set(
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.SYSTEM]
     )
-    - {commondb_command.DeleteAllOperationalDataCommand}
-    | {DeleteAllOperationalDataCommand},
+    - {
+        commondb_command.DeleteAllOperationalDataCommand,
+        commondb_command.DeleteAllRefDataCommand,
+    }
+    | {DeleteAllOperationalDataCommand, DeleteAllRefDataCommand},
     enum.ServiceType.RBAC: set(
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.RBAC]
     ),
@@ -339,4 +348,5 @@ COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {
     commondb_command.UpdateUserCommand: UpdateUserCommand,
     commondb_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
     commondb_command.DeleteAllOperationalDataCommand: DeleteAllOperationalDataCommand,
+    commondb_command.DeleteAllRefDataCommand: DeleteAllRefDataCommand,
 }

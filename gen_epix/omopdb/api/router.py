@@ -58,6 +58,7 @@ def create_routers(
             "endpoints_function_kwargs": {
                 "service_type": enum.ServiceType.SYSTEM,
                 "delete_all_operational_data_command_class": command.DeleteAllOperationalDataCommand,
+                "delete_all_ref_data_command_class": command.DeleteAllRefDataCommand,
             },
         },
         # Specific routers
