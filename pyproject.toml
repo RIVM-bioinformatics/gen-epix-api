@@ -26,6 +26,7 @@ requires-python = ">=3.14"
 # Running an application additionally needs the `server` extra below.
 dependencies = [
     "httpx==0.28.1",
+    "httpx2==2.13.1",
     "pyjwt==2.15.1",
     "urllib3==2.8.0",
     "pydantic==2.14.1",

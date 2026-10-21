@@ -73,7 +73,8 @@ def _crud_case_set_data_collection_link_with_abac(
 ):
     """Handle case-set collection links under current user restrictions.
 
-    Unrestricted reads of all links, updates, and bulk deletes are rejected.
+    Bulk queries require a non-inverted CaseSet UUID selection. Unrestricted
+    reads, updates, and bulk deletes are rejected.
     Reads are verified against the case-set read permission in each linked
     collection.
 
@@ -89,8 +90,13 @@ def _crud_case_set_data_collection_link_with_abac(
         UnauthorizedAuthError: If a restricted user requests an unsupported bulk
             read, update, or delete operation.
     """
-    # Only read/exists some and read/exists one allowed, other operations need to be performed through other commands
-    if not cmd.is_read() or cmd.is_read_all():
+    # Reads require explicit link IDs or a bounded CaseSet selection.
+    bounded_query = (
+        isinstance(cmd.query_filter, UuidSetFilter)
+        and not cmd.query_filter.invert
+        and cmd.query_filter.key == "case_set_id"
+    )
+    if not cmd.is_read() or (cmd.is_read_all() and not bounded_query):
         raise exc.UnauthorizedAuthError(
             "8c5c07be",
             f"Operation {cmd.operation.value} not allowed for case set data collection links for this user",
