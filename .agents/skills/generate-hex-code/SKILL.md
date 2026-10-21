@@ -18,10 +18,9 @@ places:
 - **`gen_epix.etl.model.Result` subclass discriminators** —
   `ID: ClassVar[str]`, the polymorphic-deserialization key registered in
   `Result._SUBCLASS_REGISTRY` (must be globally unique across every `Result`
-  subclass in every repo that imports `gen_epix.etl`: this repo, `lsp-data`,
-  `idsdb`, `juno-seqdb-etl`, ...), and `COMPLETED_CODE` (a completion-log
-  code, less severe to collide but still meant to stay individually
-  searchable).
+  subclass in this repo and every downstream repo that imports `gen_epix.etl`),
+  and `COMPLETED_CODE` (a completion-log code, less severe to collide but still
+  meant to stay individually searchable).
 
 Never hand-type or invent one of these by eye. A pattern like `"d4e5f6a7"`
 (ascending nibbles) *looks* like a random hex string but isn't — it's easy to
@@ -43,9 +42,8 @@ with `secrets.token_hex()`, not by eyeballing hex digits.
    `"[0-9a-f]{8}"` literal shape — and only prints codes that don't collide
    with anything already in the codebase.
 
-2. If you're adding a code to an *external* repo (`idsdb`, `lsp-data`,
-   `juno-seqdb-etl`) rather than here, run the script with `--root` pointed
-   at that repo's checkout instead, so the collision scan covers that repo's
+2. If you're adding a code to a downstream repo rather than here, run the script
+   with `--root` pointed at that repo's checkout instead, so the scan covers its
    own already-used codes too — this script only sees one repo at a time,
    so cross-repo collisions aren't caught automatically. This matters most
    for `Result` subclass `ID`s (registry is shared across repos); for a
