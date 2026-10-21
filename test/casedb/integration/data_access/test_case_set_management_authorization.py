@@ -187,6 +187,106 @@ def test_http_sharing_and_membership_lifecycle(authorization_env):
     asyncio.run(_sharing_and_membership_lifecycle(authorization_env))
 
 
+def test_http_case_set_access_through_created_in_collection(authorization_env):
+    asyncio.run(_case_set_access_through_created_in_collection(authorization_env))
+
+
+async def _case_set_access_through_created_in_collection(env):
+    api = _create_api(env)
+    case = _create_case(env)
+    origin = str(env.get_obj(model.DataCollection, "data_collection2").id)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=api), base_url="http://test"
+    ) as client:
+        # Creating in a single collection stores no CaseSetDataCollectionLink:
+        # the creating collection is dropped from data_collection_ids.
+        created = await _post(
+            client,
+            "consumer",
+            "create/case_set",
+            {
+                "case_ids": [str(case.id)],
+                "data_collection_ids": [origin],
+                "case_set": {
+                    "case_type_id": str(case.case_type_id),
+                    "created_in_data_collection_id": origin,
+                    "case_set_category_id": str(
+                        env.get_obj(model.CaseSetCategory, "Outbreak").id
+                    ),
+                    "case_set_status_id": str(
+                        env.get_obj(model.CaseSetStatus, "Open").id
+                    ),
+                    "name": str(uuid4()),
+                    "code": str(uuid4()),
+                    "description": "Created-in collection access regression",
+                },
+            },
+        )
+        case_set_id = created["id"]
+        assert (
+            await _post(
+                client,
+                "consumer",
+                "case_set_data_collection_links/query",
+                _query("case_set_id", [case_set_id]),
+            )
+            == []
+        )
+
+        # The creating collection grants read and write access.
+        response = await client.get(
+            f"/v1/case_sets/{case_set_id}", headers={"x-test-user": "consumer"}
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["id"] == case_set_id
+        response = await client.get(
+            "/v1/case_sets", headers={"x-test-user": "consumer"}
+        )
+        assert response.status_code == 200, response.text
+        assert case_set_id in {item["id"] for item in response.json()}
+        updated = created | {"description": "Updated by owner"}
+        response = await client.put(
+            f"/v1/case_sets/{case_set_id}",
+            json=updated,
+            headers={"x-test-user": "consumer"},
+        )
+        assert response.status_code == 200, response.text
+
+        # Without access to the creating collection, reads and updates are denied
+        # by the PEP rather than skipped or failing on an empty result.
+        response = await client.get(
+            f"/v1/case_sets/{case_set_id}", headers={"x-test-user": "outsider"}
+        )
+        assert response.status_code == 403, response.text
+        response = await client.get(
+            "/v1/case_sets", headers={"x-test-user": "outsider"}
+        )
+        assert response.status_code == 200, response.text
+        assert case_set_id not in {item["id"] for item in response.json()}
+        response = await client.put(
+            f"/v1/case_sets/{case_set_id}",
+            json=created | {"description": "Updated by outsider"},
+            headers={"x-test-user": "outsider"},
+        )
+        assert response.status_code == 403, response.text
+        assert (
+            env.app.handle(
+                command.CaseSetCrudCommand(
+                    user=env.get_root_user(),
+                    operation=CrudOperation.READ_ONE,
+                    obj_ids=case_set_id,
+                )
+            ).description
+            == "Updated by owner"
+        )
+
+        # A case set that does not exist is reported as invalid, not as a 500.
+        response = await client.get(
+            f"/v1/case_sets/{uuid4()}", headers={"x-test-user": "consumer"}
+        )
+        assert response.status_code == 422, response.text
+
+
 async def _sharing_and_membership_lifecycle(env):
     api = _create_api(env)
     first_case, second_case, private_case = (_create_case(env) for _ in range(3))
@@ -340,6 +440,37 @@ async def _sharing_and_membership_lifecycle(env):
             str(first_case.id),
             str(second_case.id),
         }
+        # The UI selects members to remove with an AND of a case and a CaseSet.
+        member_selection = {
+            "type": "COMPOSITE",
+            "operator": "AND",
+            "filters": [
+                _query("case_id", [str(second_case.id)]),
+                _query("case_set_id", [case_set_id]),
+            ],
+        }
+        selected = await _post(
+            client, "consumer", "case_set_members/query", member_selection
+        )
+        assert [member["case_id"] for member in selected] == [str(second_case.id)]
+        assert (
+            await _post(client, "outsider", "case_set_members/query", member_selection)
+            == []
+        )
+        await _post(
+            client,
+            "consumer",
+            "case_set_members/query",
+            {
+                "type": "COMPOSITE",
+                "operator": "OR",
+                "filters": [
+                    _query("case_id", [str(second_case.id)]),
+                    _query("id", [case_set_id]),
+                ],
+            },
+            status=403,
+        )
         # Explicit membership-record ID reads still enforce the same permissions.
         assert (
             env.app.handle(

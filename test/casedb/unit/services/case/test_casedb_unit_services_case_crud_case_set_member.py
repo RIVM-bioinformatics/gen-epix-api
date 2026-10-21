@@ -10,7 +10,7 @@ from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service.abac import BaseAbacService
 from gen_epix.casedb.services.case import crud_case_set_member
 from gen_epix.fastapp import CrudOperation
-from gen_epix.filter import UuidSetFilter
+from gen_epix.filter import CompositeFilter, LogicalOperator, UuidSetFilter
 
 
 class TestCaseSetMemberCrud(BaseCrudTestCase):
@@ -215,6 +215,130 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
             self.service, cmd
         )
         assert result == members[:expected_count]
+
+    @pytest.mark.parametrize(
+        "query_filter",
+        [
+            pytest.param(
+                # Exact filter sent by the UI when removing cases from an event
+                CompositeFilter.model_validate(
+                    {
+                        "filters": [
+                            {
+                                "invert": False,
+                                "key": "case_id",
+                                "members": [str(uuid4())],
+                                "type": "UUID_SET",
+                            },
+                            {
+                                "invert": False,
+                                "key": "case_set_id",
+                                "members": [str(uuid4())],
+                                "type": "UUID_SET",
+                            },
+                        ],
+                        "operator": "AND",
+                        "type": "COMPOSITE",
+                    }
+                ),
+                id="and-case-and-case-set",
+            ),
+            pytest.param(
+                CompositeFilter(
+                    filters=[
+                        UuidSetFilter(key="case_set_id", members={uuid4()}),
+                        UuidSetFilter(key="id", members={uuid4()}),
+                    ],
+                    operator=LogicalOperator.AND,
+                ),
+                id="and-one-bounded-child",
+            ),
+            pytest.param(
+                CompositeFilter(
+                    filters=[
+                        UuidSetFilter(key="case_id", members={uuid4()}),
+                        UuidSetFilter(key="case_set_id", members={uuid4()}),
+                    ],
+                    operator=LogicalOperator.OR,
+                ),
+                id="or-all-children-bounded",
+            ),
+        ],
+    )
+    def test_bounded_composite_query_preserves_parent_access_checks(
+        self, monkeypatch, query_filter
+    ):
+        cmd, abac, members, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.is_read_all.return_value = True
+        cmd.query_filter = query_filter
+        abac.is_allowed.side_effect = [True, True]
+        self._patch_case_abac(monkeypatch, abac)
+        self.service.crud.return_value = members
+        result = crud_case_set_member.case_service_crud_case_set_member(
+            self.service, cmd
+        )
+        assert result == members
+        assert abac.is_allowed.call_count == 2
+
+    @pytest.mark.parametrize(
+        "query_filter",
+        [
+            pytest.param(
+                CompositeFilter(
+                    filters=[
+                        UuidSetFilter(key="case_id", members={uuid4()}),
+                        UuidSetFilter(key="id", members={uuid4()}),
+                    ],
+                    operator=LogicalOperator.OR,
+                ),
+                id="or-with-unbounded-child",
+            ),
+            pytest.param(
+                CompositeFilter(
+                    filters=[
+                        UuidSetFilter(key="id", members={uuid4()}),
+                        UuidSetFilter(key="case_id", invert=True, members={uuid4()}),
+                    ],
+                    operator=LogicalOperator.AND,
+                ),
+                id="and-without-bounded-child",
+            ),
+            pytest.param(
+                CompositeFilter(
+                    filters=[UuidSetFilter(key="case_id", members={uuid4()})],
+                    operator=LogicalOperator.AND,
+                    invert=True,
+                ),
+                id="inverted-and",
+            ),
+            pytest.param(
+                CompositeFilter(
+                    filters=[UuidSetFilter(key="case_id", members={uuid4()})],
+                    operator=LogicalOperator.NOT,
+                ),
+                id="not",
+            ),
+            pytest.param(
+                CompositeFilter(
+                    filters=[
+                        UuidSetFilter(key="case_id", members={uuid4()}),
+                        UuidSetFilter(key="case_set_id", members={uuid4()}),
+                    ],
+                    operator=LogicalOperator.XOR,
+                ),
+                id="xor",
+            ),
+        ],
+    )
+    def test_unbounded_composite_query_still_rejected(self, monkeypatch, query_filter):
+        cmd, abac, _, _, _ = self._configure_read()
+        cmd.is_read_all.return_value = True
+        cmd.query_filter = query_filter
+        self._patch_case_abac(monkeypatch, abac)
+        with pytest.raises(exc.UnauthorizedAuthError):
+            crud_case_set_member.case_service_crud_case_set_member(self.service, cmd)
+        self.service.crud.assert_not_called()
 
     @pytest.mark.parametrize("key,invert", [("id", False), ("case_id", True)])
     def test_unbounded_query_still_rejected(self, monkeypatch, key, invert):
