@@ -286,6 +286,54 @@ class SARepository(BaseRepository):
                 )
         return problems
 
+    @classmethod
+    def find_remaining_content(cls, **kwargs: Any) -> list[str]:
+        """List the tables that ``clear_repository_content`` should have dropped.
+
+        ``clear_repository_content`` ignores most errors, so a clear that was
+        denied can go unnoticed. This checks afterwards that each persistable
+        entity's table, and the ``alembic_version`` table of ``alembic_schema``
+        if given, no longer exist.
+
+        Args:
+            **kwargs: ``entities``, ``connection_string`` and optionally
+                ``alembic_schema``, as for ``clear_repository_content``.
+
+        Returns:
+            One human-readable problem per table that still exists; empty if
+            everything was cleared.
+
+        Raises:
+            ValueError: If no connection string is given.
+        """
+        alembic_schema: str | None = kwargs.pop("alembic_schema", None)
+        entities, connection_string, _ = cls._process_repository_params(kwargs)
+        if connection_string is None:
+            raise ValueError(
+                "connection_string is required to check an SARepository is cleared"
+            )
+        tables: list[tuple[str | None, str]] = [
+            (
+                entity.schema_name,
+                cast(sa.Table, getattr(entity.db_model_class, "__table__")).name,
+            )
+            for entity in entities
+            if entity.persistable and entity.db_model_class
+        ]
+        if alembic_schema:
+            tables.append((alembic_schema, "alembic_version"))
+        engine = EngineFactory.create_engine(connection_string, echo=False)
+        try:
+            inspector = inspect(engine)
+            return [
+                f"table {f'{schema_name}.' if schema_name else ''}{table_name} "
+                "still exists"
+                for schema_name, table_name in tables
+                if inspector.has_table(table_name, schema=schema_name)
+            ]
+        finally:
+            engine.dispose()
+
     def __init__(self, engine: Engine, **kwargs: Any):
         """
         Initialise the repository with the provided SQLAlchemy engine.
@@ -1907,14 +1955,26 @@ class SARepository(BaseRepository):
         Try to open a database connection; return None on success or the
         exception on failure.
 
+        The engine is always disposed afterwards, so repeated probes do not
+        leave pooled connections open.
+
+        Args:
+            connection_string: SQLAlchemy URL of the database to probe.
+            **kwargs: Passed to the DBAPI ``connect()`` as ``connect_args``,
+                e.g. a login ``timeout`` for pyodbc.
+
+        Returns:
+            None if a connection could be opened, otherwise the exception raised
+            while creating the engine or connecting.
         """
+        engine: Engine | None = None
         try:
-            connection = sa.create_engine(
-                connection_string,
-                connect_args=kwargs,
-            ).connect()
+            engine = sa.create_engine(connection_string, connect_args=kwargs)
+            connection = engine.connect()
             connection.close()
             return None
         except Exception as exception:
-            # Connection failed, skip loading
             return exception
+        finally:
+            if engine is not None:
+                engine.dispose()
