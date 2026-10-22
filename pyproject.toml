@@ -97,6 +97,20 @@ profile = "black"
 float_to_top = true
 line_length = 88
 
+[tool.pylint.messages_control]
+# Match lsp-data's message policy; retain Pylint's default design limits.
+disable = [
+    # Explicit same-name aliases document public re-exports.
+    "useless-import-alias",
+    # Black owns formatting; URLs and field descriptions can exceed the line limit.
+    "line-too-long",
+    # A TODO marks work that is deliberately outside the current change.
+    "fixme",
+    # False positives on built-in generic types and framework-generated fields;
+    # subscripting is also checked by mypy.
+    "unsubscriptable-object",
+]
+
 [tool.ruff]
 line-length = 88
 target-version = "py314"
