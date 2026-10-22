@@ -1907,14 +1907,26 @@ class SARepository(BaseRepository):
         Try to open a database connection; return None on success or the
         exception on failure.
 
+        The engine is always disposed afterwards, so repeated probes do not
+        leave pooled connections open.
+
+        Args:
+            connection_string: SQLAlchemy URL of the database to probe.
+            **kwargs: Passed to the DBAPI ``connect()`` as ``connect_args``,
+                e.g. a login ``timeout`` for pyodbc.
+
+        Returns:
+            None if a connection could be opened, otherwise the exception raised
+            while creating the engine or connecting.
         """
+        engine: Engine | None = None
         try:
-            connection = sa.create_engine(
-                connection_string,
-                connect_args=kwargs,
-            ).connect()
+            engine = sa.create_engine(connection_string, connect_args=kwargs)
+            connection = engine.connect()
             connection.close()
             return None
         except Exception as exception:
-            # Connection failed, skip loading
             return exception
+        finally:
+            if engine is not None:
+                engine.dispose()

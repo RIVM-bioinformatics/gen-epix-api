@@ -797,6 +797,25 @@ def test_test_connection() -> None:
     assert SARepository.test_connection("not-a-valid-sqlalchemy-url") is not None
 
 
+def test_test_connection_disposes_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The probe engine is disposed whether or not the connection succeeds."""
+    engine = Mock()
+    create_engine = Mock(return_value=engine)
+    monkeypatch.setattr(sa, "create_engine", create_engine)
+
+    assert SARepository.test_connection("mssql+pyodbc://db", timeout=30) is None
+    create_engine.assert_called_once_with(
+        "mssql+pyodbc://db", connect_args={"timeout": 30}
+    )
+    engine.connect.return_value.close.assert_called_once_with()
+    engine.dispose.assert_called_once_with()
+
+    error = RuntimeError("Login timeout expired")
+    engine.connect.side_effect = error
+    assert SARepository.test_connection("mssql+pyodbc://db") is error
+    assert engine.dispose.call_count == 2
+
+
 def test_clear_repository_content_drops_alembic_tracking_table(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
