@@ -364,9 +364,10 @@ def test_create_some_without_flush_rejects_multiple_batches(
     repo: SARepository,
 ) -> None:
     repo._max_insert_batch_size = 1  # pylint: disable=protected-access
+    objs = [_make_obj(1), _make_obj(2)]
 
     with pytest.raises(exc.RepositoryServiceError, match="fa00ce85"):
-        repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2)], flush=False)
+        repo.create_some(RepoModel, "user", objs, flush=False)
 
 
 @pytest.mark.parametrize(
