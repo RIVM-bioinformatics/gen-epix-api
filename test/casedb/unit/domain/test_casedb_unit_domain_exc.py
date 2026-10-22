@@ -81,9 +81,7 @@ def test_api_exceptions_are_reexported(name: str) -> None:
 
 def test_all_public_names_of_both_sources_are_reexported() -> None:
     """Every public source name, including future additions, is re-exported."""
-    expected = _defined_exception_names(fastapp_exc) | _defined_exception_names(
-        api_exc
-    )
+    expected = _defined_exception_names(fastapp_exc) | _defined_exception_names(api_exc)
     actual = {name for name in dir(casedb_exc) if not name.startswith("_")}
     assert expected <= actual
 
