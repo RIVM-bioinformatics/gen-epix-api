@@ -57,7 +57,7 @@ server = [
     "starlette==1.9.*",
     "sqlalchemy==2.0.54",
     "sqlalchemy_utils==0.43.0",
-    "alembic==1.20.0",
+    "alembic==1.20.1",
     "slowapi==0.1.10",
     "cryptography==50.0.2",
     "oauthlib==4.0.0",
