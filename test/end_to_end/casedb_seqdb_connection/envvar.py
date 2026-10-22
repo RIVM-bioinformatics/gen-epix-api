@@ -3,31 +3,39 @@ import os
 from pathlib import Path
 
 
-def set_envvar(identity_provider_file: Path | None = None) -> None:
+def set_envvar(
+    identity_provider_file: Path | None = None,
+    use_dict_repository: bool = True,
+) -> None:
     path = Path(__file__).parent
     identity_provider_file = identity_provider_file or path / "identity_provider.toml"
+    repository_settings_files = (
+        [
+            "settings.repository.toml",
+            "secrets.repository.toml",
+        ]
+        if use_dict_repository
+        else []
+    )
     casedb_settings_files: list[Path] = [
         path / "casedb.settings.toml",
         path / "casedb.feature_flags.toml",
-        path / "casedb.settings.repository.toml",
         path / "casedb.secrets.service.toml",
-        path / "casedb.secrets.repository.toml",
+        *[path / f"casedb.{file_name}" for file_name in repository_settings_files],
         identity_provider_file,
     ]
     seqdb_settings_files: list[Path] = [
         path / "seqdb.settings.toml",
         path / "seqdb.feature_flags.toml",
-        path / "seqdb.settings.repository.toml",
         path / "seqdb.secrets.service.toml",
-        path / "seqdb.secrets.repository.toml",
+        *[path / f"seqdb.{file_name}" for file_name in repository_settings_files],
         identity_provider_file,
     ]
     omop_settings_files: list[Path] = [
         path / "omopdb.settings.toml",
         path / "omopdb.feature_flags.toml",
-        path / "omopdb.settings.repository.toml",
         path / "omopdb.secrets.service.toml",
-        path / "omopdb.secrets.repository.toml",
+        *[path / f"omopdb.{file_name}" for file_name in repository_settings_files],
         identity_provider_file,
     ]
 
