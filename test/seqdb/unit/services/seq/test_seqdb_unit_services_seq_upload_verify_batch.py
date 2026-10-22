@@ -516,24 +516,49 @@ class TestVerifyProtocol(BaseUploadTestCase):
         assert seq_result.has_errors()
         assert seq_result.has_log_code("a4c9e18b")
 
-    def test_invalid_type_on_skipped_child_does_not_add_child_error(self) -> None:
-        """Skipped children are ignored for per-child error annotation."""
+    def test_skipped_child_protocol_type_is_not_checked(self) -> None:
+        """A skipped child is not written, so its protocol type is not checked.
+
+        Checking it would fail verification without any child to blame.
+        """
         seq = self.create_seq_for_upload(sample_id=self.sample_id)
         sample = self.create_sample_for_upload(sample_id=self.sample_id, seqs=[seq])
         cmd, retval = self.create_command_and_result_for_samples(sample)
         seq_result = self.get_only_seq_result(retval)
         seq_result.status = EtlStatus.SKIPPED
-        self.service.repository.crud.return_value = [
-            Mock(id=seq.protocol_id, protocol_type=enum.ProtocolType.SEQUENCING)
-        ]
 
         cast(Any, self.batch_uploader).verify_link_id = Mock(return_value=True)
         success = _verify_protocol(
             self.batch_uploader, cmd, retval, self.uow, model.Seq
         )
 
-        assert not success
+        assert success
         assert not seq_result.has_errors()
+        self.service.repository.crud.assert_not_called()
+
+    def test_failed_child_protocol_is_not_read(self) -> None:
+        """A protocol that verify_link_id found missing is not read again (LSP-4119).
+
+        Reading it would raise InvalidIdsError and fail the whole batch instead of
+        only the sample of that child.
+        """
+        seq = self.create_seq_for_upload(sample_id=self.sample_id)
+        sample = self.create_sample_for_upload(sample_id=self.sample_id, seqs=[seq])
+        cmd, retval = self.create_command_and_result_for_samples(sample)
+        seq_result = self.get_only_seq_result(retval)
+
+        def fail_seq_link(*args: Any, **kwargs: Any) -> bool:
+            seq_result.add_error("dec840ca", "protocol does not exist")
+            return False
+
+        cast(Any, self.batch_uploader).verify_link_id = Mock(side_effect=fail_seq_link)
+        success = _verify_protocol(
+            self.batch_uploader, cmd, retval, self.uow, model.Seq
+        )
+
+        assert not success
+        assert seq_result.has_log_code("dec840ca")
+        self.service.repository.crud.assert_not_called()
 
     def test_user_none_is_forwarded_to_protocol_read(self) -> None:
         """Protocol lookup should use user_id=None when command user is None."""
@@ -559,9 +584,14 @@ class TestVerifyProtocol(BaseUploadTestCase):
         sample = self.create_sample_for_upload(sample_id=self.sample_id, seqs=[seq])
         cmd, retval = self.create_command_and_result_for_samples(sample)
         object.__setattr__(
-            cmd.sample_batch,
-            "get_all_children_for_upload",
-            Mock(return_value=[Mock(protocol_id=self.protocol_id)]),
+            cmd.sample_batch.samples[0],
+            "pcr_measurements",
+            [Mock(protocol_id=self.protocol_id)],
+        )
+        object.__setattr__(
+            retval.samples[0],
+            "pcr_measurements",
+            [UploadResult(status=EtlStatus.PENDING)],
         )
         cast(Any, self.batch_uploader).verify_link_id = Mock(return_value=True)
         with pytest.raises(NotImplementedError):
