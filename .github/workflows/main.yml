@@ -55,7 +55,7 @@ jobs:
           source ~/.venv/bin/activate
           pip install -r requirements.txt
           pip install -r dev-requirements.txt
-          pip install --no-binary :all: pyodbc==5.2.*
+          pip install --no-binary :all: pyodbc==5.3.*
         # pyodbc is CPU architecture dependent and needs to be installed from source
 
   formatting:
