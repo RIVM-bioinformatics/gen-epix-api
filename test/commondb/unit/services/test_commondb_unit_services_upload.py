@@ -90,28 +90,6 @@ combinations thereof:
 9.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
 """
 
-from typing import Any
-from uuid import UUID, uuid4
-
-import pytest
-
-from gen_epix.commondb.domain import exc
-from gen_epix.commondb.domain.enum import Role, UploadAction
-from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import (
-    IdentifierForUpload,
-    IdentifierIssuer,
-    User,
-)
-from gen_epix.commondb.domain.model.upload import ParentUploadResult, UploadResult
-from gen_epix.commondb.services.upload import BatchUploader
-from gen_epix.etl.enum import EtlStatus, EtlStatusSet
-from gen_epix.fastapp.app import App
-from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.fastapp.exc import DuplicateIdsError
-from gen_epix.fastapp.model import Model, ModelFieldProps
-from gen_epix.fastapp.service import BaseService
-from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from test.commondb.unit.upload.model import (
     Child1,
     Child1ForUpload,
@@ -124,14 +102,38 @@ from test.commondb.unit.upload.model import (
     ParentBatchUploadResult,
     ParentForUpload,
     ParentIdentifier,
-    Ref1,
-    Ref2,
-    UploadParentsCommand,
 )
 from test.commondb.unit.upload.model import (
     ParentUploadResult as FixtureParentUploadResult,
 )
+from test.commondb.unit.upload.model import Ref1, Ref2, UploadParentsCommand
 from test.util.mock_compat import Mock
+from typing import Any
+from uuid import UUID, uuid4
+
+import pytest
+
+from gen_epix.commondb.domain import command, exc
+from gen_epix.commondb.domain.enum import Role, UploadAction
+from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model.organization import (
+    IdentifierForUpload,
+    IdentifierIssuer,
+    User,
+)
+from gen_epix.commondb.domain.model.upload import (
+    BaseBatchUploadResult,
+    ParentUploadResult,
+    UploadResult,
+)
+from gen_epix.commondb.services.upload import BatchUploader
+from gen_epix.etl.enum import EtlStatus, EtlStatusSet
+from gen_epix.fastapp.app import App
+from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.exc import DuplicateIdsError
+from gen_epix.fastapp.model import Model, ModelFieldProps
+from gen_epix.fastapp.service import BaseService
+from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
 class BaseUploadTestCase:
@@ -3421,8 +3423,9 @@ class TestOneBadItemFailsOnItsOwn(BaseUploadTestCase):
         parents: list[ParentForUpload],
         fail_batch_on_item_error: bool = False,
         verify_only: bool = False,
+        on_exists: UploadAction = UploadAction.UPDATE,
     ) -> UploadParentsCommand:
-        return self.create_command_for_parents(parents).model_copy(
+        return self.create_command_for_parents(parents, on_exists=on_exists).model_copy(
             update={
                 "fail_batch_on_item_error": fail_batch_on_item_error,
                 "verify_only": verify_only,
@@ -3476,7 +3479,9 @@ class TestOneBadItemFailsOnItsOwn(BaseUploadTestCase):
             ],
         )
         self.crud.existing = [
-            self.get_parent_from_for_upload(existing_parent_for_upload)
+            self.get_parent_from_for_upload(existing_parent_for_upload).model_copy(
+                update={"parent_id": self.parent_id}
+            )
         ]
         new_parent_for_upload = self.create_parent_for_upload(
             a="new", children1=[self._child1(self.GOOD_REF1_CODE, "new_good")]
@@ -3515,6 +3520,60 @@ class TestOneBadItemFailsOnItsOwn(BaseUploadTestCase):
         assert self.crud.created == {}
         self.expectBatchFailed(batch_result)
         self.expectHasLogCode(batch_result, "02095f22")
+
+    def _verify_batch_with_batch_level_error(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        batch_result: BaseBatchUploadResult,
+        uow: BaseUnitOfWork,
+    ) -> bool:
+        """Verify as usual, then add an error that belongs to the batch, not a parent."""
+        self.original_verify_batch(cmd, batch_result, uow)
+        batch_result.add_error("7eeced9e", "Missing new alleles: ...")
+        return False
+
+    def test_nothing_is_stored_when_the_batch_itself_has_an_error(self) -> None:
+        """A batch-level error stops the batch, even when a parent also failed."""
+        self.original_verify_batch = self.batch_uploader.verify_batch
+        self.batch_uploader.verify_batch = self._verify_batch_with_batch_level_error  # type: ignore[method-assign]
+
+        batch_result = self.upload_batch(self._cmd(self._good_bad_good_parents()))
+
+        assert self.crud.created == {}
+        assert batch_result.parents[1].status == EtlStatus.FAILED
+        self.expectBatchFailed(batch_result)
+        self.expectHasLogCode(batch_result, "02095f22")
+        assert not batch_result.has_log_code("c0f70912")
+
+    def test_children_of_a_skipped_parent_are_stored_when_another_fails(self) -> None:
+        """A parent left alone by on_exists=SKIP still has its new children stored."""
+        existing_parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id,
+            children1=[self._child1(self.GOOD_REF1_CODE, "existing_good")],
+        )
+        self.crud.existing = [
+            self.get_parent_from_for_upload(existing_parent_for_upload).model_copy(
+                update={"parent_id": self.parent_id}
+            )
+        ]
+        bad_parent_for_upload = self.create_parent_for_upload(
+            a="bad", children1=[self._child1(self.BAD_REF1_CODE, "new_bad")]
+        )
+
+        batch_result = self.upload_batch(
+            self._cmd(
+                [existing_parent_for_upload, bad_parent_for_upload],
+                on_exists=UploadAction.SKIP,
+            )
+        )
+
+        assert Parent not in self.crud.created
+        assert [x.a for x in self.crud.created[Child1]] == ["existing_good"]
+        assert batch_result.parents[0].status == EtlStatus.SKIPPED
+        assert batch_result.parents[0].children1[0].status == EtlStatus.CREATED  # type: ignore[index]
+        assert batch_result.parents[1].status == EtlStatus.FAILED
+        self.expectHasLogCode(batch_result, "c0f70912")
+        assert not batch_result.has_log_code("02095f22")
 
     def test_default_still_stores_nothing(self) -> None:
         """fail_batch_on_item_error defaults to True: one bad parent stops the batch."""

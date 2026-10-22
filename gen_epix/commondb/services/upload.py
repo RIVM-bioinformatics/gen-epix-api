@@ -237,19 +237,35 @@ class BatchUploader:
 
         The other parents are uploaded only when the command allows it
         (``fail_batch_on_item_error=False``) and every failure can be traced to a
-        parent: if no parent failed, the error belongs to the batch as a whole.
+        parent. An error on the batch itself (e.g. SEQDB's missing new alleles)
+        stops the batch, as does a failed verification without a failed parent.
+
+        A parent counts as having work left when it did not fail and anything in
+        its result tree is still PENDING: a parent that is itself SKIPPED (e.g.
+        ``on_exists=SKIP``, or not provided) can still have children to write.
 
         Args:
             cmd: Upload command carrying the batch and its options.
             batch_result: Batch result after verification and failure propagation.
 
         Returns:
-            True if the parents that are still PENDING may be uploaded.
+            True if the results that are still PENDING may be uploaded.
         """
+        has_batch_error = batch_result.has_errors()
         parent_results = batch_result.get_parent_results()
         n_failed = sum(1 for x in parent_results if x.status == EtlStatus.FAILED)
-        n_pending = sum(1 for x in parent_results if x.status == EtlStatus.PENDING)
-        if cmd.fail_batch_on_item_error or n_failed == 0 or n_pending == 0:
+        n_pending = sum(
+            1
+            for x in parent_results
+            if x.status != EtlStatus.FAILED
+            and x.get_status_count(include_self=True)[EtlStatus.PENDING] > 0
+        )
+        if (
+            cmd.fail_batch_on_item_error
+            or has_batch_error
+            or n_failed == 0
+            or n_pending == 0
+        ):
             batch_result.add_error(
                 code="02095f22",
                 message="Verification found errors, upload will not proceed",
