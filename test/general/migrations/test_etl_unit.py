@@ -42,6 +42,7 @@ class _DbMocks:
     calls: Mock
     test_connection: Mock
     clear_repository_content: Mock
+    find_remaining_content: Mock
     check_schema_matches: Mock
     run_migrate: Mock
 
@@ -79,12 +80,14 @@ def get_db(monkeypatch: pytest.MonkeyPatch) -> _DbMocks:
         calls=calls,
         test_connection=Mock(return_value=None),
         clear_repository_content=Mock(),
+        find_remaining_content=Mock(return_value=[]),
         check_schema_matches=Mock(return_value=[]),
         run_migrate=Mock(),
     )
     for name in (
         "test_connection",
         "clear_repository_content",
+        "find_remaining_content",
         "check_schema_matches",
         "run_migrate",
     ):
@@ -92,6 +95,9 @@ def get_db(monkeypatch: pytest.MonkeyPatch) -> _DbMocks:
     monkeypatch.setattr(SARepository, "test_connection", db.test_connection)
     monkeypatch.setattr(
         SARepository, "clear_repository_content", db.clear_repository_content
+    )
+    monkeypatch.setattr(
+        SARepository, "find_remaining_content", db.find_remaining_content
     )
     monkeypatch.setattr(SARepository, "check_schema_matches", db.check_schema_matches)
     monkeypatch.setattr(etl, "run_migrate", db.run_migrate)
@@ -209,7 +215,7 @@ def test_wait_for_databases_waits_once_per_distinct_connection_string(
     assert "App SEQDB, service(s) A, C: database reachable after 2 attempts" in out
 
 
-def test_reset_database_clears_all_then_migrates_then_checks(
+def test_reset_database_clears_all_then_verifies_then_migrates_then_checks(
     seqdb_enum: ModuleType, seqdb_domain: Any, db: _DbMocks
 ) -> None:
     connection_string = _seqdb_connection_string(seqdb_enum)
@@ -220,13 +226,20 @@ def test_reset_database_clears_all_then_migrates_then_checks(
     assert db.call_names() == (
         ["test_connection"]
         + ["clear_repository_content"] * n
+        + ["find_remaining_content"] * n
         + ["run_migrate"]
         + ["check_schema_matches"] * n
     )
     db.run_migrate.assert_called_once_with(MODULE_ROOT, connection_string)
-    for clear_call in db.clear_repository_content.call_args_list:
+    for clear_call in (
+        db.clear_repository_content.call_args_list
+        + db.find_remaining_content.call_args_list
+    ):
         assert clear_call.kwargs["connection_string"] == connection_string
         assert clear_call.kwargs["alembic_schema"] == etl.ALEMBIC_SCHEMA
+    assert [c.kwargs["entities"] for c in db.find_remaining_content.call_args_list] == [
+        c.kwargs["entities"] for c in db.clear_repository_content.call_args_list
+    ]
     seq_entities = seqdb_domain.get_dag_sorted_entities(
         service_type=seqdb_enum.ServiceType.SEQ, persistable=True
     )
@@ -243,9 +256,31 @@ def test_reset_database_unreachable_clears_nothing(
         etl.run_reset_database(MODULE_ROOT, AppType.SEQDB, seqdb_enum, seqdb_domain)
 
     assert excinfo.value.code == 1
-    assert unreachable_db.clear_repository_content.call_count == 0
-    assert unreachable_db.run_migrate.call_count == 0
-    assert unreachable_db.check_schema_matches.call_count == 0
+    assert unreachable_db.call_names() == ["test_connection"]
+
+
+def test_reset_database_not_cleared_exits_before_migrating(
+    seqdb_enum: ModuleType,
+    seqdb_domain: Any,
+    db: _DbMocks,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A denied clear of a database already at head must not pass as a reset."""
+    db.find_remaining_content.return_value = [
+        "table organization.user still exists",
+        "table alembic.alembic_version still exists",
+    ]
+
+    with pytest.raises(SystemExit) as excinfo:
+        etl.run_reset_database(MODULE_ROOT, AppType.SEQDB, seqdb_enum, seqdb_domain)
+
+    assert excinfo.value.code == 1
+    assert db.run_migrate.call_count == 0
+    assert db.check_schema_matches.call_count == 0
+    out = capsys.readouterr().out
+    assert "reset could not clear it" in out
+    assert "  - table alembic.alembic_version still exists" in out
+    assert "database cleared" not in out
 
 
 def test_reset_database_schema_problems_exit(

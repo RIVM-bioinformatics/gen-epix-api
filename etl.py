@@ -281,8 +281,9 @@ def _exit_on_schema_problems(
     Args:
         app_type: App the service type belongs to.
         service_type_value: Service type whose schema was checked.
-        problems: Result of ``SARepository.check_schema_matches``; empty means
-            the schema matches and nothing happens.
+        problems: Result of ``SARepository.check_schema_matches`` or
+            ``SARepository.find_remaining_content``; empty means there is
+            nothing wrong and nothing happens.
         context: What the mismatch means, appended to the header line.
         module_root: If given, also print the ``alembic upgrade head`` command
             for this module, as a hint that the migration may not have run.
@@ -353,13 +354,14 @@ def run_reset_database(
     after every service type's tables have been cleared - not once per
     service type, which would re-drop the just-written alembic_version row
     and make Alembic try to recreate tables that already exist. Because
-    ``clear_repository_content`` ignores most errors, the schema of every
-    service type is checked against its entities afterwards.
+    ``clear_repository_content`` ignores most errors, the clear is verified
+    before the migration (no entity table and no ``alembic_version`` left), and
+    the schema of every service type is checked against its entities after it.
 
     Raises:
         SystemExit: With code 1 if no service type has an SA repository, a
-            database stays unreachable, or a schema does not match after the
-            migration.
+            database stays unreachable, a table is left after clearing, or a
+            schema does not match after the migration.
     """
     targets = _resolve_sa_targets(app_type, service_type_enum)
     _exit_if_no_targets(app_type, targets)
@@ -381,6 +383,17 @@ def run_reset_database(
             entities=entities,
             connection_string=target.connection_string,
             alembic_schema=ALEMBIC_SCHEMA,
+        )
+
+    for target, entities in entities_per_target:
+        service_type_value = target.service_type.value
+        remaining = target.repository_class.find_remaining_content(
+            entities=entities,
+            connection_string=target.connection_string,
+            alembic_schema=ALEMBIC_SCHEMA,
+        )
+        _exit_on_schema_problems(
+            app_type, service_type_value, remaining, "reset could not clear it"
         )
         print(f"App {app_type.value}, service {service_type_value}: database cleared")
 
