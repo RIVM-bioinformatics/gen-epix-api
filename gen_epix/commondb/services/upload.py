@@ -165,15 +165,14 @@ class BatchUploader:
                 code="a3f7e9d2",
                 message="Verification ended",
             )
+            # Propagate before deciding on a failed verification: that decision
+            # needs each parent's final status.
+            for parent_result in batch_result.get_parent_results():
+                parent_result.propagate_child_failures()
             if not success:
                 # Record the batch-level failure regardless of verify_only,
                 # so that a dry run reports the same outcome as a real run.
-                batch_result.add_error(
-                    code="02095f22",
-                    message="Verification found errors, upload will not proceed",
-                )
-            for parent_result in batch_result.get_parent_results():
-                parent_result.propagate_child_failures()
+                success = self._handle_verification_failure(cmd, batch_result)
 
             if cmd.verify_only:
                 # Stop here if only verification was requested; mark all
@@ -228,6 +227,46 @@ class BatchUploader:
         batch_result.resolve_status()
 
         return batch_result
+
+    def _handle_verification_failure(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        batch_result: BaseBatchUploadResult,
+    ) -> bool:
+        """Record a failed verification and decide whether the other parents go ahead.
+
+        The other parents are uploaded only when the command allows it
+        (``fail_batch_on_item_error=False``) and every failure can be traced to a
+        parent: if no parent failed, the error belongs to the batch as a whole.
+
+        Args:
+            cmd: Upload command carrying the batch and its options.
+            batch_result: Batch result after verification and failure propagation.
+
+        Returns:
+            True if the parents that are still PENDING may be uploaded.
+        """
+        parent_results = batch_result.get_parent_results()
+        n_failed = sum(1 for x in parent_results if x.status == EtlStatus.FAILED)
+        n_pending = sum(1 for x in parent_results if x.status == EtlStatus.PENDING)
+        if cmd.fail_batch_on_item_error or n_failed == 0 or n_pending == 0:
+            batch_result.add_error(
+                code="02095f22",
+                message="Verification found errors, upload will not proceed",
+            )
+            return False
+        batch_result.add_error(
+            code="c0f70912",
+            message=(
+                f"Verification failed for {n_failed} item(s); "
+                f"the other {n_pending} item(s) are uploaded"
+            ),
+        )
+        for parent_result in parent_results:
+            if parent_result.status == EtlStatus.FAILED:
+                # Its children and identifiers must not be written either
+                parent_result.convert_status(EtlStatus.PENDING, EtlStatus.SKIPPED)
+        return True
 
     def verify_user_rights(self, cmd: command.UploadBatchCommandMixin) -> None:
         """Verify that the user has rights to perform the upload.

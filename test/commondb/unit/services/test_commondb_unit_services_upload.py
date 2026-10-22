@@ -90,24 +90,7 @@ combinations thereof:
 9.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
 """
 
-from test.commondb.unit.upload.model import (
-    Child1,
-    Child1ForUpload,
-    Child2,
-    Child2ForUpload,
-    Child2Identifier,
-    Parent,
-    ParentBatchForUpload,
-    ParentBatchUploader,
-    ParentBatchUploadResult,
-    ParentForUpload,
-    ParentIdentifier,
-)
-from test.commondb.unit.upload.model import (
-    ParentUploadResult as FixtureParentUploadResult,
-)
-from test.commondb.unit.upload.model import Ref1, Ref2, UploadParentsCommand
-from test.util.mock_compat import Mock
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -126,9 +109,29 @@ from gen_epix.etl.enum import EtlStatus, EtlStatusSet
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.exc import DuplicateIdsError
-from gen_epix.fastapp.model import ModelFieldProps
+from gen_epix.fastapp.model import Model, ModelFieldProps
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from test.commondb.unit.upload.model import (
+    Child1,
+    Child1ForUpload,
+    Child2,
+    Child2ForUpload,
+    Child2Identifier,
+    Parent,
+    ParentBatchForUpload,
+    ParentBatchUploader,
+    ParentBatchUploadResult,
+    ParentForUpload,
+    ParentIdentifier,
+    Ref1,
+    Ref2,
+    UploadParentsCommand,
+)
+from test.commondb.unit.upload.model import (
+    ParentUploadResult as FixtureParentUploadResult,
+)
+from test.util.mock_compat import Mock
 
 
 class BaseUploadTestCase:
@@ -3353,6 +3356,192 @@ class TestVerificationAttributionAndDryRun(BaseUploadTestCase):
 
         assert batch_result.status == EtlStatus.FAILED
         assert batch_result.has_log_code("1f8d4c65")
+
+
+class _RecordingCrud:
+    """Stand-in for repository.crud that answers existence and reads, and records creates.
+
+    Created objects are recorded per model class so a test can check exactly which
+    objects were written.
+    """
+
+    def __init__(self, existing: list[Model] | None = None) -> None:
+        self.existing = existing or []
+        self.created: dict[type[Model], list[Any]] = {}
+
+    def __call__(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        model_class: type[Model],
+        operation: CrudOperation,
+        **kwargs: Any,
+    ) -> list[Any]:
+        id_field_name = model_class.ENTITY.get_id_field_name()
+        existing_by_id = {
+            getattr(x, id_field_name): x
+            for x in self.existing
+            if isinstance(x, model_class)
+        }
+        if operation == CrudOperation.EXISTS_SOME:
+            return [x in existing_by_id for x in kwargs["obj_ids"]]
+        if operation == CrudOperation.READ_SOME:
+            return [existing_by_id[x] for x in kwargs["obj_ids"]]
+        if operation == CrudOperation.CREATE_SOME:
+            self.created.setdefault(model_class, []).extend(kwargs["objs"])
+            return [getattr(x, id_field_name) for x in kwargs["objs"]]
+        raise AssertionError(f"Unexpected crud operation {operation} on {model_class}")
+
+
+class TestOneBadItemFailsOnItsOwn(BaseUploadTestCase):
+    """A parent that fails verification can be left out on its own.
+
+    With fail_batch_on_item_error=False the other parents in the batch are stored.
+    With the default, one bad parent still stops the whole batch.
+    """
+
+    GOOD_REF1_CODE = "existing_code"
+    BAD_REF1_CODE = "non_existent_code"
+
+    def setup_method(self) -> None:
+        """Answer Ref1 lookups with one existing Ref1 and record repository writes."""
+        super().setup_method()
+        existing_ref1 = self.create_ref1(self.ref1_id, self.GOOD_REF1_CODE)
+        self.service.repository.read_fields.return_value = [
+            (existing_ref1.id, existing_ref1.code)
+        ]
+        self.crud = _RecordingCrud()
+        self.service.repository.crud.side_effect = self.crud
+
+    def _child1(self, ref1_code: str, a: str) -> Child1ForUpload:
+        return self.create_child1_for_upload(ref1_id=NULL_ID, ref1_code=ref1_code, a=a)
+
+    def _cmd(
+        self,
+        parents: list[ParentForUpload],
+        fail_batch_on_item_error: bool = False,
+        verify_only: bool = False,
+    ) -> UploadParentsCommand:
+        return self.create_command_for_parents(parents).model_copy(
+            update={
+                "fail_batch_on_item_error": fail_batch_on_item_error,
+                "verify_only": verify_only,
+            }
+        )
+
+    def _good_bad_good_parents(self) -> list[ParentForUpload]:
+        """Three new parents; the middle one has one bad and one good child."""
+        return [
+            self.create_parent_for_upload(
+                a="good0", children1=[self._child1(self.GOOD_REF1_CODE, "c0")]
+            ),
+            self.create_parent_for_upload(
+                a="bad1",
+                children1=[
+                    self._child1(self.BAD_REF1_CODE, "c1_bad"),
+                    self._child1(self.GOOD_REF1_CODE, "c1_good"),
+                ],
+            ),
+            self.create_parent_for_upload(
+                a="good2", children1=[self._child1(self.GOOD_REF1_CODE, "c2")]
+            ),
+        ]
+
+    def test_good_parents_are_stored_when_one_fails_verification(self) -> None:
+        """Only the two good parents and their children are created."""
+        batch_result = self.upload_batch(self._cmd(self._good_bad_good_parents()))
+
+        assert [x.a for x in self.crud.created[Parent]] == ["good0", "good2"]
+        assert [x.a for x in self.crud.created[Child1]] == ["c0", "c2"]
+        good0, bad1, good2 = batch_result.parents
+        for parent_result in (good0, good2):
+            assert parent_result.status == EtlStatus.CREATED
+            assert parent_result.children1[0].status == EtlStatus.CREATED  # type: ignore[index]
+        assert bad1.status == EtlStatus.FAILED
+        assert [x.status for x in bad1.children1 or []] == [
+            EtlStatus.FAILED,
+            EtlStatus.SKIPPED,
+        ]
+        self.expectBatchFailed(batch_result)
+        self.expectHasLogCode(batch_result, "c0f70912")
+        assert not batch_result.has_log_code("02095f22")
+
+    def test_existing_parent_with_one_bad_child_gets_no_children_written(self) -> None:
+        """The good child of an existing parent that failed is not created either."""
+        existing_parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id,
+            children1=[
+                self._child1(self.BAD_REF1_CODE, "existing_bad"),
+                self._child1(self.GOOD_REF1_CODE, "existing_good"),
+            ],
+        )
+        self.crud.existing = [
+            self.get_parent_from_for_upload(existing_parent_for_upload)
+        ]
+        new_parent_for_upload = self.create_parent_for_upload(
+            a="new", children1=[self._child1(self.GOOD_REF1_CODE, "new_good")]
+        )
+
+        batch_result = self.upload_batch(
+            self._cmd([existing_parent_for_upload, new_parent_for_upload])
+        )
+
+        assert [x.a for x in self.crud.created[Parent]] == ["new"]
+        assert [x.a for x in self.crud.created[Child1]] == ["new_good"]
+        assert batch_result.parents[0].status == EtlStatus.FAILED
+        assert batch_result.parents[1].status == EtlStatus.CREATED
+
+    def test_nothing_is_stored_when_every_parent_fails(self) -> None:
+        """With no parent left to store, the batch fails as before."""
+        parents = [
+            self.create_parent_for_upload(
+                a=f"bad{i}", children1=[self._child1(self.BAD_REF1_CODE, f"c{i}")]
+            )
+            for i in range(2)
+        ]
+
+        batch_result = self.upload_batch(self._cmd(parents))
+
+        assert self.crud.created == {}
+        self.expectBatchFailed(batch_result)
+        self.expectHasLogCode(batch_result, "02095f22")
+
+    def test_nothing_is_stored_when_no_parent_can_be_blamed(self) -> None:
+        """A verification error that no parent carries stops the whole batch."""
+        self.batch_uploader.verify_batch = Mock(return_value=False)  # type: ignore[method-assign]
+
+        batch_result = self.upload_batch(self._cmd(self._good_bad_good_parents()))
+
+        assert self.crud.created == {}
+        self.expectBatchFailed(batch_result)
+        self.expectHasLogCode(batch_result, "02095f22")
+
+    def test_default_still_stores_nothing(self) -> None:
+        """fail_batch_on_item_error defaults to True: one bad parent stops the batch."""
+        cmd = self.create_command_for_parents(self._good_bad_good_parents())
+        assert cmd.fail_batch_on_item_error is True
+
+        batch_result = self.upload_batch(cmd)
+
+        assert self.crud.created == {}
+        self.expectBatchFailed(batch_result)
+        self.expectHasLogCode(batch_result, "02095f22")
+        assert not batch_result.has_log_code("c0f70912")
+
+    def test_dry_run_reports_like_a_real_run(self) -> None:
+        """verify_only stores nothing, but reports the same parent outcome and code."""
+        batch_result = self.upload_batch(
+            self._cmd(self._good_bad_good_parents(), verify_only=True)
+        )
+
+        assert self.crud.created == {}
+        assert [x.status for x in batch_result.parents] == [
+            EtlStatus.SKIPPED,
+            EtlStatus.FAILED,
+            EtlStatus.SKIPPED,
+        ]
+        self.expectBatchFailed(batch_result)
+        self.expectHasLogCode(batch_result, "c0f70912")
 
 
 class TestChildOrderCreateOrdering(BaseUploadTestCase):

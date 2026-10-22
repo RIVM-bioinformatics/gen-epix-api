@@ -88,7 +88,9 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
     after verification, so the result contains only verification outcomes.
 
     The data are uploaded as a single atomic unit of work, so that
-    either all data are successfully uploaded or none are.
+    either all data are successfully uploaded or none are. With
+    ``fail_batch_on_item_error=False``, cases that fail verification are left
+    out and the other cases are uploaded, still as one unit of work.
 
     Model validation:
         Every supplied case must belong to the command's case type. A mismatched
