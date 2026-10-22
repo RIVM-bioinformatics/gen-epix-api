@@ -1545,6 +1545,23 @@
         "justMyCode": true
 },
 {
+    "name": "test.general.unit.startup_benchmark",
+    "type": "debugpy",
+    "request": "launch",
+    "program": "run.py",
+    "args": ["run_test", "test/general/unit/startup_benchmark"],
+    "justMyCode": true
+},
+
+{
+    "name": "test.general.integration.startup_benchmark",
+    "type": "debugpy",
+    "request": "launch",
+    "program": "run.py",
+    "args": ["run_test", "test/general/integration/startup_benchmark"],
+    "justMyCode": true
+},
+{
         "name": "test.omopdb",
         "type": "debugpy",
         "request": "launch",
