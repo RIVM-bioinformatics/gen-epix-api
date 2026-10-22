@@ -17,6 +17,9 @@ from gen_epix.casedb.services.case.crud_common import (
 )
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.filter import CompositeFilter, Filter, LogicalOperator, UuidSetFilter
+
+BOUNDED_QUERY_KEYS = frozenset({"case_id", "case_set_id"})
 
 
 def case_service_crud_case_set_member(
@@ -77,9 +80,10 @@ def _crud_case_set_member_with_abac(
 ):
     """Handle case-set membership under current user restrictions.
 
-    Commands without case ABAC metadata delegate directly. Otherwise unrestricted
-    bulk reads, updates, and bulk deletes are rejected, and member reads are filtered
-    to rows whose case and case set are both accessible.
+    Bulk reads require an explicit case or case-set UUID selection. Reads are
+    filtered to accessible cases and case sets. Creation requires readable cases,
+    writable case sets, and matching case types before any rows are persisted.
+    Missing ABAC metadata and other writes are rejected.
 
     Args:
         self: Case service handling the command.
@@ -96,8 +100,11 @@ def _crud_case_set_member_with_abac(
     # Initialize some
     assert cmd.user is not None and cmd.user.id is not None
 
-    # Only read/exists some and read/exists one allowed, other operations need to be performed through other commands
-    if not cmd.is_read() or cmd.is_read_all():
+    is_create = cmd.is_create()
+    bounded_query = _is_bounded_query(cmd.query_filter)
+    if (not cmd.is_read() and not is_create) or (
+        cmd.is_read_all() and not bounded_query
+    ):
         raise exc.UnauthorizedAuthError(
             "85539cf8",
             f"Operation {cmd.operation.value} not allowed for case set members for this user",
@@ -105,15 +112,19 @@ def _crud_case_set_member_with_abac(
 
     case_abac = get_case_abac_from_command(cmd)
     if case_abac is None:
-        return self.crud(cmd)  # type: ignore[return-value]
+        raise exc.UnauthorizedAuthError(
+            "58bcfdde", "Case ABAC metadata is required for case set members"
+        )
 
-    retval = self.crud(cmd)
-    if not cmd.is_read():
-        return retval  # type: ignore[return-value]
+    if is_create:
+        self._verify_case_set_member_case_type(cmd.user, cmd.get_objs())
+        retval = cmd.get_objs()
+    else:
+        retval = self.crud(cmd)
     if retval is None:
         return None
 
-    if cmd.return_id:
+    if cmd.return_id and not is_create:
         if not isinstance(retval, list) or any(
             not isinstance(member_id, UUID) for member_id in retval
         ):
@@ -186,6 +197,7 @@ def _crud_case_set_member_with_abac(
     )
 
     accessible_member_ids: set[UUID] = set()
+    accessible_members = []
     for member in members:
         case = cases_by_id.get(member.case_id)
         case_set = case_sets_by_id.get(member.case_set_id)
@@ -205,15 +217,25 @@ def _crud_case_set_member_with_abac(
         ) and case_abac.is_allowed(
             case_set.case_type_id,
             case_set.created_in_data_collection_id,
-            enum.CaseRight.READ_CASE_SET,
+            (
+                enum.CaseRight.WRITE_CASE_SET
+                if is_create
+                else enum.CaseRight.READ_CASE_SET
+            ),
             current_data_collection_ids=case_set_data_collection_ids,
         ):
+            accessible_members.append(member)
             if member.id is not None:
                 accessible_member_ids.add(member.id)
 
-    accessible_members = [
-        member for member in members if member.id in accessible_member_ids
-    ]
+    if is_create:
+        if len(accessible_members) != len(members):
+            raise exc.UnauthorizedAuthError(
+                "65b21905",
+                "Creating members requires readable cases and writable case sets",
+            )
+        return self.crud(cmd)  # type: ignore[return-value]
+
     if cmd.return_id:
         return [  # type: ignore[return-value]
             member_id for member_id in member_ids if member_id in accessible_member_ids
@@ -221,3 +243,27 @@ def _crud_case_set_member_with_abac(
     if isinstance(retval, list):
         return accessible_members
     return accessible_members[0] if accessible_members else None  # type: ignore[return-value]
+
+
+def _is_bounded_query(query_filter: Filter | None) -> bool:
+    """Check whether a query filter limits members to explicit case or case-set IDs.
+
+    A non-inverted UUID set filter on ``case_id`` or ``case_set_id`` is bounded.
+    A non-inverted composite filter is bounded when its result cannot exceed that
+    of a bounded filter: ``AND`` needs at least one bounded child and ``OR``
+    needs all children bounded. Other filters and operators are unbounded.
+
+    Args:
+        query_filter: Query filter of the case-set-member command.
+
+    Returns:
+        Whether the filter restricts the query to explicit parent IDs.
+    """
+    if isinstance(query_filter, UuidSetFilter):
+        return not query_filter.invert and query_filter.key in BOUNDED_QUERY_KEYS
+    if isinstance(query_filter, CompositeFilter) and not query_filter.invert:
+        if query_filter.operator == LogicalOperator.AND:
+            return any(_is_bounded_query(x) for x in query_filter.filters)
+        if query_filter.operator == LogicalOperator.OR:
+            return all(_is_bounded_query(x) for x in query_filter.filters)
+    return False
