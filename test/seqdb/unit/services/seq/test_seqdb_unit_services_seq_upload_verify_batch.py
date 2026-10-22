@@ -537,7 +537,7 @@ class TestVerifyProtocol(BaseUploadTestCase):
         self.service.repository.crud.assert_not_called()
 
     def test_failed_child_protocol_is_not_read(self) -> None:
-        """A protocol that verify_link_id found missing is not read again (LSP-4119).
+        """A protocol that verify_link_id found missing is not read again.
 
         Reading it would raise InvalidIdsError and fail the whole batch instead of
         only the sample of that child.

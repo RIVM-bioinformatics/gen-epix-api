@@ -3,7 +3,7 @@
 Runs UploadSamplesCommand against a real (DICT demo) SEQDB app, so the whole upload
 path is exercised: verification, upsert and storage. With
 fail_batch_on_item_error=False the samples that pass verification are stored even
-when another sample in the same batch fails (LSP-4119).
+when another sample in the same batch fails.
 """
 
 import logging
@@ -120,7 +120,7 @@ class TestOneBadSampleFailsOnItsOwn:
             )
         }
         run_id = uuid4().hex[:8]
-        codes = [f"lsp4119_{run_id}_{i}" for i in range(3)]
+        codes = [f"item_error_{run_id}_{i}" for i in range(3)]
         protocols = [good_protocol, _bad_protocol(env, bad_kind), good_protocol]
         sample_batch = model.SampleBatchForUpload(
             samples=[
