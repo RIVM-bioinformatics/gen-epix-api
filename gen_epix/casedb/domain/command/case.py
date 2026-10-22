@@ -90,11 +90,15 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
     The data are uploaded as a single atomic unit of work, so that
     either all data are successfully uploaded or none are. With
     ``fail_batch_on_item_error=False``, cases that fail verification are left
-    out and the other cases are uploaded, still as one unit of work.
+    out and the other cases are uploaded, still as one unit of work. This is
+    only allowed for cases without read sets or sequences: their samples are
+    uploaded to SEQDB in a separate request that cannot yet leave out the
+    samples of the cases that failed.
 
     Model validation:
         Every supplied case must belong to the command's case type. A mismatched
-        case causes validation to fail.
+        case causes validation to fail. ``fail_batch_on_item_error=False`` with
+        read sets or sequences in the batch also causes validation to fail.
     """
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = model.CaseBatchForUpload
@@ -119,6 +123,16 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
         cases = [x.case for x in cases_for_upload if x.case is not None]
         if any(x.case_type_id != self.case_type_id for x in cases):
             raise ValueError("All cases must belong to the given CaseType ID.")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_fail_batch_on_item_error(self) -> Self:
+        """Allow leaving out failed cases only when the batch has no samples."""
+        if not self.fail_batch_on_item_error and self.case_batch.has_samples():
+            raise ValueError(
+                "fail_batch_on_item_error=False is not supported for cases with "
+                "read sets or sequences."
+            )
         return self
 
 
