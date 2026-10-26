@@ -509,8 +509,10 @@ class BatchResult(Result):
                 self.set_success()
         elif n_errors == len(self.extract_results):
             self.set_failed()
-        elif not self.is_failed():
-            self.set_mixed()
+        else:
+            # Partly failed: MIXED, unless an error on the batch itself already failed it.
+            if not self.is_failed():
+                self.set_mixed()
 
     def update_status_from_loads(self) -> None:
         """Propagate LoadResult statuses to batch status: SUCCESS / MIXED / ERROR.
@@ -531,8 +533,10 @@ class BatchResult(Result):
                 self.set_success()
         elif n_errors == len(self.load_results):
             self.set_failed()
-        elif not self.is_failed():
-            self.set_mixed()
+        else:
+            # Partly failed: MIXED, unless an error on the batch itself already failed it.
+            if not self.is_failed():
+                self.set_mixed()
 
     def update_status_from_transforms(self) -> None:
         """Propagate TransformResult statuses: SUCCESS / MIXED / ERROR.
@@ -550,8 +554,10 @@ class BatchResult(Result):
                 self.set_success()
         elif n_errors == len(self.transform_results):
             self.set_failed()
-        elif not self.is_failed():
-            self.set_mixed()
+        else:
+            # Partly failed: MIXED, unless an error on the batch itself already failed it.
+            if not self.is_failed():
+                self.set_mixed()
 
     def add_results(
         self,
