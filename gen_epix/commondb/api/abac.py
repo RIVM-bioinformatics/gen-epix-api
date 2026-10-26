@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any, NoReturn
 
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, FastAPI
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
@@ -41,7 +41,7 @@ def create_abac_endpoints(
         description=command.RetrieveOrganizationAdminNameEmailsCommand.__doc__,
     )
     async def retrieve_organization_admin_name_emails(
-        user: model.User = Depends(registered_user_dependency),
+        user: registered_user_dependency, # type: ignore[valid-type]
     ) -> list[model.UserNameEmail]:
         """Retrieve names and email addresses of the user's organization admins."""
         try:
