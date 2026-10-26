@@ -373,6 +373,42 @@ class TestBatchEtlResult:
 
         assert batch.status is status
 
+    @pytest.mark.parametrize("phase", ["extract", "transform", "load"])
+    def test_partly_failed_phase_does_not_downgrade_failure(self, phase: str) -> None:
+        batch = BatchResult(status=EtlStatus.FAILED)
+        if phase == "extract":
+            batch.extract_results = [
+                ExtractResult(status=EtlStatus.SUCCESS),
+                ExtractResult(status=EtlStatus.FAILED),
+            ]
+            batch.update_status_from_extractions()
+        elif phase == "transform":
+            batch.transform_results = [
+                TransformResult(status=EtlStatus.SUCCESS),
+                TransformResult(status=EtlStatus.FAILED),
+            ]
+            batch.update_status_from_transforms()
+        else:
+            batch.load_results = [
+                LoadResult(status=EtlStatus.PROCESSED),
+                LoadResult(status=EtlStatus.FAILED),
+            ]
+            batch.update_status_from_loads()
+
+        assert batch.status is EtlStatus.FAILED
+
+    def test_set_completed_keeps_batch_error_with_partly_failed_transforms(
+        self,
+    ) -> None:
+        batch = BatchResult()
+        batch.start_transform("completed").set_completed()
+        batch.start_transform("not completed")
+        batch.add_error("E001", "batch failed after some of its transforms")
+
+        batch.set_completed()
+
+        assert batch.status is EtlStatus.FAILED
+
     def test_set_completed_keeps_batch_error_with_successful_extracts(self) -> None:
         batch = BatchResult(extract_results=[ExtractResult(status=EtlStatus.SUCCESS)])
         batch.add_error("E001", "batch failed after its extracts succeeded")

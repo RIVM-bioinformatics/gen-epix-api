@@ -495,10 +495,10 @@ class BatchResult(Result):
     def update_status_from_extractions(self) -> None:
         """Propagate ExtractResult statuses to batch status: SUCCESS / MIXED / ERROR.
 
-        Will not upgrade the status to SUCCESS if it was already MIXED or ERROR, e.g.
-        from an error added to the batch itself. Once this method has set the status
-        to MIXED or ERROR, subsequent calls to update_status_from_transforms() cannot
-        improve the status back to SUCCESS.
+        Will not upgrade the status to SUCCESS if it was already MIXED or ERROR, nor
+        to MIXED if it was already ERROR, e.g. from an error added to the batch itself.
+        Once this method has set the status to MIXED or ERROR, subsequent calls to
+        update_status_from_transforms() cannot improve it.
         """
         if not self.extract_results:
             return
@@ -509,14 +509,15 @@ class BatchResult(Result):
                 self.set_success()
         elif n_errors == len(self.extract_results):
             self.set_failed()
-        else:
+        elif not self.is_failed():
             self.set_mixed()
 
     def update_status_from_loads(self) -> None:
         """Propagate LoadResult statuses to batch status: SUCCESS / MIXED / ERROR.
 
-        Will not upgrade the status to SUCCESS if it was already MIXED or ERROR
-        from a prior extract/transform phase.
+        Will not upgrade the status to SUCCESS if it was already MIXED or ERROR, nor
+        to MIXED if it was already ERROR, from a prior extract/transform phase or an
+        error added to the batch itself.
         """
         if not self.load_results:
             return
@@ -530,14 +531,15 @@ class BatchResult(Result):
                 self.set_success()
         elif n_errors == len(self.load_results):
             self.set_failed()
-        else:
+        elif not self.is_failed():
             self.set_mixed()
 
     def update_status_from_transforms(self) -> None:
         """Propagate TransformResult statuses: SUCCESS / MIXED / ERROR.
 
-        Will not upgrade the status to SUCCESS if it was already set to MIXED or ERROR
-        by a prior call to update_status_from_extractions().
+        Will not upgrade the status to SUCCESS if it was already set to MIXED or ERROR,
+        nor to MIXED if it was already ERROR, by a prior call to
+        update_status_from_extractions() or an error added to the batch itself.
         """
         if not self.transform_results:
             return
@@ -548,7 +550,7 @@ class BatchResult(Result):
                 self.set_success()
         elif n_errors == len(self.transform_results):
             self.set_failed()
-        else:
+        elif not self.is_failed():
             self.set_mixed()
 
     def add_results(
