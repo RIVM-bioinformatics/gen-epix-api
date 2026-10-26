@@ -356,12 +356,15 @@ class TestBatchEtlResult:
         assert batch.status is expected
 
     @pytest.mark.parametrize("status", [EtlStatus.MIXED, EtlStatus.FAILED])
-    @pytest.mark.parametrize("phase", ["transform", "load"])
-    def test_successful_later_phase_does_not_upgrade_failure(
+    @pytest.mark.parametrize("phase", ["extract", "transform", "load"])
+    def test_successful_phase_does_not_upgrade_failure(
         self, status: EtlStatus, phase: str
     ) -> None:
         batch = BatchResult(status=status)
-        if phase == "transform":
+        if phase == "extract":
+            batch.extract_results = [ExtractResult(status=EtlStatus.SUCCESS)]
+            batch.update_status_from_extractions()
+        elif phase == "transform":
             batch.transform_results = [TransformResult(status=EtlStatus.SUCCESS)]
             batch.update_status_from_transforms()
         else:
@@ -369,6 +372,15 @@ class TestBatchEtlResult:
             batch.update_status_from_loads()
 
         assert batch.status is status
+
+    def test_set_completed_keeps_batch_error_with_successful_extracts(self) -> None:
+        batch = BatchResult(extract_results=[ExtractResult(status=EtlStatus.SUCCESS)])
+        batch.add_error("E001", "batch failed after its extracts succeeded")
+
+        batch.set_completed()
+
+        assert batch.status is EtlStatus.FAILED
+        assert batch.is_completed()
 
     def test_set_completed_propagates_all_phases_and_adds_completion_log(self) -> None:
         batch = BatchResult(
