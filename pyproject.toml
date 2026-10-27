@@ -37,7 +37,7 @@ dependencies = [
     "scipy==1.18.1",
     "numpy==2.5.4",
     "biopython==1.88",
-    "cachetools==7.2.3",
+    "cachetools==7.2.4",
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
     "types-setuptools==84.0.*",
@@ -52,9 +52,9 @@ dependencies = [
 server = [
     # For compatibility with apache-airflow-core 3.3.0 used in other repositories, fastapi must be pinned to <0.137.0
     # "fastapi[standard]==0.141.1",
-    "fastapi[standard]>=0.143.0,<0.144.0",
+    "fastapi[standard]>=0.159.1,<0.160.0",
     "gunicorn==26.2.*",
-    "starlette==1.8.*",
+    "starlette==1.9.*",
     "sqlalchemy==2.0.54",
     "sqlalchemy_utils==0.43.0",
     "alembic==1.20.0",
