@@ -4,10 +4,9 @@ import base64
 import hashlib
 import json
 import struct
-from typing import Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 from uuid import UUID
 
-import numpy as np
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
@@ -27,6 +26,10 @@ from gen_epix.seqdb.domain.model.seq.locus import Allele, Locus
 from gen_epix.seqdb.domain.model.seq.protocol import HasProtocolMixin, Protocol
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.seq import HasSeqMixin, Seq
+
+if TYPE_CHECKING:
+    # A dependency of the server extra, imported at runtime only by get_allele_array
+    import numpy as np
 
 
 class SeqProfile(
@@ -317,6 +320,10 @@ class SeqProfile(
             ValueError: If this is not an allele profile.
             NotImplementedError: If its allele representation is unsupported.
         """
+        # local import: numpy is in the server extra, and the base (client)
+        # install must be able to import this model without it
+        import numpy as np
+
         if self.seq_profile_type != enum.SeqProfileType.ALLELE:
             raise ValueError("Allele array can only be computed for allele profiles")
         if self.format == enum.SeqProfileFormat.ORDERED_ALLELE_IDS:
