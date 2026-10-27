@@ -306,7 +306,7 @@ class SeqProfile(
             "Unable to parse allele IDs for this allele profile format"
         )
 
-    def get_allele_array(self) -> np.ndarray:
+    def get_allele_array(self) -> "np.ndarray":
         r"""Return allele IDs as an (n_loci,) S16 numpy array.
 
         Each element is a 16-byte UUID; missing loci (null UUID) appear as
