@@ -18,7 +18,10 @@ from pydantic import ValidationError
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
-from gen_epix.commondb.domain.model.upload import UploadResult
+from gen_epix.commondb.domain.model.upload import (
+    UploadResult,
+    UploadResultWithIdentifiers,
+)
 from gen_epix.etl.model import Result
 from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.domain.model.seq.upload import (
@@ -1840,9 +1843,9 @@ class TestSampleBatchForUploadAlleleHandling:
             batch.get_referenced_allele_ids()
 
     def test_sample_upload_result_collects_nested_errors_in_field_order(self) -> None:
-        read_set_result = UploadResult()
+        read_set_result = UploadResultWithIdentifiers()
         read_set_result.add_error("read-set-error", "Read set failed")
-        seq_result = UploadResult()
+        seq_result = UploadResultWithIdentifiers()
         seq_result.add_error("seq-error", "Sequence failed")
         result = SampleUploadResult(read_sets=[read_set_result], seqs=[seq_result])
 
@@ -1853,6 +1856,28 @@ class TestSampleBatchForUploadAlleleHandling:
 
     def test_sample_upload_result_without_child_errors_is_empty(self) -> None:
         assert SampleUploadResult().get_errors() == []
+
+
+@pytest.mark.parametrize("field_name", ["read_sets", "seqs", "seq_profiles"])
+def test_sample_upload_result_keeps_child_identifier_results_when_serialized(
+    field_name: str,
+) -> None:
+    """A failed child identifier survives the JSON round trip the API does."""
+    identifier_result = UploadResult()
+    identifier_result.add_error("0561ecd7", "Identifier refers to another object")
+    child_result = UploadResultWithIdentifiers(identifiers=[identifier_result])
+    sample_result = SampleUploadResult.model_validate({field_name: [child_result]})
+    sample_result.propagate_child_failures()
+    batch_result = SampleBatchUploadResult(samples=[sample_result])
+
+    restored = SampleBatchUploadResult.model_validate_json(
+        batch_result.model_dump_json()
+    )
+
+    restored_child = getattr(restored.samples[0], field_name)[0]
+    assert restored_child.has_log_code("d8f21b6a")
+    assert restored_child.identifiers is not None
+    assert restored_child.identifiers[0].has_log_code("0561ecd7")
 
 
 @pytest.mark.parametrize(
