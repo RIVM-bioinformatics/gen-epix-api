@@ -1,7 +1,8 @@
 """Implement seqdb sequence service behavior for services.seq.upload_verify_batch."""
 
 from collections import defaultdict
-from typing import cast
+from collections.abc import Iterator
+from typing import Any, cast
 from uuid import UUID
 
 from gen_epix import fastapp
@@ -81,8 +82,16 @@ def _verify_protocol(
         model.Protocol,
     )
 
-    # Get all protocol IDs
-    protocol_ids = {x.protocol_id for x in cmd.sample_batch.get_all_children_for_upload(child_model_class)}  # type: ignore[attr-defined]
+    # Get the protocol IDs of the children still PENDING. verify_link_id has already
+    # failed every child whose protocol does not exist, and reading a missing ID
+    # would raise for the whole batch instead of failing only that child's sample.
+    protocol_ids = {
+        child_for_upload.protocol_id
+        for child_for_upload, child_result in _children_with_results(
+            cmd, batch_result, children_field_name
+        )
+        if child_result.status == EtlStatus.PENDING
+    }
     protocol_ids.discard(None)
     protocol_ids.discard(NULL_ID)
     if not protocol_ids:
@@ -146,21 +155,41 @@ def _add_invalid_protocol_errors(
     child_model_class: type[model.Model],
 ) -> None:
     """Attach errors to non-skipped children using invalid protocol IDs."""
+    for child_for_upload, child_result in _children_with_results(
+        cmd, batch_result, children_field_name
+    ):
+        if child_result.status == EtlStatus.SKIPPED:
+            # Child is already marked as skipped -> nothing left to do.
+            continue
+        if child_for_upload.protocol_id in invalid_protocol_ids:
+            child_result.add_error(
+                "a4c9e18b",
+                f"Referenced protocol with ID {child_for_upload.protocol_id} has protocol_type {protocol_map[child_for_upload.protocol_id].protocol_type} that is not compatible with {child_model_class.__name__}",
+            )
+
+
+def _children_with_results(
+    cmd: command.UploadSamplesCommand,
+    batch_result: model.SampleBatchUploadResult,
+    children_field_name: str,
+) -> Iterator[tuple[Any, model.UploadResult]]:
+    """Yield each child of every sample with its upload result, in batch order.
+
+    Args:
+        cmd: Upload command holding the samples and their children.
+        batch_result: Batch result, positionally aligned with the samples.
+        children_field_name: Sample field holding the children of one model type.
+
+    Yields:
+        Pairs of a child for upload and its upload result.
+    """
     for sample_for_upload, sample_result in zip(
         cmd.sample_batch.samples, batch_result.samples
     ):
-        for child_for_upload, child_result in zip(
+        yield from zip(
             getattr(sample_for_upload, children_field_name) or [],
             getattr(sample_result, children_field_name) or [],
-        ):
-            if child_result.status == EtlStatus.SKIPPED:
-                # Child is already marked as skipped -> nothing left to do.
-                continue
-            if child_for_upload.protocol_id in invalid_protocol_ids:
-                child_result.add_error(
-                    "a4c9e18b",
-                    f"Referenced protocol with ID {child_for_upload.protocol_id} has protocol_type {protocol_map[child_for_upload.protocol_id].protocol_type} that is not compatible with {child_model_class.__name__}",
-                )
+        )
 
 
 def _verify_children_seqs(
