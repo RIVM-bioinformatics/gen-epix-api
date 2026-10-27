@@ -1277,6 +1277,17 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             assert specimen_result.has_log_code("d8f21b6a"), label
             assert person_result.has_log_code("6a1f3d0c"), label
 
+            # The identifier-level message must also survive the JSON
+            # serialization the API response goes through.
+            restored = PersonBatchUploadResult.model_validate_json(
+                batch_result.model_dump_json()
+            )
+            restored_specimens = restored.persons[0].specimens
+            assert restored_specimens is not None, label
+            restored_identifiers = restored_specimens[0].identifiers
+            assert restored_identifiers is not None, label
+            assert restored_identifiers[0].has_log_code("0561ecd7"), label
+
     def test_8_2_2_new_identifier_new_specimen(self) -> None:
         """Test 8.2.2: New Identifier for new specimen - should succeed."""
         identifier = self.create_identifier_for_upload(
