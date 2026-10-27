@@ -169,6 +169,7 @@ class BatchUploader:
             # needs each parent's final status.
             for parent_result in batch_result.get_parent_results():
                 parent_result.propagate_child_failures()
+                self._skip_descendants_of_skipped_new_objects(parent_result)
             if not success:
                 # Record the batch-level failure regardless of verify_only,
                 # so that a dry run reports the same outcome as a real run.
@@ -275,7 +276,7 @@ class BatchUploader:
             code="c0f70912",
             message=(
                 f"Verification failed for {n_failed} item(s); "
-                f"the other {n_pending} item(s) are uploaded"
+                f"the other {n_pending} item(s) are eligible for upload"
             ),
         )
         for parent_result in parent_results:
@@ -283,6 +284,34 @@ class BatchUploader:
                 # Its children and identifiers must not be written either
                 parent_result.convert_status(EtlStatus.PENDING, EtlStatus.SKIPPED)
         return True
+
+    @staticmethod
+    def _skip_descendants_of_skipped_new_objects(
+        parent_result: model.ParentUploadResult,
+    ) -> None:
+        """Skip the children and identifiers of a new object that is not created.
+
+        A parent or child that does not exist and is left out by ``on_new=SKIP``
+        is never stored, so nothing that links to it can be written either. An
+        existing object left out by ``on_exists=SKIP``, or a parent that was not
+        provided, keeps its PENDING children and identifiers.
+
+        Args:
+            parent_result: Parent result after verification.
+        """
+        if parent_result.is_new and parent_result.status == EtlStatus.SKIPPED:
+            parent_result.convert_status(EtlStatus.PENDING, EtlStatus.SKIPPED)
+            return
+        for field_name in parent_result.get_child_results_field_names():
+            child_results: list[UploadResult] = getattr(parent_result, field_name) or []
+            for child_result in child_results:
+                if not child_result.is_new or child_result.status != EtlStatus.SKIPPED:
+                    continue
+                for identifier_result in (
+                    child_result.get_identifier_upload_results() or []
+                ):
+                    if identifier_result.status == EtlStatus.PENDING:
+                        identifier_result.status = EtlStatus.SKIPPED
 
     def verify_user_rights(self, cmd: command.UploadBatchCommandMixin) -> None:
         """Verify that the user has rights to perform the upload.
