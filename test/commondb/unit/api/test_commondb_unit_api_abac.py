@@ -2,11 +2,11 @@
 
 from test.util.mock_compat import Mock, patch
 from types import SimpleNamespace
-from typing import Callable
+from typing import Annotated, Callable
 from uuid import uuid4
 
 import pytest
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.routing import APIRoute
 
 from gen_epix.commondb.api.abac import create_abac_endpoints
@@ -14,8 +14,12 @@ from gen_epix.commondb.domain import command, enum, model
 from gen_epix.fastapp.api import CrudEndpointGenerator
 
 
-def _registered_user_dependency() -> None:
+def _get_registered_user() -> None:
     return None
+
+
+# Mirrors AuthService.create_user_dependencies, which returns an Annotated alias
+_registered_user_dependency = Annotated[model.User, Depends(_get_registered_user)]
 
 
 def _create_abac_routes(
@@ -116,7 +120,7 @@ async def test_admin_names_route_dispatches_command_for_registered_user() -> Non
 
     assert response is result
     assert route.path == "/retrieve_organization_admin_name_emails"
-    assert route.dependant.dependencies[0].call is _registered_user_dependency
+    assert route.dependant.dependencies[0].call is _get_registered_user
     dispatched_command = app.handle.call_args.args[0]
     assert isinstance(
         dispatched_command,
