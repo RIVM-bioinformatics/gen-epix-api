@@ -18,6 +18,7 @@ from gen_epix.commondb.domain.model.upload import (
     ParentForUpload,
     ParentUploadResult,
     UploadResult,
+    UploadResultWithIdentifiers,
 )
 from gen_epix.etl.model import LogItem
 from gen_epix.seqdb.domain import enum
@@ -627,11 +628,11 @@ class SampleUploadResult(ParentUploadResult):
         ParentUploadResult, "data_issues"
     )
 
-    read_sets: list[UploadResult] | None = Field(
+    read_sets: list[UploadResultWithIdentifiers] | None = Field(
         default=None,
         description="The results of uploading the read sets associated with the sample, if any were provided, in the same order as provided.",
     )
-    seqs: list[UploadResult] | None = Field(
+    seqs: list[UploadResultWithIdentifiers] | None = Field(
         default=None,
         description="The results of uploading the sequences associated with the sample, if any were provided, in the same order as provided.",
     )
@@ -643,7 +644,7 @@ class SampleUploadResult(ParentUploadResult):
         default=None,
         description="The results of uploading the seq classifications associated with the sample, if any were provided, in the same order as provided.",
     )
-    seq_profiles: list[UploadResult] | None = Field(
+    seq_profiles: list[UploadResultWithIdentifiers] | None = Field(
         default=None,
         description="The results of uploading the sequence profiles associated with the sample, if any were provided, in the same order as provided.",
     )

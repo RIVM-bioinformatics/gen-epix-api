@@ -70,3 +70,29 @@ def test_dependency_list_matches() -> None:
             msg_lines.extend(f"  - {x}" for x in missing_from_requirements)
 
         pytest.fail("\n".join(msg_lines))
+
+
+def _get_distribution_name(dep: str) -> str:
+    """Return the normalized distribution name of a dependency specifier."""
+    match = re.match(r"[A-Za-z0-9._-]+", dep.strip())
+    assert match, dep
+    return re.sub(r"[-_.]+", "-", match.group(0)).lower()
+
+
+@pytest.mark.scenario_ids("TC-SEC-28-08")
+def test_server_dependencies_are_not_base_dependencies() -> None:
+    """Ensure that no package is both a base dependency and in the server extra.
+
+    A package in both is installed without the extra too, so a client-only
+    installation (such as the Airflow worker's) would get it after all.
+    """
+    data = tomllib.loads(
+        (get_package_root() / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    project = data["project"]
+    base = {_get_distribution_name(x) for x in project["dependencies"]}
+    server = {
+        _get_distribution_name(x) for x in project["optional-dependencies"]["server"]
+    }
+    in_both = sorted(base & server)
+    assert not in_both, f"In both dependencies and the server extra: {in_both}"
