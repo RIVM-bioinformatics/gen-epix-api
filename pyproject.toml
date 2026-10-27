@@ -41,7 +41,7 @@ dependencies = [
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
     "types-setuptools==84.0.*",
-    "tenacity==9.2.*",
+    "tenacity==9.1.4",
     "pydantic-settings==2.*",
 ]
 
@@ -90,7 +90,7 @@ paths = ["gen_epix"]
 
 [tool.black]
 line-length = 88
-target-version = ['py313']
+target-version = ['py314']
 
 [tool.isort]
 profile = "black"
