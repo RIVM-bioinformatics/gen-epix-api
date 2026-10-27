@@ -935,6 +935,36 @@ def test_find_remaining_content_reports_tables_left_by_denied_drops(
     ]
 
 
+def test_find_remaining_content_reports_legacy_table_left_by_denied_drop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A table that is no longer an entity is checked too."""
+    connection_string, engine = _create_alembic_tracked_repo_engine(
+        tmp_path, monkeypatch
+    )
+    with engine.begin() as conn:
+        conn.execute(sa.text("CREATE TABLE legacy_model (id INTEGER PRIMARY KEY)"))
+    drop = sa.Table.drop
+
+    def _deny_legacy_drop(table: sa.Table, *args: Any, **kwargs: Any) -> None:
+        if table.name == "legacy_model":
+            raise RuntimeError("DROP TABLE permission denied")
+        drop(table, *args, **kwargs)
+
+    monkeypatch.setattr(sa.Table, "drop", _deny_legacy_drop)
+    kwargs = {
+        "entities": [RepoModel.ENTITY],
+        "connection_string": connection_string,
+        "alembic_schema": "alembic",
+    }
+
+    SARepository.clear_repository_content(**kwargs)
+
+    assert SARepository.find_remaining_content(**kwargs) == [
+        "table legacy_model still exists"
+    ]
+
+
 def test_find_remaining_content_disposes_engine_when_inspection_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -943,7 +973,7 @@ def test_find_remaining_content_disposes_engine_when_inspection_fails(
         repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
     )
     inspector = Mock()
-    inspector.has_table.side_effect = RuntimeError("permission denied")
+    inspector.get_table_names.side_effect = RuntimeError("permission denied")
     monkeypatch.setattr(repository_module, "inspect", Mock(return_value=inspector))
 
     with pytest.raises(RuntimeError, match="permission denied"):
