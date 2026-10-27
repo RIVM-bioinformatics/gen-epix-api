@@ -72,6 +72,13 @@
             ],
             "enabled": false,
             "description": "3.3.4 breaks idsdb (eager @format evaluation during merge_enabled settings load). Pinned to 3.3.3 in fix(deps) commit b5109956. Re-enable once fixed upstream."
+        },
+        {
+            "matchPackageNames": [
+                "tenacity"
+            ],
+            "enabled": false,
+            "description": "Pinned to 9.1.4, since required by Airflow for compatibility with its dependencies"
         }
     ]
 }
