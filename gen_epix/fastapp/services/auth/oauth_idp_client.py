@@ -227,6 +227,15 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
                 )
             raise exc.UnauthorizedAuthError("5bb8ffb6") from e
 
+    def _decode_jwt_unverified(self, jwt_token: str) -> dict[str, Any]:
+        """Decode jwt unverified."""
+        try:
+            return jwt.decode(jwt_token, options={"verify_signature": False})
+        except jwt.PyJWTError as exception:
+            raise exc.CredentialsAuthError(
+                "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            ) from exception
+
     async def get_claims_from_jwt(self, jwt_token: str) -> dict[str, Any] | None:
         """Return validated claims from a JWT, or ``None`` for an untrusted issuer.
 
@@ -236,22 +245,13 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
                 the token's key ID.
             ServiceUnavailableError: If signing keys cannot be loaded.
         """
-        try:
-            jwt.get_unverified_header(jwt_token)
-            unverified_claims = jwt.decode(
-                jwt_token, options={"verify_signature": False}
-            )
-        except jwt.PyJWTError as exception:
-            raise exc.CredentialsAuthError(
-                "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-            ) from exception
-        if unverified_claims.get("iss") != self.issuer:
+        claims = self._decode_jwt_unverified(jwt_token)
+        if not self._validate_issuer(claims):
             return None
+
         key = await self.get_jwk_from_jwt(jwt_token)
 
         claims = self._verify_token(jwt_token, key)
-        if not self._validate_issuer(claims):
-            return None
         self._check_required_claims(claims)
 
         # optionally apply token introspection
@@ -312,12 +312,9 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
                 key=key,
                 algorithms=self._allowed_signing_algorithms,
                 audience=self.audience,
-                issuer=self.issuer,
-                options={  # type: ignore[arg-type]
-                    "require": ["iss"],
-                    "require_iat": True,
+                options={
+                    "require": ["iss", "exp", "iat"],
                     "verify_iat": True,
-                    "require_exp": True,
                     "verify_exp": True,
                 },
             )

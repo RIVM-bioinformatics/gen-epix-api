@@ -42,7 +42,7 @@ class MockIDPClient(IdpClient):
 
     async def get_claims_from_jwt(
         self, jwt_token: str
-    ) -> dict[str, str | int | bool | list[str]] | None:
+    ) -> dict[str, str | int | bool | list[str] | None] | None:
         """Return claims from jwt."""
         raise NotImplementedError(_METHOD_NOT_YET_IMPLEMENTED)
 
