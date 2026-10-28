@@ -279,8 +279,8 @@ def test_sql_server_inverted_filters_match_null_and_nonmatching_values() -> None
             results = repository.read_all(LifecycleModel, filter_)
             assert {obj.id for obj in results} == expected_ids
     finally:
-        repository._engine.dispose()  # type: ignore[attr-defined]  # pylint: disable=protected-access
-        SARepository.clear_repository_content(
-            entities=[LifecycleModel.ENTITY],
-            connection_string=connection_string,
-        )
+        # This repository shares a SQL Server database; remove only this test table.
+        try:
+            LifecycleRow.__table__.drop(repository._engine, checkfirst=True)
+        finally:
+            repository._engine.dispose()  # type: ignore[attr-defined]  # pylint: disable=protected-access

@@ -137,7 +137,12 @@ class CompositeFilter(Filter):
                     map_fn=child_map_fn,
                     is_model=is_model,
                 )
-            return map_value(self._get_row_value(row, child_filter.key, is_model))
+            value_exists = is_model or child_filter.key in row
+            value = self._get_row_value(row, child_filter.key, is_model)
+            value_exists = value_exists and (
+                value is not None if na_values is None else value not in na_values
+            )
+            return map_value(value) if value_exists else value
 
         mapped_values = (
             map_child_value(child_filter, map_value)

@@ -253,6 +253,49 @@ def test_nested_composite_accepts_one_parent_list_mapping() -> None:
     )
 
 
+def test_composite_row_mapping_skips_missing_and_excluded_values() -> None:
+    """Do not map values the caller's NA policy excludes."""
+    composite_filter = CompositeFilter(
+        filters=[
+            EqualsStringFilter(key="a", value="x"),
+            EqualsStringFilter(key="b", value="x"),
+        ],
+        operator=LogicalOperator.XOR,
+    )
+
+    def guarded_lower(value: str) -> str:
+        if value == "excluded":
+            raise AssertionError("excluded value should not be mapped")
+        return value.lower()
+
+    assert composite_filter.match_row({"a": None, "b": "X"}, map_fn=guarded_lower)
+    assert composite_filter.match_row(
+        {"a": "excluded", "b": "X"},
+        na_values={"excluded"},
+        map_fn=guarded_lower,
+    )
+
+
+def test_nested_composite_shared_mapping_skips_missing_inverted_values() -> None:
+    """Keep nested leaf inversion while avoiding mapping missing scalar values."""
+    inner_filter = CompositeFilter(
+        filters=[
+            EqualsStringFilter(key="a", value="x", invert=True),
+            EqualsStringFilter(key="b", value="x"),
+        ],
+        operator=LogicalOperator.AND,
+    )
+    composite_filter = CompositeFilter(
+        filters=[inner_filter],
+        operator=LogicalOperator.AND,
+    )
+
+    assert composite_filter.match_row(
+        {"a": None, "b": "X"},
+        map_fn=str.lower,
+    )
+
+
 def test_inverted_child_matches_null_in_dict_rows() -> None:
     """An inverted child matches missing values consistently in row evaluation."""
     composite_filter = CompositeFilter(
