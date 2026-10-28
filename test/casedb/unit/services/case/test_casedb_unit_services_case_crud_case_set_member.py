@@ -126,6 +126,57 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
         assert cmd.model_copy.call_args.kwargs["update"]["obj_ids"] == member_ids
         assert self.service.crud.call_count == 2
 
+    @pytest.mark.parametrize(
+        ("access_decisions", "expected"),
+        [
+            pytest.param([True, True], True, id="both-parents-readable"),
+            pytest.param([False], False, id="case-unreadable"),
+            pytest.param([True, False], False, id="case-set-unreadable"),
+        ],
+    )
+    def test_exists_one_returns_true_only_when_both_parents_are_readable(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        access_decisions: list[bool],
+        expected: bool,
+    ) -> None:
+        cmd, case_abac, members, cases, case_sets = self._configure_read()
+        cmd.operation = CrudOperation.EXISTS_ONE
+        cmd.obj_ids = members[0].id
+        cmd.get_obj_ids = Mock(return_value=[members[0].id])
+        case_abac.is_allowed.side_effect = access_decisions
+        self._patch_case_abac(monkeypatch, case_abac)
+        self.service.crud.side_effect = [True, members]
+
+        result = crud_case_set_member._crud_case_set_member_with_abac(
+            self.service, self.uow, cmd
+        )
+
+        assert result is expected
+        assert self.service.crud.call_count == 2
+        assert self.service.repository.crud.call_count == 2
+
+    def test_exists_some_preserves_order_and_checks_each_parent_pair(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cmd, case_abac, members, cases, case_sets = self._configure_read(count=2)
+        member_ids = [member.id for member in members]
+        missing_member_id = uuid4()
+        requested_ids = [member_ids[0], member_ids[1], missing_member_id]
+        cmd.operation = CrudOperation.EXISTS_SOME
+        cmd.obj_ids = requested_ids
+        cmd.get_obj_ids = Mock(return_value=requested_ids)
+        case_abac.is_allowed.side_effect = [True, True, True, False]
+        self._patch_case_abac(monkeypatch, case_abac)
+        self.service.crud.side_effect = [[True, True, False], members]
+
+        result = crud_case_set_member._crud_case_set_member_with_abac(
+            self.service, self.uow, cmd
+        )
+
+        assert result == [True, False, False]
+        assert cmd.model_copy.call_args.kwargs["update"]["obj_ids"] == member_ids
+
     def test_unfiltered_bulk_read_is_rejected(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

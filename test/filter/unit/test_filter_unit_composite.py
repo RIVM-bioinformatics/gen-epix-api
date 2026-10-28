@@ -207,6 +207,52 @@ def test_nested_composite_propagates_shared_mapping_function() -> None:
     assert composite_filter.match_row({"a": "MIXED"}, map_fn=str.lower)
 
 
+def test_nested_composite_uses_parent_list_mapping_for_nested_row() -> None:
+    """Apply a per-child list mapping to the nested row, not inner leaves."""
+    inner_filter = CompositeFilter(
+        filters=[
+            EqualsStringFilter(key="a", value="mixed"),
+            EqualsStringFilter(key="b", value="mapped"),
+        ],
+        operator=LogicalOperator.AND,
+    )
+    composite_filter = CompositeFilter(
+        filters=[
+            inner_filter,
+            EqualsStringFilter(key="c", value="leaf"),
+        ],
+        operator=LogicalOperator.AND,
+    )
+
+    def map_nested_row(row: dict[str, str]) -> dict[str, str]:
+        return {"a": row["a"].lower(), "b": row["b"].lower(), "c": row["c"]}
+
+    assert composite_filter.match_row(
+        {"a": "MIXED", "b": "MAPPED", "c": "leaf"},
+        map_fn=[map_nested_row, str.lower],
+    )
+
+
+def test_nested_composite_accepts_one_parent_list_mapping() -> None:
+    """Do not forward a parent's one-entry mapper list to inner leaves."""
+    inner_filter = CompositeFilter(
+        filters=[
+            EqualsStringFilter(key="a", value="a"),
+            EqualsStringFilter(key="b", value="b"),
+        ],
+        operator=LogicalOperator.AND,
+    )
+    composite_filter = CompositeFilter(
+        filters=[inner_filter],
+        operator=LogicalOperator.AND,
+    )
+
+    assert composite_filter.match_row(
+        {"a": "a", "b": "b"},
+        map_fn=[lambda row: row],
+    )
+
+
 def test_inverted_child_matches_null_in_dict_rows() -> None:
     """An inverted child matches missing values consistently in row evaluation."""
     composite_filter = CompositeFilter(

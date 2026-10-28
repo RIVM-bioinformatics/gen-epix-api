@@ -125,10 +125,16 @@ class CompositeFilter(Filter):
             child_filter: Filter, map_value: Callable[[Any], Any]
         ) -> Any:
             if isinstance(child_filter, CompositeFilter):
+                if isinstance(nested_map_fn, list):
+                    nested_row = map_value(row)
+                    child_map_fn = None
+                else:
+                    nested_row = row
+                    child_map_fn = nested_map_fn
                 return lambda: child_filter.match_row(
-                    row,
+                    nested_row,
                     na_values=na_values,
-                    map_fn=nested_map_fn,
+                    map_fn=child_map_fn,
                     is_model=is_model,
                 )
             return map_value(self._get_row_value(row, child_filter.key, is_model))
