@@ -364,9 +364,10 @@ def test_create_some_without_flush_rejects_multiple_batches(
     repo: SARepository,
 ) -> None:
     repo._max_insert_batch_size = 1  # pylint: disable=protected-access
+    objs = [_make_obj(1), _make_obj(2)]
 
     with pytest.raises(exc.RepositoryServiceError, match="fa00ce85"):
-        repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2)], flush=False)
+        repo.create_some(RepoModel, "user", objs, flush=False)
 
 
 @pytest.mark.parametrize(
@@ -797,6 +798,25 @@ def test_test_connection() -> None:
     assert SARepository.test_connection("not-a-valid-sqlalchemy-url") is not None
 
 
+def test_test_connection_disposes_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The probe engine is disposed whether or not the connection succeeds."""
+    engine = Mock()
+    create_engine = Mock(return_value=engine)
+    monkeypatch.setattr(sa, "create_engine", create_engine)
+
+    assert SARepository.test_connection("mssql+pyodbc://db", timeout=30) is None
+    create_engine.assert_called_once_with(
+        "mssql+pyodbc://db", connect_args={"timeout": 30}
+    )
+    engine.connect.return_value.close.assert_called_once_with()
+    engine.dispose.assert_called_once_with()
+
+    error = RuntimeError("Login timeout expired")
+    engine.connect.side_effect = error
+    assert SARepository.test_connection("mssql+pyodbc://db") is error
+    assert engine.dispose.call_count == 2
+
+
 def test_clear_repository_content_drops_alembic_tracking_table(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -843,6 +863,130 @@ def test_clear_repository_content_alembic_schema_defaults_to_noop() -> None:
     SARepository.clear_repository_content(
         entities=[RepoModel.ENTITY], connection_string="sqlite:///:memory:"
     )
+
+
+def _create_alembic_tracked_repo_engine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[str, sa.Engine]:
+    """A sqlite database with the repo_model table and an Alembic version stamp.
+
+    The ``alembic`` schema is an attached database, and every engine the
+    repository creates is this one, so the attachment is always there.
+    """
+    connection_string = f"sqlite:///{(tmp_path / 'main.sqlite').as_posix()}"
+    alembic_file = tmp_path / "alembic.sqlite"
+    engine = sa.create_engine(connection_string)
+
+    @sa.event.listens_for(engine, "connect")
+    def _attach_alembic_schema(dbapi_connection: Any, connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute(f"ATTACH DATABASE '{alembic_file.as_posix()}' AS alembic")
+        cursor.close()
+
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+    SARepoModel.__table__.create(engine)
+    with engine.begin() as conn:
+        conn.execute(
+            sa.text(
+                "CREATE TABLE alembic.alembic_version "
+                "(version_num VARCHAR(32) NOT NULL)"
+            )
+        )
+        conn.execute(sa.text("INSERT INTO alembic.alembic_version VALUES ('deadbeef')"))
+    return connection_string, engine
+
+
+def test_find_remaining_content_empty_after_clear(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    connection_string, _ = _create_alembic_tracked_repo_engine(tmp_path, monkeypatch)
+    kwargs = {
+        "entities": [RepoModel.ENTITY],
+        "connection_string": connection_string,
+        "alembic_schema": "alembic",
+    }
+
+    SARepository.clear_repository_content(**kwargs)
+
+    assert not SARepository.find_remaining_content(**kwargs)
+
+
+def test_find_remaining_content_reports_tables_left_by_denied_drops(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """clear_repository_content swallows a denied DROP; this is what catches it."""
+    connection_string, _ = _create_alembic_tracked_repo_engine(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        sa.Table, "drop", Mock(side_effect=RuntimeError("DROP TABLE permission denied"))
+    )
+    kwargs = {
+        "entities": [RepoModel.ENTITY],
+        "connection_string": connection_string,
+        "alembic_schema": "alembic",
+    }
+
+    SARepository.clear_repository_content(**kwargs)
+
+    assert SARepository.find_remaining_content(**kwargs) == [
+        "table repo_model still exists",
+        "table alembic.alembic_version still exists",
+    ]
+
+
+def test_find_remaining_content_reports_legacy_table_left_by_denied_drop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A table that is no longer an entity is checked too."""
+    connection_string, engine = _create_alembic_tracked_repo_engine(
+        tmp_path, monkeypatch
+    )
+    with engine.begin() as conn:
+        conn.execute(sa.text("CREATE TABLE legacy_model (id INTEGER PRIMARY KEY)"))
+    drop = sa.Table.drop
+
+    def _deny_legacy_drop(table: sa.Table, *args: Any, **kwargs: Any) -> None:
+        if table.name == "legacy_model":
+            raise RuntimeError("DROP TABLE permission denied")
+        drop(table, *args, **kwargs)
+
+    monkeypatch.setattr(sa.Table, "drop", _deny_legacy_drop)
+    kwargs = {
+        "entities": [RepoModel.ENTITY],
+        "connection_string": connection_string,
+        "alembic_schema": "alembic",
+    }
+
+    SARepository.clear_repository_content(**kwargs)
+
+    assert SARepository.find_remaining_content(**kwargs) == [
+        "table legacy_model still exists"
+    ]
+
+
+def test_find_remaining_content_disposes_engine_when_inspection_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+    inspector = Mock()
+    inspector.get_table_names.side_effect = RuntimeError("permission denied")
+    monkeypatch.setattr(repository_module, "inspect", Mock(return_value=inspector))
+
+    with pytest.raises(RuntimeError, match="permission denied"):
+        SARepository.find_remaining_content(
+            entities=[], connection_string="mssql+pyodbc://db", alembic_schema="alembic"
+        )
+
+    engine.dispose.assert_called_once_with()
+
+
+def test_find_remaining_content_requires_connection_string() -> None:
+    with pytest.raises(ValueError, match="connection_string is required"):
+        SARepository.find_remaining_content(entities=[])
 
 
 def test_check_schema_matches_reports_missing_table(tmp_path: Path) -> None:

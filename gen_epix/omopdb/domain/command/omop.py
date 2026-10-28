@@ -15,7 +15,9 @@ class UploadPersonsCommand(Command, UploadBatchCommandMixin):
     """Represents a request to upload a batch of persons and associated data.
 
     The data are uploaded as a single atomic unit of work, so that either all
-    data are successfully uploaded or none are.
+    data are successfully uploaded or none are. With
+    ``fail_batch_on_item_error=False``, persons that fail verification are left
+    out and the other persons are uploaded, still as one unit of work.
     """
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = model.PersonBatchForUpload
