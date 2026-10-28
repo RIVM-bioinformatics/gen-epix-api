@@ -111,6 +111,61 @@ def test_upload_cases_rejects_mismatched_case_type() -> None:
         )
 
 
+def _make_case_batch_with_read_set(case_type_id: UUID) -> model.CaseBatchForUpload:
+    return model.CaseBatchForUpload(
+        cases=[
+            model.CaseForUpload(
+                case=_make_case(case_type_id),
+                read_sets=[
+                    model.ReadSetForUpload(
+                        col_id=uuid4(), sample_id=uuid4(), protocol_code="protocol"
+                    )
+                ],
+            )
+        ]
+    )
+
+
+@pytest.mark.parametrize("fail_batch_on_item_error", [True, False])
+def test_upload_cases_without_samples_accepts_fail_batch_on_item_error(
+    fail_batch_on_item_error: bool,
+) -> None:
+    """Allow leaving out failed cases when no case carries a read set or sequence."""
+    case_type_id = uuid4()
+
+    upload_command = UploadCasesCommand(
+        case_type_id=case_type_id,
+        case_batch=_make_case_batch(case_type_id),
+        fail_batch_on_item_error=fail_batch_on_item_error,  # type: ignore[call-arg]
+    )
+
+    assert upload_command.fail_batch_on_item_error is fail_batch_on_item_error
+
+
+def test_upload_cases_with_samples_rejects_fail_batch_on_item_error_false() -> None:
+    """Reject leaving out failed cases when their samples go to SEQDB."""
+    case_type_id = uuid4()
+
+    with pytest.raises(ValidationError, match="fail_batch_on_item_error=False"):
+        UploadCasesCommand(
+            case_type_id=case_type_id,
+            case_batch=_make_case_batch_with_read_set(case_type_id),
+            fail_batch_on_item_error=False,  # type: ignore[call-arg]
+        )
+
+
+def test_upload_cases_with_samples_accepts_the_default() -> None:
+    """Keep accepting read sets with the default fail_batch_on_item_error."""
+    case_type_id = uuid4()
+
+    upload_command = UploadCasesCommand(
+        case_type_id=case_type_id,
+        case_batch=_make_case_batch_with_read_set(case_type_id),
+    )
+
+    assert upload_command.case_batch.has_samples()
+
+
 @pytest.mark.parametrize(
     "command_class",
     [RetrieveCasesByIdCommand, RetrieveCaseRightsCommand],

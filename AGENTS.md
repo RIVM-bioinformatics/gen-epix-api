@@ -45,6 +45,25 @@ Preserve these boundaries:
 - Python docstrings and comments follow the repo standard in
   `docs/standards/google-python-style-guide-3.8-comments-and-docstrings.md`.
 
+## Dependencies
+
+`pyproject.toml` splits the runtime dependencies; see "Installing as a package:
+client versus server" in `docs/06-Development-Guide.md`.
+
+- The base `dependencies` are the client: domain models, commands, enums and the
+      remote clients. Consumers that only call the apps (the lsp-data Airflow
+      worker) install only these.
+- The `server` extra is everything else needed to run an app: the web stack,
+      repositories, services, policies, configuration and `run.py`. idsdb and
+      lsp-data's refdata build install `gen-epix[server]`.
+- A new runtime dependency goes in `server`, unless client-facing code imports
+      it. Import a package that only a service or repository needs there, not in
+      a model; if a model method needs one, import it inside that method.
+- Development tools and type stubs go in `dev-requirements.txt`.
+- `requirements.txt` is the base dependencies plus `server`, and must follow
+      `pyproject.toml`; `test/general/code/test_general_dependency_list.py` checks
+      this.
+
 ## Commands
 
 Use Python 3.14 or newer, preferably in the project virtual environment.

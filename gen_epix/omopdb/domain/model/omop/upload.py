@@ -13,7 +13,7 @@ from gen_epix.commondb.domain.model.upload import (
     IdentifiersMixin,
     ParentForUpload,
     ParentUploadResult,
-    UploadResult,
+    UploadResultWithIdentifiers,
 )
 from gen_epix.etl.model import LogItem
 from gen_epix.omopdb.domain.model.omop import clinical_data as model
@@ -179,19 +179,19 @@ class PersonUploadResult(ParentUploadResult):
         ParentUploadResult, "data_issues"
     )
 
-    specimens: list[UploadResult] | None = Field(
+    specimens: list[UploadResultWithIdentifiers] | None = Field(
         default=None,
         description="The results of uploading the individual specimens, if any were provided, in the same order as provided.",
     )
-    observations: list[UploadResult] | None = Field(
+    observations: list[UploadResultWithIdentifiers] | None = Field(
         default=None,
         description="The results of uploading the individual observations, if any were provided, in the same order as provided.",
     )
-    measurements: list[UploadResult] | None = Field(
+    measurements: list[UploadResultWithIdentifiers] | None = Field(
         default=None,
         description="The results of uploading the individual measurements, if any were provided, in the same order as provided.",
     )
-    measurement_relations: list[UploadResult] | None = Field(
+    measurement_relations: list[UploadResultWithIdentifiers] | None = Field(
         default=None,
         description="The results of uploading the individual measurement relations, if any were provided, in the same order as provided.",
     )
