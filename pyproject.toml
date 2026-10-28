@@ -45,7 +45,7 @@ dependencies = [
 server = [
     # For compatibility with apache-airflow-core 3.3.0 used in other repositories, fastapi must be pinned to <0.137.0
     # "fastapi[standard]==0.141.1",
-    "fastapi[standard]>=0.159.1,<0.160.0",
+    "fastapi[standard]>=0.162.0,<0.163.0",
     "gunicorn==26.2.*",
     "starlette==1.9.*",
     "sqlalchemy==2.0.54",
