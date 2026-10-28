@@ -192,6 +192,9 @@ class BaseAbacTestCase:
 class TestRegisterPolicies(BaseAbacTestCase):
     """Test registration of policies."""
 
+    def test_case_set_member_is_registered_for_case_abac(self) -> None:
+        assert command.CaseSetMemberCrudCommand in BaseAbacService.CASE_ABAC_COMMANDS
+
     def test_retrieve_seq_distances_is_registered_for_case_abac(self) -> None:
         assert (
             command.RetrieveSeqDistancesByCasesCommand

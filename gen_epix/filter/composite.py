@@ -125,13 +125,10 @@ class CompositeFilter(Filter):
             child_filter: Filter, map_value: Callable[[Any], Any]
         ) -> Any:
             if isinstance(child_filter, CompositeFilter):
-                child_map_fn = (
-                    nested_map_fn if isinstance(nested_map_fn, dict) else None
-                )
                 return lambda: child_filter.match_row(
-                    map_value(row),
+                    row,
                     na_values=na_values,
-                    map_fn=child_map_fn,
+                    map_fn=nested_map_fn,
                     is_model=is_model,
                 )
             return map_value(self._get_row_value(row, child_filter.key, is_model))
@@ -177,6 +174,34 @@ class CompositeFilter(Filter):
         }
         self._match, self._match_row = matcher_builders[self.operator]()
 
+    def _match_child_value(
+        self, filter: Filter, value_exists: bool, value: Any
+    ) -> bool:
+        """Match one scalar child using the parent's missing-value decision."""
+        if isinstance(filter, CompositeFilter):
+            return filter._match_scalar(value, value_exists)
+        return (value_exists and filter._match(value)) ^ filter.invert
+
+    def _match_scalar(self, value: Any, value_exists: bool) -> bool:
+        """Evaluate this composite's scalar operator and its inversion."""
+        return self._match(value, value_exists) ^ self.invert
+
+    def _match_scalar_value(
+        self,
+        value: Any | None,
+        na_values: set[Any] | None,
+        map_fn: Callable[[Any], Any] | None,
+    ) -> bool:
+        """Apply one scalar's NA policy and mapping before evaluating children."""
+        if not map_fn:
+            map_fn = lambda x: x
+        value_exists = (
+            value is not None if na_values is None else value not in na_values
+        )
+        if value_exists:
+            value = map_fn(value)
+        return self._match_scalar(value, value_exists)
+
     def _match_child_row(self, filter: Filter, value_exists: bool, value: Any) -> bool:
         """Match one child filter, including inverted and nested filters."""
         if isinstance(filter, CompositeFilter):
@@ -186,14 +211,19 @@ class CompositeFilter(Filter):
     def _build_not_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the NOT operator."""
         return (
-            lambda x: not self.filters[0].match_value(x),
+            lambda x, value_exists=True: not self._match_child_value(
+                self.filters[0], value_exists, x
+            ),
             lambda x, y: not self._match_child_row(self.filters[0], next(x), next(y)),
         )
 
     def _build_and_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the AND operator."""
         return (
-            lambda x: all(filter.match_value(x) for filter in self.filters),
+            lambda x, value_exists=True: all(
+                self._match_child_value(filter, value_exists, x)
+                for filter in self.filters
+            ),
             lambda x, y: all(
                 self._match_child_row(filter, value_exists, value)
                 for value_exists, value, filter in zip(x, y, self.filters)
@@ -203,7 +233,10 @@ class CompositeFilter(Filter):
     def _build_or_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the OR operator."""
         return (
-            lambda x: any(filter.match_value(x) for filter in self.filters),
+            lambda x, value_exists=True: any(
+                self._match_child_value(filter, value_exists, x)
+                for filter in self.filters
+            ),
             lambda x, y: any(
                 self._match_child_row(filter, value_exists, value)
                 for value_exists, value, filter in zip(x, y, self.filters)
@@ -213,7 +246,10 @@ class CompositeFilter(Filter):
     def _build_xor_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the XOR operator."""
         return (
-            lambda x: self.filters[0].match_value(x) != self.filters[1].match_value(x),
+            lambda x, value_exists=True: self._match_child_value(
+                self.filters[0], value_exists, x
+            )
+            != self._match_child_value(self.filters[1], value_exists, x),
             lambda x, y: self._match_child_row(self.filters[0], next(x), next(y))
             != self._match_child_row(self.filters[1], next(x), next(y)),
         )
@@ -221,8 +257,9 @@ class CompositeFilter(Filter):
     def _build_nand_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the NAND operator."""
         return (
-            lambda x: not (
-                self.filters[0].match_value(x) and self.filters[1].match_value(x)
+            lambda x, value_exists=True: not (
+                self._match_child_value(self.filters[0], value_exists, x)
+                and self._match_child_value(self.filters[1], value_exists, x)
             ),
             lambda x, y: not (
                 self._match_child_row(self.filters[0], next(x), next(y))
@@ -233,8 +270,9 @@ class CompositeFilter(Filter):
     def _build_nor_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the NOR operator."""
         return (
-            lambda x: not (
-                self.filters[0].match_value(x) or self.filters[1].match_value(x)
+            lambda x, value_exists=True: not (
+                self._match_child_value(self.filters[0], value_exists, x)
+                or self._match_child_value(self.filters[1], value_exists, x)
             ),
             lambda x, y: not (
                 self._match_child_row(self.filters[0], next(x), next(y))
@@ -245,7 +283,10 @@ class CompositeFilter(Filter):
     def _build_xnor_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the XNOR operator."""
         return (
-            lambda x: self.filters[0].match_value(x) == self.filters[1].match_value(x),
+            lambda x, value_exists=True: self._match_child_value(
+                self.filters[0], value_exists, x
+            )
+            == self._match_child_value(self.filters[1], value_exists, x),
             lambda x, y: self._match_child_row(self.filters[0], next(x), next(y))
             == self._match_child_row(self.filters[1], next(x), next(y)),
         )
@@ -253,8 +294,10 @@ class CompositeFilter(Filter):
     def _build_implies_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the IMPLIES operator."""
         return (
-            lambda x: not self.filters[0].match_value(x)
-            or self.filters[1].match_value(x),
+            lambda x, value_exists=True: not self._match_child_value(
+                self.filters[0], value_exists, x
+            )
+            or self._match_child_value(self.filters[1], value_exists, x),
             lambda x, y: not self._match_child_row(self.filters[0], next(x), next(y))
             or self._match_child_row(self.filters[1], next(x), next(y)),
         )
@@ -262,17 +305,20 @@ class CompositeFilter(Filter):
     def _build_nimplies_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the NIMPLIES operator."""
         return (
-            lambda x: self.filters[0].match_value(x)
-            and not self.filters[1].match_value(x),
+            lambda x, value_exists=True: self._match_child_value(
+                self.filters[0], value_exists, x
+            )
+            and not self._match_child_value(self.filters[1], value_exists, x),
             lambda x, y: self._match_child_row(self.filters[0], next(x), next(y))
             and not self._match_child_row(self.filters[1], next(x), next(y)),
         )
 
-    def _match(self, value: Any) -> bool:
+    def _match(self, value: Any, value_exists: bool = True) -> bool:
         """Match a value using the function generated during validation.
 
         Args:
             value: The scalar value to match.
+            value_exists: Whether the scalar is present under the caller's NA policy.
 
         Returns:
             Whether the value matches the configured composition.
@@ -373,6 +419,36 @@ class CompositeFilter(Filter):
         if len(map_fn) != len(self.filters):
             raise ValueError("map_fn must have the same length as the filters list.")
         return map_fn
+
+    def match_value(
+        self,
+        value: Any | None,
+        na_values: set[Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
+    ) -> bool:
+        """Return whether a scalar satisfies the composite filter."""
+        return self._match_scalar_value(value, na_values, map_fn)
+
+    def match_column(
+        self,
+        values: Iterable[Any | None],
+        na_values: set[Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
+    ) -> Iterator[bool]:
+        """Yield whether each scalar satisfies the composite filter."""
+        for value in values:
+            yield self._match_scalar_value(value, na_values, map_fn)
+
+    def filter_column(
+        self,
+        values: Iterable[Any | None],
+        na_values: set[Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
+    ) -> Iterator[Any | None]:
+        """Yield scalar values that satisfy the composite filter."""
+        for value in values:
+            if self._match_scalar_value(value, na_values, map_fn):
+                yield value
 
     def match_row(
         self,

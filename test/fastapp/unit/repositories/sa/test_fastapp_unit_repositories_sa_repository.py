@@ -574,6 +574,54 @@ def test_read_all_translates_exists_set_and_range_filters(
     assert [obj.id for obj in objs] == expected_ids
 
 
+def test_read_all_inverted_composite_filter_includes_null_values(
+    repo: SARepository,
+) -> None:
+    repo.create_some(
+        RepoModel,
+        "user",
+        [
+            RepoModel(id="id-null", value=1, label=None),
+            RepoModel(id="id-match", value=2, label="x"),
+            RepoModel(id="id-other", value=3, label="other"),
+        ],
+    )
+    filter_ = CompositeFilter(
+        operator=LogicalOperator.AND,
+        filters=[
+            EqualsStringFilter(key="label", value="x", invert=True),
+            ExistsFilter(key="value"),
+        ],
+    )
+
+    objs = cast(list[RepoModel], repo.read_all(RepoModel, filter_))
+
+    assert {obj.id for obj in objs} == {"id-null", "id-other"}
+
+
+def test_read_all_inverted_composite_includes_null_values(
+    repo: SARepository,
+) -> None:
+    repo.create_some(
+        RepoModel,
+        "user",
+        [
+            RepoModel(id="id-null", value=1, label=None),
+            RepoModel(id="id-match", value=2, label="x"),
+            RepoModel(id="id-other", value=3, label="other"),
+        ],
+    )
+    filter_ = CompositeFilter(
+        operator=LogicalOperator.AND,
+        filters=[EqualsStringFilter(key="label", value="x")],
+        invert=True,
+    )
+
+    objs = cast(list[RepoModel], repo.read_all(RepoModel, filter_))
+
+    assert {obj.id for obj in objs} == {"id-null", "id-other"}
+
+
 def test_split_filter_keeps_or_with_unmapped_branch_in_python(
     repo: SARepository,
 ) -> None:

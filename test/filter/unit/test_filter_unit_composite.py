@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.date_range import DateRangeFilter
 from gen_epix.filter.enum import LogicalOperator, LogicalOperatorSet
+from gen_epix.filter.equals_string import EqualsStringFilter
 from gen_epix.filter.exists import ExistsFilter
 from gen_epix.filter.number_range import NumberRangeFilter
 from gen_epix.filter.partial_date_range import PartialDateRangeFilter
@@ -156,6 +157,72 @@ def test_nested_composite_match() -> None:
     )
 
     util.validate_filter_behavior(composite_filter, [{"a": "a"}], [True])
+
+
+@pytest.mark.parametrize(
+    ("operator", "expected"),
+    [
+        pytest.param(LogicalOperator.NOT, False, id="not"),
+        pytest.param(LogicalOperator.AND, True, id="and"),
+        pytest.param(LogicalOperator.OR, True, id="or"),
+        pytest.param(LogicalOperator.XOR, False, id="xor"),
+        pytest.param(LogicalOperator.NAND, False, id="nand"),
+        pytest.param(LogicalOperator.NOR, False, id="nor"),
+        pytest.param(LogicalOperator.XNOR, True, id="xnor"),
+        pytest.param(LogicalOperator.IMPLIES, True, id="implies"),
+        pytest.param(LogicalOperator.NIMPLIES, False, id="nimplies"),
+    ],
+)
+def test_composite_scalar_methods_preserve_explicit_na_values(
+    operator: LogicalOperator, expected: bool
+) -> None:
+    """Apply the caller's NA policy consistently to every scalar operator."""
+    child_count = 1 if operator in LogicalOperatorSet.UNARY.value else 2
+    composite_filter = CompositeFilter(
+        filters=[ExistsFilter(key="a") for _ in range(child_count)],
+        operator=operator,
+    )
+    row = {"a": None}
+
+    assert composite_filter.match_value(None, na_values=set()) is expected
+    assert list(composite_filter.match_column([None], na_values=set())) == [expected]
+    assert list(composite_filter.filter_column([None], na_values=set())) == (
+        [None] if expected else []
+    )
+    assert composite_filter.match_row(row, na_values=set()) is expected
+    assert list(composite_filter.match_rows([row], na_values=set())) == [expected]
+
+
+def test_nested_composite_propagates_shared_mapping_function() -> None:
+    """Apply a shared mapping function to nested leaf values, not the row."""
+    inner_filter = CompositeFilter(
+        filters=[EqualsStringFilter(key="a", value="mixed")],
+        operator=LogicalOperator.AND,
+    )
+    composite_filter = CompositeFilter(
+        filters=[inner_filter],
+        operator=LogicalOperator.AND,
+    )
+
+    assert composite_filter.match_row({"a": "MIXED"}, map_fn=str.lower)
+
+
+def test_inverted_child_matches_null_in_dict_rows() -> None:
+    """An inverted child matches missing values consistently in row evaluation."""
+    composite_filter = CompositeFilter(
+        filters=[
+            EqualsStringFilter(key="description", value="x", invert=True),
+            ExistsFilter(key="value"),
+        ],
+        operator=LogicalOperator.AND,
+    )
+    rows = [
+        {"description": None, "value": 1},
+        {"description": "x", "value": 1},
+        {"description": "other", "value": 1},
+    ]
+
+    assert list(composite_filter.match_rows(rows)) == [True, False, True]
 
 
 def test_composite_filter_pydantic_and_plain_python_class() -> None:

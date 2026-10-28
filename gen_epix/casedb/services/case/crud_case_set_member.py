@@ -105,7 +105,8 @@ def _crud_case_set_member_with_abac(
 
     Commands without case ABAC metadata delegate directly. Otherwise unrestricted
     bulk reads, updates, and bulk deletes are rejected, and member reads are filtered
-    to rows whose case and case set are both accessible.
+    to rows whose case and case set are both accessible. Filtered bulk reads reject
+    pagination until it can be applied after those access checks.
 
     Args:
         self: Case service handling the command.
@@ -118,6 +119,8 @@ def _crud_case_set_member_with_abac(
     Raises:
         UnauthorizedAuthError: If a restricted user requests an unsupported bulk
             operation or the returned rows cannot be verified.
+        InvalidArgumentsError: If a filtered bulk read requests pagination while
+            case access filtering is active.
     """
     # Initialize some
     assert cmd.user is not None and cmd.user.id is not None
@@ -137,6 +140,12 @@ def _crud_case_set_member_with_abac(
     case_abac = get_case_abac_from_command(cmd)
     if case_abac is None:
         return self.crud(cmd)  # type: ignore[return-value]
+
+    if is_read_all and (cmd.limit or cmd.offset):
+        raise exc.InvalidArgumentsError(
+            "d62b3eb6",
+            "Pagination is not supported for case-set member bulk reads with case access filtering.",
+        )
 
     retval = self.crud(cmd)
     if not cmd.is_read():
