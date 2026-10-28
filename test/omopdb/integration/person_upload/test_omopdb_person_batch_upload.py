@@ -1,14 +1,8 @@
 """
 Integration tests for OMOPDB person batch upload via the HTTP API.
 
-These tests exercise the full HTTP flow:
-  POST /v1/upload/persons → PersonBatchUploadResult
-
-They complement the unit tests in test/omopdb/unit/upload/test_omopdb_upload.py,
-which test the batch uploader logic in isolation using mocks. Here we use a real
-app instance (with an in-memory DICT repository) and a FastAPI TestClient so that
-the request travels through authentication, routing, command dispatch, and the full
-upload pipeline before we inspect the response.
+These tests exercise the full HTTP flow on DICT and the command upload path on
+SQLite. They complement the mocked unit tests of the batch uploader.
 
 Happy-path batch-level status values:
   CREATED   – all persons in the batch were new
@@ -26,21 +20,22 @@ LSP-2985: the goal is to make the batch return SUCCEEDED. Once that is implement
 the happy-path assertions below should be updated to expect EtlStatus.SUCCEEDED.
 """
 
+import copy
 import json
 import logging
 from datetime import date
 from test.omopdb.integration.person_upload.base import (
-    DEV_REPOSITORY_CONFIG,
-    SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
 )
+from test.omopdb.integration.person_upload.ref_data import RefData
 from test.omopdb.omopdb_test_client import OmopdbTestClient as Env
+from test.test_client.pytest_params import BuildDbParams
 from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import AppType, UploadAction
+from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import IdentifierForUpload, IdentifierIssuer
 from gen_epix.commondb.domain.util import get_app_cfgs
@@ -55,11 +50,6 @@ from gen_epix.omopdb.domain.model import (
     SpecimenForUpload,
 )
 
-_GENDER_CONCEPT_ID = UUID("1e7d7dc0-41ef-9b58-de77-cb4a4eff115b")
-_RACE_CONCEPT_ID = UUID("af5570f5-a181-0b7a-f78c-af4bc70a660f")
-_ETHNICITY_CONCEPT_ID = UUID("8a234c39-9f1d-de91-f9f6-bd90661f36db")
-_PERSON_TYPE_CONCEPT_ID = UUID("e8ac2efe-d38a-c881-c5dc-1812343e67c8")
-
 OMOPDB_APP_CFGS = get_app_cfgs(
     AppType.OMOPDB,
     enum.ServiceType,
@@ -69,40 +59,51 @@ OMOPDB_APP_CFGS = get_app_cfgs(
 )
 
 
-@pytest.fixture(scope="module", name="env")
-def get_test_client() -> Env:
+_PARAMS = [
+    BuildDbParams(True, DevRepositoryConfig.SA_SQLITE_EMPTY),
+    BuildDbParams(False, DevRepositoryConfig.DICT_EMPTY),
+]
+
+
+@pytest.fixture(scope="module", name="env", params=_PARAMS, ids=[p.id for p in _PARAMS])
+def get_test_client(request: pytest.FixtureRequest) -> Env:
+    params: BuildDbParams = request.param
+    app_cfg = copy.copy(
+        OMOPDB_APP_CFGS[f"{TEST_TYPE.value}__{params.dev_repository_config.value}"]
+    )
+    app_cfg._name = f"{TEST_TYPE.value}__{params.id}"
     return Env.get_test_client(  # type: ignore[return-value]
-        test_type=TEST_TYPE.value,
-        app_cfg=OMOPDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"],
+        test_type=app_cfg.name,
+        app_cfg=app_cfg,
         verbose=VERBOSE,
         log_level=logging.ERROR,
-        use_endpoints=not SKIP_ENDPOINTS,
+        use_endpoints=not params.skip_endpoints,
     )
 
 
 def _make_specimen(
-    identifier: IdentifierForUpload, specimen_id: UUID = NULL_ID
+    identifier: IdentifierForUpload, ref_data: RefData, specimen_id: UUID = NULL_ID
 ) -> SpecimenForUpload:
     """Create a minimal SpecimenForUpload carrying one identifier."""
     return SpecimenForUpload(
         specimen_id=specimen_id,
-        specimen_concept_id=uuid4(),
-        specimen_concept_int_id=4001225,
-        specimen_type_concept_id=uuid4(),
-        specimen_type_concept_int_id=32817,
+        specimen_concept_id=ref_data.concept_id,
+        specimen_concept_int_id=1,
+        specimen_type_concept_id=ref_data.concept_id,
+        specimen_type_concept_int_id=1,
         specimen_date=date(2024, 1, 15),
         identifiers=[identifier],  # type: ignore[call-arg]
     )
 
 
-def _make_person() -> Person:
-    """Create a minimal valid Person using real OMOP concept IDs."""
+def _make_person(ref_data: RefData) -> Person:
+    """Create a minimal valid person using the fixture concept."""
     return Person(
         year_of_birth=1990,
-        gender_concept_id=_GENDER_CONCEPT_ID,
-        race_concept_id=_RACE_CONCEPT_ID,
-        ethnicity_concept_id=_ETHNICITY_CONCEPT_ID,
-        person_type_concept_id=_PERSON_TYPE_CONCEPT_ID,
+        gender_concept_id=ref_data.concept_id,
+        race_concept_id=ref_data.concept_id,
+        ethnicity_concept_id=ref_data.concept_id,
+        person_type_concept_id=ref_data.concept_id,
     )
 
 
@@ -112,8 +113,7 @@ class TestPersonBatchUploadHappyPath:
     Happy-path tests for POST /v1/upload/persons.
 
     The root user is auto-created by the app config (IDP_MODE=MOCK,
-    key="root1_1@org1.org"). No additional setup is required because
-    reference data validation is not enforced in the base upload pipeline.
+    key="root1_1@org1.org"). Reference concepts are created in a fixture.
     """
 
     def test_upload_empty_batch_returns_skipped(self, env: Env) -> None:
@@ -135,7 +135,9 @@ class TestPersonBatchUploadHappyPath:
         assert result.persons == []
         assert result.status == EtlStatus.SKIPPED
 
-    def test_upload_single_person_returns_created(self, env: Env) -> None:
+    def test_upload_single_person_returns_created(
+        self, env: Env, ref_data: RefData
+    ) -> None:
         """
         A batch containing exactly one new person should return CREATED at both the
 
@@ -144,7 +146,7 @@ class TestPersonBatchUploadHappyPath:
         root_user = env.retrieve_user_by_key("root1_1@org1.org")
 
         batch = PersonBatchForUpload(
-            persons=[PersonForUpload(id=NULL_ID, person=_make_person())]
+            persons=[PersonForUpload(id=NULL_ID, person=_make_person(ref_data))]
         )
         result: PersonBatchUploadResult = env.handle(
             command.UploadPersonsCommand(user=root_user, person_batch=batch)
@@ -158,7 +160,9 @@ class TestPersonBatchUploadHappyPath:
         assert person_result.id is not None
         assert result.status == EtlStatus.CREATED
 
-    def test_upload_multiple_persons_returns_created(self, env: Env) -> None:
+    def test_upload_multiple_persons_returns_created(
+        self, env: Env, ref_data: RefData
+    ) -> None:
         """
         A batch of three new persons should return CREATED for each individual result
 
@@ -168,9 +172,9 @@ class TestPersonBatchUploadHappyPath:
 
         batch = PersonBatchForUpload(
             persons=[
-                PersonForUpload(id=NULL_ID, person=_make_person()),
-                PersonForUpload(id=NULL_ID, person=_make_person()),
-                PersonForUpload(id=NULL_ID, person=_make_person()),
+                PersonForUpload(id=NULL_ID, person=_make_person(ref_data)),
+                PersonForUpload(id=NULL_ID, person=_make_person(ref_data)),
+                PersonForUpload(id=NULL_ID, person=_make_person(ref_data)),
             ]
         )
         result: PersonBatchUploadResult = env.handle(
@@ -186,7 +190,7 @@ class TestPersonBatchUploadHappyPath:
         assert result.status == EtlStatus.CREATED
 
     def test_upload_person_twice_with_on_exists_update_returns_updated(
-        self, env: Env, monkeypatch: pytest.MonkeyPatch
+        self, env: Env, ref_data: RefData, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """
         Uploading the same person a second time using on_exists=UPDATE should return
@@ -204,7 +208,7 @@ class TestPersonBatchUploadHappyPath:
             lambda *args, **kwargs: None,  # No-op
         )
 
-        person = _make_person()
+        person = _make_person(ref_data)
 
         # First upload – creates the person
         first_result: PersonBatchUploadResult = env.handle(
@@ -240,7 +244,7 @@ class TestPersonBatchUploadHappyPath:
         assert second_result.persons[0].is_new is False
         assert second_result.status == EtlStatus.UPDATED
 
-    def test_on_exists_skip_returns_skipped(self, env: Env) -> None:
+    def test_on_exists_skip_returns_skipped(self, env: Env, ref_data: RefData) -> None:
         """
         When on_exists=SKIP and the person already exists, the upload silently skips
 
@@ -253,7 +257,7 @@ class TestPersonBatchUploadHappyPath:
             command.UploadPersonsCommand(
                 user=root_user,
                 person_batch=PersonBatchForUpload(
-                    persons=[PersonForUpload(id=NULL_ID, person=_make_person())]
+                    persons=[PersonForUpload(id=NULL_ID, person=_make_person(ref_data))]
                 ),
             )
         )
@@ -266,7 +270,9 @@ class TestPersonBatchUploadHappyPath:
                 user=root_user,
                 on_exists=UploadAction.SKIP,
                 person_batch=PersonBatchForUpload(
-                    persons=[PersonForUpload(id=created_id, person=_make_person())]
+                    persons=[
+                        PersonForUpload(id=created_id, person=_make_person(ref_data))
+                    ]
                 ),
             )
         )
@@ -275,7 +281,7 @@ class TestPersonBatchUploadHappyPath:
         assert second_result.persons[0].status == EtlStatus.SKIPPED
         assert second_result.status == EtlStatus.SKIPPED
 
-    def test_on_new_skip_returns_skipped(self, env: Env) -> None:
+    def test_on_new_skip_returns_skipped(self, env: Env, ref_data: RefData) -> None:
         """
         When on_new=SKIP and the person does not exist, the upload silently skips
 
@@ -288,7 +294,7 @@ class TestPersonBatchUploadHappyPath:
                 user=root_user,
                 on_new=UploadAction.SKIP,
                 person_batch=PersonBatchForUpload(
-                    persons=[PersonForUpload(id=NULL_ID, person=_make_person())]
+                    persons=[PersonForUpload(id=NULL_ID, person=_make_person(ref_data))]
                 ),
             )
         )
@@ -297,7 +303,7 @@ class TestPersonBatchUploadHappyPath:
         assert result.persons[0].status == EtlStatus.SKIPPED
         assert result.status == EtlStatus.SKIPPED
 
-    def test_verify_only_does_not_persist(self, env: Env) -> None:
+    def test_verify_only_does_not_persist(self, env: Env, ref_data: RefData) -> None:
         """
         When verify_only=True the upload pipeline runs validation but does not write
 
@@ -312,7 +318,9 @@ class TestPersonBatchUploadHappyPath:
                 user=root_user,
                 verify_only=True,
                 person_batch=PersonBatchForUpload(
-                    persons=[PersonForUpload(id=fixed_id, person=_make_person())]
+                    persons=[
+                        PersonForUpload(id=fixed_id, person=_make_person(ref_data))
+                    ]
                 ),
             )
         )
@@ -330,7 +338,9 @@ class TestPersonBatchUploadHappyPath:
                 user=root_user,
                 on_new=UploadAction.ERROR,
                 person_batch=PersonBatchForUpload(
-                    persons=[PersonForUpload(id=fixed_id, person=_make_person())]
+                    persons=[
+                        PersonForUpload(id=fixed_id, person=_make_person(ref_data))
+                    ]
                 ),
             )
         )
@@ -347,7 +357,9 @@ class TestPersonBatchUploadFailureModes:
     (4xx response code).
     """
 
-    def test_on_exists_error_default_returns_failed(self, env: Env) -> None:
+    def test_on_exists_error_default_returns_failed(
+        self, env: Env, ref_data: RefData
+    ) -> None:
         """
         The default on_exists value is ERROR. Uploading a person that already exists
 
@@ -361,7 +373,7 @@ class TestPersonBatchUploadFailureModes:
             command.UploadPersonsCommand(
                 user=root_user,
                 person_batch=PersonBatchForUpload(
-                    persons=[PersonForUpload(id=NULL_ID, person=_make_person())]
+                    persons=[PersonForUpload(id=NULL_ID, person=_make_person(ref_data))]
                 ),
             )
         )
@@ -374,7 +386,9 @@ class TestPersonBatchUploadFailureModes:
                 user=root_user,
                 # on_exists defaults to UploadAction.ERROR — not set explicitly
                 person_batch=PersonBatchForUpload(
-                    persons=[PersonForUpload(id=created_id, person=_make_person())]
+                    persons=[
+                        PersonForUpload(id=created_id, person=_make_person(ref_data))
+                    ]
                 ),
             )
         )
@@ -384,7 +398,7 @@ class TestPersonBatchUploadFailureModes:
         assert second_result.status == EtlStatus.FAILED
         assert second_result.persons[0].has_errors()
 
-    def test_on_new_error_returns_failed(self, env: Env) -> None:
+    def test_on_new_error_returns_failed(self, env: Env, ref_data: RefData) -> None:
         """
         When on_new=ERROR and the person does not exist, the upload must fail.
         """
@@ -395,7 +409,7 @@ class TestPersonBatchUploadFailureModes:
                 user=root_user,
                 on_new=UploadAction.ERROR,
                 person_batch=PersonBatchForUpload(
-                    persons=[PersonForUpload(id=NULL_ID, person=_make_person())]
+                    persons=[PersonForUpload(id=NULL_ID, person=_make_person(ref_data))]
                 ),
             )
         )
@@ -406,8 +420,8 @@ class TestPersonBatchUploadFailureModes:
         assert result.persons[0].has_errors()
 
     # TODO: This fails, meaning the call succeeds without the Authorization header
-    # @pytest.mark.skipif(SKIP_ENDPOINTS, reason="Requires HTTP endpoint to test auth")
-    # def test_unauthenticated_request_is_rejected(self, env: Env) -> None:
+    # The unauthenticated endpoint test is disabled pending the auth fix.
+    # def test_unauthenticated_request_is_rejected(self, env: Env, ref_data: RefData) -> None:
     #     """
     #     A POST without an Authorization header must be rejected by the server
     #     before the command handler runs. Expected: HTTP 401 or 403.
@@ -435,9 +449,6 @@ class TestPersonBatchUploadFailureModes:
     #     )
     #     assert response.status_code in (401, 403)
 
-    @pytest.mark.skipif(
-        SKIP_ENDPOINTS, reason="Requires HTTP endpoint for 422 response"
-    )
     def test_malformed_body_returns_422(self, env: Env) -> None:
         """
         A POST with a body that is missing required Person fields (year_of_birth,
@@ -445,7 +456,8 @@ class TestPersonBatchUploadFailureModes:
         gender_concept_id, etc.) must be rejected with HTTP 422 by FastAPI's request
         validation before the command handler runs.
         """
-        assert env.endpoint_test_client is not None
+        if env.endpoint_test_client is None:
+            pytest.skip("Requires HTTP endpoint; SQLite runs directly")
         root_user = env.retrieve_user_by_key("root1_1@org1.org")
         headers = env.endpoint_test_client.get_dummy_jwt_header(root_user.get_key())
 
@@ -469,13 +481,12 @@ class TestPersonBatchUploadFailureModes:
         assert response.status_code == 422
 
 
-@pytest.mark.skipif(
-    SKIP_ENDPOINTS, reason="Requires HTTP endpoint to inspect the response body"
-)
 class TestPersonBatchUploadNestedIdentifierResults:
     """The nested identifier results of a child must reach the HTTP response."""
 
-    def test_conflicting_specimen_identifier_is_in_response(self, env: Env) -> None:
+    def test_conflicting_specimen_identifier_is_in_response(
+        self, env: Env, ref_data: RefData
+    ) -> None:
         """
         A new specimen carrying the identifier of an existing specimen fails, and the
 
@@ -483,7 +494,8 @@ class TestPersonBatchUploadNestedIdentifierResults:
         specimens[i].identifiers[j], not only the specimen-level pointer to it
         (d8f21b6a).
         """
-        assert env.endpoint_test_client is not None
+        if env.endpoint_test_client is None:
+            pytest.skip("Requires HTTP endpoint; SQLite runs directly")
         root_user = env.retrieve_user_by_key("root1_1@org1.org")
         identifier_issuer: IdentifierIssuer = env.handle(
             command.IdentifierIssuerCrudCommand(
@@ -508,8 +520,8 @@ class TestPersonBatchUploadNestedIdentifierResults:
                     persons=[
                         PersonForUpload(
                             id=NULL_ID,
-                            person=_make_person(),
-                            specimens=[_make_specimen(identifier)],
+                            person=_make_person(ref_data),
+                            specimens=[_make_specimen(identifier, ref_data)],
                         )
                     ]
                 ),
@@ -526,7 +538,9 @@ class TestPersonBatchUploadNestedIdentifierResults:
                 persons=[
                     PersonForUpload(
                         id=person_id,
-                        specimens=[_make_specimen(identifier, specimen_id=uuid4())],
+                        specimens=[
+                            _make_specimen(identifier, ref_data, specimen_id=uuid4())
+                        ],
                     )
                 ]
             ),

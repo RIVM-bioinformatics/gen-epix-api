@@ -4,17 +4,17 @@ A person or specimen that does not exist yet and is uploaded with on_new=SKIP is
 created. Its identifiers must then not be created either: they would point to an
 object that is not there, which fails the link check and with it the whole request.
 
-Runs against SQLite rather than DICT, so that the data the uploader writes also has
-to satisfy the database's foreign keys, as in production. The endpoints are not
-used, since they do not work with SQLite (multi-threading).
+Runs against DICT and SQLite, so the data must satisfy SQLite foreign keys.
+The endpoints are not used because they do not work with SQLite (multi-threading).
 """
 
+import copy
 import logging
-from dataclasses import dataclass
 from datetime import date
+from test.omopdb.integration.person_upload.ref_data import RefData
 from test.omopdb.omopdb_test_client import OmopdbTestClient as Env
 from test.test_client.enum import EnumTestType
-from typing import Any
+from test.test_client.pytest_params import BuildDbParams
 from uuid import UUID, uuid4
 
 import pytest
@@ -27,7 +27,6 @@ from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.omopdb.domain import command, enum, model
 
 TEST_TYPE = EnumTestType.OMOPDB_INTEGRATION_PERSON_UPLOAD_SKIPPED_NEW
-DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_EMPTY
 
 OMOPDB_APP_CFGS = get_app_cfgs(
     AppType.OMOPDB,
@@ -38,95 +37,25 @@ OMOPDB_APP_CFGS = get_app_cfgs(
 )
 
 
-@dataclass(frozen=True)
-class RefData:
-    """The user, concept and identifier issuer the tests upload persons with."""
-
-    root_user: model.User
-    concept_id: UUID
-    identifier_issuer_id: UUID
+_PARAMS = [
+    BuildDbParams(True, DevRepositoryConfig.SA_SQLITE_EMPTY),
+    BuildDbParams(True, DevRepositoryConfig.DICT_EMPTY),
+]
 
 
-@pytest.fixture(scope="module", name="env")
-def get_test_client() -> Env:
-    """Return a test client on an empty SQLite repository."""
+@pytest.fixture(scope="module", name="env", params=_PARAMS, ids=[p.id for p in _PARAMS])
+def get_test_client(request: pytest.FixtureRequest) -> Env:
+    params: BuildDbParams = request.param
+    app_cfg = copy.copy(
+        OMOPDB_APP_CFGS[f"{TEST_TYPE.value}__{params.dev_repository_config.value}"]
+    )
+    app_cfg._name = f"{TEST_TYPE.value}__{params.id}"
     return Env.get_test_client(  # type: ignore[return-value]
-        test_type=TEST_TYPE.value,
-        app_cfg=OMOPDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"],
+        test_type=app_cfg.name,
+        app_cfg=app_cfg,
         log_level=logging.ERROR,
-        use_endpoints=False,
+        use_endpoints=not params.skip_endpoints,
     )
-
-
-def _create(env: Env, root_user: model.User, crud_command_class: type, obj: Any) -> Any:
-    return env.app.handle(
-        crud_command_class(user=root_user, operation=CrudOperation.CREATE_ONE, objs=obj)
-    )
-
-
-@pytest.fixture(scope="module", name="ref_data")
-def create_ref_data(env: Env) -> RefData:
-    """Create one concept, used for every concept field, and an identifier issuer.
-
-    The concept's domain, vocabulary and class point to concepts by id only, which
-    are not checked, so they need not exist.
-    """
-    root_user = env.get_root_user()
-    domain: model.Domain = _create(
-        env,
-        root_user,
-        command.DomainCrudCommand,
-        model.Domain(
-            domain_str_id="test", domain_name="Test", domain_concept_id=uuid4()
-        ),
-    )
-    vocabulary: model.Vocabulary = _create(
-        env,
-        root_user,
-        command.VocabularyCrudCommand,
-        model.Vocabulary(
-            vocabulary_str_id="test",
-            vocabulary_name="Test",
-            vocabulary_concept_id=uuid4(),
-        ),
-    )
-    concept_class: model.ConceptClass = _create(
-        env,
-        root_user,
-        command.ConceptClassCrudCommand,
-        model.ConceptClass(
-            concept_class_str_id="test",
-            concept_class_name="Test",
-            concept_class_concept_id=uuid4(),
-        ),
-    )
-    assert domain.domain_id is not None
-    assert vocabulary.vocabulary_id is not None
-    assert concept_class.concept_class_id is not None
-    concept: model.Concept = _create(
-        env,
-        root_user,
-        command.ConceptCrudCommand,
-        model.Concept(
-            concept_int_id=1,
-            concept_name="Test",
-            domain_id=domain.domain_id,
-            vocabulary_id=vocabulary.vocabulary_id,
-            concept_class_id=concept_class.concept_class_id,
-            concept_code="test",
-            valid_start_date=date(2000, 1, 1),
-            valid_end_date=date(2099, 12, 31),
-        ),
-    )
-    identifier_issuer: model.IdentifierIssuer = _create(
-        env,
-        root_user,
-        command.IdentifierIssuerCrudCommand,
-        model.IdentifierIssuer(code="test_issuer", name="Test"),
-    )
-    assert concept.concept_id is not None
-    assert identifier_issuer.id is not None
-    return RefData(root_user, concept.concept_id, identifier_issuer.id)
 
 
 def _identifiers(
