@@ -45,12 +45,11 @@ _OBJECT_ID_PATH_SUFFIX = "/{object_id}"
 
 def _default_validate_query_filter(
     query_filter: Filter,
+    max_composite_depth: int = 1,
 ) -> bool:
-    """Allow query filters with at most one level of composite filters."""
+    """Allow query filters within the configured composite nesting depth."""
     if isinstance(query_filter, CompositeFilter):
-        for subfilter in query_filter.filters:
-            if isinstance(subfilter, CompositeFilter):
-                return False
+        return query_filter.is_within_max_depth(max_composite_depth)
     return True
 
 

@@ -8,6 +8,8 @@ from gen_epix.casedb.domain import exc, model
 from gen_epix.casedb.domain.enum import CaseRight
 from gen_epix.casedb.services.case import crud_case_set_member
 from gen_epix.fastapp import CrudOperation
+from gen_epix.filter import CompositeFilter, LogicalOperator
+from gen_epix.filter.uuid_set import UuidSetFilter
 
 
 class TestCaseSetMemberCrud(BaseCrudTestCase):
@@ -124,6 +126,72 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
         cmd, case_abac, _, _, _ = self._configure_read()
         cmd.query_filter = None
         cmd.operation = CrudOperation.READ_ALL
+        cmd.is_read_all.return_value = True
+        self._patch_case_abac(monkeypatch, case_abac)
+
+        with pytest.raises(exc.UnauthorizedAuthError):
+            crud_case_set_member._crud_case_set_member_with_abac(
+                self.service, self.uow, cmd
+            )
+
+        self.service.crud.assert_not_called()
+
+    def test_filtered_bulk_read_by_case_ids_is_allowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cmd, case_abac, members, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.query_filter = UuidSetFilter(
+            key="case_id",
+            members=frozenset({str(uuid4()), str(uuid4())}),
+        )
+        cmd.is_read_all.return_value = True
+        self._patch_case_abac(monkeypatch, case_abac)
+        self.service.crud.return_value = members
+
+        result = crud_case_set_member._crud_case_set_member_with_abac(
+            self.service, self.uow, cmd
+        )
+
+        assert result == members
+        self.service.crud.assert_called_once_with(cmd)
+
+    def test_filtered_bulk_read_by_case_set_and_case_ids_is_allowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cmd, case_abac, members, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.query_filter = CompositeFilter(
+            filters=[
+                UuidSetFilter(key="case_id", members=frozenset({str(uuid4())})),
+                UuidSetFilter(
+                    key="case_set_id",
+                    members=frozenset({str(uuid4())}),
+                ),
+            ],
+            operator=LogicalOperator.AND,
+        )
+        cmd.is_read_all.return_value = True
+        self._patch_case_abac(monkeypatch, case_abac)
+        self.service.crud.return_value = members
+
+        result = crud_case_set_member._crud_case_set_member_with_abac(
+            self.service, self.uow, cmd
+        )
+
+        assert result == members
+        self.service.crud.assert_called_once_with(cmd)
+
+    def test_inverted_case_id_filter_is_not_an_allowed_bulk_read(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cmd, case_abac, _, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.query_filter = UuidSetFilter(
+            key="case_id",
+            members=frozenset({str(uuid4())}),
+            invert=True,
+        )
         cmd.is_read_all.return_value = True
         self._patch_case_abac(monkeypatch, case_abac)
 

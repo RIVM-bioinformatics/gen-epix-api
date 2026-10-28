@@ -20,6 +20,8 @@ from gen_epix.filter import CompositeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
 
+_CASE_QUERY_MAX_COMPOSITE_FILTER_DEPTH = 2
+
 
 class CaseStats(fastapp.Model):
     """Represents aggregate statistics for cases or a case set.
@@ -95,8 +97,24 @@ class CaseQuery(Model):
     )
     # TODO: add data_collection_id
     filter: CompositeFilter | None = Field(
-        default=None, description="The filter to apply. Not applied if not provided."
+        default=None,
+        description=(
+            "The filter to apply. Not applied if not provided. Composite filters "
+            f"may be nested at most {_CASE_QUERY_MAX_COMPOSITE_FILTER_DEPTH} levels deep."
+        ),
     )
+
+    @model_validator(mode="after")
+    def _validate_filter_depth(self) -> Self:
+        """Limit case-query composites to the nesting required by query filters."""
+        if self.filter is not None and not self.filter.is_within_max_depth(
+            _CASE_QUERY_MAX_COMPOSITE_FILTER_DEPTH
+        ):
+            raise ValueError(
+                "Case query composite filters may be nested at most "
+                f"{_CASE_QUERY_MAX_COMPOSITE_FILTER_DEPTH} levels deep."
+            )
+        return self
 
 
 class CaseSetQuery(Model):

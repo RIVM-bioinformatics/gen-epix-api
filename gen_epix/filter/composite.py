@@ -59,8 +59,10 @@ class CompositeFilter(Filter):
     """
 
     type: Literal[enum.FilterType.COMPOSITE.value] = enum.FilterType.COMPOSITE.value  # type: ignore[name-defined]
-    filters: list[FilterUnion | Filter] = Field(
-        description="The list of filters.", min_length=1, frozen=True
+    filters: list[FilterUnion | Filter | CompositeFilter] = Field(
+        description="The list of scalar or nested composite filters.",
+        min_length=1,
+        frozen=True,
     )
     key: str | None = Field(default=None)
     operator: enum.LogicalOperator = Field(
@@ -69,6 +71,26 @@ class CompositeFilter(Filter):
         frozen=True,
     )
     _is_composite: bool = True
+
+    def is_within_max_depth(self, max_composite_depth: int) -> bool:
+        """Check the maximum number of nested composite filters.
+
+        The root composite has depth one. Leaf filters do not add to the depth.
+        """
+        if max_composite_depth < 0:
+            raise ValueError("Maximum composite filter depth cannot be negative.")
+
+        pending: list[tuple[CompositeFilter, int]] = [(self, 1)]
+        while pending:
+            composite_filter, depth = pending.pop()
+            if depth > max_composite_depth:
+                return False
+            pending.extend(
+                (child_filter, depth + 1)
+                for child_filter in composite_filter.filters
+                if isinstance(child_filter, CompositeFilter)
+            )
+        return True
 
     def _get_row_value(
         self, row: dict | BaseModel, key: Hashable, is_model: bool
@@ -84,6 +106,12 @@ class CompositeFilter(Filter):
         map_fn: list[Callable[[Any], Any]],
         na_values: set[Any] | None,
         is_model: bool,
+        nested_map_fn: (
+            dict[Hashable, Callable[[Any], Any]]
+            | Callable[[Any], Any]
+            | list[Callable[[Any], Any]]
+            | None
+        ),
     ) -> bool:
         """Match one row using normalized value maps and optional NA values."""
         # Match, per row and filter, if both key exists, value not null and value matches
@@ -92,12 +120,24 @@ class CompositeFilter(Filter):
             if na_values is None
             else self._not_na_row_iterator(row, na_values, is_model)
         )
+
+        def map_child_value(
+            child_filter: Filter, map_value: Callable[[Any], Any]
+        ) -> Any:
+            if isinstance(child_filter, CompositeFilter):
+                child_map_fn = (
+                    nested_map_fn if isinstance(nested_map_fn, dict) else None
+                )
+                return lambda: child_filter.match_row(
+                    map_value(row),
+                    na_values=na_values,
+                    map_fn=child_map_fn,
+                    is_model=is_model,
+                )
+            return map_value(self._get_row_value(row, child_filter.key, is_model))
+
         mapped_values = (
-            (
-                map_value(row)
-                if child_filter._is_composite
-                else map_value(self._get_row_value(row, child_filter.key, is_model))
-            )
+            map_child_value(child_filter, map_value)
             for child_filter, map_value in zip(self.filters, map_fn)
         )
         return self._match_row(row_iterator, mapped_values) ^ self.invert
@@ -137,102 +177,95 @@ class CompositeFilter(Filter):
         }
         self._match, self._match_row = matcher_builders[self.operator]()
 
+    def _match_child_row(self, filter: Filter, value_exists: bool, value: Any) -> bool:
+        """Match one child filter, including inverted and nested filters."""
+        if isinstance(filter, CompositeFilter):
+            return bool(value())
+        return (value_exists and filter._match(value)) ^ filter.invert
+
     def _build_not_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the NOT operator."""
         return (
-            lambda x: not self.filters[0]._match(x),  # type: ignore
-            lambda x, y: x and not self.filters[0]._match(next(y)),  # type: ignore
+            lambda x: not self.filters[0].match_value(x),
+            lambda x, y: not self._match_child_row(self.filters[0], next(x), next(y)),
         )
 
     def _build_and_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the AND operator."""
-        # TODO: improve performance by not using filter.match_row for nested composite filter
         return (
-            lambda x: all(filter._match(x) for filter in self.filters),  # type: ignore
-            lambda x, y: all(  # type: ignore
-                a
-                and (filter.match_row(b) if filter._is_composite else filter._match(b))
-                for a, b, filter in zip(x, y, self.filters)
+            lambda x: all(filter.match_value(x) for filter in self.filters),
+            lambda x, y: all(
+                self._match_child_row(filter, value_exists, value)
+                for value_exists, value, filter in zip(x, y, self.filters)
             ),
         )
 
     def _build_or_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the OR operator."""
-        # TODO: improve performance by not using filter.match_row for nested composite filter
         return (
-            lambda x: any(filter._match(x) for filter in self.filters),  # type: ignore
-            lambda x, y: any(  # type: ignore
-                a
-                and (filter.match_row(b) if filter._is_composite else filter._match(b))
-                for a, b, filter in zip(x, y, self.filters)
+            lambda x: any(filter.match_value(x) for filter in self.filters),
+            lambda x, y: any(
+                self._match_child_row(filter, value_exists, value)
+                for value_exists, value, filter in zip(x, y, self.filters)
             ),
         )
 
     def _build_xor_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the XOR operator."""
         return (
-            lambda x: self.filters[0]._match(x)
-            != self.filters[1]._match(x),  # type: ignore
-            lambda x, y: all(x)
-            and self.filters[0]._match(  # type: ignore
-                next(y)  # type: ignore
-            )
-            != self.filters[1]._match(next(y)),  # type: ignore
+            lambda x: self.filters[0].match_value(x) != self.filters[1].match_value(x),
+            lambda x, y: self._match_child_row(self.filters[0], next(x), next(y))
+            != self._match_child_row(self.filters[1], next(x), next(y)),
         )
 
     def _build_nand_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the NAND operator."""
         return (
-            lambda x: not (  # type: ignore
-                self.filters[0]._match(x) and self.filters[1]._match(x)
+            lambda x: not (
+                self.filters[0].match_value(x) and self.filters[1].match_value(x)
             ),
-            lambda x, y: all(x)
-            and not (  # type: ignore
-                self.filters[0]._match(next(y)) and self.filters[1]._match(next(y))  # type: ignore
+            lambda x, y: not (
+                self._match_child_row(self.filters[0], next(x), next(y))
+                and self._match_child_row(self.filters[1], next(x), next(y))
             ),
         )
 
     def _build_nor_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the NOR operator."""
         return (
-            lambda x: not (  # type: ignore
-                self.filters[0]._match(x) or self.filters[1]._match(x)
+            lambda x: not (
+                self.filters[0].match_value(x) or self.filters[1].match_value(x)
             ),
-            lambda x, y: all(x)
-            and not (  # type: ignore
-                self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))  # type: ignore
+            lambda x, y: not (
+                self._match_child_row(self.filters[0], next(x), next(y))
+                or self._match_child_row(self.filters[1], next(x), next(y))
             ),
         )
 
     def _build_xnor_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the XNOR operator."""
         return (
-            lambda x: self.filters[0]._match(x) == self.filters[1]._match(x),  # type: ignore
-            lambda x, y: all(x)
-            and self.filters[0]._match(  # type: ignore
-                next(y)  # type: ignore
-            )
-            == self.filters[1]._match(next(y)),  # type: ignore
+            lambda x: self.filters[0].match_value(x) == self.filters[1].match_value(x),
+            lambda x, y: self._match_child_row(self.filters[0], next(x), next(y))
+            == self._match_child_row(self.filters[1], next(x), next(y)),
         )
 
     def _build_implies_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the IMPLIES operator."""
         return (
-            lambda x: not self.filters[0]._match(x) or self.filters[1]._match(x),  # type: ignore
-            lambda x, y: all(x)
-            and (  # type: ignore
-                not self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))  # type: ignore
-            ),
+            lambda x: not self.filters[0].match_value(x)
+            or self.filters[1].match_value(x),
+            lambda x, y: not self._match_child_row(self.filters[0], next(x), next(y))
+            or self._match_child_row(self.filters[1], next(x), next(y)),
         )
 
     def _build_nimplies_matchers(self) -> tuple[Callable, Callable]:
         """Build matchers for the NIMPLIES operator."""
         return (
-            lambda x: self.filters[0]._match(x) and not self.filters[1]._match(x),  # type: ignore
-            lambda x, y: all(x)
-            and (  # type: ignore
-                self.filters[0]._match(next(y)) and not self.filters[1]._match(next(y))  # type: ignore
-            ),
+            lambda x: self.filters[0].match_value(x)
+            and not self.filters[1].match_value(x),
+            lambda x, y: self._match_child_row(self.filters[0], next(x), next(y))
+            and not self._match_child_row(self.filters[1], next(x), next(y)),
         )
 
     def _match(self, value: Any) -> bool:
@@ -251,15 +284,12 @@ class CompositeFilter(Filter):
             "Method is implemented dynamically in _validate_state"
         )
 
-    def _match_row(
-        self, value_exists: Iterable[bool], value: Iterable[Any], is_model: bool
-    ) -> bool:
+    def _match_row(self, value_exists: Iterable[bool], value: Iterable[Any]) -> bool:
         """Match row values using the function generated during validation.
 
         Args:
             value_exists: Flags indicating whether each child value exists.
             value: Values to match against the child filters.
-            is_model: Whether values originate from model rows.
 
         Returns:
             Whether the row values match the configured composition.
@@ -373,42 +403,11 @@ class CompositeFilter(Filter):
         if not self._all_subfilters_have_key():
             raise ValueError(_ROW_FILTER_KEY_REQUIRED)
         # Match, per filter, if both key exists, value not null and value matches
+        nested_map_fn = map_fn
         map_fn = self._get_map_fun_list(map_fn)
-        if na_values is None:
-            return (
-                self._match_row(
-                    self._not_none_row_iterator(row, is_model),
-                    (
-                        (
-                            y(row)
-                            if x._is_composite
-                            else y(self._get_row_value(row, x.key, is_model))
-                        )
-                        for x, y in zip(self.filters, map_fn)
-                    ),
-                )
-                ^ self.invert
-            )
-            # yield (
-            #     key in row_dict
-            #     and row_dict[key] is not None
-            #     and self._match(map_fn(row_dict[key]))
-            # ) ^ self.invert
-        else:
-            return (
-                self._match_row(
-                    self._not_na_row_iterator(row, na_values, is_model),
-                    (
-                        (
-                            y(row)
-                            if x._is_composite
-                            else y(self._get_row_value(row, x.key, is_model))
-                        )
-                        for x, y in zip(self.filters, map_fn)
-                    ),
-                )
-                ^ self.invert
-            )
+        return self._matches_row_with_map(
+            row, map_fn, na_values, is_model, nested_map_fn
+        )
 
     def match_rows(
         self,
@@ -442,39 +441,12 @@ class CompositeFilter(Filter):
         # Match, per row and filter, if both key exists, value not null and value matches
         if not self._all_subfilters_have_key():
             raise ValueError(_ROW_FILTER_KEY_REQUIRED)
+        nested_map_fn = map_fn
         map_fn = self._get_map_fun_list(map_fn)
-        if na_values is None:
-            for row in rows:
-                yield (
-                    self._match_row(
-                        self._not_none_row_iterator(row, is_model),
-                        (
-                            (
-                                y(row)
-                                if x._is_composite
-                                else y(self._get_row_value(row, x.key, is_model))
-                            )
-                            for x, y in zip(self.filters, map_fn)
-                        ),
-                    )
-                    ^ self.invert
-                )
-        else:
-            for row in rows:
-                yield (
-                    self._match_row(
-                        self._not_na_row_iterator(row, na_values, is_model),
-                        (
-                            (
-                                y(row)
-                                if x._is_composite
-                                else y(self._get_row_value(row, x.key, is_model))
-                            )
-                            for x, y in zip(self.filters, map_fn)
-                        ),
-                    )
-                    ^ self.invert
-                )
+        for row in rows:
+            yield self._matches_row_with_map(
+                row, map_fn, na_values, is_model, nested_map_fn
+            )
 
     def filter_rows(
         self,
@@ -507,9 +479,12 @@ class CompositeFilter(Filter):
         """
         if not self._all_subfilters_have_key():
             raise ValueError(_ROW_FILTER_KEY_REQUIRED)
+        nested_map_fn = map_fn
         map_fn = self._get_map_fun_list(map_fn)
         for row in rows:
-            if self._matches_row_with_map(row, map_fn, na_values, is_model):
+            if self._matches_row_with_map(
+                row, map_fn, na_values, is_model, nested_map_fn
+            ):
                 yield row
 
     def get_keys(self) -> list[Hashable]:

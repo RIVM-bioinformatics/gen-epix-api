@@ -17,6 +17,32 @@ from gen_epix.casedb.services.case.crud_common import (
 )
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.filter import CompositeFilter, LogicalOperator
+from gen_epix.filter.uuid_set import UuidSetFilter
+
+_CASE_SET_MEMBER_QUERY_FILTER_KEYS = frozenset({"case_id", "case_set_id"})
+
+
+def _is_bounded_case_set_member_query_filter(query_filter: object) -> bool:
+    """Allow only non-inverted UUID-set filters on case or case-set IDs."""
+    if isinstance(query_filter, UuidSetFilter):
+        return (
+            query_filter.key in _CASE_SET_MEMBER_QUERY_FILTER_KEYS
+            and not query_filter.invert
+        )
+    if not isinstance(query_filter, CompositeFilter):
+        return False
+    if query_filter.invert or query_filter.operator not in {
+        LogicalOperator.AND,
+        LogicalOperator.OR,
+    }:
+        return False
+    return bool(query_filter.filters) and all(
+        isinstance(sub_filter, UuidSetFilter)
+        and sub_filter.key in _CASE_SET_MEMBER_QUERY_FILTER_KEYS
+        and not sub_filter.invert
+        for sub_filter in query_filter.filters
+    )
 
 
 def case_service_crud_case_set_member(
@@ -96,8 +122,13 @@ def _crud_case_set_member_with_abac(
     # Initialize some
     assert cmd.user is not None and cmd.user.id is not None
 
-    # Only read/exists some and read/exists one allowed, other operations need to be performed through other commands
-    if not cmd.is_read() or cmd.is_read_all():
+    # Bulk reads must be constrained to explicit case or case-set IDs. Other
+    # reads, updates, and deletes need to be performed through dedicated commands.
+    is_read_all = cmd.is_read_all()
+    is_bounded_filtered_read_all = is_read_all and (
+        _is_bounded_case_set_member_query_filter(cmd.query_filter)
+    )
+    if not cmd.is_read() or (is_read_all and not is_bounded_filtered_read_all):
         raise exc.UnauthorizedAuthError(
             "85539cf8",
             f"Operation {cmd.operation.value} not allowed for case set members for this user",

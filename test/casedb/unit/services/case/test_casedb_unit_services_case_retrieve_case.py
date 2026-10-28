@@ -440,6 +440,80 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
         with pytest.raises(exc.InvalidArgumentsError):
             case_service_retrieve_cases_by_query(self.service, cmd)
 
+    def test_nested_missing_filter_is_valid_for_concept_backed_column(self) -> None:
+        col_id = uuid4()
+        ref_col_id = uuid4()
+        col, ref_col = self.create_col(
+            col_id, ref_col_id, enum.ColType.NOMINAL, concept_set_id=uuid4()
+        )
+        nested_filter = CompositeFilter(
+            filters=[
+                self.create_typed_string_set_filter(col_id, set()),
+                ExistsFilter(
+                    type=FilterType.EXISTS.value, key=str(col_id), invert=True
+                ),
+            ],
+            operator=LogicalOperator.OR,
+        )
+        case_query = model.CaseQuery(
+            case_type_id=self.case_type_id,
+            filter=self.create_composite_filter([nested_filter]),
+        )
+        cmd = command.RetrieveCasesByQueryCommand(user=self.user, case_query=case_query)
+
+        self.attach_abac_policy(cmd)
+        self.set_repository_cols_and_ref_cols([col], [ref_col])
+        self.set_repository_case_type(self.create_case_type(read_max_n_cases=5))
+        self.service.app.handle = Mock(return_value=[])
+        self.set_retrieve_cases_result([])
+
+        result = case_service_retrieve_cases_by_query(self.service, cmd)
+
+        assert result.case_ids == []
+        col_read_some_call = next(
+            call
+            for call in self.repository.crud.call_args_list
+            if call.args[2] is model.Col
+        )
+        assert col_read_some_call.kwargs["obj_ids"] == [col_id]
+
+    def test_nested_date_filter_includes_missing_case_content(self) -> None:
+        from gen_epix.filter.date_range import DateRangeFilter
+
+        col_id = uuid4()
+        ref_col_id = uuid4()
+        col, ref_col = self.create_col(col_id, ref_col_id, enum.ColType.TIME_DAY)
+        date_filter = DateRangeFilter(
+            key=str(col_id),
+            lower_bound=date(2005, 7, 1),
+        )
+        missing_filter = ExistsFilter(
+            type=FilterType.EXISTS.value,
+            key=str(col_id),
+            invert=True,
+        )
+        nested_filter = CompositeFilter(
+            filters=[date_filter, missing_filter],
+            operator=LogicalOperator.OR,
+        )
+        case_query = model.CaseQuery(
+            case_type_id=self.case_type_id,
+            filter=self.create_composite_filter([nested_filter]),
+        )
+        cmd = command.RetrieveCasesByQueryCommand(user=self.user, case_query=case_query)
+        matching_case = self.create_case(uuid4(), {col_id: "2005-07-01"})
+        missing_case = self.create_case(uuid4(), {col_id: None})
+        out_of_range_case = self.create_case(uuid4(), {col_id: "2005-06-30"})
+
+        self.attach_abac_policy(cmd)
+        self.set_repository_cols_and_ref_cols([col], [ref_col])
+        self.set_repository_case_type(self.create_case_type(read_max_n_cases=5))
+        self.set_retrieve_cases_result([matching_case, missing_case, out_of_range_case])
+
+        result = case_service_retrieve_cases_by_query(self.service, cmd)
+
+        assert result.case_ids == [matching_case.id, missing_case.id]
+
     def test_happy_path_with_filters_case_sets_and_max_limit(self) -> None:
         # 1. Input: multiple columns to exercise mapping, plus case sets
         time_col_id: UUID = uuid4()

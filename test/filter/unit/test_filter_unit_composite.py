@@ -120,6 +120,26 @@ def test_multary_composite_operators_accept_one_or_more_children(
     assert len(composite_filter.filters) == child_count
 
 
+def test_is_within_max_depth_counts_composite_levels() -> None:
+    leaf_filter = ExistsFilter(key="a")
+    nested_filter = CompositeFilter(
+        filters=[CompositeFilter(filters=[leaf_filter], operator="OR")],
+        operator="AND",
+    )
+
+    assert CompositeFilter(filters=[leaf_filter]).is_within_max_depth(1)
+    assert not nested_filter.is_within_max_depth(1)
+    assert nested_filter.is_within_max_depth(2)
+    assert not nested_filter.is_within_max_depth(0)
+
+
+def test_is_within_max_depth_rejects_negative_limit() -> None:
+    composite_filter = CompositeFilter(filters=[ExistsFilter(key="a")])
+
+    with pytest.raises(ValueError, match="cannot be negative"):
+        composite_filter.is_within_max_depth(-1)
+
+
 def test_nested_composite_match() -> None:
     """Evaluate a composite filter nested inside another composite."""
     sub_filter1 = StringSetFilter(members={"a", "b", "c"}, key="a")
