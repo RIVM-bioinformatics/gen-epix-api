@@ -11,6 +11,8 @@ from uuid import UUID
 import httpx
 import jwt
 import pytest
+from cryptography.hazmat.primitives.asymmetric import rsa
+from jwt.algorithms import RSAAlgorithm
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
@@ -71,6 +73,7 @@ class BaseOauthIdpClientTestCase:
         enable_introspection: bool = False,
         client_credential_flow_max_retries: int | None = None,
         client_credential_flow_base_delay: float | None = None,
+        jwt_leeway_seconds: int = 0,
     ) -> OauthIdpClient:
         """Create client with provided overrides."""
         cfg_copy: OidcServerCfg = (cfg or self.server_cfg).model_copy()
@@ -96,6 +99,7 @@ class BaseOauthIdpClientTestCase:
                 discovery_url=discovery_url,
                 client_credential_flow_max_retries=client_credential_flow_max_retries,
                 client_credential_flow_base_delay=client_credential_flow_base_delay,
+                jwt_leeway_seconds=jwt_leeway_seconds,
             )
         if doc_to_apply:
             for key, value in doc_to_apply.items():
@@ -566,6 +570,54 @@ class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
         assert result is not None
         assert result["email"] == "user@example.com"
         tim_mock.introspect_token.assert_called_once()
+
+
+class TestVerifyTokenLeeway(BaseOauthIdpClientTestCase):
+    """Clock-skew tolerance of the time claims during JWT verification."""
+
+    def setup_method(self) -> None:
+        super().setup_method()
+        self.private_key = rsa.generate_private_key(
+            public_exponent=65537, key_size=2048
+        )
+        self.jwk = jwt.PyJWK.from_dict(
+            json.loads(RSAAlgorithm.to_jwk(self.private_key.public_key())),
+            algorithm="RS256",
+        )
+
+    def make_token(self, iat_offset_seconds: int) -> str:
+        """Sign a token issued `iat_offset_seconds` from now, valid for an hour."""
+        iat = self.now() + iat_offset_seconds
+        return jwt.encode(
+            {
+                "iss": self.discovery_doc["issuer"],
+                "sub": "u",
+                "aud": self.server_cfg.client_id,
+                "iat": iat,
+                "exp": iat + 3600,
+            },
+            self.private_key,
+            algorithm="RS256",
+        )
+
+    def test_future_iat_rejected_without_leeway(self) -> None:
+        client: OauthIdpClient = self.create_client()
+
+        with pytest.raises(exc.CredentialsAuthError):
+            client._verify_token(self.make_token(10), self.jwk)
+
+    def test_future_iat_accepted_within_leeway(self) -> None:
+        client: OauthIdpClient = self.create_client(jwt_leeway_seconds=30)
+
+        claims = client._verify_token(self.make_token(10), self.jwk)
+
+        assert claims["sub"] == "u"
+
+    def test_future_iat_rejected_beyond_leeway(self) -> None:
+        client: OauthIdpClient = self.create_client(jwt_leeway_seconds=30)
+
+        with pytest.raises(exc.CredentialsAuthError):
+            client._verify_token(self.make_token(60), self.jwk)
 
 
 @pytest.mark.scenario_ids(

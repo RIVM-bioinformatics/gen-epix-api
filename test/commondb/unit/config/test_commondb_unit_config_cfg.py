@@ -79,6 +79,7 @@ def _read_config(
         "app_composer_type": type(app_composer).__name__,
         "cfg_auto_create_new_users": auth_props["auto_create_new_users"],
         "cfg_root_token_time_to_live": auth_props["root_token_time_to_live"],
+        "cfg_jwt_leeway_seconds": auth_props["jwt_leeway_seconds"],
         "feature_flag_auto_create_new_users": app.get_feature_flag(
             FastappFeatureFlag.AUTO_CREATE_NEW_USERS
         ),
@@ -86,6 +87,7 @@ def _read_config(
             CommonFeatureFlag.UPDATE_OWN_ORGANIZATION
         ),
         "service_root_token_time_to_live": auth_service_any._root_token_time_to_live,
+        "service_jwt_leeway_seconds": auth_service_any._jwt_leeway_seconds,
         "service_idp_client_count": len(auth_service_any.idp_clients),
     }
 
@@ -105,6 +107,7 @@ def _write_string_auth_override_file(override_tmp_dir: Path, app_name: str) -> P
             [service.auth.props]
             auto_create_new_users = "0"
             root_token_time_to_live = "900"
+            jwt_leeway_seconds = "30"
             """),
         encoding="utf-8",
     )
@@ -117,6 +120,8 @@ def _assert_default_import_payload(payload: dict, app_name: str) -> None:
     assert payload["app_composer_type"] == "AppComposer"
     assert payload["cfg_auto_create_new_users"] is spec["default_auto_create_new_users"]
     assert payload["cfg_root_token_time_to_live"] == 0
+    assert payload["cfg_jwt_leeway_seconds"] == 0
+    assert payload["service_jwt_leeway_seconds"] == 0
     assert (
         payload["feature_flag_auto_create_new_users"]
         is spec["default_auto_create_new_users"]
@@ -137,6 +142,8 @@ def _assert_string_override_payload(payload: dict, app_name: str) -> None:
     assert payload["feature_flag_auto_create_new_users"] is False
     assert payload["feature_flag_update_own_organization"] is False
     assert payload["service_root_token_time_to_live"] == 900
+    assert payload["cfg_jwt_leeway_seconds"] == 30
+    assert payload["service_jwt_leeway_seconds"] == 30
     assert payload["service_idp_client_count"] == 0
 
 
