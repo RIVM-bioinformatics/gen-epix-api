@@ -1317,9 +1317,7 @@ class SARepository(BaseRepository):
             raise exc.InvalidArgumentsError(
                 "880a6446", f"Unsupported filter type: {filter.__class__.__name__}"
             )
-        return (
-            sa.not_(sa.func.coalesce(clause, sa.false())) if filter.invert else clause
-        )
+        return self._invert_sql_predicate(clause) if filter.invert else clause
 
     def _get_composite_where_clause(
         self,
@@ -1340,9 +1338,12 @@ class SARepository(BaseRepository):
             raise exc.InvalidArgumentsError(
                 "8f411a53", f"Unsupported filter operator: {filter.operator.value}"
             )
-        return (
-            sa.not_(sa.func.coalesce(clause, sa.false())) if filter.invert else clause
-        )
+        return self._invert_sql_predicate(clause) if filter.invert else clause
+
+    @staticmethod
+    def _invert_sql_predicate(clause: Any) -> Any:
+        """Negate a SQL predicate while treating FALSE and UNKNOWN as non-matches."""
+        return sa.case((clause, 1), else_=0) == 0
 
     @staticmethod
     def _get_filter_column(
