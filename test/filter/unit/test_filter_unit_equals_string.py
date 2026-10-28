@@ -1,7 +1,8 @@
 """Tests for EqualsStringFilter matching."""
 
-import pytest
 from test.filter.unit import util
+
+import pytest
 
 from gen_epix.filter.equals_string import EqualsStringFilter
 

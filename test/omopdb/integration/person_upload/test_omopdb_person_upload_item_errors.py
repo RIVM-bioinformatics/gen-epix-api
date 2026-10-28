@@ -1,18 +1,19 @@
 """Integration test: one bad person in an upload no longer keeps the others out.
 
-Runs UploadPersonsCommand through the HTTP endpoint against a real (DICT) OMOPDB
-app, so the flag travels over the wire and the whole upload path is exercised:
+Runs UploadPersonsCommand through DICT HTTP and directly against SQLite, exercising
 verification, upsert and storage. With fail_batch_on_item_error=False the persons
 that pass verification are stored even when another person in the same batch
 fails. A person fails here because its specimen carries an identifier that already
 belongs to another specimen.
 """
 
+import copy
 import logging
-from dataclasses import dataclass
 from datetime import date
+from test.omopdb.integration.person_upload.ref_data import RefData
 from test.omopdb.omopdb_test_client import OmopdbTestClient as Env
 from test.test_client.enum import EnumTestType
+from test.test_client.pytest_params import BuildDbParams
 from uuid import UUID, uuid4
 
 import pytest
@@ -25,16 +26,6 @@ from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.omopdb.domain import command, enum, model
 
 TEST_TYPE = EnumTestType.OMOPDB_INTEGRATION_PERSON_UPLOAD_ITEM_ERRORS
-DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_EMPTY
-
-# Concept ids are not checked against reference data by the upload
-_GENDER_CONCEPT_ID = UUID("1e7d7dc0-41ef-9b58-de77-cb4a4eff115b")
-_RACE_CONCEPT_ID = UUID("af5570f5-a181-0b7a-f78c-af4bc70a660f")
-_ETHNICITY_CONCEPT_ID = UUID("8a234c39-9f1d-de91-f9f6-bd90661f36db")
-_PERSON_TYPE_CONCEPT_ID = UUID("e8ac2efe-d38a-c881-c5dc-1812343e67c8")
-_SPECIMEN_CONCEPT_ID = UUID("4d7a1f0e-6b55-4c1e-9a43-0f3c2a9d8e11")
-_SPECIMEN_TYPE_CONCEPT_ID = UUID("9b2e6c3d-1a7f-4e08-b5d4-7c6a2f1e0d22")
-
 OMOPDB_APP_CFGS = get_app_cfgs(
     AppType.OMOPDB,
     enum.ServiceType,
@@ -44,38 +35,25 @@ OMOPDB_APP_CFGS = get_app_cfgs(
 )
 
 
-@dataclass(frozen=True)
-class RefData:
-    """The user and identifier issuer the tests upload persons with."""
-
-    root_user: model.User
-    identifier_issuer_id: UUID
+_PARAMS = [
+    BuildDbParams(True, DevRepositoryConfig.SA_SQLITE_EMPTY),
+    BuildDbParams(False, DevRepositoryConfig.DICT_EMPTY),
+]
 
 
-@pytest.fixture(scope="module", name="env")
-def get_test_client() -> Env:
-    """Return a test client on an empty DICT repository that uses the endpoints."""
+@pytest.fixture(scope="module", name="env", params=_PARAMS, ids=[p.id for p in _PARAMS])
+def get_test_client(request: pytest.FixtureRequest) -> Env:
+    params: BuildDbParams = request.param
+    app_cfg = copy.copy(
+        OMOPDB_APP_CFGS[f"{TEST_TYPE.value}__{params.dev_repository_config.value}"]
+    )
+    app_cfg._name = f"{TEST_TYPE.value}__{params.id}"
     return Env.get_test_client(  # type: ignore[return-value]
-        test_type=TEST_TYPE.value,
-        app_cfg=OMOPDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"],
+        test_type=app_cfg.name,
+        app_cfg=app_cfg,
         log_level=logging.ERROR,
-        use_endpoints=True,
+        use_endpoints=not params.skip_endpoints,
     )
-
-
-@pytest.fixture(scope="module", name="ref_data")
-def create_ref_data(env: Env) -> RefData:
-    """Create the identifier issuer for the specimen identifiers."""
-    root_user = env.get_root_user()
-    identifier_issuer: model.IdentifierIssuer = env.app.handle(
-        command.IdentifierIssuerCrudCommand(
-            user=root_user,
-            operation=CrudOperation.CREATE_ONE,
-            objs=model.IdentifierIssuer(code="specimen_issuer", name="Specimens"),
-        )
-    )
-    assert identifier_issuer.id is not None
-    return RefData(root_user, identifier_issuer.id)
 
 
 def _person_for_upload(
@@ -87,8 +65,8 @@ def _person_for_upload(
         specimens = [
             model.SpecimenForUpload(  # type: ignore[call-arg]
                 specimen_id=uuid4(),
-                specimen_concept_id=_SPECIMEN_CONCEPT_ID,
-                specimen_type_concept_id=_SPECIMEN_TYPE_CONCEPT_ID,
+                specimen_concept_id=ref_data.concept_id,
+                specimen_type_concept_id=ref_data.concept_id,
                 specimen_date=date(2026, 10, 1),
                 identifiers=[
                     IdentifierForUpload(
@@ -102,10 +80,10 @@ def _person_for_upload(
         id=uuid4(),
         person=model.Person(
             year_of_birth=1990,
-            gender_concept_id=_GENDER_CONCEPT_ID,
-            race_concept_id=_RACE_CONCEPT_ID,
-            ethnicity_concept_id=_ETHNICITY_CONCEPT_ID,
-            person_type_concept_id=_PERSON_TYPE_CONCEPT_ID,
+            gender_concept_id=ref_data.concept_id,
+            race_concept_id=ref_data.concept_id,
+            ethnicity_concept_id=ref_data.concept_id,
+            person_type_concept_id=ref_data.concept_id,
         ),
         specimens=specimens,
     )
