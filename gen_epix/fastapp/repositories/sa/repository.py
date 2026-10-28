@@ -1294,32 +1294,30 @@ class SARepository(BaseRepository):
         result_column = self._get_filter_column(
             row_class, mapper, filter, column_function_map
         )
-        invert = filter.invert
         if (
             isinstance(filter, StringSetFilter)
             or isinstance(filter, NumberSetFilter)
             or isinstance(filter, UuidSetFilter)
         ):
-            return self._get_set_where_clause(filter, result_column, invert)
-        if isinstance(filter, ExistsFilter):
-            return result_column != None if not invert else result_column == None
-        if isinstance(filter, EqualsFilter):
-            return (
-                result_column == filter.value
-                if not invert
-                else result_column != filter.value
+            clause = self._get_set_where_clause(filter, result_column)
+        elif isinstance(filter, ExistsFilter):
+            clause = result_column.is_not(None)
+        elif isinstance(filter, EqualsFilter):
+            clause = sa.and_(result_column.is_not(None), result_column == filter.value)
+        elif isinstance(filter, ContainsStringFilter):
+            clause = sa.and_(
+                result_column.is_not(None), result_column.contains(filter.value)
             )
-        if isinstance(filter, ContainsStringFilter):
-            return (
-                result_column.contains(filter.value)
-                if not invert
-                else ~result_column.contains(filter.value)
+        elif isinstance(filter, RangeFilter):
+            clause = sa.and_(
+                result_column.is_not(None),
+                self._get_range_where_clause(filter, result_column),
             )
-        if isinstance(filter, RangeFilter):
-            return self._get_range_where_clause(filter, result_column, invert)
-        raise exc.InvalidArgumentsError(
-            "880a6446", f"Unsupported filter type: {filter.__class__.__name__}"
-        )
+        else:
+            raise exc.InvalidArgumentsError(
+                "880a6446", f"Unsupported filter type: {filter.__class__.__name__}"
+            )
+        return self._invert_sql_predicate(clause) if filter.invert else clause
 
     def _get_composite_where_clause(
         self,
@@ -1340,7 +1338,12 @@ class SARepository(BaseRepository):
             raise exc.InvalidArgumentsError(
                 "8f411a53", f"Unsupported filter operator: {filter.operator.value}"
             )
-        return sa.not_(clause) if filter.invert else clause
+        return self._invert_sql_predicate(clause) if filter.invert else clause
+
+    @staticmethod
+    def _invert_sql_predicate(clause: Any) -> Any:
+        """Negate a SQL predicate while treating FALSE and UNKNOWN as non-matches."""
+        return sa.case((clause, 1), else_=0) == 0
 
     @staticmethod
     def _get_filter_column(
@@ -1369,7 +1372,6 @@ class SARepository(BaseRepository):
     def _get_set_where_clause(
         filter: StringSetFilter | NumberSetFilter | UuidSetFilter,
         column: Any,
-        invert: bool,
     ) -> Any:
         """Build an IN predicate, converting Enum members when needed."""
         members = filter.members
@@ -1377,12 +1379,11 @@ class SARepository(BaseRepository):
         enum_class = getattr(column.type, "enum_class", None)
         if enum_class is not None:
             members = frozenset(enum_class(value) for value in members)
-        clause = column.in_(members)
-        return sa.not_(clause) if invert else clause
+        return column.in_(members)
 
     @staticmethod
-    def _get_range_where_clause(filter: RangeFilter, column: Any, invert: bool) -> Any:
-        """Build lower and upper range predicates, including inversion."""
+    def _get_range_where_clause(filter: RangeFilter, column: Any) -> Any:
+        """Build lower and upper range predicates."""
         args = []
         if filter.lower_bound is not None:
             if filter.lower_bound_censor == ComparisonOperator.GT:
@@ -1395,9 +1396,8 @@ class SARepository(BaseRepository):
             elif filter.upper_bound_censor == ComparisonOperator.STE:
                 args.append(column <= filter.upper_bound)
         if len(args) == 1:
-            return sa.not_(args[0]) if invert else args[0]
-        clause = sa.and_(*args)
-        return sa.not_(clause) if invert else clause
+            return args[0]
+        return sa.and_(*args)
 
     def _split_filter_recursion(
         self, field_name_map: dict[str, str], filter: Filter

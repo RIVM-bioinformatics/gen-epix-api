@@ -7,6 +7,7 @@ from typing import Any, ClassVar, cast
 
 import pytest
 import sqlalchemy as sa
+from sqlalchemy.dialects import mssql
 from sqlalchemy.orm import Session, declarative_base
 
 import gen_epix.fastapp.exc as exc
@@ -20,6 +21,7 @@ from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.filter import (
     ComparisonOperator,
     CompositeFilter,
+    ContainsStringFilter,
     EqualsNumberFilter,
     EqualsStringFilter,
     ExistsFilter,
@@ -572,6 +574,102 @@ def test_read_all_translates_exists_set_and_range_filters(
     objs = cast(list[RepoModel], repo.read_all(RepoModel, filter_))
 
     assert [obj.id for obj in objs] == expected_ids
+
+
+def test_read_all_inverted_composite_filter_includes_null_values(
+    repo: SARepository,
+) -> None:
+    repo.create_some(
+        RepoModel,
+        "user",
+        [
+            RepoModel(id="id-null", value=1, label=None),
+            RepoModel(id="id-match", value=2, label="x"),
+            RepoModel(id="id-other", value=3, label="other"),
+        ],
+    )
+    filter_ = CompositeFilter(
+        operator=LogicalOperator.AND,
+        filters=[
+            EqualsStringFilter(key="label", value="x", invert=True),
+            ExistsFilter(key="value"),
+        ],
+    )
+
+    objs = cast(list[RepoModel], repo.read_all(RepoModel, filter_))
+
+    assert {obj.id for obj in objs} == {"id-null", "id-other"}
+
+
+def test_read_all_inverted_composite_includes_null_values(
+    repo: SARepository,
+) -> None:
+    repo.create_some(
+        RepoModel,
+        "user",
+        [
+            RepoModel(id="id-null", value=1, label=None),
+            RepoModel(id="id-match", value=2, label="x"),
+            RepoModel(id="id-other", value=3, label="other"),
+        ],
+    )
+    filter_ = CompositeFilter(
+        operator=LogicalOperator.AND,
+        filters=[EqualsStringFilter(key="label", value="x")],
+        invert=True,
+    )
+
+    objs = cast(list[RepoModel], repo.read_all(RepoModel, filter_))
+
+    assert {obj.id for obj in objs} == {"id-null", "id-other"}
+
+
+@pytest.mark.parametrize(
+    "filter_",
+    [
+        pytest.param(ExistsFilter(key="label", invert=True), id="exists"),
+        pytest.param(
+            EqualsStringFilter(key="label", value="x", invert=True), id="equality"
+        ),
+        pytest.param(
+            StringSetFilter(key="label", members=frozenset({"x"}), invert=True),
+            id="set",
+        ),
+        pytest.param(
+            ContainsStringFilter(key="label", value="x", invert=True), id="contains"
+        ),
+        pytest.param(
+            NumberRangeFilter(key="value", lower_bound=0, invert=True), id="range"
+        ),
+        pytest.param(
+            CompositeFilter(
+                operator=LogicalOperator.AND,
+                filters=[
+                    EqualsStringFilter(key="label", value="x"),
+                    ExistsFilter(key="value"),
+                ],
+                invert=True,
+            ),
+            id="composite",
+        ),
+    ],
+)
+def test_inverted_filters_compile_with_mssql_dialect(
+    repo: SARepository, filter_: Any
+) -> None:
+    mapper = repo.get_mapper(RepoModel)
+    clause = repo.get_where_clause_from_filter(mapper.row_class, mapper, filter_)
+
+    sql = str(
+        clause.compile(
+            dialect=mssql.dialect(),
+            compile_kwargs={"literal_binds": True},
+        )
+    ).upper()
+
+    assert "CASE WHEN" in sql
+    assert "COALESCE" not in sql
+    assert "END = 0" in sql
 
 
 def test_split_filter_keeps_or_with_unmapped_branch_in_python(

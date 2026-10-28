@@ -5,7 +5,7 @@ case-set, content, date, and configured result-limit restrictions.
 """
 
 import datetime
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Hashable, Iterable, Iterator
 from decimal import Decimal
 from typing import Any, cast
 from uuid import UUID
@@ -16,7 +16,9 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.filter.base import Filter
 from gen_epix.filter.composite import CompositeFilter
+from gen_epix.filter.exists import ExistsFilter
 from gen_epix.filter.string_set import StringSetFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
 
@@ -119,7 +121,12 @@ def case_service_retrieve_cases_by_query(
 
         # Filter cases by filters
         if case_query.filter:
-            filter_mapping_functions = _get_map_functions_for_filters(ref_cols)
+            filter_mapping_functions = dict(
+                zip(
+                    case_query.filter.get_keys(),
+                    _get_map_functions_for_filters(ref_cols),
+                )
+            )
             cases = [
                 x
                 for x, y in zip(
@@ -345,14 +352,24 @@ def _verify_case_filter(
         InvalidArgumentsError: If a set-backed column uses a non-string-set filter or
             contains a member outside its configured domain.
     """
+
+    def iter_leaf_filters(filter: Filter) -> Iterator[Filter]:
+        if isinstance(filter, CompositeFilter):
+            for child_filter in filter.filters:
+                yield from iter_leaf_filters(child_filter)
+            return
+        yield filter
+
     # Retrieve Cols corresponding to filter keys
     filter_col_ids = composite_filter.get_keys()
+    unique_filter_col_ids = list(dict.fromkeys(filter_col_ids))
+    leaf_filters = list(iter_leaf_filters(composite_filter))
     filter_cols: list[model.Col] = self.repository.crud(
         uow,
         user.id,
         model.Col,
         CrudOperation.READ_SOME,
-        obj_ids=filter_col_ids,
+        obj_ids=unique_filter_col_ids,
     )
     # Retrieve cols for Cols
     ref_cols: list[model.RefCol] = self.repository.crud(
@@ -365,13 +382,16 @@ def _verify_case_filter(
         ),  # TODO: consider READ_SOME allowing duplicate ids
     )
     ref_cols_map = {x.id: x for x in ref_cols}
-    ref_cols = [ref_cols_map[x.ref_col_id] for x in filter_cols]
+    filter_cols_map: dict[Hashable, model.Col] = {x.id: x for x in filter_cols}
+    ref_cols = [
+        ref_cols_map[filter_cols_map[filter_col_id].ref_col_id]
+        for filter_col_id in filter_col_ids
+    ]
     # Verify filter validity
     concept_valid_values: dict[UUID, set[str]] = {}
     region_valid_values: dict[UUID, set[str]] = {}
-    for col, ref_col, filter in zip(  # type: ignore[assignment]
-        filter_cols, ref_cols, composite_filter.filters
-    ):
+    for filter_col_id, ref_col, filter in zip(filter_col_ids, ref_cols, leaf_filters):
+        col = filter_cols_map[filter_col_id]
         if ref_col.concept_set_id or ref_col.region_set_id:
             if isinstance(filter, StringSetFilter):
                 validate_concept_or_region(
@@ -383,7 +403,7 @@ def _verify_case_filter(
                     col,
                     ref_col,
                 )
-            else:
+            elif not isinstance(filter, ExistsFilter):
                 raise exc.InvalidArgumentsError(
                     "290ab290",
                     f"Column {col.id}: invalid filter type: {filter.__class__.__name__}",

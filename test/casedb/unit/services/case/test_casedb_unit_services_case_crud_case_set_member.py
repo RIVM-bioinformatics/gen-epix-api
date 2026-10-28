@@ -1,13 +1,19 @@
 from test.casedb.unit.services.case.base import BaseCrudTestCase
 from test.util.mock_compat import Mock
+from typing import cast
 from uuid import uuid4
 
 import pytest
 
-from gen_epix.casedb.domain import exc, model
+from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.enum import CaseRight
+from gen_epix.casedb.domain.service.abac import BaseAbacService
+from gen_epix.casedb.policies.case_abac_policy import CaseAbacPolicy
 from gen_epix.casedb.services.case import crud_case_set_member
-from gen_epix.fastapp import CrudOperation
+from gen_epix.commondb.domain.enum import Role
+from gen_epix.fastapp import App, CrudOperation, EventTiming
+from gen_epix.filter import CompositeFilter, LogicalOperator
+from gen_epix.filter.uuid_set import UuidSetFilter
 
 
 class TestCaseSetMemberCrud(BaseCrudTestCase):
@@ -19,6 +25,8 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
             query_filter=object(),
         )
         cmd.return_id = return_id
+        cmd.limit = 0
+        cmd.offset = 0
         cmd.is_read = Mock(return_value=True)
         cmd.is_read_all = Mock(return_value=False)
         cmd.is_delete_all = Mock(return_value=False)
@@ -118,12 +126,212 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
         assert cmd.model_copy.call_args.kwargs["update"]["obj_ids"] == member_ids
         assert self.service.crud.call_count == 2
 
+    @pytest.mark.parametrize(
+        ("access_decisions", "expected"),
+        [
+            pytest.param([True, True], True, id="both-parents-readable"),
+            pytest.param([False], False, id="case-unreadable"),
+            pytest.param([True, False], False, id="case-set-unreadable"),
+        ],
+    )
+    def test_exists_one_returns_true_only_when_both_parents_are_readable(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        access_decisions: list[bool],
+        expected: bool,
+    ) -> None:
+        cmd, case_abac, members, cases, case_sets = self._configure_read()
+        cmd.operation = CrudOperation.EXISTS_ONE
+        cmd.obj_ids = members[0].id
+        cmd.get_obj_ids = Mock(return_value=[members[0].id])
+        case_abac.is_allowed.side_effect = access_decisions
+        self._patch_case_abac(monkeypatch, case_abac)
+        self.service.crud.side_effect = [True, members]
+
+        result = crud_case_set_member._crud_case_set_member_with_abac(
+            self.service, self.uow, cmd
+        )
+
+        assert result is expected
+        assert self.service.crud.call_count == 2
+        assert self.service.repository.crud.call_count == 2
+
+    def test_exists_some_preserves_order_and_checks_each_parent_pair(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cmd, case_abac, members, cases, case_sets = self._configure_read(count=2)
+        member_ids = [member.id for member in members]
+        missing_member_id = uuid4()
+        requested_ids = [member_ids[0], member_ids[1], missing_member_id]
+        cmd.operation = CrudOperation.EXISTS_SOME
+        cmd.obj_ids = requested_ids
+        cmd.get_obj_ids = Mock(return_value=requested_ids)
+        case_abac.is_allowed.side_effect = [True, True, True, False]
+        self._patch_case_abac(monkeypatch, case_abac)
+        self.service.crud.side_effect = [[True, True, False], members]
+
+        result = crud_case_set_member._crud_case_set_member_with_abac(
+            self.service, self.uow, cmd
+        )
+
+        assert result == [True, False, False]
+        assert cmd.model_copy.call_args.kwargs["update"]["obj_ids"] == member_ids
+
     def test_unfiltered_bulk_read_is_rejected(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         cmd, case_abac, _, _, _ = self._configure_read()
         cmd.query_filter = None
         cmd.operation = CrudOperation.READ_ALL
+        cmd.is_read_all.return_value = True
+        self._patch_case_abac(monkeypatch, case_abac)
+
+        with pytest.raises(exc.UnauthorizedAuthError):
+            crud_case_set_member._crud_case_set_member_with_abac(
+                self.service, self.uow, cmd
+            )
+
+        self.service.crud.assert_not_called()
+
+    def test_filtered_bulk_read_by_case_ids_is_allowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cmd, case_abac, members, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.query_filter = UuidSetFilter(
+            key="case_id",
+            members=frozenset({str(uuid4()), str(uuid4())}),
+        )
+        cmd.is_read_all.return_value = True
+        self._patch_case_abac(monkeypatch, case_abac)
+        self.service.crud.return_value = members
+
+        result = crud_case_set_member._crud_case_set_member_with_abac(
+            self.service, self.uow, cmd
+        )
+
+        assert result == members
+        self.service.crud.assert_called_once_with(cmd)
+
+    def test_filtered_bulk_read_by_case_set_and_case_ids_is_allowed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cmd, case_abac, members, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.query_filter = CompositeFilter(
+            filters=[
+                UuidSetFilter(key="case_id", members=frozenset({str(uuid4())})),
+                UuidSetFilter(
+                    key="case_set_id",
+                    members=frozenset({str(uuid4())}),
+                ),
+            ],
+            operator=LogicalOperator.AND,
+        )
+        cmd.is_read_all.return_value = True
+        self._patch_case_abac(monkeypatch, case_abac)
+        self.service.crud.return_value = members
+
+        result = crud_case_set_member._crud_case_set_member_with_abac(
+            self.service, self.uow, cmd
+        )
+
+        assert result == members
+        self.service.crud.assert_called_once_with(cmd)
+
+    def test_app_handle_filters_members_for_restricted_case_set_user(self) -> None:
+        case = Mock(spec=model.Case)
+        case.id = uuid4()
+        case.case_type_id = uuid4()
+        case.created_in_data_collection_id = uuid4()
+        case_set = Mock(spec=model.CaseSet)
+        case_set.id = uuid4()
+        case_set.case_type_id = uuid4()
+        case_set.created_in_data_collection_id = uuid4()
+        member = Mock(spec=model.CaseSetMember)
+        member.id = uuid4()
+        member.case_id = case.id
+        member.case_set_id = case_set.id
+
+        case_abac = Mock()
+        case_abac.is_allowed.side_effect = [True, False]
+        abac_service = Mock(spec=BaseAbacService)
+        abac_service.get_case_abac.return_value = case_abac
+        case_policy = CaseAbacPolicy(cast(BaseAbacService, abac_service))
+
+        app = App(logger=None)
+        for command_class in BaseAbacService.CASE_ABAC_COMMANDS:
+            app.register_policy(command_class, case_policy, EventTiming.DURING)
+        self.service.app.pdp.is_exempted.return_value = False
+        self.service.crud.return_value = [member]
+        self.service.repository.crud.side_effect = [[case], [case_set]]
+        self.service._retrieve_case_data_collections_map.return_value = {}
+        self.service._retrieve_case_set_data_collections_map.return_value = {}
+        app.register_handler(
+            command.CaseSetMemberCrudCommand,
+            lambda _cmd: crud_case_set_member.case_service_crud_case_set_member(
+                self.service, _cmd
+            ),
+        )
+        cmd = command.CaseSetMemberCrudCommand(
+            user=self.user,
+            operation=CrudOperation.READ_ALL,
+            query_filter=UuidSetFilter(
+                key="case_set_id", members=frozenset({case_set.id})
+            ),
+        )
+
+        assert self.user.roles == {Role.ORG_USER.value}
+        assert app.handle(cmd) == []
+        abac_service.get_case_abac.assert_called_once_with(cmd)
+        assert case_abac.is_allowed.call_count == 2
+
+    @pytest.mark.parametrize(
+        ("limit", "offset", "return_id"),
+        [
+            pytest.param(1, 0, False, id="limit-objects"),
+            pytest.param(0, 1, False, id="offset-objects"),
+            pytest.param(1, 0, True, id="limit-ids"),
+            pytest.param(0, 1, True, id="offset-ids"),
+        ],
+    )
+    def test_filtered_bulk_read_rejects_pagination(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        limit: int,
+        offset: int,
+        return_id: bool,
+    ) -> None:
+        cmd, case_abac, _, _, _ = self._configure_read(return_id=return_id)
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.query_filter = UuidSetFilter(
+            key="case_set_id", members=frozenset({str(uuid4())})
+        )
+        cmd.is_read_all.return_value = True
+        cmd.limit = limit
+        cmd.offset = offset
+        self._patch_case_abac(monkeypatch, case_abac)
+
+        with pytest.raises(
+            exc.InvalidArgumentsError, match="Pagination is not supported"
+        ):
+            crud_case_set_member._crud_case_set_member_with_abac(
+                self.service, self.uow, cmd
+            )
+
+        self.service.crud.assert_not_called()
+        self.service.repository.crud.assert_not_called()
+
+    def test_inverted_case_id_filter_is_not_an_allowed_bulk_read(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cmd, case_abac, _, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.query_filter = UuidSetFilter(
+            key="case_id",
+            members=frozenset({str(uuid4())}),
+            invert=True,
+        )
         cmd.is_read_all.return_value = True
         self._patch_case_abac(monkeypatch, case_abac)
 

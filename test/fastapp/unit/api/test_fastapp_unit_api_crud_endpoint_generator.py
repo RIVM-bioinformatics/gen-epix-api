@@ -1328,9 +1328,7 @@ class TestGeneratedEndpointExecution:
 class TestCrudEndpointGeneratorHelpers:
     """Tests for endpoint selection and metadata helper methods."""
 
-    def test_default_filter_validator_allows_flat_and_rejects_nested_filters(
-        self,
-    ) -> None:
+    def test_default_filter_validator_applies_configured_composite_depth(self) -> None:
         flat_filter = CompositeFilter(
             operator=LogicalOperator.AND,
             filters=[
@@ -1348,10 +1346,28 @@ class TestCrudEndpointGeneratorHelpers:
                 ),
             ],
         )
+        deeply_nested_filter = CompositeFilter(
+            operator=LogicalOperator.AND,
+            filters=[
+                CompositeFilter(
+                    operator=LogicalOperator.OR,
+                    filters=[
+                        CompositeFilter(
+                            operator=LogicalOperator.AND,
+                            filters=[EqualsNumberFilter(key="id", value=2)],
+                        )
+                    ],
+                )
+            ],
+        )
 
         assert _default_validate_query_filter(EqualsNumberFilter(key="id", value=1))
         assert _default_validate_query_filter(flat_filter)
         assert not _default_validate_query_filter(nested_filter)
+        assert _default_validate_query_filter(nested_filter, max_composite_depth=2)
+        assert not _default_validate_query_filter(
+            deeply_nested_filter, max_composite_depth=2
+        )
 
     def test_permission_types_map_to_supported_crud_operations(self) -> None:
         permissions = {

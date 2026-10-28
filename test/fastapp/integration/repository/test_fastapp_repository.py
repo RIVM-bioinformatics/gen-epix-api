@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Any, ClassVar
+from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
@@ -12,6 +13,14 @@ from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.fastapp.repositories.sa.repository import SARepository
 from gen_epix.fastapp.repository import BaseRepository
+from gen_epix.filter import (
+    CompositeFilter,
+    ContainsStringFilter,
+    EqualsStringFilter,
+    ExistsFilter,
+    LogicalOperator,
+    StringSetFilter,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -22,8 +31,9 @@ class LifecycleRow(Base):
     __tablename__ = "repository_lifecycle"
     __table_args__: ClassVar[tuple[Any, ...]] = tuple()
 
-    id = sa.Column(sa.String, primary_key=True, nullable=False)
+    id = sa.Column(sa.String(64), primary_key=True, nullable=False)
     value = sa.Column(sa.Integer, nullable=False)
+    label = sa.Column(sa.String(128), nullable=True)
 
 
 class LifecycleModel(Model):
@@ -35,6 +45,7 @@ class LifecycleModel(Model):
 
     id: str
     value: int
+    label: str | None = None
 
 
 LifecycleModel.ENTITY.set_model_class(LifecycleModel)
@@ -180,3 +191,96 @@ def test_repository_lifecycle(
             engine.dispose()
     else:
         repository_class.clear_repository_content(entities=entities)
+
+
+def test_sql_server_inverted_filters_match_null_and_nonmatching_values() -> None:
+    from gen_epix.casedb.domain import enum as casedb_enum
+    from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
+    from gen_epix.commondb.domain.util import get_app_cfgs
+    from gen_epix.seqdb.domain import enum as seqdb_enum
+
+    test_type = "FASTAPP_MSSQL_FILTER_INTEGRATION"
+    seqdb_app_cfgs = get_app_cfgs(
+        AppType.SEQDB,
+        seqdb_enum.ServiceType,
+        seqdb_enum.RepositoryType,
+        test_type,
+        dev_idp_config=DevIdpConfig.NONE,
+        log_any=False,
+    )
+    casedb_app_cfgs = get_app_cfgs(
+        AppType.CASEDB,
+        casedb_enum.ServiceType,
+        casedb_enum.RepositoryType,
+        test_type,
+        dev_idp_config=DevIdpConfig.NONE,
+        seqdb_app_cfgs=seqdb_app_cfgs,
+        log_any=False,
+    )
+    app_cfg = casedb_app_cfgs[f"{test_type}__{DevRepositoryConfig.SA_SQL.value}"]
+    connection_string = app_cfg.cfg["repository"]["defaults"]["props"][
+        "connection_string"
+    ]
+    connection_error = SARepository.test_connection(connection_string, timeout=5)
+    if connection_error is not None:
+        pytest.skip(
+            "SQL Server integration unavailable: " f"{type(connection_error).__name__}"
+        )
+
+    repository = SARepository.create_repository(
+        entities=[LifecycleModel.ENTITY],
+        connection_string=connection_string,
+        create_database_objects=True,
+    )
+    run_id = uuid4().hex
+    null_id = f"{run_id}-null"
+    matching_id = f"{run_id}-matching"
+    nonmatching_id = f"{run_id}-nonmatching"
+    try:
+        repository.create_some(
+            LifecycleModel,
+            "test-user",
+            [
+                LifecycleModel(id=null_id, value=1, label=None),
+                LifecycleModel(id=matching_id, value=2, label="matching"),
+                LifecycleModel(id=nonmatching_id, value=3, label="other"),
+            ],
+        )
+        filters_and_ids = [
+            (ExistsFilter(key="label", invert=True), {null_id}),
+            (
+                EqualsStringFilter(key="label", value="matching", invert=True),
+                {null_id, nonmatching_id},
+            ),
+            (
+                StringSetFilter(
+                    key="label", members=frozenset({"matching"}), invert=True
+                ),
+                {null_id, nonmatching_id},
+            ),
+            (
+                ContainsStringFilter(key="label", value="match", invert=True),
+                {null_id, nonmatching_id},
+            ),
+            (
+                CompositeFilter(
+                    operator=LogicalOperator.AND,
+                    filters=[
+                        EqualsStringFilter(key="label", value="matching"),
+                        ExistsFilter(key="value"),
+                    ],
+                    invert=True,
+                ),
+                {null_id, nonmatching_id},
+            ),
+        ]
+
+        for filter_, expected_ids in filters_and_ids:
+            results = repository.read_all(LifecycleModel, filter_)
+            assert {obj.id for obj in results} == expected_ids
+    finally:
+        # This repository shares a SQL Server database; remove only this test table.
+        try:
+            LifecycleRow.__table__.drop(repository._engine, checkfirst=True)
+        finally:
+            repository._engine.dispose()  # type: ignore[attr-defined]  # pylint: disable=protected-access

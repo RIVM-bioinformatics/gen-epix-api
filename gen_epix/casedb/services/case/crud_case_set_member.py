@@ -3,6 +3,7 @@
 Complex association entity with extensive ABAC logic.
 """
 
+from collections.abc import Hashable
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -17,6 +18,32 @@ from gen_epix.casedb.services.case.crud_common import (
 )
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.filter import CompositeFilter, LogicalOperator
+from gen_epix.filter.uuid_set import UuidSetFilter
+
+_CASE_SET_MEMBER_QUERY_FILTER_KEYS = frozenset({"case_id", "case_set_id"})
+
+
+def _is_bounded_case_set_member_query_filter(query_filter: object) -> bool:
+    """Allow only non-inverted UUID-set filters on case or case-set IDs."""
+    if isinstance(query_filter, UuidSetFilter):
+        return (
+            query_filter.key in _CASE_SET_MEMBER_QUERY_FILTER_KEYS
+            and not query_filter.invert
+        )
+    if not isinstance(query_filter, CompositeFilter):
+        return False
+    if query_filter.invert or query_filter.operator not in {
+        LogicalOperator.AND,
+        LogicalOperator.OR,
+    }:
+        return False
+    return bool(query_filter.filters) and all(
+        isinstance(sub_filter, UuidSetFilter)
+        and sub_filter.key in _CASE_SET_MEMBER_QUERY_FILTER_KEYS
+        and not sub_filter.invert
+        for sub_filter in query_filter.filters
+    )
 
 
 def case_service_crud_case_set_member(
@@ -79,7 +106,8 @@ def _crud_case_set_member_with_abac(
 
     Commands without case ABAC metadata delegate directly. Otherwise unrestricted
     bulk reads, updates, and bulk deletes are rejected, and member reads are filtered
-    to rows whose case and case set are both accessible.
+    to rows whose case and case set are both accessible. Filtered bulk reads reject
+    pagination until it can be applied after those access checks.
 
     Args:
         self: Case service handling the command.
@@ -92,12 +120,19 @@ def _crud_case_set_member_with_abac(
     Raises:
         UnauthorizedAuthError: If a restricted user requests an unsupported bulk
             operation or the returned rows cannot be verified.
+        InvalidArgumentsError: If a filtered bulk read requests pagination while
+            case access filtering is active.
     """
     # Initialize some
     assert cmd.user is not None and cmd.user.id is not None
 
-    # Only read/exists some and read/exists one allowed, other operations need to be performed through other commands
-    if not cmd.is_read() or cmd.is_read_all():
+    # Bulk reads must be constrained to explicit case or case-set IDs. Other
+    # reads, updates, and deletes need to be performed through dedicated commands.
+    is_read_all = cmd.is_read_all()
+    is_bounded_filtered_read_all = is_read_all and (
+        _is_bounded_case_set_member_query_filter(cmd.query_filter)
+    )
+    if not cmd.is_read() or (is_read_all and not is_bounded_filtered_read_all):
         raise exc.UnauthorizedAuthError(
             "85539cf8",
             f"Operation {cmd.operation.value} not allowed for case set members for this user",
@@ -107,22 +142,52 @@ def _crud_case_set_member_with_abac(
     if case_abac is None:
         return self.crud(cmd)  # type: ignore[return-value]
 
+    if is_read_all and (cmd.limit or cmd.offset):
+        raise exc.InvalidArgumentsError(
+            "d62b3eb6",
+            "Pagination is not supported for case-set member bulk reads with case access filtering.",
+        )
+
     retval = self.crud(cmd)
     if not cmd.is_read():
         return retval  # type: ignore[return-value]
-    if retval is None:
-        return None
 
-    if cmd.return_id:
+    is_exists_one = cmd.operation == CrudOperation.EXISTS_ONE
+    is_exists_some = cmd.operation == CrudOperation.EXISTS_SOME
+    exists_obj_ids: list[Hashable] = []
+    exists_results: list[bool] = []
+    if is_exists_one:
+        if not isinstance(retval, bool):
+            raise exc.UnauthorizedAuthError(
+                "9ef9c356", "Unable to verify access to case set members"
+            )
+        exists_results = [retval]
+    elif is_exists_some:
         if not isinstance(retval, list) or any(
-            not isinstance(member_id, UUID) for member_id in retval
+            not isinstance(result, bool) for result in retval
         ):
             raise exc.UnauthorizedAuthError(
                 "9ef9c356", "Unable to verify access to case set members"
             )
-        if not retval:
-            return retval  # type: ignore[return-value]
-        member_ids = retval
+        exists_results = retval
+    if is_exists_one or is_exists_some:
+        raw_obj_ids = cmd.get_obj_ids()
+        if not isinstance(raw_obj_ids, list) or len(raw_obj_ids) != len(exists_results):
+            raise exc.UnauthorizedAuthError(
+                "9ef9c356", "Unable to verify access to case set members"
+            )
+        exists_obj_ids = [obj_id for obj_id in raw_obj_ids if obj_id is not None]
+        if len(exists_obj_ids) != len(raw_obj_ids):
+            raise exc.UnauthorizedAuthError(
+                "9ef9c356", "Unable to verify access to case set members"
+            )
+        member_ids = [
+            obj_id
+            for obj_id, exists in zip(exists_obj_ids, exists_results, strict=True)
+            if exists
+        ]
+        if not member_ids:
+            return exists_results[0] if is_exists_one else exists_results
         member_cmd = cmd.model_copy(
             update={
                 "operation": CrudOperation.READ_SOME,
@@ -141,22 +206,54 @@ def _crud_case_set_member_with_abac(
                 "9ef9c356", "Unable to verify access to case set members"
             )
         members = member_result
-    elif isinstance(retval, list):
-        if any(not isinstance(member, model.CaseSetMember) for member in retval):
+        member_ids = []
+    if not is_exists_one and not is_exists_some:
+        if retval is None:
+            return None
+        if cmd.return_id:
+            if not isinstance(retval, list) or any(
+                not isinstance(member_id, UUID) for member_id in retval
+            ):
+                raise exc.UnauthorizedAuthError(
+                    "9ef9c356", "Unable to verify access to case set members"
+                )
+            if not retval:
+                return retval  # type: ignore[return-value]
+            member_ids = retval
+            member_cmd = cmd.model_copy(
+                update={
+                    "operation": CrudOperation.READ_SOME,
+                    "obj_ids": member_ids,
+                    "query_filter": None,
+                    "return_id": False,
+                    "limit": 0,
+                    "offset": 0,
+                }
+            )
+            member_result = self.crud(member_cmd)
+            if not isinstance(member_result, list) or any(
+                not isinstance(member, model.CaseSetMember) for member in member_result
+            ):
+                raise exc.UnauthorizedAuthError(
+                    "9ef9c356", "Unable to verify access to case set members"
+                )
+            members = member_result
+        elif isinstance(retval, list):
+            if any(not isinstance(member, model.CaseSetMember) for member in retval):
+                raise exc.UnauthorizedAuthError(
+                    "9ef9c356", "Unable to verify access to case set members"
+                )
+            members = retval
+            member_ids = []
+        elif isinstance(retval, model.CaseSetMember):
+            members = [retval]
+            member_ids = []
+        else:
             raise exc.UnauthorizedAuthError(
                 "9ef9c356", "Unable to verify access to case set members"
             )
-        members = retval
-        member_ids = []
-    elif isinstance(retval, model.CaseSetMember):
-        members = [retval]
-        member_ids = []
-    else:
-        raise exc.UnauthorizedAuthError(
-            "9ef9c356", "Unable to verify access to case set members"
-        )
 
-    if not members:
+    if not members and not (is_exists_one or is_exists_some):
         return [] if isinstance(retval, list) else None  # type: ignore[return-value]
 
     case_ids = {member.case_id for member in members}
@@ -214,6 +311,19 @@ def _crud_case_set_member_with_abac(
     accessible_members = [
         member for member in members if member.id in accessible_member_ids
     ]
+    accessible_member_ids_as_strings = {
+        str(member_id) for member_id in accessible_member_ids
+    }
+    if is_exists_one:
+        return bool(
+            exists_results[0]
+            and str(exists_obj_ids[0]) in accessible_member_ids_as_strings
+        )
+    if is_exists_some:
+        return [
+            exists and str(obj_id) in accessible_member_ids_as_strings
+            for obj_id, exists in zip(exists_obj_ids, exists_results, strict=True)
+        ]
     if cmd.return_id:
         return [  # type: ignore[return-value]
             member_id for member_id in member_ids if member_id in accessible_member_ids
