@@ -513,6 +513,7 @@
                 "test_all"
         ],
         "console": "integratedTerminal",
+        "subProcess": false,
         "justMyCode": true
 },
 {
