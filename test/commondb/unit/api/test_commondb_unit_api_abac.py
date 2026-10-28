@@ -2,11 +2,11 @@
 
 from test.util.mock_compat import Mock, patch
 from types import SimpleNamespace
-from typing import Callable
+from typing import Annotated, Callable
 from uuid import uuid4
 
 import pytest
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Security
 from fastapi.routing import APIRoute
 
 from gen_epix.commondb.api.abac import create_abac_endpoints
@@ -18,6 +18,11 @@ def _registered_user_dependency() -> None:
     return None
 
 
+_registered_user_annotation = Annotated[
+    model.User, Security(_registered_user_dependency, scopes=["openid", "profile"])
+]
+
+
 def _create_abac_routes(
     result: list[model.UserNameEmail],
     router_factory: Callable[[], APIRouter | FastAPI] = APIRouter,
@@ -26,7 +31,7 @@ def _create_abac_routes(
     router = router_factory()
     app = Mock()
     app.impl = SimpleNamespace(
-        registered_user_dependency=_registered_user_dependency,
+        registered_user_dependency=_registered_user_annotation,
     )
     app.handle.return_value = result
     handle_exception = Mock()
@@ -89,7 +94,7 @@ def test_create_abac_endpoints_generates_crud_routes(
     create_endpoint_sets.assert_called_once_with(
         app,
         service_type=expected_service_type,
-        user_dependency=_registered_user_dependency,
+        user_dependency=_registered_user_annotation,
     )
     generate_endpoints.assert_called_once_with(
         router,
@@ -117,6 +122,7 @@ async def test_admin_names_route_dispatches_command_for_registered_user() -> Non
     assert response is result
     assert route.path == "/retrieve_organization_admin_name_emails"
     assert route.dependant.dependencies[0].call is _registered_user_dependency
+    assert route.dependant.dependencies[0].own_oauth_scopes == ["openid", "profile"]
     dispatched_command = app.handle.call_args.args[0]
     assert isinstance(
         dispatched_command,

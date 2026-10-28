@@ -15,6 +15,7 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     get_case_abac_from_command,
+    is_bounded_query,
 )
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -73,9 +74,11 @@ def _crud_case_data_collection_link_with_abac(
 ):
     """Handle CaseCollectionLink CRUD operations with ABAC applied.
 
-    Creating links requires case write access and permission to add each case to
-    its target collection. Every requested link is checked before persistence.
-    Other writes and unrestricted bulk reads remain unsupported.
+    Creating links requires permission to add each case to its target collection.
+    Every requested link is checked before persistence.
+    Bulk reads require a bounded case ID selection and each returned link
+    is checked for read access. Other writes and unrestricted bulk reads remain
+    unsupported.
 
     Args:
         self: Case service handling the command.
@@ -110,13 +113,6 @@ def _crud_case_data_collection_link_with_abac(
                 or not case_abac.is_allowed(
                     case.case_type_id,
                     case.created_in_data_collection_id,
-                    CaseRight.WRITE_CASE,
-                    current_data_collection_ids=current_ids
-                    | {case.created_in_data_collection_id},
-                )
-                or not case_abac.is_allowed(
-                    case.case_type_id,
-                    case.created_in_data_collection_id,
                     CaseRight.ADD_CASE,
                     current_data_collection_ids=current_ids,
                     tgt_data_collection_ids={link.data_collection_id},
@@ -124,12 +120,13 @@ def _crud_case_data_collection_link_with_abac(
             ):
                 raise exc.UnauthorizedAuthError(
                     "6422d2ea",
-                    "Sharing requires case write access and target add permission",
+                    "Sharing requires target add permission",
                 )
         return self.crud(cmd)  # type: ignore[return-value]
 
-    # Other writes and unrestricted reads are unsupported.
-    if not cmd.is_read() or cmd.is_read_all():
+    # Reads require explicit link IDs or a bounded case selection.
+    bounded_query = is_bounded_query(cmd.query_filter, frozenset({"case_id"}))
+    if not cmd.is_read() or (cmd.is_read_all() and not bounded_query):
         raise exc.UnauthorizedAuthError(
             "7fe2e531",
             f"Operation {cmd.operation.value} not allowed for case data collection links for this user",
