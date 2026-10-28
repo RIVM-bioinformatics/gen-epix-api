@@ -30,7 +30,7 @@ def _create_abac_routes(
     router = router_factory()
     app = Mock()
     app.impl = SimpleNamespace(
-        registered_user_dependency=_registered_user_annotation,
+        registered_user_dependency=_registered_user_dependency,
     )
     app.handle.return_value = result
     handle_exception = Mock()
@@ -93,7 +93,7 @@ def test_create_abac_endpoints_generates_crud_routes(
     create_endpoint_sets.assert_called_once_with(
         app,
         service_type=expected_service_type,
-        user_dependency=_registered_user_annotation,
+        user_dependency=_registered_user_dependency,
     )
     generate_endpoints.assert_called_once_with(
         router,
