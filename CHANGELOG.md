@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## [11.0.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v10.0.0...v11.0.0) (2026-10-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* Installing gen-epix without extras no longer installs the dependencies needed to run an application. Install gen-epix[server] when running an application.
+
+### Features
+
+* **casedb:** authorize case-linked sequence distance retrieval ([758e94d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/758e94d193f2d1eda8dc5b8cbfac2f35ddb97657))
+* move application dependencies to the server extra ([758e94d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/758e94d193f2d1eda8dc5b8cbfac2f35ddb97657))
+
+
+### Bug Fixes
+
+* **casedb:** enforce access checks for case set management and members ([758e94d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/758e94d193f2d1eda8dc5b8cbfac2f35ddb97657))
+* **commondb:** restore organization administrator lookup and local mock service startup ([758e94d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/758e94d193f2d1eda8dc5b8cbfac2f35ddb97657))
+* **deps:** update server dependency versions ([758e94d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/758e94d193f2d1eda8dc5b8cbfac2f35ddb97657))
+* **etl:** wait for sleeping databases and report reset and batch failures ([758e94d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/758e94d193f2d1eda8dc5b8cbfac2f35ddb97657))
+* **seqdb:** correct role imports for sample upload ([758e94d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/758e94d193f2d1eda8dc5b8cbfac2f35ddb97657))
+* **upload:** isolate failed items in batch uploads and preserve nested identifier results ([758e94d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/758e94d193f2d1eda8dc5b8cbfac2f35ddb97657))
+
 ## [10.0.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v9.0.2...v10.0.0) (2026-10-21)
 
 
