@@ -7,6 +7,7 @@ import pytest
 from gen_epix.casedb.domain import exc, model
 from gen_epix.casedb.services.case import crud_case_set_data_collection_link
 from gen_epix.fastapp import CrudOperation
+from gen_epix.filter import CompositeFilter, LogicalOperator, UuidSetFilter
 
 
 class TestCaseSetDataCollectionLinkCrud(BaseCrudTestCase):
@@ -230,7 +231,20 @@ class TestCaseSetDataCollectionLinkCrud(BaseCrudTestCase):
                 self.service, cmd
             )
 
-    @pytest.mark.parametrize("query_filter", [None, object()])
+    @pytest.mark.parametrize(
+        "query_filter",
+        [
+            None,
+            object(),
+            CompositeFilter(
+                filters=[
+                    UuidSetFilter(key="case_set_id", members={uuid4()}),
+                    UuidSetFilter(key="data_collection_id", members={uuid4()}),
+                ],
+                operator=LogicalOperator.OR,
+            ),
+        ],
+    )
     def test_read_all_is_rejected(
         self, monkeypatch: pytest.MonkeyPatch, query_filter: object | None
     ) -> None:
@@ -272,3 +286,36 @@ class TestCaseSetDataCollectionLinkCrud(BaseCrudTestCase):
             )
 
         self.service.crud.assert_not_called()
+
+    @pytest.mark.parametrize("read_access", [False, True])
+    @pytest.mark.parametrize("composite", [False, True])
+    def test_bounded_query_checks_link_access(
+        self, monkeypatch, read_access, composite
+    ):
+        cmd, abac, links = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.is_read_all.return_value = True
+        cmd.query_filter = UuidSetFilter(
+            key="case_set_id", members={links[0].case_set_id}
+        )
+        if composite:
+            cmd.query_filter = CompositeFilter(
+                filters=[cmd.query_filter, UuidSetFilter(key="id", members={uuid4()})],
+                operator=LogicalOperator.AND,
+            )
+        access = next(iter(next(iter(abac.case_type_access_abacs.values())).values()))
+        access.read_case_set = read_access
+        self._patch_abac(monkeypatch, abac)
+        self.service.crud.return_value = links
+        if read_access:
+            assert (
+                crud_case_set_data_collection_link.case_service_crud_case_set_data_collection_link(
+                    self.service, cmd
+                )
+                == links
+            )
+        else:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                crud_case_set_data_collection_link.case_service_crud_case_set_data_collection_link(
+                    self.service, cmd
+                )
