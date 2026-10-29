@@ -13,7 +13,31 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
+from gen_epix.filter import CompositeFilter, Filter, LogicalOperator, UuidSetFilter
+
+
+def is_bounded_query(query_filter: Filter | None, keys: frozenset[str]) -> bool:
+    """Check whether a filter restricts results to explicit parent IDs.
+
+    A non-inverted UUID set on an allowed key is bounded. For non-inverted
+    composites, AND requires one bounded child and OR requires every child to
+    be bounded. Other filters and operators are unbounded.
+
+    Args:
+        query_filter: Query filter to check.
+        keys: Parent ID fields that bound the query.
+
+    Returns:
+        Whether the query is bounded by the allowed fields.
+    """
+    if isinstance(query_filter, UuidSetFilter):
+        return not query_filter.invert and query_filter.key in keys
+    if isinstance(query_filter, CompositeFilter) and not query_filter.invert:
+        if query_filter.operator == LogicalOperator.AND:
+            return any(is_bounded_query(x, keys) for x in query_filter.filters)
+        if query_filter.operator == LogicalOperator.OR:
+            return all(is_bounded_query(x, keys) for x in query_filter.filters)
+    return False
 
 
 def get_case_abac_from_command(cmd: command.CrudCommand) -> model.CaseAbac | None:
@@ -116,6 +140,7 @@ def _crud_cascade_delete(
     model_class: type[model.Model] = cmd.MODEL_CLASS  # type: ignore[assignment]
     link_model_classes = self.CASCADE_DELETE_MODEL_CLASSES.get(model_class)
     if link_model_classes is None:
+        # No direct linked model classes found, check for base class matches.
         is_found = False
         matched_link_classes: tuple[type[model.Model], ...] | None = None
         for (
@@ -123,13 +148,16 @@ def _crud_cascade_delete(
             link_model_classes,
         ) in self.CASCADE_DELETE_MODEL_CLASSES.items():
             if issubclass(model_class, model_base_class):
+                # Found a base class match for cascade delete.
                 is_found = True
                 matched_link_classes = link_model_classes
                 break
         if is_found and matched_link_classes is not None:
+            # Cache the matched link classes for the current model class.
             self.CASCADE_DELETE_MODEL_CLASSES[model_class] = matched_link_classes
             link_model_classes = matched_link_classes
         else:
+            # No base class match found for cascade delete. Cache an empty tuple.
             self.CASCADE_DELETE_MODEL_CLASSES[model_class] = ()
             link_model_classes = ()
 

@@ -8,8 +8,7 @@ from typing import Any, NoReturn
 
 from fastapi import HTTPException
 
-from gen_epix.casedb.domain import command, model
-from gen_epix.commondb.domain import model
+from gen_epix.commondb.domain import command, model
 from gen_epix.fastapp import App, LogLevel, exc
 from gen_epix.fastapp.api import exc as api_exc
 
@@ -247,6 +246,9 @@ def handle_command(
     try:
         return app.handle(input_command)
     except Exception as exception:
+        # TODO: LSP-3893 When no callback is supplied, this fallback receives three
+        # arguments, but handle_exception requires app/logger context and five
+        # required arguments; confirm the intended default logger/context.
         if input_handle_exception is None:
             input_handle_exception = handle_exception  # type: ignore[assignment]
         input_handle_exception(exception_code, user, exception)  # type: ignore[misc]

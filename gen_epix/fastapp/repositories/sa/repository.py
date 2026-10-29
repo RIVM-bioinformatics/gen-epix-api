@@ -28,6 +28,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import (
     ComparisonOperator,
     CompositeFilter,
+    ContainsStringFilter,
     DateRangeFilter,
     DatetimeRangeFilter,
     EqualsBooleanFilter,
@@ -99,7 +100,18 @@ class SARepository(BaseRepository):
             raise ValueError("connection_string is required to clear an SARepository")
         # Get engine
         engine = EngineFactory.create_engine(connection_string, echo=False)
+        try:
+            cls._clear_repository_content(engine, entities, alembic_schema)
+        finally:
+            engine.dispose()
 
+    @staticmethod
+    def _clear_repository_content(
+        engine: Engine,
+        entities: list[Entity],
+        alembic_schema: str | None,
+    ) -> None:
+        """Drop repository tables and an optional Alembic tracking schema."""
         # Get all actual table names from the database using schema names
         inspector = inspect(engine)
         actual_tables: set[tuple[str | None, str]] = set()
@@ -213,7 +225,6 @@ class SARepository(BaseRepository):
                 except Exception:  # pylint: disable=broad-except
                     # Schema might not exist or have other issues
                     continue
-            engine.dispose()
 
         # Drop the Alembic version-tracking table and schema, if requested
         if alembic_schema:
@@ -231,7 +242,6 @@ class SARepository(BaseRepository):
                         conn.commit()
                 except Exception:  # pylint: disable=broad-except
                     pass
-            engine.dispose()
 
     @classmethod
     def check_schema_matches(cls, **kwargs: Any) -> list[str]:
@@ -275,6 +285,52 @@ class SARepository(BaseRepository):
                     f"{', '.join(sorted(missing_columns))}"
                 )
         return problems
+
+    @classmethod
+    def find_remaining_content(cls, **kwargs: Any) -> list[str]:
+        """List the tables that ``clear_repository_content`` should have dropped.
+
+        ``clear_repository_content`` ignores most errors, so a clear that was
+        denied can go unnoticed. This checks afterwards that the schemas of
+        the persistable entities, and ``alembic_schema`` if given, hold no
+        tables at all, so legacy tables that are no longer an entity are
+        checked too.
+
+        Args:
+            **kwargs: ``entities``, ``connection_string`` and optionally
+                ``alembic_schema``, as for ``clear_repository_content``.
+
+        Returns:
+            One human-readable problem per table that still exists; empty if
+            everything was cleared.
+
+        Raises:
+            ValueError: If no connection string is given.
+        """
+        alembic_schema: str | None = kwargs.pop("alembic_schema", None)
+        entities, connection_string, _ = cls._process_repository_params(kwargs)
+        if connection_string is None:
+            raise ValueError(
+                "connection_string is required to check an SARepository is cleared"
+            )
+        schema_names: list[str | None] = sorted(
+            {x.schema_name for x in entities if x.persistable},
+            key=lambda x: x or "",
+        )
+        if alembic_schema and alembic_schema not in schema_names:
+            schema_names.append(alembic_schema)
+        engine = EngineFactory.create_engine(connection_string, echo=False)
+        try:
+            inspector = inspect(engine)
+            return [
+                f"table {f'{schema_name}.' if schema_name else ''}{table_name} "
+                "still exists"
+                for schema_name in schema_names
+                if schema_name is None or inspector.has_schema(schema_name)
+                for table_name in sorted(inspector.get_table_names(schema=schema_name))
+            ]
+        finally:
+            engine.dispose()
 
     def __init__(self, engine: Engine, **kwargs: Any):
         """
@@ -1057,7 +1113,7 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> None:
             """Execute the requested value."""
-            is_existing = self.exists_some(model_class, row_ids)
+            is_existing = self.exists_some(model_class, row_ids, session=session)
             if not all(is_existing):
                 invalid_ids = [x for x, y in zip(row_ids, is_existing) if not y]
                 invalid_ids_str = ", ".join([str(x) for x in invalid_ids])
@@ -1253,6 +1309,12 @@ class SARepository(BaseRepository):
                 if not invert
                 else result_column != filter.value
             )
+        if isinstance(filter, ContainsStringFilter):
+            return (
+                result_column.contains(filter.value)
+                if not invert
+                else ~result_column.contains(filter.value)
+            )
         if isinstance(filter, RangeFilter):
             return self._get_range_where_clause(filter, result_column, invert)
         raise exc.InvalidArgumentsError(
@@ -1364,6 +1426,7 @@ class SARepository(BaseRepository):
             EqualsNumberFilter,
             EqualsStringFilter,
             EqualsUuidFilter,
+            ContainsStringFilter,
             StringSetFilter,
             NumberSetFilter,
             UuidSetFilter,
@@ -1890,14 +1953,26 @@ class SARepository(BaseRepository):
         Try to open a database connection; return None on success or the
         exception on failure.
 
+        The engine is always disposed afterwards, so repeated probes do not
+        leave pooled connections open.
+
+        Args:
+            connection_string: SQLAlchemy URL of the database to probe.
+            **kwargs: Passed to the DBAPI ``connect()`` as ``connect_args``,
+                e.g. a login ``timeout`` for pyodbc.
+
+        Returns:
+            None if a connection could be opened, otherwise the exception raised
+            while creating the engine or connecting.
         """
+        engine: Engine | None = None
         try:
-            connection = sa.create_engine(
-                connection_string,
-                connect_args=kwargs,
-            ).connect()
+            engine = sa.create_engine(connection_string, connect_args=kwargs)
+            connection = engine.connect()
             connection.close()
             return None
         except Exception as exception:
-            # Connection failed, skip loading
             return exception
+        finally:
+            if engine is not None:
+                engine.dispose()

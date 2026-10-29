@@ -28,6 +28,7 @@ _TAXON_ID_FK_TARGET = "seq.taxon.id"
 
 
 def _create_schemas() -> None:
+    """Create application schemas when the database dialect requires them."""
     if op.get_bind().dialect.name == "mssql":
         for schema in ("abac", "organization", "system", "file", "seq"):
             op.execute(

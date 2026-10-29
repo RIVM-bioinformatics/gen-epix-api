@@ -1,4 +1,10 @@
-"""Define seqdb domain models for domain.model.seq.non_persistable."""
+"""Define non-persistable sequence query and result models.
+
+The module provides sample query criteria and results, plus ``FullSample`` for
+assembling a sample with its related sequence, read, profile, and measurement data.
+These domain models describe retrieval inputs and outputs rather than persisted
+records.
+"""
 
 from datetime import datetime
 from typing import ClassVar, Self

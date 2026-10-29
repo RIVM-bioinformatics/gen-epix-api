@@ -119,15 +119,15 @@ class Run:
         from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
         from test.test_client.start_all_services import run_platform
 
-        set_envvar()
-        run_platform(use_dict_repository=True, start_omopdb=True)
+        set_envvar(use_dict_repository=True)
+        run_platform(start_omopdb=True)
 
     def api_platform_local_mock_sa_sql_demo(self) -> None:
         from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
         from test.test_client.start_all_services import run_platform
 
-        set_envvar()
-        run_platform(use_dict_repository=False, start_omopdb=True)
+        set_envvar(use_dict_repository=False)
+        run_platform(start_omopdb=True)
 
     ## env
 
@@ -193,6 +193,10 @@ class Run:
                 "test/omopdb/integration",
                 "test/general/docs",
                 "test/general/migrations",
+                # The other tests in test/general/code are not normally included
+                "test/general/code/test_general_client_import_isolation.py",
+                "test/general/code/test_general_dependency_list.py",
+                "test/general/code/test_general_lazy_exports.py",
             ]
             + (["test/end_to_end"] if include_e2e else [])
             + [

@@ -23,8 +23,7 @@ from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, HttpMethod, OAuthFlow
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command, Permission
-from gen_epix.fastapp.services.auth.model import OidcServerCfg
-from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
+from gen_epix.fastapp.services.auth import OauthTokenClient, OidcServerCfg
 
 # Decode options for reading the ``exp`` claim of a token without verifying it
 _UNVERIFIED_OPTIONS = {"verify_signature": False}
@@ -131,7 +130,9 @@ class CommondbClient(Client):
             oauth_flow = OAuthFlow(oauth_flow)
         default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         oauth_token_refresh_margin = (
-            oauth_token_refresh_margin or self.DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN
+            self.DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN
+            if oauth_token_refresh_margin is None
+            else oauth_token_refresh_margin
         )
 
         super().__init__(
@@ -205,7 +206,7 @@ class CommondbClient(Client):
         self.register_handler(command.RetrieveOutagesCommand, self.retrieve_outages)
 
         # Initialize IDP client if needed
-        oauth_idp_client: OauthIdpClient | None = None
+        oauth_idp_client: OauthTokenClient | None = None
         if auth_protocol == AuthProtocol.NONE:
             pass
         elif auth_protocol == AuthProtocol.OAUTH2:
@@ -223,7 +224,7 @@ class CommondbClient(Client):
                 raise exc.InitializationServiceError(
                     "683cf2a0", "OAuth scope must be provided for OAUTH2 auth protocol"
                 )
-            oauth_idp_client = OauthIdpClient(
+            oauth_idp_client = OauthTokenClient(
                 server_cfg=OidcServerCfg(
                     name="",
                     label="",

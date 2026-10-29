@@ -18,7 +18,7 @@ def seq_service_retrieve_seq_distances_by_seq_profiles(
     user_id = cmd.user.id if cmd.user else None
     repository: BaseSeqRepository = self.repository  # type: ignore[assignment]
     with repository.uow() as uow:
-        return repository.crud(
+        retval = repository.crud(
             uow,
             user_id,
             model.SeqDistance,
@@ -37,3 +37,6 @@ def seq_service_retrieve_seq_distances_by_seq_profiles(
                 operator=LogicalOperator.AND,
             ),
         )
+        # @ABAC: remove non-readable seq_profile_ids from SeqDistance.content
+        # TODO: apply ABAC once the access control logic is implemented
+        return retval

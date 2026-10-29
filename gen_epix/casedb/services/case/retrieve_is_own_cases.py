@@ -44,7 +44,7 @@ def case_service_retrieve_is_own_cases(
                 "b4c3caa5", f"Unauthorized CaseType: {case_type_id}"
             )
 
-        all_cases, is_max_results_exceeded = self._retrieve_cases_with_content_right(
+        all_cases, _is_max_results_exceeded = self._retrieve_cases_with_content_right(
             uow,
             user.id,
             case_abac,
@@ -54,7 +54,7 @@ def case_service_retrieve_is_own_cases(
             filter_content=True,
             calculate_case_date=False,
             apply_max_n_cases=False,
-            on_invalid_case_id="ignore",
+            raise_on_no_access=False,
         )
 
         case_type_access_abacs = case_abac.case_type_access_abacs.get(case_type_id, {})
@@ -63,8 +63,9 @@ def case_service_retrieve_is_own_cases(
             for x in case_type_access_abacs.values()
             if x.is_private
         }
+        case_ids = {x.id for x in all_cases if x is not None and x.id is not None}
         case_data_collections_map = self._retrieve_case_data_collections_map(
-            uow, user.id, case_ids={x.id for x in all_cases if x is not None}  # type: ignore[misc]
+            uow, user.id, case_ids=case_ids
         )
 
         is_own_cases_map = {

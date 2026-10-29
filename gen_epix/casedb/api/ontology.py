@@ -5,24 +5,16 @@ from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
-from pydantic import BaseModel as PydanticBaseModel
 
+# The request and response models stay importable from this module
+# pylint: disable=useless-import-alias, unused-import
+from gen_epix.casedb.api.ontology_schema import (
+    DiseaseEtiologicalAgentUpdateAssociationRequestBody as DiseaseEtiologicalAgentUpdateAssociationRequestBody,
+)
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.commondb.domain.literal import MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
-from gen_epix.util import copy_model_field
-
-
-class DiseaseEtiologicalAgentUpdateAssociationRequestBody(PydanticBaseModel):
-    """Represents etiological agents associated with a disease."""
-
-    etiologies: list[model.Etiology] = copy_model_field(
-        command.DiseaseEtiologicalAgentUpdateAssociationCommand,
-        "association_objs",
-        max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
-    )
 
 
 def create_ontology_endpoints(
@@ -31,7 +23,20 @@ def create_ontology_endpoints(
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
-    """Register all non-CRUD ontology endpoints on the given router."""
+    """Register all non-CRUD ontology endpoints on the given router.
+
+    Also registers the generated CRUD endpoints for the ontology service.
+
+    Args:
+        router: Router or application to register the endpoints on.
+        app: Application used to handle commands and resolve the user dependency.
+        handle_exception: Callback that converts an exception into an HTTP error;
+            it must not return. Required.
+        **kwargs: Ignored; accepted for a uniform endpoint-factory signature.
+
+    Raises:
+        AssertionError: If `handle_exception` is not provided.
+    """
     assert handle_exception
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency

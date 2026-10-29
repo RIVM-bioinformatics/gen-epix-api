@@ -9,7 +9,7 @@ import pickle
 from collections.abc import Hashable, Iterable
 from enum import Enum
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from gen_epix import fastapp
@@ -25,8 +25,11 @@ from gen_epix.fastapp import Command, Domain, Model, ModelFieldProps, exc
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories.dict import DictRepository
-from gen_epix.fastapp.repositories.sa import SARepository
 from gen_epix.util import get_package_root
+
+if TYPE_CHECKING:
+    # Only needed for annotations; a runtime import would load SQLAlchemy
+    from gen_epix.fastapp.repositories.sa import SARepository
 
 
 def _get_identity_provider_settings_file(
@@ -188,7 +191,7 @@ def create_demo_data_from_repository(
     user_id: UUID,
     entities: list[Entity],
     dict_repository: DictRepository,
-    sa_repository: SARepository,
+    sa_repository: "SARepository",
     module_root: str,
 ) -> None:
     """Populate an SA repository from a dict repository for the given entities."""
@@ -366,12 +369,12 @@ def _load_demo_data_for_service(
         cast(dict[str, Any], sa_sql_app_cfg_data["repository"])[service_type.value],
     )
     connection_string = sa_sql_repository_cfg["props"]["connection_string"]
-    if "mssql" in connection_string:
+    if "mssql+pyodbc" in connection_string:
         connect_args = {
             "timeout": connect_timeout,
             "login_timeout": connect_timeout,
         }
-    elif "pyodcb" in connection_string:
+    elif "pyodbc" in connection_string:
         connect_args = {
             "connect_timeout": connect_timeout,
             "timeout": connect_timeout,

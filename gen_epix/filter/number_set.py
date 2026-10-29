@@ -1,4 +1,8 @@
-"""Numeric set-membership filter models."""
+"""Define NumberSetFilter for membership in numeric value sets.
+
+NumberSetFilter specializes HashableSetFilter with integer, float, and Decimal
+members while retaining the shared Filter matching interface.
+"""
 
 from decimal import Decimal
 from typing import Literal

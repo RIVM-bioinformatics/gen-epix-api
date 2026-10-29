@@ -165,15 +165,15 @@ class BatchUploader:
                 code="a3f7e9d2",
                 message="Verification ended",
             )
+            # Propagate before deciding on a failed verification: that decision
+            # needs each parent's final status.
+            for parent_result in batch_result.get_parent_results():
+                parent_result.propagate_child_failures()
+                self._skip_descendants_of_skipped_new_objects(parent_result)
             if not success:
                 # Record the batch-level failure regardless of verify_only,
                 # so that a dry run reports the same outcome as a real run.
-                batch_result.add_error(
-                    code="02095f22",
-                    message="Verification found errors, upload will not proceed",
-                )
-            for parent_result in batch_result.get_parent_results():
-                parent_result.propagate_child_failures()
+                success = self._handle_verification_failure(cmd, batch_result)
 
             if cmd.verify_only:
                 # Stop here if only verification was requested; mark all
@@ -228,6 +228,90 @@ class BatchUploader:
         batch_result.resolve_status()
 
         return batch_result
+
+    def _handle_verification_failure(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        batch_result: BaseBatchUploadResult,
+    ) -> bool:
+        """Record a failed verification and decide whether the other parents go ahead.
+
+        The other parents are uploaded only when the command allows it
+        (``fail_batch_on_item_error=False``) and every failure can be traced to a
+        parent. An error on the batch itself (e.g. SEQDB's missing new alleles)
+        stops the batch, as does a failed verification without a failed parent.
+
+        A parent counts as having work left when it did not fail and anything in
+        its result tree is still PENDING: a parent that is itself SKIPPED (e.g.
+        ``on_exists=SKIP``, or not provided) can still have children to write.
+
+        Args:
+            cmd: Upload command carrying the batch and its options.
+            batch_result: Batch result after verification and failure propagation.
+
+        Returns:
+            True if the results that are still PENDING may be uploaded.
+        """
+        has_batch_error = batch_result.has_errors()
+        parent_results = batch_result.get_parent_results()
+        n_failed = sum(1 for x in parent_results if x.status == EtlStatus.FAILED)
+        n_pending = sum(
+            1
+            for x in parent_results
+            if x.status != EtlStatus.FAILED
+            and x.get_status_count(include_self=True)[EtlStatus.PENDING] > 0
+        )
+        if (
+            cmd.fail_batch_on_item_error
+            or has_batch_error
+            or n_failed == 0
+            or n_pending == 0
+        ):
+            batch_result.add_error(
+                code="02095f22",
+                message="Verification found errors, upload will not proceed",
+            )
+            return False
+        batch_result.add_error(
+            code="c0f70912",
+            message=(
+                f"Verification failed for {n_failed} item(s); "
+                f"the other {n_pending} item(s) are eligible for upload"
+            ),
+        )
+        for parent_result in parent_results:
+            if parent_result.status == EtlStatus.FAILED:
+                # Its children and identifiers must not be written either
+                parent_result.convert_status(EtlStatus.PENDING, EtlStatus.SKIPPED)
+        return True
+
+    @staticmethod
+    def _skip_descendants_of_skipped_new_objects(
+        parent_result: model.ParentUploadResult,
+    ) -> None:
+        """Skip the children and identifiers of a new object that is not created.
+
+        A parent or child that does not exist and is left out by ``on_new=SKIP``
+        is never stored, so nothing that links to it can be written either. An
+        existing object left out by ``on_exists=SKIP``, or a parent that was not
+        provided, keeps its PENDING children and identifiers.
+
+        Args:
+            parent_result: Parent result after verification.
+        """
+        if parent_result.is_new and parent_result.status == EtlStatus.SKIPPED:
+            parent_result.convert_status(EtlStatus.PENDING, EtlStatus.SKIPPED)
+            return
+        for field_name in parent_result.get_child_results_field_names():
+            child_results: list[UploadResult] = getattr(parent_result, field_name) or []
+            for child_result in child_results:
+                if not child_result.is_new or child_result.status != EtlStatus.SKIPPED:
+                    continue
+                for identifier_result in (
+                    child_result.get_identifier_upload_results() or []
+                ):
+                    if identifier_result.status == EtlStatus.PENDING:
+                        identifier_result.status = EtlStatus.SKIPPED
 
     def verify_user_rights(self, cmd: command.UploadBatchCommandMixin) -> None:
         """Verify that the user has rights to perform the upload.
@@ -1629,6 +1713,7 @@ class BatchUploader:
                         "d3ac4368",
                         f"{identifier_class.NAME} ({identifier_for_upload.identifier_issuer_id}, {identifier_for_upload.external_id}) already exists and cannot be updated",
                     )
+                    success = False
                     continue
                 assert identifier_for_upload.identifier_issuer_id is not None
                 # Create Identifier object and add to list
@@ -2319,6 +2404,7 @@ class BatchUploader:
             None, add it to content.
         - A key from updates exists in content:
             - If the new value is None: the key is then also removed from content.
+              If the original value was None, this does not count as an update.
             - If the new value is different from the existing value.
         """
         is_updated = False
@@ -2335,6 +2421,7 @@ class BatchUploader:
                 if value is None:
                     # New value is None, remove the key
                     if orig_value is not None:
+                        # Only consider it an update if the original value was not None
                         is_updated = True
                     del content[key]
                 elif orig_value != value:

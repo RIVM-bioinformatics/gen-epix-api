@@ -7,10 +7,7 @@ import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.policies.pdp import PolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.casedb.services.case.crud_common import (
-    _crud_cascade_delete,
-    crud_with_access_filter,
-)
+from gen_epix.casedb.services.case.crud_common import crud_with_access_filter
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
@@ -23,7 +20,7 @@ def case_service_crud_case_type(
     # Start unit of work
     with self.repository.uow() as uow:
         assert cmd.user is not None
-        _crud_cascade_delete(self, uow, cmd)
+        # No cascade delete to enforce conscious deletion of linked objects
         pdp: BasePolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
         if pdp.is_exempted(cmd):
             result = _crud_case_type_without_abac(self, uow, cmd)
@@ -58,5 +55,4 @@ def _crud_case_type_with_abac(
     """CaseType user command handling, ABAC applied."""
     pdp: PolicyDecisionPoint = self.app.pdp  # type: ignore[assignment]
     access_filter = pdp.get_case_type_id_filter(cmd, case_type_id_field_name="id")
-    # No cascade delete to force conscious decision to delete from other models
     return crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]

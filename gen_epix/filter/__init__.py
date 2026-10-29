@@ -14,6 +14,7 @@ and no-op filters provide concrete matching behavior and carry their serialized
 from gen_epix.filter.base import Filter as Filter
 from gen_epix.filter.composite import CompositeFilter as CompositeFilter
 from gen_epix.filter.composite import FilterUnion as FilterUnion
+from gen_epix.filter.contains_string import ContainsStringFilter as ContainsStringFilter
 from gen_epix.filter.date_range import DateRangeFilter as DateRangeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter as DatetimeRangeFilter
 

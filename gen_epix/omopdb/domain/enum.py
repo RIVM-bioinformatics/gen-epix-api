@@ -63,4 +63,7 @@ class AnonMethod(Enum):
     SHIFT = "shift"
     RANDOM = "random"
     CATEGORICAL = "categorical"
+    # TODO: LSP-3893 Accessing AnonMethod.MODEL_ANONYMIZATION raises AttributeError;
+    # callers may expect the member matching "model_anonymization" to exist. It is
+    # unclear whether MODEL_ANONYIMIZATION is intentional compatibility or a typo.
     MODEL_ANONYIMIZATION = "model_anonymization"  # for future use

@@ -88,11 +88,17 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
     after verification, so the result contains only verification outcomes.
 
     The data are uploaded as a single atomic unit of work, so that
-    either all data are successfully uploaded or none are.
+    either all data are successfully uploaded or none are. With
+    ``fail_batch_on_item_error=False``, cases that fail verification are left
+    out and the other cases are uploaded, still as one unit of work. This is
+    only allowed for cases without read sets or sequences: their samples are
+    uploaded to SEQDB in a separate request that cannot yet leave out the
+    samples of the cases that failed.
 
     Model validation:
         Every supplied case must belong to the command's case type. A mismatched
-        case causes validation to fail.
+        case causes validation to fail. ``fail_batch_on_item_error=False`` with
+        read sets or sequences in the batch also causes validation to fail.
     """
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = model.CaseBatchForUpload
@@ -117,6 +123,16 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
         cases = [x.case for x in cases_for_upload if x.case is not None]
         if any(x.case_type_id != self.case_type_id for x in cases):
             raise ValueError("All cases must belong to the given CaseType ID.")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_fail_batch_on_item_error(self) -> Self:
+        """Allow leaving out failed cases only when the batch has no samples."""
+        if not self.fail_batch_on_item_error and self.case_batch.has_samples():
+            raise ValueError(
+                "fail_batch_on_item_error=False is not supported for cases with "
+                "read sets or sequences."
+            )
         return self
 
 
@@ -266,13 +282,18 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
 
 
 class RetrieveSeqDistancesByCasesCommand(Command):
-    """Represents a request to retrieve sequence distances for cases."""
+    """Represents a request to execute case-linked sequence-distance retrieval.
+
+    Requested distance content must be readable and populated. Entries above the
+    configured casedb protocol storage maximum are omitted. External targets, when requested,
+    also require readable linked sequence content on a matching case.
+    """
 
     case_type_id: UUID = Field(
         description="The CaseType ID that all the cases must belong to."
     )
     case_ids: list[UUID] = Field(
-        description="The IDs of the cases to retrieve sequence distances for."
+        description="The IDs of the cases to retrieve sequence distances for. Must be unique."
     )
     genetic_distance_col_id: UUID = Field(
         description="The ID of the genetic distance Col to use."
@@ -281,6 +302,13 @@ class RetrieveSeqDistancesByCasesCommand(Command):
         default=True,
         description="Whether to omit distances to cases not included in case_ids.",
     )
+
+    @field_validator("case_ids", mode="after")
+    def validate_case_ids(cls, value: list[UUID]) -> list[UUID]:
+        """Require each requested case ID to occur once."""
+        if len(value) != len(set(value)):
+            raise ValueError("case_ids must be unique")
+        return value
 
 
 class RetrieveSimilarCasesCommand(Command):

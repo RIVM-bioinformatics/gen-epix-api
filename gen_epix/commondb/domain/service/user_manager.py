@@ -119,6 +119,9 @@ class BaseUserManager(ServiceUserManager):
                 registered, or the organization ID is invalid.
         """
         self._auto_created_user_cfg: dict[str, Any] | None = None
+        # TODO: LSP-3893 An empty mapping bypasses required-key validation and disables
+        # auto-creation; it should likely raise for missing roles and organization_id.
+        # Confirm whether an empty mapping is intended to disable provisioning.
         if not auto_created_user_cfg:
             # No configuration provided, so automatic new user creation is disabled
             return
