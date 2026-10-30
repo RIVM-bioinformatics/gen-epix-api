@@ -227,26 +227,31 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
                 )
             raise exc.UnauthorizedAuthError("5bb8ffb6") from e
 
-    async def get_claims_from_jwt(self, jwt_token: str) -> dict[str, Any] | None:
-        """Return validated claims from a JWT, or ``None`` for an untrusted issuer.
-
-        Raises:
-            CredentialsAuthError: If the JWT header is malformed.
-            UnauthorizedAuthError: If the token cannot be verified or lacks required
-                claims.
-            InitializationServiceError: If signing keys cannot be loaded.
-        """
+    def _decode_jwt_unverified(self, jwt_token: str) -> dict[str, Any]:
+        """Decode jwt unverified."""
         try:
-            jwt.get_unverified_header(jwt_token)
+            return jwt.decode(jwt_token, options={"verify_signature": False})
         except jwt.PyJWTError as exception:
             raise exc.CredentialsAuthError(
                 "f6ec5507", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             ) from exception
+
+    async def get_claims_from_jwt(self, jwt_token: str) -> dict[str, Any] | None:
+        """Return validated claims from a JWT, or ``None`` for an untrusted issuer.
+
+        Raises:
+            CredentialsAuthError: If the token is malformed or fails verification.
+            UnauthorizedAuthError: If the matching provider has no signing key for
+                the token's key ID.
+            ServiceUnavailableError: If signing keys cannot be loaded.
+        """
+        claims = self._decode_jwt_unverified(jwt_token)
+        if not self._validate_issuer(claims):
+            return None
+
         key = await self.get_jwk_from_jwt(jwt_token)
 
         claims = self._verify_token(jwt_token, key)
-        if not self._validate_issuer(claims):
-            return None
         self._check_required_claims(claims)
 
         # optionally apply token introspection
@@ -309,10 +314,8 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
                 audience=self.audience,
                 leeway=self.server_cfg.jwt_leeway_seconds,
                 options={
-                    "require": ["iss"],
-                    "require_iat": True,
+                    "require": ["iss", "exp", "iat"],
                     "verify_iat": True,
-                    "require_exp": True,
                     "verify_exp": True,
                 },
             )
