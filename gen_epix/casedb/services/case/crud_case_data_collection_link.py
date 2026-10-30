@@ -9,11 +9,13 @@ from uuid import UUID
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
+from gen_epix.casedb.domain.enum import CaseRight
 from gen_epix.casedb.domain.policy.pdp import BasePolicyDecisionPoint
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     get_case_abac_from_command,
+    is_bounded_query,
 )
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -72,6 +74,12 @@ def _crud_case_data_collection_link_with_abac(
 ):
     """Handle CaseCollectionLink CRUD operations with ABAC applied.
 
+    Creating links requires permission to add each case to its target collection.
+    Every requested link is checked before persistence.
+    Bulk reads require a bounded case ID selection and each returned link
+    is checked for read access. Other writes and unrestricted bulk reads remain
+    unsupported.
+
     Args:
         self: Case service handling the command.
         uow: Active unit of work reserved for CRUD coordination.
@@ -82,10 +90,43 @@ def _crud_case_data_collection_link_with_abac(
 
     Raises:
         UnauthorizedAuthError: If a restricted user requests an unsupported bulk
-            read, update, or delete operation.
+            read, update, or delete operation, or lacks sharing permission.
     """
-    # Only read/exists some and read/exists one allowed, other operations need to be performed through other commands
-    if not cmd.is_read() or cmd.is_read_all():
+    if cmd.is_create():
+        assert cmd.user is not None and cmd.user.id is not None
+        links = cmd.get_objs()
+        case_ids = {link.case_id for link in links}
+        cases = self.repository.crud(
+            uow, cmd.user.id, model.Case, CrudOperation.READ_SOME, obj_ids=case_ids
+        )
+        cases_by_id = {case.id: case for case in cases}
+        collections = self._retrieve_case_data_collections_map(
+            uow, cmd.user.id, case_ids=case_ids
+        )
+        case_abac = get_case_abac_from_command(cmd)
+        for link in links:
+            case = cases_by_id.get(link.case_id)
+            current_ids = collections.get(link.case_id, set())
+            if (
+                case_abac is None
+                or case is None
+                or not case_abac.is_allowed(
+                    case.case_type_id,
+                    case.created_in_data_collection_id,
+                    CaseRight.ADD_CASE,
+                    current_data_collection_ids=current_ids,
+                    tgt_data_collection_ids={link.data_collection_id},
+                )
+            ):
+                raise exc.UnauthorizedAuthError(
+                    "6422d2ea",
+                    "Sharing requires target add permission",
+                )
+        return self.crud(cmd)  # type: ignore[return-value]
+
+    # Reads require explicit link IDs or a bounded case selection.
+    bounded_query = is_bounded_query(cmd.query_filter, frozenset({"case_id"}))
+    if not cmd.is_read() or (cmd.is_read_all() and not bounded_query):
         raise exc.UnauthorizedAuthError(
             "7fe2e531",
             f"Operation {cmd.operation.value} not allowed for case data collection links for this user",

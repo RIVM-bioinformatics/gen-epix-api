@@ -61,7 +61,7 @@ IDP configuration is loaded from runtime settings files and validated as OIDC se
 ### Token Validation Path
 
 1. Parse `Authorization` header and require bearer scheme.
-2. Decode/verify JWT against OIDC metadata and keys.
+2. Decode/verify JWT against OIDC metadata and keys, including the time claims (`exp`, `nbf`, `iat`), which have no clock-skew tolerance by default (see [JWT clock-skew tolerance](./05-Configuration-and-Runtime.md#jwt-clock-skew-tolerance)).
 3. Enforce issuer and required claims.
 4. Optionally introspect token when enabled.
 

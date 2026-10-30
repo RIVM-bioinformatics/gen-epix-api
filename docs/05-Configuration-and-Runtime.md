@@ -224,6 +224,26 @@ The system supports three identity provider modes, selected at startup:
 
 **Security Note:** `NONE` mode is a real configuration path, not an error fallback. It materially changes trust posture. Before exposing any instance beyond a trusted environment, verify both IDP mode and repository mode. See [03-Security](./03-Security.md) for full risk analysis.
 
+### JWT clock-skew tolerance
+
+`service.auth.props.jwt_leeway_seconds` (default `0`) is the clock skew, in seconds, tolerated when verifying the time claims of JWTs issued by OIDC identity providers. It is one setting for all identity providers of an app, because a single entry of the `idps_cfg` list can't easily be overridden from an environment variable. Override it with a nested Dynaconf environment variable, for example:
+
+```bash
+CASEDB_SERVICE__AUTH__PROPS__JWT_LEEWAY_SECONDS=30
+```
+
+The same tolerance applies to all three time claims. With a leeway of N seconds, a token is accepted:
+
+| Claim | Effect of the leeway |
+|-------|----------------------|
+| `exp` | For up to N seconds after it expired |
+| `nbf` | For up to N seconds before its not-before time, if the token has this claim |
+| `iat` | With an issue time up to N seconds in the future |
+
+(Source: `gen_epix/commondb/config/cfg.py#L287-L288`; Source: `gen_epix/fastapp/services/auth/oauth_idp_client.py#L304-L320`)
+
+**Security Note:** A leeway makes every token usable for longer, including a stolen one: a 30-second leeway means a token still works 30 seconds after its expiry. Keep the value no larger than the clock skew it has to absorb, and leave it at `0` where clocks are synchronized.
+
 ---
 
 ## 3. Repository Modes
