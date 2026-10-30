@@ -116,6 +116,7 @@ class OidcServerCfg(Model):
         "scope",
         "public",
         "enable_introspection",
+        "jwt_leeway_seconds",
     }
     SPEC_REQUIRED_FIELDS: ClassVar[set[str]] = {
         "issuer",
@@ -163,6 +164,12 @@ class OidcServerCfg(Model):
         default=False,
         description=(
             "Enable token introspection after local JWT verification. Disabled by default."
+        ),
+    )
+    jwt_leeway_seconds: int = Field(
+        default=0,
+        description=(
+            "Clock skew in seconds tolerated when verifying the time claims of JWTs."
         ),
     )
     # OpenID Provider Metadata fields from Section 3 of the specification

@@ -240,7 +240,7 @@ The same tolerance applies to all three time claims. With a leeway of N seconds,
 | `nbf` | For up to N seconds before its not-before time, if the token has this claim |
 | `iat` | With an issue time up to N seconds in the future |
 
-(Source: `gen_epix/commondb/config/cfg.py#L287-L288`; Source: `gen_epix/fastapp/services/auth/oauth_idp_client.py#L304-L320`)
+(Source: `gen_epix/commondb/config/cfg.py#L287-L288`; Source: `gen_epix/fastapp/services/auth/oauth_idp_client.py#L302-L318`)
 
 **Security Note:** A leeway makes every token usable for longer, including a stolen one: a 30-second leeway means a token still works 30 seconds after its expiry. Keep the value no larger than the clock skew it has to absorb, and leave it at `0` where clocks are synchronized.
 

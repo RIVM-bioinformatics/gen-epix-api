@@ -54,7 +54,6 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
         client_credential_flow_request_headers: dict[str, str] | None = None,
         client_credential_flow_max_retries: int | None = None,
         client_credential_flow_base_delay: float | None = None,
-        jwt_leeway_seconds: int = 0,
         **kwargs: Any,
     ):
         # Set IdpClient properties
@@ -84,7 +83,6 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
             client_credential_flow_base_delay=client_credential_flow_base_delay,
         )
         self._signing_keys: dict[str, jwt.PyJWK] = {}
-        self._jwt_leeway_seconds = jwt_leeway_seconds
         self._allowed_signing_algorithms = (
             self.server_cfg.id_token_signing_alg_values_supported
             or self.DEFAULT_ALLOWED_SIGNING_ALGORITHMS
@@ -314,7 +312,7 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
                 key=key,
                 algorithms=self._allowed_signing_algorithms,
                 audience=self.audience,
-                leeway=self._jwt_leeway_seconds,
+                leeway=self.server_cfg.jwt_leeway_seconds,
                 options={
                     "require": ["iss", "exp", "iat"],
                     "verify_iat": True,

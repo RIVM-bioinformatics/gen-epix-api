@@ -919,19 +919,22 @@ class AuthService(BaseAuthService):
         try:
             protocol = enum.AuthProtocol[str(idp_cfg["protocol"])]
             if protocol == enum.AuthProtocol.OIDC:
+                server_cfg: dict[str, Any] = {
+                    **idp_cfg,
+                    "jwt_leeway_seconds": self._jwt_leeway_seconds,
+                }
                 # TODO: only select actual discovery doc keys, should be class variable of OidcServerCfg containing a set of property names
                 discovery_doc = {
                     x: y
-                    for x, y in idp_cfg.items()
+                    for x, y in server_cfg.items()
                     if x in set(OidcServerCfg.model_fields.keys())
                 }
                 idp_client = OauthIdpClient(
-                    OidcServerCfg(**idp_cfg),  # type: ignore
+                    OidcServerCfg(**server_cfg),
                     logger=self._logger,
                     log_item_class=self.app.log_item_class,
                     discovery_doc=discovery_doc,
                     ssl_context=idp_cfg.get("ssl_context", ssl_context),  # type: ignore
-                    jwt_leeway_seconds=self._jwt_leeway_seconds,
                 )
                 return idp_client
             else:

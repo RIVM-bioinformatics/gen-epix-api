@@ -660,7 +660,7 @@ class TestInitializationValidation(BaseAuthServiceTestCase):
                 jwt_leeway_seconds=45,
             )
         # Verify
-        assert client_class.call_args.kwargs["jwt_leeway_seconds"] == 45
+        assert client_class.call_args.args[0].jwt_leeway_seconds == 45
 
 
 class TestRetryPendingIdpClients(BaseAuthServiceTestCase):
