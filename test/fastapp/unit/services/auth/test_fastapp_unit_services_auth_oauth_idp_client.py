@@ -78,6 +78,7 @@ class BaseOauthIdpClientTestCase:
         """Create client with provided overrides."""
         cfg_copy: OidcServerCfg = (cfg or self.server_cfg).model_copy()
         cfg_copy.enable_introspection = enable_introspection
+        cfg_copy.jwt_leeway_seconds = jwt_leeway_seconds
         doc_to_apply: dict[str, Any] | None = discovery_doc or self.discovery_doc
 
         # COMMENTED OUT: SEEMS NO LONGER NEEDED AND OTHERWISE BREAKS TESTS
@@ -99,7 +100,6 @@ class BaseOauthIdpClientTestCase:
                 discovery_url=discovery_url,
                 client_credential_flow_max_retries=client_credential_flow_max_retries,
                 client_credential_flow_base_delay=client_credential_flow_base_delay,
-                jwt_leeway_seconds=jwt_leeway_seconds,
             )
         if doc_to_apply:
             for key, value in doc_to_apply.items():
@@ -607,9 +607,10 @@ class TestVerifyTokenLeeway(BaseOauthIdpClientTestCase):
     @pytest.mark.parametrize("claim", ["exp", "nbf", "iat"])
     def test_skewed_claim_rejected_without_leeway(self, claim: str) -> None:
         client: OauthIdpClient = self.create_client()
+        token = self.make_token(claim, 10)
 
         with pytest.raises(exc.CredentialsAuthError):
-            client._verify_token(self.make_token(claim, 10), self.jwk)
+            client._verify_token(token, self.jwk)
 
     @pytest.mark.parametrize("claim", ["exp", "nbf", "iat"])
     def test_skewed_claim_accepted_within_leeway(self, claim: str) -> None:
@@ -622,9 +623,35 @@ class TestVerifyTokenLeeway(BaseOauthIdpClientTestCase):
     @pytest.mark.parametrize("claim", ["exp", "nbf", "iat"])
     def test_skewed_claim_rejected_beyond_leeway(self, claim: str) -> None:
         client: OauthIdpClient = self.create_client(jwt_leeway_seconds=30)
+        token = self.make_token(claim, 60)
 
         with pytest.raises(exc.CredentialsAuthError):
-            client._verify_token(self.make_token(claim, 60), self.jwk)
+            client._verify_token(token, self.jwk)
+
+    def test_discovery_url_cannot_change_leeway(self) -> None:
+        cfg: OidcServerCfg = self.server_cfg.model_copy()
+        client: OauthIdpClient = self.create_client(
+            cfg=cfg,
+            discovery_doc=None,
+            discovery_url=cfg.discovery_url,
+            jwt_leeway_seconds=30,
+        )
+        p, client_mock = self.patch_httpx_client()
+        response_mock: Mock = Mock()
+        response_mock.json.return_value = {
+            **self.discovery_doc,
+            "jwt_leeway_seconds": 3600,
+        }
+        response_mock.raise_for_status.return_value = None
+        client_mock.get.return_value = response_mock
+
+        p.start()
+        try:
+            client.update_server_config_from_discovery(url=cfg.discovery_url)
+        finally:
+            p.stop()
+
+        assert client.server_cfg.jwt_leeway_seconds == 30
 
 
 @pytest.mark.scenario_ids(
