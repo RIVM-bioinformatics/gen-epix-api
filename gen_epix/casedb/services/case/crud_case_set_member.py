@@ -283,3 +283,27 @@ def _crud_case_set_member_with_abac(
     if isinstance(retval, list):
         return accessible_members
     return accessible_members[0] if accessible_members else None  # type: ignore[return-value]
+
+
+def _is_bounded_query(query_filter: Filter | None) -> bool:
+    """Check whether a query filter limits members to explicit case or case-set IDs.
+
+    A non-inverted UUID set filter on ``case_id`` or ``case_set_id`` is bounded.
+    A non-inverted composite filter is bounded when its result cannot exceed that
+    of a bounded filter: ``AND`` needs at least one bounded child and ``OR``
+    needs all children bounded. Other filters and operators are unbounded.
+
+    Args:
+        query_filter: Query filter of the case-set-member command.
+
+    Returns:
+        Whether the filter restricts the query to explicit parent IDs.
+    """
+    if isinstance(query_filter, UuidSetFilter):
+        return not query_filter.invert and query_filter.key in BOUNDED_QUERY_KEYS
+    if isinstance(query_filter, CompositeFilter) and not query_filter.invert:
+        if query_filter.operator == LogicalOperator.AND:
+            return any(_is_bounded_query(x) for x in query_filter.filters)
+        if query_filter.operator == LogicalOperator.OR:
+            return all(_is_bounded_query(x) for x in query_filter.filters)
+    return False

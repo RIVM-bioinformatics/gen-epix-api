@@ -165,7 +165,7 @@ class AuthService(BaseAuthService):
                 validated_claims = True
                 try:
                     claims = Claims(
-                        claims=jwt_claims,
+                        claims=jwt_claims,  # type: ignore[arg-type]
                         scheme="BEARER",
                         token=token,
                         idp_client_id=idp_client.id,
