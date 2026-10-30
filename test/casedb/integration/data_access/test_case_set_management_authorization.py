@@ -421,12 +421,13 @@ async def _sharing_and_membership_lifecycle(env):
             == []
         )
         wrong_type_case = _create_case(env, "case_type2")
+        # Access is denied before the type of an inaccessible case is checked.
         await _post(
             client,
             "consumer",
             "case_set_members/batch",
             [{"case_id": str(wrong_type_case.id), "case_set_id": case_set_id}],
-            status=422,
+            status=403,
         )
         await _post(
             client,

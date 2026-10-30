@@ -62,6 +62,7 @@ class AuthService(BaseAuthService):
         setup_logger: logging.Logger | None = None,
         idps_cfg: list[dict[str, str | list]] | None = None,
         ssl_context: ssl.SSLContext | bool = True,
+        jwt_leeway_seconds: int = 0,
         repository: None = None,
         **kwargs: Any,
     ):
@@ -81,6 +82,8 @@ class AuthService(BaseAuthService):
             setup_logger: Logger for service setup events.
             idps_cfg: Identity-provider client configurations.
             ssl_context: SSL context or enabled flag for provider requests.
+            jwt_leeway_seconds: Clock skew in seconds tolerated when verifying the
+                time claims (``exp``, ``nbf``, ``iat``) of provider JWTs.
             repository: Optional repository supplied through the base service.
         """
         super().__init__(
@@ -100,6 +103,7 @@ class AuthService(BaseAuthService):
         self._no_auth_idp_client: IdpClient = MockIDPClient(logger=logger)
         self._pending_idp_client_cfgs: list[dict[str, str | list]] = []
         self._pending_idp_clients_lock = threading.Lock()
+        self._jwt_leeway_seconds = jwt_leeway_seconds
         self._init_idp_clients(app, idps_cfg, ssl_context)
 
         # Parse and set auto_create_new_users, and expose as feature flag
@@ -915,14 +919,18 @@ class AuthService(BaseAuthService):
         try:
             protocol = enum.AuthProtocol[str(idp_cfg["protocol"])]
             if protocol == enum.AuthProtocol.OIDC:
+                server_cfg: dict[str, Any] = {
+                    **idp_cfg,
+                    "jwt_leeway_seconds": self._jwt_leeway_seconds,
+                }
                 # TODO: only select actual discovery doc keys, should be class variable of OidcServerCfg containing a set of property names
                 discovery_doc = {
                     x: y
-                    for x, y in idp_cfg.items()
+                    for x, y in server_cfg.items()
                     if x in set(OidcServerCfg.model_fields.keys())
                 }
                 idp_client = OauthIdpClient(
-                    OidcServerCfg(**idp_cfg),  # type: ignore
+                    OidcServerCfg(**server_cfg),
                     logger=self._logger,
                     log_item_class=self.app.log_item_class,
                     discovery_doc=discovery_doc,

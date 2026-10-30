@@ -121,6 +121,54 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
         assert cmd.model_copy.call_args.kwargs["update"]["obj_ids"] == member_ids
         assert self.service.crud.call_count == 2
 
+    @pytest.mark.parametrize(
+        "operation", [CrudOperation.EXISTS_ONE, CrudOperation.EXISTS_SOME]
+    )
+    @pytest.mark.parametrize(
+        "access", ["allowed", "case_denied", "set_denied", "missing"]
+    )
+    def test_exists_respects_parent_access_and_missing_ids(
+        self, monkeypatch, operation, access
+    ):
+        _, abac, members, _, _ = self._configure_read()
+        member = members[0]
+        missing_id = uuid4()
+        requested = (
+            [member.id, missing_id, member.id]
+            if operation == CrudOperation.EXISTS_SOME
+            else [member.id]
+        )
+        cmd = command.CaseSetMemberCrudCommand(
+            user=self.user,
+            operation=operation,
+            obj_ids=(
+                requested if operation == CrudOperation.EXISTS_SOME else requested[0]
+            ),
+        )
+        self._patch_case_abac(monkeypatch, abac)
+        abac.is_allowed.side_effect = {
+            "allowed": [True, True],
+            "case_denied": [False],
+            "set_denied": [True, False],
+        }.get(access, [])
+        self.service.crud.return_value = [] if access == "missing" else members
+
+        result = crud_case_set_member.case_service_crud_case_set_member(
+            self.service, cmd
+        )
+
+        expected = access == "allowed"
+        assert result == (
+            expected
+            if operation == CrudOperation.EXISTS_ONE
+            else [expected, False, expected]
+        )
+        read_cmd = self.service.crud.call_args.args[0]
+        assert read_cmd.operation == CrudOperation.READ_ALL
+        assert read_cmd.obj_ids is None
+        assert read_cmd.query_filter.key == "id"
+        assert read_cmd.query_filter.members == set(requested)
+
     def test_unfiltered_bulk_read_is_rejected(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -375,13 +423,33 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
             )
             self.service.crud.assert_called_once_with(cmd)
             assert abac.is_allowed.call_args_list[1].args[2] == CaseRight.WRITE_CASE_SET
+            self.service._verify_case_set_member_case_type.assert_called_once_with(
+                cmd.user, members
+            )
         else:
             with pytest.raises(exc.UnauthorizedAuthError):
                 crud_case_set_member.case_service_crud_case_set_member(
                     self.service, cmd
                 )
             self.service.crud.assert_not_called()
-        self.service._verify_case_set_member_case_type.assert_called_once()
+            self.service._verify_case_set_member_case_type.assert_not_called()
+
+    def test_authorized_create_validates_case_type_before_persisting(self, monkeypatch):
+        cmd, abac, members, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.CREATE_SOME
+        cmd.is_create.return_value = True
+        cmd.is_read.return_value = False
+        cmd.get_objs.return_value = members
+        abac.is_allowed.return_value = True
+        self._patch_case_abac(monkeypatch, abac)
+        self.service._verify_case_set_member_case_type.side_effect = (
+            exc.InvalidArgumentsError("3e11edd5", "Different case type")
+        )
+
+        with pytest.raises(exc.InvalidArgumentsError):
+            crud_case_set_member.case_service_crud_case_set_member(self.service, cmd)
+
+        self.service.crud.assert_not_called()
 
     @pytest.mark.parametrize("shared", [False, True])
     def test_real_query_command_and_abac_resolve_shared_private_origin_data(
@@ -442,3 +510,4 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
         with pytest.raises(exc.UnauthorizedAuthError):
             crud_case_set_member.case_service_crud_case_set_member(self.service, cmd)
         self.service.crud.assert_not_called()
+        self.service._verify_case_set_member_case_type.assert_not_called()

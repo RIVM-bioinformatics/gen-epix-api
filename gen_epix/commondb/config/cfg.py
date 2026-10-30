@@ -285,6 +285,7 @@ class AppCfg(BaseAppCfg):
                 "props": {
                     "auto_create_new_users": False,
                     "root_token_time_to_live": 0,  # disabled during development
+                    "jwt_leeway_seconds": 0,
                     "auto_created_user": {
                         "organization_id": "018d074d-ea0c-e942-07db-a3cc0ba1d653",
                         "roles": ["COMMONDB_ORG_USER"],

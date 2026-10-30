@@ -12,6 +12,8 @@ from uuid import UUID
 import httpx
 import jwt
 import pytest
+from cryptography.hazmat.primitives.asymmetric import rsa
+from jwt.algorithms import RSAAlgorithm
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
@@ -72,10 +74,12 @@ class BaseOauthIdpClientTestCase:
         enable_introspection: bool = False,
         client_credential_flow_max_retries: int | None = None,
         client_credential_flow_base_delay: float | None = None,
+        jwt_leeway_seconds: int = 0,
     ) -> OauthIdpClient:
         """Create client with provided overrides."""
         cfg_copy: OidcServerCfg = (cfg or self.server_cfg).model_copy()
         cfg_copy.enable_introspection = enable_introspection
+        cfg_copy.jwt_leeway_seconds = jwt_leeway_seconds
         doc_to_apply: dict[str, Any] | None = discovery_doc or self.discovery_doc
 
         # COMMENTED OUT: SEEMS NO LONGER NEEDED AND OTHERWISE BREAKS TESTS
@@ -639,6 +643,88 @@ class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
         assert result is not None
         assert result["email"] == "user@example.com"
         tim_mock.introspect_token.assert_called_once()
+
+
+class TestVerifyTokenLeeway(BaseOauthIdpClientTestCase):
+    """Clock-skew tolerance of the time claims during JWT verification."""
+
+    def setup_method(self) -> None:
+        super().setup_method()
+        self.private_key = rsa.generate_private_key(
+            public_exponent=65537, key_size=2048
+        )
+        self.jwk = jwt.PyJWK.from_dict(
+            json.loads(RSAAlgorithm.to_jwk(self.private_key.public_key())),
+            algorithm="RS256",
+        )
+
+    def make_token(self, claim: str, skew_seconds: int) -> str:
+        """Sign a token with time claim `claim` `skew_seconds` outside its valid range."""
+        now = self.now()
+        time_claims: dict[str, int] = {"iat": now, "exp": now + 3600}
+        if claim == "exp":
+            time_claims = {"iat": now - 3600, "exp": now - skew_seconds}
+        else:
+            time_claims[claim] = now + skew_seconds
+        return jwt.encode(
+            {
+                "iss": self.discovery_doc["issuer"],
+                "sub": "u",
+                "aud": self.server_cfg.client_id,
+                **time_claims,
+            },
+            self.private_key,
+            algorithm="RS256",
+        )
+
+    @pytest.mark.parametrize("claim", ["exp", "nbf", "iat"])
+    def test_skewed_claim_rejected_without_leeway(self, claim: str) -> None:
+        client: OauthIdpClient = self.create_client()
+        token = self.make_token(claim, 10)
+
+        with pytest.raises(exc.CredentialsAuthError):
+            client._verify_token(token, self.jwk)
+
+    @pytest.mark.parametrize("claim", ["exp", "nbf", "iat"])
+    def test_skewed_claim_accepted_within_leeway(self, claim: str) -> None:
+        client: OauthIdpClient = self.create_client(jwt_leeway_seconds=30)
+
+        claims = client._verify_token(self.make_token(claim, 10), self.jwk)
+
+        assert claims["sub"] == "u"
+
+    @pytest.mark.parametrize("claim", ["exp", "nbf", "iat"])
+    def test_skewed_claim_rejected_beyond_leeway(self, claim: str) -> None:
+        client: OauthIdpClient = self.create_client(jwt_leeway_seconds=30)
+        token = self.make_token(claim, 60)
+
+        with pytest.raises(exc.CredentialsAuthError):
+            client._verify_token(token, self.jwk)
+
+    def test_discovery_url_cannot_change_leeway(self) -> None:
+        cfg: OidcServerCfg = self.server_cfg.model_copy()
+        client: OauthIdpClient = self.create_client(
+            cfg=cfg,
+            discovery_doc=None,
+            discovery_url=cfg.discovery_url,
+            jwt_leeway_seconds=30,
+        )
+        p, client_mock = self.patch_httpx_client()
+        response_mock: Mock = Mock()
+        response_mock.json.return_value = {
+            **self.discovery_doc,
+            "jwt_leeway_seconds": 3600,
+        }
+        response_mock.raise_for_status.return_value = None
+        client_mock.get.return_value = response_mock
+
+        p.start()
+        try:
+            client.update_server_config_from_discovery(url=cfg.discovery_url)
+        finally:
+            p.stop()
+
+        assert client.server_cfg.jwt_leeway_seconds == 30
 
 
 @pytest.mark.scenario_ids(

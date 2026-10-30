@@ -641,6 +641,27 @@ class TestInitializationValidation(BaseAuthServiceTestCase):
         # Verify
         assert len(svc._pending_idp_client_cfgs) == 1
 
+    def test_jwt_leeway_seconds_passed_to_oidc_idp_client(self) -> None:
+        """The configured JWT leeway reaches each OIDC IDP client."""
+        # Create input
+        idps_cfg: list[dict[str, Any]] = [
+            {"name": "idp", "label": "L", "protocol": "OIDC"}
+        ]
+        # Set up mocks
+        with patch(
+            "gen_epix.fastapp.services.auth.service.OauthIdpClient"
+        ) as client_class:
+            # Execute
+            AuthService(
+                app=self.app,
+                logger=self.logger,
+                idps_cfg=idps_cfg,
+                ssl_context=False,
+                jwt_leeway_seconds=45,
+            )
+        # Verify
+        assert client_class.call_args.args[0].jwt_leeway_seconds == 45
+
 
 class TestRetryPendingIdpClients(BaseAuthServiceTestCase):
     def create_idp_config(self, name: str, label: str) -> dict[str, str | list]:

@@ -9,6 +9,7 @@ from gen_epix.casedb.domain.enum import CaseRight
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case import crud_case_data_collection_link
 from gen_epix.fastapp import CrudOperation
+from gen_epix.filter import CompositeFilter, LogicalOperator, UuidSetFilter
 
 
 class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
@@ -235,7 +236,22 @@ class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
                 self.service, cmd
             )
 
-    @pytest.mark.parametrize("query_filter", [None, object()])
+    @pytest.mark.parametrize(
+        "query_filter",
+        [
+            None,
+            object(),
+            UuidSetFilter(key="case_id", members={uuid4()}, invert=True),
+            UuidSetFilter(key="data_collection_id", members={uuid4()}),
+            CompositeFilter(
+                filters=[
+                    UuidSetFilter(key="case_id", members={uuid4()}),
+                    UuidSetFilter(key="data_collection_id", members={uuid4()}),
+                ],
+                operator=LogicalOperator.OR,
+            ),
+        ],
+    )
     def test_read_all_is_rejected(
         self, monkeypatch: pytest.MonkeyPatch, query_filter: object | None
     ) -> None:
@@ -251,6 +267,40 @@ class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
             )
 
         self.service.crud.assert_not_called()
+
+    @pytest.mark.parametrize("read_access", [False, True])
+    @pytest.mark.parametrize("composite", [False, True])
+    def test_bounded_query_checks_link_access(
+        self, monkeypatch, read_access, composite
+    ):
+        cmd, case_abac, links = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.is_read_all.return_value = True
+        cmd.query_filter = UuidSetFilter(key="case_id", members={links[0].case_id})
+        if composite:
+            cmd.query_filter = CompositeFilter(
+                filters=[cmd.query_filter, UuidSetFilter(key="id", members={uuid4()})],
+                operator=LogicalOperator.AND,
+            )
+        access = next(
+            iter(next(iter(case_abac.case_type_access_abacs.values())).values())
+        )
+        access.read_col_ids = {uuid4()} if read_access else set()
+        self._patch_abac(monkeypatch, case_abac)
+        self.service.crud.return_value = links
+
+        if read_access:
+            assert (
+                crud_case_data_collection_link.case_service_crud_case_data_collection_link(
+                    self.service, cmd
+                )
+                == links
+            )
+        else:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                crud_case_data_collection_link.case_service_crud_case_data_collection_link(
+                    self.service, cmd
+                )
 
     def test_command_without_case_abac_raises_assertion(
         self, monkeypatch: pytest.MonkeyPatch
@@ -316,9 +366,9 @@ class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
 
     @pytest.mark.parametrize(
         "decisions,allowed",
-        [([True, True], True), ([False], False), ([True, False], False)],
+        [([True], True), ([False], False)],
     )
-    def test_share_requires_case_write_and_target_add_before_persisting(
+    def test_share_requires_target_add_before_persisting(
         self, monkeypatch, decisions, allowed
     ):
         case = model.Case(
@@ -342,8 +392,8 @@ class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
                 link
             ]
             self.service.crud.assert_called_once_with(cmd)
-            assert abac.is_allowed.call_args_list[0].args[2] == CaseRight.WRITE_CASE
-            assert abac.is_allowed.call_args_list[1].args[2] == CaseRight.ADD_CASE
+            assert abac.is_allowed.call_count == 1
+            assert abac.is_allowed.call_args.args[2] == CaseRight.ADD_CASE
             assert abac.is_allowed.call_args.kwargs["tgt_data_collection_ids"] == {
                 link.data_collection_id
             }
@@ -358,7 +408,7 @@ class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
         "source_write,target_add",
         [(True, True), (False, True), (True, False), (False, False)],
     )
-    def test_real_share_policy_requires_both_source_and_target_rights(
+    def test_real_share_policy_requires_target_add_not_source_write(
         self, source_write, target_add
     ):
         case_type_id, origin_id, target_id, col_id = (uuid4() for _ in range(4))
@@ -403,7 +453,7 @@ class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
         self.service.repository.crud.return_value = [case]
         self.service._retrieve_case_data_collections_map.return_value = {}
         self.service.crud.return_value = [link]
-        if source_write and target_add:
+        if target_add:
             assert crud_case_data_collection_link.case_service_crud_case_data_collection_link(
                 self.service, cmd
             ) == [
@@ -431,7 +481,7 @@ class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
         ]
         cmd = self.create_crud_command(operation=CrudOperation.CREATE_SOME, objs=links)
         abac = Mock()
-        abac.is_allowed.side_effect = [True, True, True, False]
+        abac.is_allowed.side_effect = [True, False]
         self._patch_abac(monkeypatch, abac)
         self.service.repository.crud.return_value = [case]
         self.service._retrieve_case_data_collections_map.return_value = {}

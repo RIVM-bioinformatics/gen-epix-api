@@ -14,10 +14,11 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     get_case_abac_from_command,
+    is_bounded_query,
 )
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.filter import CompositeFilter, Filter, LogicalOperator, UuidSetFilter
+from gen_epix.filter import UuidSetFilter
 
 BOUNDED_QUERY_KEYS = frozenset({"case_id", "case_set_id"})
 
@@ -101,7 +102,7 @@ def _crud_case_set_member_with_abac(
     assert cmd.user is not None and cmd.user.id is not None
 
     is_create = cmd.is_create()
-    bounded_query = _is_bounded_query(cmd.query_filter)
+    bounded_query = is_bounded_query(cmd.query_filter, BOUNDED_QUERY_KEYS)
     if (not cmd.is_read() and not is_create) or (
         cmd.is_read_all() and not bounded_query
     ):
@@ -116,11 +117,32 @@ def _crud_case_set_member_with_abac(
             "58bcfdde", "Case ABAC metadata is required for case set members"
         )
 
-    if is_create:
-        self._verify_case_set_member_case_type(cmd.user, cmd.get_objs())
+    is_exists = cmd.operation in (CrudOperation.EXISTS_ONE, CrudOperation.EXISTS_SOME)
+    requested_ids = cmd.get_obj_ids() if is_exists else None
+    if is_exists:
+        assert isinstance(requested_ids, list)
+        if not requested_ids:
+            return []
+        retval = self.crud(
+            cmd.model_copy(
+                update={
+                    "operation": CrudOperation.READ_ALL,
+                    "obj_ids": None,
+                    "query_filter": UuidSetFilter(key="id", members=set(requested_ids)),
+                    "return_id": False,
+                    "limit": 0,
+                    "offset": 0,
+                }
+            )
+        )
+    elif is_create:
         retval = cmd.get_objs()
     else:
         retval = self.crud(cmd)
+    if is_exists and not isinstance(retval, list):
+        raise exc.UnauthorizedAuthError(
+            "9ef9c356", "Unable to verify access to case set members"
+        )
     if retval is None:
         return None
 
@@ -167,6 +189,13 @@ def _crud_case_set_member_with_abac(
             "9ef9c356", "Unable to verify access to case set members"
         )
 
+    if not members and is_exists:
+        assert requested_ids is not None
+        return (
+            False
+            if cmd.operation == CrudOperation.EXISTS_ONE
+            else [False for _ in requested_ids]
+        )
     if not members:
         return [] if isinstance(retval, list) else None  # type: ignore[return-value]
 
@@ -234,8 +263,19 @@ def _crud_case_set_member_with_abac(
                 "65b21905",
                 "Creating members requires readable cases and writable case sets",
             )
+        self._verify_case_set_member_case_type(cmd.user, members)
         return self.crud(cmd)  # type: ignore[return-value]
 
+    if is_exists:
+        assert requested_ids is not None
+        exists_results = [
+            member_id in accessible_member_ids for member_id in requested_ids
+        ]
+        return (
+            exists_results[0]
+            if cmd.operation == CrudOperation.EXISTS_ONE
+            else exists_results
+        )
     if cmd.return_id:
         return [  # type: ignore[return-value]
             member_id for member_id in member_ids if member_id in accessible_member_ids

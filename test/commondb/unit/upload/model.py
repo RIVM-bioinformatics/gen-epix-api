@@ -8,7 +8,10 @@ from gen_epix import fastapp
 from gen_epix.commondb.domain import command as commondb_command
 from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.upload import UploadResult
+from gen_epix.commondb.domain.model.upload import (
+    UploadResult,
+    UploadResultWithIdentifiers,
+)
 from gen_epix.commondb.services.upload import BatchUploader
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.fastapp.service import BaseService
@@ -259,7 +262,7 @@ class ParentUploadResult(commondb_model.ParentUploadResult):
     children1: list[UploadResult] | None = Field(
         default=None, description="List of Child1 upload results."
     )
-    children2: list[UploadResult] | None = Field(
+    children2: list[UploadResultWithIdentifiers] | None = Field(
         default=None, description="List of Child2 upload results."
     )
 

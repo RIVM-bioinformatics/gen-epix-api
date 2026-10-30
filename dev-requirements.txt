@@ -1,11 +1,11 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
-pandas==3.0.6
-polars==2.0.0
-xlsxwriter==3.2.9
+pandas==3.1.0
+polars==2.1.0
+xlsxwriter==3.3.0
 pytest
 pytest-asyncio
-pytest-gremlins==1.12.1
+pytest-gremlins==1.12.2
 pytest-xdist
 pytest-mock==3.17.*
 pytest-dependency==0.6.*
@@ -15,7 +15,7 @@ ruff==0.17.*
 pylint==4.1.*
 mypy==2.4.*
 oauthlib==4.0.0
-coverage==7.16.2
+coverage==7.17.0
 # profiling, used by gen_epix.util.profile_method
 pyinstrument==5.1.*
 
