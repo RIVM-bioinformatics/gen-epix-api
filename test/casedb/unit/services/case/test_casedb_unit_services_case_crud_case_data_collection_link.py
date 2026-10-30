@@ -4,9 +4,12 @@ from uuid import uuid4
 
 import pytest
 
-from gen_epix.casedb.domain import exc, model
+from gen_epix.casedb.domain import command, exc, model
+from gen_epix.casedb.domain.enum import CaseRight
+from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case import crud_case_data_collection_link
 from gen_epix.fastapp import CrudOperation
+from gen_epix.filter import CompositeFilter, LogicalOperator, UuidSetFilter
 
 
 class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
@@ -233,7 +236,22 @@ class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
                 self.service, cmd
             )
 
-    @pytest.mark.parametrize("query_filter", [None, object()])
+    @pytest.mark.parametrize(
+        "query_filter",
+        [
+            None,
+            object(),
+            UuidSetFilter(key="case_id", members={uuid4()}, invert=True),
+            UuidSetFilter(key="data_collection_id", members={uuid4()}),
+            CompositeFilter(
+                filters=[
+                    UuidSetFilter(key="case_id", members={uuid4()}),
+                    UuidSetFilter(key="data_collection_id", members={uuid4()}),
+                ],
+                operator=LogicalOperator.OR,
+            ),
+        ],
+    )
     def test_read_all_is_rejected(
         self, monkeypatch: pytest.MonkeyPatch, query_filter: object | None
     ) -> None:
@@ -249,6 +267,40 @@ class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
             )
 
         self.service.crud.assert_not_called()
+
+    @pytest.mark.parametrize("read_access", [False, True])
+    @pytest.mark.parametrize("composite", [False, True])
+    def test_bounded_query_checks_link_access(
+        self, monkeypatch, read_access, composite
+    ):
+        cmd, case_abac, links = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
+        cmd.is_read_all.return_value = True
+        cmd.query_filter = UuidSetFilter(key="case_id", members={links[0].case_id})
+        if composite:
+            cmd.query_filter = CompositeFilter(
+                filters=[cmd.query_filter, UuidSetFilter(key="id", members={uuid4()})],
+                operator=LogicalOperator.AND,
+            )
+        access = next(
+            iter(next(iter(case_abac.case_type_access_abacs.values())).values())
+        )
+        access.read_col_ids = {uuid4()} if read_access else set()
+        self._patch_abac(monkeypatch, case_abac)
+        self.service.crud.return_value = links
+
+        if read_access:
+            assert (
+                crud_case_data_collection_link.case_service_crud_case_data_collection_link(
+                    self.service, cmd
+                )
+                == links
+            )
+        else:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                crud_case_data_collection_link.case_service_crud_case_data_collection_link(
+                    self.service, cmd
+                )
 
     def test_command_without_case_abac_raises_assertion(
         self, monkeypatch: pytest.MonkeyPatch
@@ -310,4 +362,131 @@ class TestCaseDataCollectionLinkCrud(BaseCrudTestCase):
                 self.service, cmd
             )
 
+        self.service.crud.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "decisions,allowed",
+        [([True], True), ([False], False)],
+    )
+    def test_share_requires_target_add_before_persisting(
+        self, monkeypatch, decisions, allowed
+    ):
+        case = model.Case(
+            id=uuid4(),
+            case_type_id=uuid4(),
+            created_in_data_collection_id=uuid4(),
+            content={},
+        )
+        link = model.CaseDataCollectionLink(case_id=case.id, data_collection_id=uuid4())
+        cmd = self.create_crud_command(operation=CrudOperation.CREATE_SOME, objs=[link])
+        abac = Mock()
+        abac.is_allowed.side_effect = decisions
+        self._patch_abac(monkeypatch, abac)
+        self.service.repository.crud.return_value = [case]
+        self.service._retrieve_case_data_collections_map.return_value = {}
+        self.service.crud.return_value = [link]
+        if allowed:
+            assert crud_case_data_collection_link.case_service_crud_case_data_collection_link(
+                self.service, cmd
+            ) == [
+                link
+            ]
+            self.service.crud.assert_called_once_with(cmd)
+            assert abac.is_allowed.call_count == 1
+            assert abac.is_allowed.call_args.args[2] == CaseRight.ADD_CASE
+            assert abac.is_allowed.call_args.kwargs["tgt_data_collection_ids"] == {
+                link.data_collection_id
+            }
+        else:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                crud_case_data_collection_link.case_service_crud_case_data_collection_link(
+                    self.service, cmd
+                )
+            self.service.crud.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "source_write,target_add",
+        [(True, True), (False, True), (True, False), (False, False)],
+    )
+    def test_real_share_policy_requires_target_add_not_source_write(
+        self, source_write, target_add
+    ):
+        case_type_id, origin_id, target_id, col_id = (uuid4() for _ in range(4))
+        case = model.Case(
+            id=uuid4(),
+            case_type_id=case_type_id,
+            created_in_data_collection_id=origin_id,
+            content={},
+        )
+        link = model.CaseDataCollectionLink(
+            case_id=case.id, data_collection_id=target_id
+        )
+        access = {
+            collection_id: model.CaseTypeAccessAbac(
+                case_type_id=case_type_id,
+                data_collection_id=collection_id,
+                is_private=collection_id == origin_id,
+                add_case=target_add if collection_id == target_id else True,
+                remove_case=False,
+                add_case_set=False,
+                remove_case_set=False,
+                read_col_ids={col_id},
+                write_col_ids=(
+                    {col_id} if source_write and collection_id == origin_id else set()
+                ),
+                read_case_set=False,
+                write_case_set=False,
+            )
+            for collection_id in [origin_id, target_id]
+        }
+        abac = model.CaseAbac(
+            is_full_access=False,
+            case_type_access_abacs={case_type_id: access},
+            case_type_share_abacs={},
+        )
+        cmd = command.CaseDataCollectionLinkCrudCommand(
+            user=self.user, operation=CrudOperation.CREATE_SOME, objs=[link]
+        )
+        abac_service = Mock()
+        abac_service.get_case_abac.return_value = abac
+        cmd._policies.append(BaseCaseAbacPolicy(abac_service))
+        self.service.repository.crud.return_value = [case]
+        self.service._retrieve_case_data_collections_map.return_value = {}
+        self.service.crud.return_value = [link]
+        if target_add:
+            assert crud_case_data_collection_link.case_service_crud_case_data_collection_link(
+                self.service, cmd
+            ) == [
+                link
+            ]
+        else:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                crud_case_data_collection_link.case_service_crud_case_data_collection_link(
+                    self.service, cmd
+                )
+            self.service.crud.assert_not_called()
+
+    def test_mixed_share_batch_is_rejected_before_any_link_is_written(
+        self, monkeypatch
+    ):
+        case = model.Case(
+            id=uuid4(),
+            case_type_id=uuid4(),
+            created_in_data_collection_id=uuid4(),
+            content={},
+        )
+        links = [
+            model.CaseDataCollectionLink(case_id=case.id, data_collection_id=uuid4())
+            for _ in range(2)
+        ]
+        cmd = self.create_crud_command(operation=CrudOperation.CREATE_SOME, objs=links)
+        abac = Mock()
+        abac.is_allowed.side_effect = [True, False]
+        self._patch_abac(monkeypatch, abac)
+        self.service.repository.crud.return_value = [case]
+        self.service._retrieve_case_data_collections_map.return_value = {}
+        with pytest.raises(exc.UnauthorizedAuthError):
+            crud_case_data_collection_link.case_service_crud_case_data_collection_link(
+                self.service, cmd
+            )
         self.service.crud.assert_not_called()

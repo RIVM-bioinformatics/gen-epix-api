@@ -31,14 +31,14 @@
         "justMyCode": true
 },
 {
-        "name": "api.casedb.local.mock.sa_sqlite_empty",
+        "name": "api.casedb.local.idps.sa_sqlite_empty",
         "type": "debugpy",
         "request": "launch",
         "program": "run.py",
         "args": [
                 "api",
                 "CASEDB",
-                "MOCK",
+                "IDPS",
                 "SA_SQLITE_EMPTY"
         ],
         "justMyCode": true
@@ -112,14 +112,14 @@
         "justMyCode": true
 },
 {
-        "name": "api.seqdb.local.mock.sa_sqlite_empty",
+        "name": "api.seqdb.local.idps.sa_sqlite_empty",
         "type": "debugpy",
         "request": "launch",
         "program": "run.py",
         "args": [
                 "api",
                 "SEQDB",
-                "MOCK",
+                "IDPS",
                 "SA_SQLITE_EMPTY"
         ],
         "justMyCode": true
