@@ -102,6 +102,17 @@ class UploadBatchCommandMixin:
             description="Action to take if one of the entities in the batch is new upon upload.",
         ),
     ]
+    fail_batch_on_item_error: Annotated[
+        bool,
+        Field(
+            default=True,
+            description=(
+                "If true, a verification error in one item stops the whole batch. "
+                "If false, the items that failed verification are left out and the "
+                "other items are uploaded."
+            ),
+        ),
+    ]
 
     def get_batch_for_upload(self) -> model.BaseBatchForUpload:
         """Get the batch for upload from the command."""
