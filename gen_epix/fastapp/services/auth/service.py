@@ -83,7 +83,7 @@ class AuthService(BaseAuthService):
             idps_cfg: Identity-provider client configurations.
             ssl_context: SSL context or enabled flag for provider requests.
             jwt_leeway_seconds: Clock skew in seconds tolerated when verifying the
-                time claims (``exp``, ``iat``) of provider JWTs.
+                time claims (``exp``, ``nbf``, ``iat``) of provider JWTs.
             repository: Optional repository supplied through the base service.
         """
         super().__init__(

@@ -585,39 +585,46 @@ class TestVerifyTokenLeeway(BaseOauthIdpClientTestCase):
             algorithm="RS256",
         )
 
-    def make_token(self, iat_offset_seconds: int) -> str:
-        """Sign a token issued `iat_offset_seconds` from now, valid for an hour."""
-        iat = self.now() + iat_offset_seconds
+    def make_token(self, claim: str, skew_seconds: int) -> str:
+        """Sign a token with time claim `claim` `skew_seconds` outside its valid range."""
+        now = self.now()
+        time_claims: dict[str, int] = {"iat": now, "exp": now + 3600}
+        if claim == "exp":
+            time_claims = {"iat": now - 3600, "exp": now - skew_seconds}
+        else:
+            time_claims[claim] = now + skew_seconds
         return jwt.encode(
             {
                 "iss": self.discovery_doc["issuer"],
                 "sub": "u",
                 "aud": self.server_cfg.client_id,
-                "iat": iat,
-                "exp": iat + 3600,
+                **time_claims,
             },
             self.private_key,
             algorithm="RS256",
         )
 
-    def test_future_iat_rejected_without_leeway(self) -> None:
+    @pytest.mark.parametrize("claim", ["exp", "nbf", "iat"])
+    def test_skewed_claim_rejected_without_leeway(self, claim: str) -> None:
         client: OauthIdpClient = self.create_client()
 
         with pytest.raises(exc.CredentialsAuthError):
-            client._verify_token(self.make_token(10), self.jwk)
+            client._verify_token(self.make_token(claim, 10), self.jwk)
 
-    def test_future_iat_accepted_within_leeway(self) -> None:
+    @pytest.mark.parametrize("claim", ["exp", "nbf", "iat"])
+    def test_skewed_claim_accepted_within_leeway(self, claim: str) -> None:
         client: OauthIdpClient = self.create_client(jwt_leeway_seconds=30)
 
-        claims = client._verify_token(self.make_token(10), self.jwk)
+        claims = client._verify_token(self.make_token(claim, 10), self.jwk)
 
         assert claims["sub"] == "u"
 
-    def test_future_iat_rejected_beyond_leeway(self) -> None:
+    @pytest.mark.parametrize("claim", ["exp", "nbf", "iat"])
+    def test_skewed_claim_rejected_beyond_leeway(self, claim: str) -> None:
         client: OauthIdpClient = self.create_client(jwt_leeway_seconds=30)
 
         with pytest.raises(exc.CredentialsAuthError):
-            client._verify_token(self.make_token(60), self.jwk)
+            client._verify_token(self.make_token(claim, 60), self.jwk)
 
 
 @pytest.mark.scenario_ids(
