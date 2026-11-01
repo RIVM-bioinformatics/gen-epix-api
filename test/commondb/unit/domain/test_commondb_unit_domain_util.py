@@ -346,8 +346,24 @@ def test_create_demo_data_from_repository_deletes_then_copies_in_order() -> None
     assert events[3][3]["objs"] == [{"model": "FirstModel"}]
 
 
+@pytest.mark.parametrize(
+    ("sql_validation_error", "expected_exception", "expected_sql_config"),
+    [
+        (None, False, {"repository": {}}),
+        (
+            "SA_SQL repository requires a credential: set repository.defaults.props.pwd",
+            False,
+            None,
+        ),
+        ("Unrelated settings validation failed", True, None),
+    ],
+    ids=["sql-configured", "sql-credentials-missing", "other-validation-error"],
+)
 def test_load_demo_data_imports_modules_and_dispatches_each_service(
     monkeypatch: pytest.MonkeyPatch,
+    sql_validation_error: str | None,
+    expected_exception: bool,
+    expected_sql_config: dict | None,
 ) -> None:
     """Load app metadata and dispatch one demo-data operation per service."""
 
@@ -369,6 +385,8 @@ def test_load_demo_data_imports_modules_and_dispatches_each_service(
     class FakeAppCfg:
         def __init__(self, *args, **kwargs):
             config_calls.append((args, kwargs))
+            if len(config_calls) == 3 and sql_validation_error is not None:
+                raise ValueError(sql_validation_error)
             self.cfg = {"repository": {}}
 
     dispatched = []
@@ -385,12 +403,18 @@ def test_load_demo_data_imports_modules_and_dispatches_each_service(
         lambda *args: dispatched.append(args),
     )
 
-    load_demo_data(AppType.CASEDB, "demo", connect_timeout=4, verbose=False)
+    if expected_exception:
+        with pytest.raises(ValueError, match="Unrelated settings validation failed"):
+            load_demo_data(AppType.CASEDB, "demo", connect_timeout=4, verbose=False)
+    else:
+        load_demo_data(AppType.CASEDB, "demo", connect_timeout=4, verbose=False)
 
-    assert [args[1] for args in dispatched] == list(ServiceType)
-    assert all(args[0] is AppType.CASEDB for args in dispatched)
-    assert all(args[8:] == (4, False) for args in dispatched)
     assert len(config_calls) == 3
+    if not expected_exception:
+        assert [args[1] for args in dispatched] == list(ServiceType)
+        assert all(args[0] is AppType.CASEDB for args in dispatched)
+        assert all(args[6] == expected_sql_config for args in dispatched)
+        assert all(args[8:] == (4, False) for args in dispatched)
 
 
 @pytest.mark.parametrize(

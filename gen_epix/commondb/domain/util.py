@@ -253,14 +253,25 @@ def load_demo_data(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
-    sa_sql_app_cfg = app_cfg_class(
-        app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
-    )
+    try:
+        sa_sql_app_cfg = app_cfg_class(
+            app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
+        )
+    except Exception as error:
+        if "SA_SQL repository requires a credential" not in str(error):
+            raise
+        sa_sql_app_cfg_data = None
+        if verbose:
+            print(
+                f"App {app_type.value}: SA_SQL credentials are not configured; "
+                "skipping SQL demo data"
+            )
+    else:
+        sa_sql_app_cfg_data = cast(dict[str, Any], sa_sql_app_cfg.cfg)
     # user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
     user_id = NULL_ID
     dict_app_cfg_data = cast(dict[str, Any], dict_app_cfg.cfg)
     sa_sqlite_app_cfg_data = cast(dict[str, Any], sa_sqlite_app_cfg.cfg)
-    sa_sql_app_cfg_data = cast(dict[str, Any], sa_sql_app_cfg.cfg)
     for service_type in enum.ServiceType:
         _load_demo_data_for_service(
             app_type,
@@ -283,7 +294,7 @@ def _load_demo_data_for_service(
     domain: Domain,
     dict_app_cfg_data: dict[str, Any],
     sa_sqlite_app_cfg_data: dict[str, Any],
-    sa_sql_app_cfg_data: dict[str, Any],
+    sa_sql_app_cfg_data: dict[str, Any] | None,
     user_id: UUID,
     connect_timeout: float,
     verbose: bool,
@@ -363,6 +374,8 @@ def _load_demo_data_for_service(
         print(
             f"App {app_type.value}, service {service_type.value}: sa_sqlite repository written to file in {end_time - start_time}s"
         )
+    if sa_sql_app_cfg_data is None:
+        return
     # Create empty SA_SQL repository or loaded with demo data
     sa_sql_repository_cfg = cast(
         dict[str, Any],
