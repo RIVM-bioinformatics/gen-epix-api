@@ -26,7 +26,9 @@ LSP-2985: the goal is to make the batch return SUCCEEDED. Once that is implement
 the happy-path assertions below should be updated to expect EtlStatus.SUCCEEDED.
 """
 
+import json
 import logging
+from datetime import date
 from test.omopdb.integration.person_upload.base import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
@@ -40,14 +42,17 @@ import pytest
 
 from gen_epix.commondb.domain.enum import AppType, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model import IdentifierForUpload, IdentifierIssuer
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.etl.enum import EtlStatus
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.omopdb.domain import command, enum
 from gen_epix.omopdb.domain.model import (
     Person,
     PersonBatchForUpload,
     PersonBatchUploadResult,
     PersonForUpload,
+    SpecimenForUpload,
 )
 
 _GENDER_CONCEPT_ID = UUID("1e7d7dc0-41ef-9b58-de77-cb4a4eff115b")
@@ -72,6 +77,21 @@ def get_test_client() -> Env:
         verbose=VERBOSE,
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,
+    )
+
+
+def _make_specimen(
+    identifier: IdentifierForUpload, specimen_id: UUID = NULL_ID
+) -> SpecimenForUpload:
+    """Create a minimal SpecimenForUpload carrying one identifier."""
+    return SpecimenForUpload(
+        specimen_id=specimen_id,
+        specimen_concept_id=uuid4(),
+        specimen_concept_int_id=4001225,
+        specimen_type_concept_id=uuid4(),
+        specimen_type_concept_int_id=32817,
+        specimen_date=date(2024, 1, 15),
+        identifiers=[identifier],  # type: ignore[call-arg]
     )
 
 
@@ -447,3 +467,80 @@ class TestPersonBatchUploadFailureModes:
             },
         )
         assert response.status_code == 422
+
+
+@pytest.mark.skipif(
+    SKIP_ENDPOINTS, reason="Requires HTTP endpoint to inspect the response body"
+)
+class TestPersonBatchUploadNestedIdentifierResults:
+    """The nested identifier results of a child must reach the HTTP response."""
+
+    def test_conflicting_specimen_identifier_is_in_response(self, env: Env) -> None:
+        """
+        A new specimen carrying the identifier of an existing specimen fails, and the
+
+        identifier-level reason (0561ecd7) is in the response body under
+        specimens[i].identifiers[j], not only the specimen-level pointer to it
+        (d8f21b6a).
+        """
+        assert env.endpoint_test_client is not None
+        root_user = env.retrieve_user_by_key("root1_1@org1.org")
+        identifier_issuer: IdentifierIssuer = env.handle(
+            command.IdentifierIssuerCrudCommand(
+                user=root_user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=IdentifierIssuer(
+                    code="nested_identifier_results_issuer",
+                    name="nested_identifier_results_issuer",
+                ),
+            )
+        )
+        assert identifier_issuer.id is not None
+        identifier = IdentifierForUpload(
+            identifier_issuer_id=identifier_issuer.id,
+            external_id="LAB-SAMPLE-001",
+        )
+        # The identifier now belongs to the first specimen
+        first_result: PersonBatchUploadResult = env.handle(
+            command.UploadPersonsCommand(
+                user=root_user,
+                person_batch=PersonBatchForUpload(
+                    persons=[
+                        PersonForUpload(
+                            id=NULL_ID,
+                            person=_make_person(),
+                            specimens=[_make_specimen(identifier)],
+                        )
+                    ]
+                ),
+            )
+        )
+        assert first_result.status == EtlStatus.CREATED
+        person_id = first_result.persons[0].id
+        assert person_id is not None
+
+        # A second, new specimen carries the same identifier
+        cmd = command.UploadPersonsCommand(
+            user=root_user,
+            person_batch=PersonBatchForUpload(
+                persons=[
+                    PersonForUpload(
+                        id=person_id,
+                        specimens=[_make_specimen(identifier, specimen_id=uuid4())],
+                    )
+                ]
+            ),
+        )
+        headers = env.endpoint_test_client.get_dummy_jwt_header(root_user.get_key())
+        response = env.endpoint_test_client.test_client.post(
+            env.default_route_prefix + "/upload/persons",
+            headers=headers,
+            json=json.loads(cmd.model_dump_json(exclude={"user"})),
+        )
+
+        assert response.status_code == 200
+        specimen_result = response.json()["persons"][0]["specimens"][0]
+        assert "d8f21b6a" in {x["code"] for x in specimen_result["logs"]}
+        identifier_result = specimen_result["identifiers"][0]
+        assert identifier_result["status"] == EtlStatus.FAILED.value
+        assert "0561ecd7" in {x["code"] for x in identifier_result["logs"]}

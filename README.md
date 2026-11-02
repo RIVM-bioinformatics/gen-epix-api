@@ -102,7 +102,7 @@ Project tree (trimmed to the main structure):
 
    ```console
    pip install -r requirements.txt
-   pip install --no-binary :all: pyodbc==5.2.*
+   pip install --no-binary :all: pyodbc==5.3.*
    ```
 
    **Some hardware architectures (especially Apple M1/M2/M3 chips) require pyodbc to be compiled from source for compatibility***

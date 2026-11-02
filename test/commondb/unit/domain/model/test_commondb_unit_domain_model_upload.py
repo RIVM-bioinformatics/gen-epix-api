@@ -10,15 +10,20 @@ from test.commondb.unit.upload.model import (
     ParentBatchForUpload,
 )
 from test.commondb.unit.upload.model import ParentForUpload as FixtureParentForUpload
-from typing import ClassVar
+from test.commondb.unit.upload.model import (
+    ParentUploadResult as FixtureParentUploadResult,
+)
+from typing import Any, ClassVar, get_args
 from uuid import UUID, uuid4
 
 import pytest
 
+from gen_epix.casedb.domain.model import CaseUploadResult
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchUploadResult,
+    IdentifiersMixin,
     ParentForUpload,
     ParentUploadResult,
     UploadResult,
@@ -28,6 +33,8 @@ from gen_epix.etl.enum import EtlStatus
 from gen_epix.etl.model import LogItem, Result
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.fastapp.enum import LogLevel
+from gen_epix.omopdb.domain.model import PersonUploadResult
+from gen_epix.seqdb.domain.model import SampleUploadResult
 
 
 @pytest.mark.parametrize(
@@ -377,3 +384,98 @@ class TestUploadResultLogs:
         self.result.add_warning("SPECIFIC_CODE", "msg")
         assert self.result.has_log_code("SPECIFIC_CODE")
         assert not self.result.has_log_code("OTHER_CODE")
+
+
+def _concrete_parent_upload_result_classes() -> list[type[ParentUploadResult]]:
+    """Return every ParentUploadResult subclass that is bound to a payload class."""
+    classes: list[type[ParentUploadResult]] = []
+    pending: list[type[ParentUploadResult]] = [ParentUploadResult]
+    while pending:
+        result_class = pending.pop()
+        pending.extend(result_class.__subclasses__())
+        if result_class.PARENT_FOR_UPLOAD_CLASS is not None:
+            classes.append(result_class)
+    return sorted(classes, key=lambda x: f"{x.__module__}.{x.__qualname__}")
+
+
+def _child_result_field_cases() -> list[Any]:
+    cases = []
+    for result_class in _concrete_parent_upload_result_classes():
+        parent_for_upload_class = result_class.PARENT_FOR_UPLOAD_CLASS
+        for (
+            child_model_class,
+            field_name,
+        ) in parent_for_upload_class.CHILDREN_FIELD_NAME_MAP.items():
+            child_for_upload_class = parent_for_upload_class.CHILD_FOR_UPLOAD_CLASS_MAP[
+                child_model_class
+            ]
+            cases.append(
+                pytest.param(
+                    result_class,
+                    field_name,
+                    child_for_upload_class,
+                    id=f"{result_class.__module__}.{result_class.__name__}.{field_name}",
+                )
+            )
+    return cases
+
+
+class TestChildResultFieldTypes:
+    """Child result fields must be declared with the result type the uploader builds.
+
+    The uploader builds an UploadResultWithIdentifiers for every child whose
+    for-upload class has identifiers. Pydantic serializes by the declared field
+    type, so a field declared as list[UploadResult] drops the nested identifier
+    results from the API response.
+    """
+
+    def test_all_known_parent_upload_results_are_checked(self) -> None:
+        classes = _concrete_parent_upload_result_classes()
+        for result_class in (
+            CaseUploadResult,
+            FixtureParentUploadResult,
+            PersonUploadResult,
+            SampleUploadResult,
+        ):
+            assert result_class in classes
+
+    @pytest.mark.parametrize(
+        ("result_class", "field_name", "child_for_upload_class"),
+        _child_result_field_cases(),
+    )
+    def test_child_result_field_matches_child_identifiers(
+        self,
+        result_class: type[ParentUploadResult],
+        field_name: str,
+        child_for_upload_class: type,
+    ) -> None:
+        annotation = result_class.model_fields[field_name].annotation
+        (list_type,) = [x for x in get_args(annotation) if x is not type(None)]
+        (item_type,) = get_args(list_type)
+        expected_item_type = (
+            UploadResultWithIdentifiers
+            if issubclass(child_for_upload_class, IdentifiersMixin)
+            else UploadResult
+        )
+        assert item_type is expected_item_type, (
+            f"{result_class.__name__}.{field_name} must be declared as "
+            f"list[{expected_item_type.__name__}] | None, got {annotation}"
+        )
+
+
+def test_child_identifier_results_survive_serialization() -> None:
+    identifier_result = UploadResult()
+    identifier_result.add_error("0561ecd7", "Identifier refers to another object")
+    child_result = UploadResultWithIdentifiers(identifiers=[identifier_result])
+    parent_result = FixtureParentUploadResult(children2=[child_result])
+    parent_result.propagate_child_failures()
+
+    restored = FixtureParentUploadResult.model_validate_json(
+        parent_result.model_dump_json()
+    )
+
+    assert restored.children2 is not None
+    restored_child = restored.children2[0]
+    assert restored_child.has_log_code("d8f21b6a")
+    assert restored_child.identifiers is not None
+    assert restored_child.identifiers[0].has_log_code("0561ecd7")

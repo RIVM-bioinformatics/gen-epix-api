@@ -250,8 +250,15 @@ class CaseBatchUploader(BatchUploader):
                     for key, value in case.content.items()
                     if value is not None
                 }
-            if not self.is_null(case.id) and case.content:
-                # Case and its content will be updated and has to be validated again
+            if (
+                not self.is_null(case.id)
+                and case.content
+                and case_result.status == EtlStatus.PENDING
+            ):
+                # Case and its content will be updated and has to be validated
+                # again. A case that is not PENDING (e.g. it failed verification
+                # with fail_batch_on_item_error=False) is not written, so its
+                # stored content is not read.
                 cases_for_validation.append(case)
         return cases_only_cmd, cases_for_validation
 
