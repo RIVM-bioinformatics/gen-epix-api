@@ -57,7 +57,7 @@ RUN adduser \
 # so it is not included in the requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    CC=g++ CXX=g++ python -m pip install -r requirements.txt pyodbc==5.2.* --no-cache-dir
+    CC=g++ CXX=g++ python -m pip install -r requirements.txt pyodbc==5.3.* --no-cache-dir
 
 # Copy the source code into the container.
 COPY . /app

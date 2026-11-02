@@ -35,7 +35,9 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     Represents a request to upload a batch of samples along with their associated data.
 
     The data are uploaded as a single atomic unit of work, so that either all data are
-    successfully uploaded or none are.
+    successfully uploaded or none are. With ``fail_batch_on_item_error=False``, samples
+    that fail verification are left out and the other samples are uploaded, still as
+    one unit of work.
 
     The upload process consists of the following steps:
     1) Check if the user has the rights to upload the data in question.

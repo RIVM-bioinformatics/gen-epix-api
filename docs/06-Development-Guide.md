@@ -207,7 +207,7 @@ mypy, and writes output to `test/output/`. (Source: `run.py`; Source:
 | Install | Contents | Use |
 |---------|----------|-----|
 | `pip install gen-epix` | Base `dependencies` | Domain models, commands and the remote clients (`CasedbClient`, `SeqdbClient`, `OmopdbClient`, `CommondbClient`) |
-| `pip install "gen-epix[server]"` | Base plus the `server` extra: FastAPI, Starlette, gunicorn, slowapi, python-multipart, SQLAlchemy, Alembic, cryptography, oauthlib | Running an application, composing one in-process (`AppComposer`), SQLAlchemy repositories |
+| `pip install "gen-epix[server]"` | Base plus the `server` extra: FastAPI, Starlette, gunicorn, slowapi, python-multipart, SQLAlchemy, Alembic, cryptography, oauthlib, NumPy, SciPy, Biopython, cachetools, tomli-w, fire | Running an application, composing one in-process (`AppComposer`), SQLAlchemy repositories, the services and their calculations, `run.py` |
 
 `requirements.txt` equals the base dependencies plus the `server` extra; a test
 keeps them in sync. (Source: `test/general/code/test_general_dependency_list.py`)
@@ -217,7 +217,9 @@ re-export server-side names resolve them on first access (`gen_epix/_lazy.py`),
 and because the request and response models live in `*_schema.py` modules apart
 from the routes. When adding an export, keep anything that imports a `server`
 package out of the import chain of the remote clients;
-`test/general/code/test_general_client_import_isolation.py` fails otherwise.
+`test/general/code/test_general_client_import_isolation.py` fails otherwise. The
+`client-install` CI job also runs that test in an installation without the extra,
+and fails if one of the extra's packages is installed there.
 
 ---
 

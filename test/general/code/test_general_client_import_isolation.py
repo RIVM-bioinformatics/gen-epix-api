@@ -3,32 +3,62 @@
 A consumer that only calls the applications over HTTP installs gen_epix without
 the ``server`` extra. Each test runs in a fresh interpreter in which importing
 any of the server-only packages fails, as it would in such an installation.
+
+Uses only pytest besides gen_epix's base dependencies, so the ``client-install``
+CI job also runs it in a real installation without the extra.
 """
 
+import importlib.metadata
+import re
 import subprocess
 import sys
 import textwrap
+import tomllib
 
 import pytest
 
 from gen_epix.util import get_package_root
 
-SERVER_ONLY_PACKAGES = (
-    "fastapi",
-    "starlette",
-    "slowapi",
-    "sqlalchemy",
-    "sqlalchemy_utils",
-    "alembic",
-    "gunicorn",
+# Import names that are not those of a distribution in the server extra
+_OTHER_SERVER_ONLY_PACKAGES = (
+    # Installed by fastapi[standard]
     "uvicorn",
-    "multipart",
-    "python_multipart",
-    "cryptography",
-    "oauthlib",
     # Not in the server extra either: a development dependency
     "pyinstrument",
 )
+
+
+def _normalize(distribution_name: str) -> str:
+    return re.sub(r"[-_.]+", "-", distribution_name).lower()
+
+
+def _get_server_only_packages() -> tuple[str, ...]:
+    """Return the import names of the server extra's packages that are installed.
+
+    In an installation without the extra none of them are installed, and none
+    need to be blocked.
+    """
+    project = tomllib.loads(
+        (get_package_root() / "pyproject.toml").read_text(encoding="utf-8")
+    )["project"]
+    server = {
+        _normalize(re.split(r"[\[<>=!~;\s]", x.strip(), maxsplit=1)[0])
+        for x in project["optional-dependencies"]["server"]
+    }
+    installed = importlib.metadata.packages_distributions()
+    return tuple(
+        sorted(
+            {
+                package
+                for package, distributions in installed.items()
+                if any(_normalize(x) in server for x in distributions)
+            }
+            | set(_OTHER_SERVER_ONLY_PACKAGES)
+        )
+    )
+
+
+SERVER_ONLY_PACKAGES = _get_server_only_packages()
 
 _BLOCK_SERVER_ONLY_PACKAGES = f"""
 import sys
@@ -129,7 +159,25 @@ def test_import_client_side_api_without_server_packages() -> None:
         """)
 
 
+def test_server_only_packages_follow_server_extra() -> None:
+    """Ensure that the blocked packages include the server extra's, if installed."""
+    try:
+        importlib.metadata.version("numpy")
+    except importlib.metadata.PackageNotFoundError:
+        pytest.skip("installed without the server extra")
+    assert {"Bio", "cachetools", "fire", "numpy", "scipy", "tomli_w"} <= set(
+        SERVER_ONLY_PACKAGES
+    )
+
+
 def test_server_side_export_requires_server_packages() -> None:
-    """Ensure that the blocker works, by importing something that needs the server."""
-    with pytest.raises(pytest.fail.Exception, match="server-only package imported"):
+    """Ensure that the blocker works, by importing something that needs the server.
+
+    Without the server extra installed, the blocker does not know the package and
+    the import fails with the usual message.
+    """
+    with pytest.raises(
+        pytest.fail.Exception,
+        match=r"server-only package imported|No module named",
+    ):
         _run_without_server_packages("from gen_epix import CasedbAppComposer")
