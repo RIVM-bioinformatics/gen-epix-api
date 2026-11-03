@@ -10,10 +10,6 @@ class_name = "OrganizationDictRepository"
 module = "gen_epix.omopdb.repositories"
 class_name = "SystemDictRepository"
 
-[repository.file]
+[repository.omop]
 module = "gen_epix.omopdb.repositories"
-class_name = "FileDictRepository"
-
-[repository.seq]
-module = "gen_epix.omopdb.repositories"
-class_name = "SeqDictRepository"
+class_name = "OmopDictRepository"

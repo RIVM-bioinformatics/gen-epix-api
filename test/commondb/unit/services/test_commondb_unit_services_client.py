@@ -127,7 +127,7 @@ class TestInitialization(BaseCommondbClientTestCase):
     def test_init_with_oauth2_auth_protocol_enum(self) -> None:
         """Initialize with OAUTH2 auth protocol as enum."""
         with patch(
-            "gen_epix.commondb.services.client.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthTokenClient"
         ) as mock_idp_class:
             app = CommondbClient(
                 domain=self.domain,
@@ -146,7 +146,7 @@ class TestInitialization(BaseCommondbClientTestCase):
     def test_init_with_oauth2_auth_protocol_string(self) -> None:
         """Initialize with OAUTH2 auth protocol as string."""
         with patch(
-            "gen_epix.commondb.services.client.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthTokenClient"
         ) as mock_idp_class:
             app = CommondbClient(
                 domain=self.domain,
@@ -330,7 +330,7 @@ class TestGetHeaders(BaseCommondbClientTestCase):
 
     def test_get_headers_caches_token(self) -> None:
         """get_headers caches token when not expired."""
-        # Create mock OauthIdpClient
+        # Create mock OauthTokenClient
         mock_idp_client = Mock()
 
         # Create JWT token that expires in the future
@@ -345,7 +345,7 @@ class TestGetHeaders(BaseCommondbClientTestCase):
         )
 
         with patch(
-            "gen_epix.commondb.services.client.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthTokenClient"
         ) as mock_idp_class:
             mock_idp_class.return_value = mock_idp_client
 
@@ -388,7 +388,7 @@ class TestGetHeaders(BaseCommondbClientTestCase):
         ]
 
         with patch(
-            "gen_epix.commondb.services.client.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthTokenClient"
         ) as mock_idp_class:
             mock_idp_class.return_value = mock_idp_client
 
@@ -430,7 +430,7 @@ class TestGetHeaders(BaseCommondbClientTestCase):
         )
 
         with patch(
-            "gen_epix.commondb.services.client.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthTokenClient"
         ) as mock_idp_class:
             mock_idp_class.return_value = mock_idp_client
 
@@ -789,7 +789,7 @@ class TestIntegration(BaseCommondbClientTestCase):
         )
 
         with patch(
-            "gen_epix.commondb.services.client.OauthIdpClient"
+            "gen_epix.commondb.services.client.OauthTokenClient"
         ) as mock_idp_class:
             mock_idp_class.return_value = mock_idp_client
 

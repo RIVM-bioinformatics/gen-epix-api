@@ -13,7 +13,31 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
+from gen_epix.filter import CompositeFilter, Filter, LogicalOperator, UuidSetFilter
+
+
+def is_bounded_query(query_filter: Filter | None, keys: frozenset[str]) -> bool:
+    """Check whether a filter restricts results to explicit parent IDs.
+
+    A non-inverted UUID set on an allowed key is bounded. For non-inverted
+    composites, AND requires one bounded child and OR requires every child to
+    be bounded. Other filters and operators are unbounded.
+
+    Args:
+        query_filter: Query filter to check.
+        keys: Parent ID fields that bound the query.
+
+    Returns:
+        Whether the query is bounded by the allowed fields.
+    """
+    if isinstance(query_filter, UuidSetFilter):
+        return not query_filter.invert and query_filter.key in keys
+    if isinstance(query_filter, CompositeFilter) and not query_filter.invert:
+        if query_filter.operator == LogicalOperator.AND:
+            return any(is_bounded_query(x, keys) for x in query_filter.filters)
+        if query_filter.operator == LogicalOperator.OR:
+            return all(is_bounded_query(x, keys) for x in query_filter.filters)
+    return False
 
 
 def get_case_abac_from_command(cmd: command.CrudCommand) -> model.CaseAbac | None:

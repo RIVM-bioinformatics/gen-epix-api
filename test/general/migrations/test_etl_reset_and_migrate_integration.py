@@ -50,9 +50,7 @@ def get_connection_string() -> str:
     """Resolve the SEQDB SA_SQL connection string, skipping if unreachable."""
     set_env_variables(AppType.SEQDB, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
     connection_string = _seq_connection_string()
-    if exception := SARepository.test_connection(
-        connection_string, timeout=2, login_timeout=2
-    ):
+    if exception := SARepository.test_connection(connection_string, timeout=2):
         pytest.skip(
             f"SEQDB SA_SQL database is unreachable ({exception}); "
             "run `make start-db` first"

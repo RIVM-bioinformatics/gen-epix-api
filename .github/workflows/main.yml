@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Set up Python 3.14
         id: setup-python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: 3.14
       - name: Install ODBC development headers
@@ -55,7 +55,7 @@ jobs:
           source ~/.venv/bin/activate
           pip install -r requirements.txt
           pip install -r dev-requirements.txt
-          pip install --no-binary :all: pyodbc==5.2.*
+          pip install --no-binary :all: pyodbc==5.3.*
         # pyodbc is CPU architecture dependent and needs to be installed from source
 
   formatting:
@@ -68,7 +68,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ needs.setup-env.outputs.python-version }}
       - name: Restore pip dependencies
@@ -102,7 +102,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ needs.setup-env.outputs.python-version }}
       - name: Restore pip dependencies
@@ -144,7 +144,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ needs.setup-env.outputs.python-version }}
       - name: Restore pip dependencies
@@ -167,7 +167,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ needs.setup-env.outputs.python-version }}
       - name: Restore pip dependencies
@@ -190,6 +190,45 @@ jobs:
         with:
           name: coverage-report
           path: test/output/coverage.xml
+
+  client-install:
+    name: Client install
+    # Installs gen-epix without extras, as consumers that only call the apps do
+    # (the lsp-data Airflow worker), and checks that the client side imports.
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python 3.14
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: 3.14
+      - name: Install without extras
+        run: |
+          python -m venv ~/.venv-client
+          ~/.venv-client/bin/python -m pip install --no-cache-dir . pytest
+      - name: Check that no package of the server extra is installed
+        run: |
+          ~/.venv-client/bin/python - <<'EOF'
+          import importlib.metadata, re, tomllib
+
+          with open("pyproject.toml", "rb") as f:
+              server = tomllib.load(f)["project"]["optional-dependencies"]["server"]
+          installed = []
+          for requirement in server:
+              name = re.split(r"[\[<>=!~;\s]", requirement.strip(), maxsplit=1)[0]
+              try:
+                  importlib.metadata.version(name)
+              except importlib.metadata.PackageNotFoundError:
+                  continue
+              installed.append(name)
+          assert not installed, f"Installed without the server extra: {installed}"
+          EOF
+      - name: Check the client imports
+        # The root conftest.py needs development dependencies
+        run: |
+          ~/.venv-client/bin/python -m pytest --noconftest -p no:cacheprovider test/general/code/test_general_client_import_isolation.py
 
   sonarcloud:
     name: SonarCloud Scan

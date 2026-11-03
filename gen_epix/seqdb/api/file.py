@@ -6,24 +6,17 @@ from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
+
+# The request and response models stay importable from this module
+# pylint: disable=useless-import-alias, unused-import
+from gen_epix.seqdb.api.file_schema import (
+    CreateFileRequestBody as CreateFileRequestBody,
+)
 from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.util import copy_model_field
-
-
-class CreateFileRequestBody(PydanticBaseModel):
-    """Represents a base64-encoded file creation request."""
-
-    content: str = Field(description="The content of the file as base64 encoded bytes.")
-    format: enum.FileFormat = copy_model_field(command.CreateFileCommand, "format")
-    compression: enum.FileCompression = copy_model_field(
-        command.CreateFileCommand, "compression"
-    )
 
 
 def create_file_endpoints(

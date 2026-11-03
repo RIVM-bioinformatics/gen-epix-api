@@ -1,12 +1,16 @@
 """Base authentication service contract."""
 
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
 from gen_epix.fastapp import model
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
-from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, IDPUser
+
+if TYPE_CHECKING:
+    # Depends on FastAPI, which a client of this contract does not need
+    from gen_epix.fastapp.services.auth.idp_client import IdpClient
 
 
 class BaseAuthService(BaseService):
@@ -23,7 +27,7 @@ class BaseAuthService(BaseService):
 
     @property
     @abstractmethod
-    def idp_clients(self) -> list[IdpClient]:
+    def idp_clients(self) -> "list[IdpClient]":
         """Idp clients."""
         raise NotImplementedError()
 

@@ -15,7 +15,29 @@ from gen_epix.casedb.services.case import crud_common
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.enum import CrudOperationSet
-from gen_epix.filter import CompositeFilter, EqualsStringFilter, Filter, LogicalOperator
+from gen_epix.filter import (
+    CompositeFilter,
+    EqualsStringFilter,
+    Filter,
+    LogicalOperator,
+    UuidSetFilter,
+)
+
+
+@pytest.mark.parametrize("key", ["case_id", "case_set_id"])
+def test_bounded_query_recurses_and_respects_allowed_keys(key):
+    bounded = UuidSetFilter(key=key, members={uuid4()})
+    other = UuidSetFilter(key="id", members={uuid4()})
+    nested = CompositeFilter(
+        filters=[
+            CompositeFilter(filters=[bounded, other], operator=LogicalOperator.AND),
+            UuidSetFilter(key=key, members={uuid4()}),
+        ],
+        operator=LogicalOperator.OR,
+    )
+
+    assert crud_common.is_bounded_query(nested, frozenset({key}))
+    assert not crud_common.is_bounded_query(nested, frozenset({"id"}))
 
 
 class DummyCmd:
