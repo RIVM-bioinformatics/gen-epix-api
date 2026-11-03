@@ -344,14 +344,26 @@ completed `HTTP 200 GET /v1/health` from the launched instance. Select `casedb`,
 `seqdb`, or `omopdb` and explicitly supply both existing development modes:
 
 ```bash
+# Measure 30 normal application starts.
 .venv/bin/python -m scripts.startup_benchmark benchmark casedb \
-  --idp-mode NONE --repository-mode DICT_EMPTY
-.venv/bin/python -m scripts.startup_benchmark diagnose seqdb \
-  --idp-mode NONE --repository-mode DICT_EMPTY --kind both
-.venv/bin/python -m scripts.startup_benchmark report RESULTS_JSON \
-  --diagnostics DIAGNOSTICS_JSON --output REPORT_DIRECTORY
-.venv/bin/python -m scripts.startup_benchmark report --input RESULTS_JSON \
-  --diagnostics DIAGNOSTICS_JSON --output report.html
+  --idp-mode IDPS \
+  --repository-mode DICT_DEMO \
+  --runs 30 \
+  --output test/output/startup_benchmark/casedb-benchmark
+
+# Collect import and startup phase diagnostics: 30 runs of each kind.
+.venv/bin/python -m scripts.startup_benchmark diagnose casedb \
+  --idp-mode IDPS \
+  --repository-mode DICT_DEMO \
+  --kind both \
+  --runs 30 \
+  --output test/output/startup_benchmark/casedb-diagnostics
+
+# Combine the results in one offline HTML report.
+.venv/bin/python -m scripts.startup_benchmark report \
+  --input test/output/startup_benchmark/casedb-benchmark/results.json \
+  --diagnostics test/output/startup_benchmark/casedb-diagnostics/diagnostics.json \
+  --output test/output/startup_benchmark/casedb-report.html
 ```
 
 The positional-input report still writes Markdown, SVG, and JSON to a directory.
