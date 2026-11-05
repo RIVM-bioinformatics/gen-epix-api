@@ -36,6 +36,7 @@ from gen_epix.fastapp.exc import NoResultsError as NoResultsError
 from gen_epix.fastapp.exc import (
     NotNullConstraintViolationError as NotNullConstraintViolationError,
 )
+from gen_epix.fastapp.exc import RemoteServiceError as RemoteServiceError
 from gen_epix.fastapp.exc import (
     RepositoryInitializationServiceError as RepositoryInitializationServiceError,
 )
