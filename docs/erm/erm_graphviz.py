@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import warnings
+from collections.abc import Collection
 from pathlib import Path
 
 import erdantic as erd
@@ -21,6 +22,7 @@ import erdantic as erd
 from docs.erm.erm import ErmGenerator
 from docs.erm.erm_hash import DOMAINS, generate_hash_for_domain_models
 from gen_epix.fastapp import Domain
+from gen_epix.fastapp.model import Model
 
 # Disable Graphviz Pango plugin warnings on Windows
 # This prevents "Could not load gvplugin_pango.dll" warnings
@@ -71,10 +73,9 @@ class GraphvizErmGenerator(ErmGenerator):
                 "ignore", category=RuntimeWarning, module="pygraphviz.*"
             )
             sorted_model_classes = domain.get_dag_sorted_models(persistable=True)
-            erd.draw(
-                *sorted_model_classes,
-                out=dir / f"{domain.name.lower()}.png",
-                limit_search_models_to=[x.__name__ for x in sorted_model_classes],
+            erd.draw(*sorted_model_classes, out=dir / f"{domain.name.lower()}.png")
+            GraphvizErmGenerator._draw_scoped(
+                sorted_model_classes, dir / f"{domain.name.lower()}.persisted.png"
             )
 
     @staticmethod
@@ -85,8 +86,22 @@ class GraphvizErmGenerator(ErmGenerator):
             )
             for service_type in domain.get_service_types():
                 model_classes = domain.get_models_for_service_type(service_type)
-                erd.draw(
-                    *model_classes,
-                    out=dir / f"{domain.name.lower()}.{service_type.value.lower()}.png",
-                    limit_search_models_to=[x.__name__ for x in model_classes],
+                tag = f"{domain.name.lower()}.{service_type.value.lower()}"
+                GraphvizErmGenerator._draw_scoped(model_classes, dir / f"{tag}.png")
+                persisted_models = domain.get_dag_sorted_models(
+                    service_type=service_type, persistable=True
                 )
+                GraphvizErmGenerator._draw_scoped(
+                    persisted_models, dir / f"{tag}.persisted.png"
+                )
+
+    @staticmethod
+    def _draw_scoped(model_classes: Collection[type[Model]], out: Path) -> None:
+        """Draw only the supplied models and relationships between them."""
+        diagram = erd.create(*model_classes)
+        graph = diagram.to_graphviz()
+        included = set(model_classes)
+        for name, model in diagram.models.items():
+            if model.raw_model not in included:
+                graph.remove_node(name)
+        graph.draw(out, prog="dot")

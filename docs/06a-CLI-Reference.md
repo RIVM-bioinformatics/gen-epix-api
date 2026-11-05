@@ -96,7 +96,7 @@ Per-app commands follow the pattern `test_{app}_{scope}` and optionally `test_{a
 | `other_general_run_mypy` | Run mypy alone using repository `mypy.ini` settings. |
 | `other_general_analyse_pylint_code_impact` | Analyse relative impact of pylint codes across the codebase. |
 | `other_general_generate_uuids` | Generate a grid of UUIDs (benchmarking utility). |
-| `other_general_generate_erm_diagrams` | Generate entity-relationship diagrams into `docs/assets/erm/`. |
+| `other_general_generate_erm_diagrams` | Generate entity-relationship diagrams into `docs/erm/`, including persisted-only PNGs with the `.persisted.png` suffix. |
 | `other_casedb_parse_user_journey_from_debug_log` | Parse a debug log into an Excel report and a pickled user-journey object. |
 | `other_oauth_server_start` | Start the local OAuth test server. |
 
