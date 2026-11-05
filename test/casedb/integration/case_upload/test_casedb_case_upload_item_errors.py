@@ -1,16 +1,18 @@
 """Integration test: one bad case in an upload no longer keeps the others out.
 
-Runs UploadCasesCommand against a real (DICT) CASEDB app, so the whole upload path
+Runs UploadCasesCommand against DICT and SQLite CASEDB apps, so the whole upload path
 is exercised: verification, merged-content validation, upsert and storage. With
 fail_batch_on_item_error=False the cases that pass verification are stored even
 when another case in the same batch fails. A case fails here by
 carrying a value for a column that does not exist.
 """
 
+import copy
 import logging
 from dataclasses import dataclass
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import EnumTestType
+from test.test_client.pytest_params import BuildDbParams
 from uuid import UUID, uuid4
 
 import pytest
@@ -27,7 +29,6 @@ from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_UPLOAD_ITEM_ERRORS
-DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_EMPTY
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -54,14 +55,26 @@ class RefData:
     data_collection_id: UUID
 
 
-@pytest.fixture(scope="module", name="env")
-def get_test_client() -> Env:
-    """Return a test client on an empty DICT repository."""
+_PARAMS = [
+    BuildDbParams(True, DevRepositoryConfig.SA_SQLITE_EMPTY),
+    BuildDbParams(True, DevRepositoryConfig.DICT_EMPTY),
+]
+
+
+@pytest.fixture(scope="module", name="env", params=_PARAMS, ids=[p.id for p in _PARAMS])
+def get_test_client(request: pytest.FixtureRequest) -> Env:
+    params: BuildDbParams = request.param
+    cfg_key = f"{TEST_TYPE.value}__{params.dev_repository_config.value}"
+    app_cfg = copy.copy(CASEDB_APP_CFGS[cfg_key])
+    app_cfg._name = f"{TEST_TYPE.value}__{params.id}"
+    app_cfg.cfg["service"]["seqdb"]["props"]["local_client"]["app_cfg"] = (
+        SEQDB_APP_CFGS[cfg_key]
+    )
     return Env.get_test_client(  # type: ignore[return-value]
-        test_type=TEST_TYPE.value,
-        app_cfg=CASEDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"],
+        test_type=app_cfg.name,
+        app_cfg=app_cfg,
         log_level=logging.ERROR,
-        use_endpoints=False,
+        use_endpoints=not params.skip_endpoints,
     )
 
 
