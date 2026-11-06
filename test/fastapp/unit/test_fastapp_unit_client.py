@@ -1056,3 +1056,116 @@ class TestClientRetry:
 
         assert handler.calls == 1
         assert retry_sleeps == []
+
+
+class Lookup:
+    """A find_result callable that answers in order, then keeps answering None."""
+
+    def __init__(self, *answers: Any) -> None:
+        self.answers = list(answers)
+        self.calls = 0
+
+    def __call__(self) -> Any:
+        self.calls += 1
+        if not self.answers:
+            return None
+        answer = self.answers.pop(0)
+        if isinstance(answer, BaseException):
+            raise answer
+        return answer
+
+
+class TestClientFindResult:
+    """`handle(cmd, find_result=...)` looks for the effect after every failed attempt."""
+
+    def test_found_result_stops_the_retries(self, retry_sleeps: list[float]) -> None:
+        handler = Flaky(httpx.ReadTimeout("t"))
+        lookup = Lookup("found")
+        client = _make_retry_client(handler, RETRY_POLICY)
+
+        assert client.handle(RetryCommand(), find_result=lookup) == "found"
+
+        assert handler.calls == 1
+        assert lookup.calls == 1
+        assert retry_sleeps == []
+
+    def test_lookup_runs_after_each_failed_attempt(
+        self, retry_sleeps: list[float]
+    ) -> None:
+        handler = Flaky(httpx.ReadTimeout("t"), _status_error(503))
+        lookup = Lookup(None, None)
+        client = _make_retry_client(handler, RETRY_POLICY)
+
+        assert client.handle(RetryCommand(), find_result=lookup) == "ok"
+
+        assert handler.calls == 3
+        assert lookup.calls == 2
+        assert retry_sleeps == [1, 2]
+
+    @pytest.mark.parametrize("status", [401, 403, 422])
+    def test_lookup_runs_after_a_failure_that_is_not_retried(
+        self, status: int, retry_sleeps: list[float]
+    ) -> None:
+        handler = Flaky(_status_error(status))
+        lookup = Lookup("found")
+        client = _make_retry_client(handler, RETRY_POLICY)
+
+        assert client.handle(RetryCommand(), find_result=lookup) == "found"
+
+        assert handler.calls == 1
+        assert retry_sleeps == []
+
+    def test_error_is_raised_when_nothing_is_found(
+        self, retry_sleeps: list[float]
+    ) -> None:
+        handler = Flaky(_status_error(422))
+        lookup = Lookup(None)
+        client = _make_retry_client(handler, RETRY_POLICY)
+
+        with pytest.raises(ServiceException, match="HTTP status 422"):
+            client.handle(RetryCommand(), find_result=lookup)
+
+        assert lookup.calls == 1
+
+    def test_lookup_runs_after_the_last_attempt(
+        self, retry_sleeps: list[float]
+    ) -> None:
+        handler = Flaky(*[_status_error(502) for _ in range(10)])
+        attempts = len(RETRY_POLICY.wait_schedule) + 1
+        lookup = Lookup(*[None] * (attempts - 1), "found")
+        client = _make_retry_client(handler, RETRY_POLICY)
+
+        assert client.handle(RetryCommand(), find_result=lookup) == "found"
+
+        assert handler.calls == attempts
+        assert lookup.calls == attempts
+
+    def test_failing_lookup_keeps_the_commands_error_and_the_retries(
+        self, retry_sleeps: list[float]
+    ) -> None:
+        handler = Flaky(_status_error(503), _status_error(400))
+        lookup = Lookup(RuntimeError("lookup down"), RuntimeError("lookup down"))
+        client = _make_retry_client(handler, RETRY_POLICY)
+
+        with pytest.raises(ServiceException, match="HTTP status 400"):
+            client.handle(RetryCommand(), find_result=lookup)
+
+        assert handler.calls == 2
+        assert lookup.calls == 2
+
+    def test_lookup_is_not_used_after_success(self, retry_sleeps: list[float]) -> None:
+        lookup = Lookup("found")
+        client = _make_retry_client(Flaky(), RETRY_POLICY)
+
+        assert client.handle(RetryCommand(), find_result=lookup) == "ok"
+
+        assert lookup.calls == 0
+
+    def test_lookup_works_without_a_retry_policy(self) -> None:
+        handler = Flaky(_status_error(503))
+        lookup = Lookup("found")
+        client = _make_retry_client(handler, None)
+
+        assert client.handle(RetryCommand(), find_result=lookup) == "found"
+
+        assert handler.calls == 1
