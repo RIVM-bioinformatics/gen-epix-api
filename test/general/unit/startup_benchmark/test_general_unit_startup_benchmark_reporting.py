@@ -22,7 +22,7 @@ def artifact():
         "options": {"idp_mode": "NONE", "repository_mode": "DICT_EMPTY"},
         "configuration_valid": True,
         "configuration_fingerprint": "a",
-        "metadata": {"commit": "abc"},
+        "metadata": {"commit": "abc", "dirty": False},
         "records": [
             dataclasses.asdict(RunRecord(1, "measured", status="timeout")),
             dataclasses.asdict(RunRecord(2, "measured")),
@@ -53,6 +53,16 @@ def test_schema_and_compatibility(tmp_path):
     save_json(tmp_path / "bad.json", {"schema_version": 90})
     with pytest.raises(ValueError):
         load_json(tmp_path / "bad.json")
+
+
+@pytest.mark.parametrize("dirty_artifact", ["results", "diagnostics"])
+def test_dirty_artifacts_are_incompatible(dirty_artifact):
+    results = artifact()
+    diagnostics = artifact()
+    diagnostics["command"] = "diagnose"
+    target = results if dirty_artifact == "results" else diagnostics
+    target["metadata"]["dirty"] = True
+    assert not compatible(results, diagnostics)
 
 
 def test_redaction():

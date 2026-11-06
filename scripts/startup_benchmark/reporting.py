@@ -48,6 +48,8 @@ def compatible(results: dict, diagnostics: dict) -> bool:
         )
         and bool(results.get("configuration_fingerprint"))
         and results["metadata"]["commit"] == diagnostics["metadata"]["commit"]
+        and not results["metadata"]["dirty"]
+        and not diagnostics["metadata"]["dirty"]
         and results.get("configuration_valid", False)
         and diagnostics.get("configuration_valid", False)
     )
