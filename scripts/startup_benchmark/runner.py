@@ -139,30 +139,36 @@ def cleanup(process: subprocess.Popen, grace: float = 10) -> bool:
     Live descendants must disappear before the next run can proceed.
     """
 
-    def alive() -> bool:
+    def session_members() -> list[int]:
+        members = []
         for entry in Path("/proc").glob("[0-9]*/stat"):
             try:
                 fields = entry.read_text().rsplit(")", 1)[1].split()
-                if int(fields[2]) == process.pid and fields[0] != "Z":
-                    return True
+                if int(fields[3]) == process.pid and fields[0] != "Z":
+                    members.append(int(entry.parent.name))
             except (OSError, ValueError, IndexError):
                 continue
-        return False
+        return members
 
     for sig, wait in ((signal.SIGTERM, grace), (signal.SIGKILL, 2)):
-        try:
-            os.killpg(process.pid, sig)
-        except ProcessLookupError:
-            pass
         deadline = time.monotonic() + wait
+        signaled = set()
         while time.monotonic() < deadline:
+            members = session_members()
+            for pid in members:
+                if sig == signal.SIGKILL or pid not in signaled:
+                    try:
+                        os.kill(pid, sig)
+                        signaled.add(pid)
+                    except ProcessLookupError:
+                        pass
             process.poll()
-            if not alive():
+            if not members:
                 process.wait(timeout=2)
                 return True
             time.sleep(0.02)
     process.poll()
-    return process.returncode is not None and not alive()
+    return process.returncode is not None and not session_members()
 
 
 def run_once(

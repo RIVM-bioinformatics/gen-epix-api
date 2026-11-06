@@ -117,7 +117,7 @@ def test_interruption_cleans_process(options, tmp_path, monkeypatch):
 
 def test_descendant_ignoring_sigterm_is_killed(tmp_path):
     ready = tmp_path / "ready"
-    script = 'import signal,time,sys; from pathlib import Path; signal.signal(signal.SIGTERM, signal.SIG_IGN); Path(sys.argv[1]).write_text("ready"); time.sleep(120)'
+    script = 'import os,signal,time,sys; from pathlib import Path; os.setpgrp(); signal.signal(signal.SIGTERM, signal.SIG_IGN); Path(sys.argv[1]).write_text("ready"); time.sleep(120)'
     parent_script = 'import subprocess,sys,time; subprocess.Popen([sys.executable,"-c",sys.argv[1],sys.argv[2]]); time.sleep(120)'
     process = subprocess.Popen(
         [sys.executable, "-c", parent_script, script, str(ready)],
