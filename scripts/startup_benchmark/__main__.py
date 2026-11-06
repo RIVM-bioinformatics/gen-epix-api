@@ -130,8 +130,8 @@ def execute(args: Any) -> int:
         / f"{args.application}-{stamp}-{uuid.uuid4().hex[:8]}"
     ).resolve()
     output.mkdir(parents=True, exist_ok=True)
-    if (output / "results.json").exists():
-        raise ValueError("Output already contains results; choose a new directory")
+    if any(output.iterdir()):
+        raise ValueError("Output directory must be empty; choose a new directory")
     metadata = capture(options, env)
     data: Artifact = {
         "schema_version": SCHEMA_VERSION,
