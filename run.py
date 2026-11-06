@@ -145,7 +145,11 @@ class Run:
 
     ## etl
     def etl_load_demo_data(
-        self, app_type: AppType | str, connect_timeout: float = 1, verbose: bool = True
+        self,
+        app_type: AppType | str,
+        connect_timeout: float = 1,
+        verbose: bool = True,
+        load_sa_sql: bool = False,
     ) -> None:
         from gen_epix.commondb.domain.util import load_demo_data
 
@@ -165,11 +169,16 @@ class Run:
                     module_root,
                     connect_timeout=connect_timeout,
                     verbose=verbose,
+                    load_sa_sql=load_sa_sql,
                 )
             return
         module_root: str = Run.ETL_ENV[app_type]["module_root"]
         load_demo_data(
-            app_type, module_root, connect_timeout=connect_timeout, verbose=verbose
+            app_type,
+            module_root,
+            connect_timeout=connect_timeout,
+            verbose=verbose,
+            load_sa_sql=load_sa_sql,
         )
 
     ## test

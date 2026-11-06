@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, cast
 
 import ulid
 
+from gen_epix.commondb.domain.enum import RoleSet as RoleSet
+
 if TYPE_CHECKING:
     from pydantic import GetJsonSchemaHandler
     from pydantic.json_schema import JsonSchemaValue

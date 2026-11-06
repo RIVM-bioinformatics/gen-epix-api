@@ -234,8 +234,9 @@ def load_demo_data(
     module_root: str,
     connect_timeout: float = 1,
     verbose: bool = True,
+    load_sa_sql: bool = False,
 ) -> None:
-    """Load demo data for the given app type from zip archives into dict and SA repos."""
+    """Load demo data into dict and SA_SQLITE repos, optionally loading SA_SQL."""
     domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
     # Import the sa_model module to register the models
     importlib.import_module(f"{module_root}.repositories.sa_model")
@@ -252,15 +253,19 @@ def load_demo_data(
     sa_sqlite_app_cfg = app_cfg_class(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
-    set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
-    sa_sql_app_cfg = app_cfg_class(
-        app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
-    )
+    sa_sql_app_cfg_data = None
+    # `etl.py load_demodata` is the canonical SQL database loader; this helper
+    # regenerates committed demo files unless SQL loading is explicitly requested.
+    if load_sa_sql:
+        set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
+        sa_sql_app_cfg = app_cfg_class(
+            app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
+        )
+        sa_sql_app_cfg_data = cast(dict[str, Any], sa_sql_app_cfg.cfg)
     # user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
     user_id = NULL_ID
     dict_app_cfg_data = cast(dict[str, Any], dict_app_cfg.cfg)
     sa_sqlite_app_cfg_data = cast(dict[str, Any], sa_sqlite_app_cfg.cfg)
-    sa_sql_app_cfg_data = cast(dict[str, Any], sa_sql_app_cfg.cfg)
     for service_type in enum.ServiceType:
         _load_demo_data_for_service(
             app_type,
@@ -283,7 +288,7 @@ def _load_demo_data_for_service(
     domain: Domain,
     dict_app_cfg_data: dict[str, Any],
     sa_sqlite_app_cfg_data: dict[str, Any],
-    sa_sql_app_cfg_data: dict[str, Any],
+    sa_sql_app_cfg_data: dict[str, Any] | None,
     user_id: UUID,
     connect_timeout: float,
     verbose: bool,
@@ -363,6 +368,8 @@ def _load_demo_data_for_service(
         print(
             f"App {app_type.value}, service {service_type.value}: sa_sqlite repository written to file in {end_time - start_time}s"
         )
+    if sa_sql_app_cfg_data is None:
+        return
     # Create empty SA_SQL repository or loaded with demo data
     sa_sql_repository_cfg = cast(
         dict[str, Any],
