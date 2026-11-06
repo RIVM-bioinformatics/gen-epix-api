@@ -3,6 +3,7 @@
 Complex association entity with extensive ABAC logic.
 """
 
+from typing import cast
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -60,7 +61,12 @@ def _crud_case_set_member_without_abac(
     # Non-ABAC restrictions not enforced anywhere else
     if cmd.is_create() or cmd.is_update():
         # Verify that the case set and case have the same CaseType
-        self._verify_case_set_member_case_type(cmd.user, cmd.get_objs())
+        assert cmd.user is not None
+        members = cmd.get_objs()
+        assert members is not None
+        self._verify_case_set_member_case_type(
+            cmd.user, cast(list[model.CaseSetMember], members)
+        )
 
     _crud_cascade_delete(self, uow, cmd)
     return self.crud(cmd)  # type: ignore[return-value]
@@ -128,7 +134,9 @@ def _crud_case_set_member_with_abac(
                 update={
                     "operation": CrudOperation.READ_ALL,
                     "obj_ids": None,
-                    "query_filter": UuidSetFilter(key="id", members=set(requested_ids)),
+                    "query_filter": UuidSetFilter(
+                        key="id", members=frozenset(cast(list[UUID], requested_ids))
+                    ),
                     "return_id": False,
                     "limit": 0,
                     "offset": 0,
@@ -151,7 +159,7 @@ def _crud_case_set_member_with_abac(
             not isinstance(member_id, UUID) for member_id in retval
         ):
             raise exc.UnauthorizedAuthError(
-                "9ef9c356", "Unable to verify access to case set members"
+                "81df183b", "Unable to verify access to case set members"
             )
         if not retval:
             return retval  # type: ignore[return-value]
@@ -171,22 +179,22 @@ def _crud_case_set_member_with_abac(
             not isinstance(member, model.CaseSetMember) for member in member_result
         ):
             raise exc.UnauthorizedAuthError(
-                "9ef9c356", "Unable to verify access to case set members"
+                "c214a8fd", "Unable to verify access to case set members"
             )
         members = member_result
     elif isinstance(retval, list):
         if any(not isinstance(member, model.CaseSetMember) for member in retval):
             raise exc.UnauthorizedAuthError(
-                "9ef9c356", "Unable to verify access to case set members"
+                "2deaa390", "Unable to verify access to case set members"
             )
-        members = retval
+        members = cast(list[model.CaseSetMember], retval)
         member_ids = []
     elif isinstance(retval, model.CaseSetMember):
         members = [retval]
         member_ids = []
     else:
         raise exc.UnauthorizedAuthError(
-            "9ef9c356", "Unable to verify access to case set members"
+            "e1b8eb2b", "Unable to verify access to case set members"
         )
 
     if not members and is_exists:
@@ -232,12 +240,12 @@ def _crud_case_set_member_with_abac(
         case_set = case_sets_by_id.get(member.case_set_id)
         if case is None or case_set is None:
             continue
-        case_data_collection_ids = case_data_collection_map.get(case.id, set()) | {
-            case.created_in_data_collection_id
-        }
-        case_set_data_collection_ids = case_set_data_collection_map.get(
-            case_set.id, set()
-        ) | {case_set.created_in_data_collection_id}
+        case_data_collection_ids = set(case_data_collection_map.get(case.id, set()))
+        case_data_collection_ids.add(case.created_in_data_collection_id)
+        case_set_data_collection_ids = set(
+            case_set_data_collection_map.get(case_set.id, set())
+        )
+        case_set_data_collection_ids.add(case_set.created_in_data_collection_id)
         if case_abac.is_allowed(
             case.case_type_id,
             case.created_in_data_collection_id,
@@ -283,3 +291,27 @@ def _crud_case_set_member_with_abac(
     if isinstance(retval, list):
         return accessible_members
     return accessible_members[0] if accessible_members else None  # type: ignore[return-value]
+
+
+# def _is_bounded_query(query_filter: Filter | None) -> bool:
+#     """Check whether a query filter limits members to explicit case or case-set IDs.
+
+#     A non-inverted UUID set filter on ``case_id`` or ``case_set_id`` is bounded.
+#     A non-inverted composite filter is bounded when its result cannot exceed that
+#     of a bounded filter: ``AND`` needs at least one bounded child and ``OR``
+#     needs all children bounded. Other filters and operators are unbounded.
+
+#     Args:
+#         query_filter: Query filter of the case-set-member command.
+
+#     Returns:
+#         Whether the filter restricts the query to explicit parent IDs.
+#     """
+#     if isinstance(query_filter, UuidSetFilter):
+#         return not query_filter.invert and query_filter.key in BOUNDED_QUERY_KEYS
+#     if isinstance(query_filter, CompositeFilter) and not query_filter.invert:
+#         if query_filter.operator == LogicalOperator.AND:
+#             return any(_is_bounded_query(x) for x in query_filter.filters)
+#         if query_filter.operator == LogicalOperator.OR:
+#             return all(_is_bounded_query(x) for x in query_filter.filters)
+#     return False
