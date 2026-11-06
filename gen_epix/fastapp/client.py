@@ -310,6 +310,10 @@ class Client(App):
         )
         return retrying(attempt, cmd)
 
+    def _should_log_stack_trace(self, exception: exc.ServiceException) -> bool:
+        """Log no stack trace for a network error or timeout: the message says it all."""
+        return not RetryPolicy.is_network_error(exception)
+
     def _attempt(
         self, cmd: Command, find_result: Callable[[], Any | None] | None
     ) -> Any:

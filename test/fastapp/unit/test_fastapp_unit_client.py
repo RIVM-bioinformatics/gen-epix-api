@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from test.util.mock_compat import Mock, patch
 from typing import Any, Callable, ClassVar, cast
 from uuid import UUID, uuid4
@@ -1169,3 +1170,44 @@ class TestClientFindResult:
         assert client.handle(RetryCommand(), find_result=lookup) == "found"
 
         assert handler.calls == 1
+
+
+class TestStackTraceLogging:
+    """A network error or timeout is logged without its stack trace, other errors with."""
+
+    @staticmethod
+    def _error_records(
+        error: BaseException, caplog: pytest.LogCaptureFixture
+    ) -> list[logging.LogRecord]:
+        client = Client(
+            Domain("trace-test"),
+            "example.org",
+            8000,
+            protocol=HttpProtocol.HTTP,
+            add_generated_crud_route_handlers=False,
+            logger=logging.getLogger("trace-test"),
+        )
+        client.register_route(RetryCommand, "/retry")
+        client.register_handler(RetryCommand, Flaky(error))
+        with caplog.at_level(logging.ERROR, logger="trace-test"):
+            with pytest.raises(ServiceException):
+                client.handle(RetryCommand())
+        return [r for r in caplog.records if r.levelno == logging.ERROR]
+
+    @pytest.mark.parametrize("error", [httpx.ReadTimeout("t"), httpx.ConnectError("c")])
+    def test_network_errors_have_no_stack_trace(
+        self, error: BaseException, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        records = self._error_records(error, caplog)
+
+        assert len(records) == 1
+        assert not records[0].exc_info
+
+    @pytest.mark.parametrize("status", [401, 500])
+    def test_other_errors_keep_their_stack_trace(
+        self, status: int, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        records = self._error_records(_status_error(status), caplog)
+
+        assert len(records) == 1
+        assert records[0].exc_info

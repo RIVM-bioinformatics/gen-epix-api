@@ -647,7 +647,8 @@ class App:
             if type(cmd) in self._auto_invalidate_cache_set:
                 self.invalidate_cache(cmd)
         except exc.ServiceException as exception:
-            # Service errors should always capture the stack trace to aid diagnosis.
+            # Service errors capture the stack trace to aid diagnosis, unless the
+            # subclass knows that it adds nothing.
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
@@ -657,7 +658,7 @@ class App:
                         cmd=cmd,
                         exception=exception,
                     ),
-                    exc_info=True,
+                    exc_info=self._should_log_stack_trace(exception),
                 )
             self._command_stack.pop()
             raise exception
@@ -692,6 +693,14 @@ class App:
             self._command_stack.pop()
             raise exception
         return retval
+
+    def _should_log_stack_trace(self, exception: exc.ServiceException) -> bool:
+        """Return whether a failed command is logged with the stack trace.
+
+        Override to leave it out for a failure whose trace says nothing more than
+        its message.
+        """
+        return True
 
     def _get_command_handler(self, cmd: Command) -> Callable:
         """Resolve a command handler while logging and unwinding a failed dispatch.
