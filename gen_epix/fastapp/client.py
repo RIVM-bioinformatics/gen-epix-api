@@ -110,6 +110,22 @@ class RetryPolicy:
         return False
 
     @staticmethod
+    def is_http_error(exception: BaseException) -> bool:
+        """Return whether an exception, or any exception in its cause chain, is an ``httpx.HTTPError``.
+
+        True for a timeout, a connection error and an error status of the remote, so
+        for every failure whose cause lies in the request or in the remote's answer.
+        """
+        seen: set[int] = set()
+        current: BaseException | None = exception
+        while current is not None and id(current) not in seen:
+            if isinstance(current, httpx.HTTPError):
+                return True
+            seen.add(id(current))
+            current = current.__cause__
+        return False
+
+    @staticmethod
     def is_auth_failure(exception: BaseException) -> bool:
         """Return whether an exception, or any exception in its cause chain, is an ``AuthException``.
 
@@ -311,8 +327,12 @@ class Client(App):
         return retrying(attempt, cmd)
 
     def _should_log_stack_trace(self, exception: exc.ServiceException) -> bool:
-        """Log no stack trace for a network error or timeout: the message says it all."""
-        return not RetryPolicy.is_network_error(exception)
+        """Log no stack trace for a failure of the request or of the remote's answer.
+
+        The trace holds only local httpx frames; what the remote did is in its own log.
+        An error in the client's own code (a token provider, parsing the response) keeps it.
+        """
+        return not RetryPolicy.is_http_error(exception)
 
     def _attempt(
         self, cmd: Command, find_result: Callable[[], Any | None] | None

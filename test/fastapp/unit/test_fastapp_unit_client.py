@@ -1173,7 +1173,7 @@ class TestClientFindResult:
 
 
 class TestStackTraceLogging:
-    """A network error or timeout is logged without its stack trace, other errors with."""
+    """A failure of the request or of the remote's answer is logged without a stack trace."""
 
     @staticmethod
     def _error_records(
@@ -1194,8 +1194,16 @@ class TestStackTraceLogging:
                 client.handle(RetryCommand())
         return [r for r in caplog.records if r.levelno == logging.ERROR]
 
-    @pytest.mark.parametrize("error", [httpx.ReadTimeout("t"), httpx.ConnectError("c")])
-    def test_network_errors_have_no_stack_trace(
+    @pytest.mark.parametrize(
+        "error",
+        [
+            httpx.ReadTimeout("t"),
+            httpx.ConnectError("c"),
+            _status_error(401),
+            _status_error(500),
+        ],
+    )
+    def test_http_errors_have_no_stack_trace(
         self, error: BaseException, caplog: pytest.LogCaptureFixture
     ) -> None:
         records = self._error_records(error, caplog)
@@ -1203,11 +1211,11 @@ class TestStackTraceLogging:
         assert len(records) == 1
         assert not records[0].exc_info
 
-    @pytest.mark.parametrize("status", [401, 500])
-    def test_other_errors_keep_their_stack_trace(
-        self, status: int, caplog: pytest.LogCaptureFixture
+    @pytest.mark.parametrize("error", [ValueError("bad response"), KeyError("id")])
+    def test_errors_in_the_clients_own_code_keep_their_stack_trace(
+        self, error: BaseException, caplog: pytest.LogCaptureFixture
     ) -> None:
-        records = self._error_records(_status_error(status), caplog)
+        records = self._error_records(error, caplog)
 
         assert len(records) == 1
         assert records[0].exc_info
