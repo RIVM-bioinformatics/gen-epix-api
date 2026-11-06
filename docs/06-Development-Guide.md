@@ -19,6 +19,32 @@ Developer command (run.py)
 
 See [01-Getting-Started](./01-Getting-Started.md) for initial setup and quickstart.
 
+### Local Docker stacks
+
+Choose one standalone Compose stack and run it from the repository root:
+
+| Compose file | Dataset and persistence | Authentication |
+| --- | --- | --- |
+| `docker-compose.yml` | `DICT_EMPTY`: initially empty, in-memory repositories; data is lost when the applications stop. | `NONE`: local root-user fallback without an identity provider. |
+| `docker-compose.sql.yml` | `SA_SQL`: SQL Server databases with migrations applied; data persists in Docker volumes. | `NONE`: local root-user fallback without an identity provider. |
+| `docker-compose.sql.idp.yml` | `SA_SQL`: SQL Server databases with migrations applied; data persists in Docker volumes. | `MOCK`: a local OIDC provider issues JWTs for the registered `mock` client, mapped to the root user. |
+
+For example:
+
+```bash
+docker compose -f docker-compose.sql.idp.yml up --build --wait
+docker compose -f docker-compose.sql.idp.yml down
+```
+
+The SQL stacks create schemas; they do not load a demo dataset. All three stacks
+use this repository's application startup and require no sibling checkout.
+CASEDB communicates with SEQDB over HTTP; the OIDC stack authenticates that
+connection with the registered client. These are local development stacks with
+root access. See [Configuration & Runtime](./05-Configuration-and-Runtime.md) for
+repository modes and [Security](./03-Security.md) for authentication behavior.
+The SQL Compose files document client settings and startup commands. Avoid
+`down -v` when retaining database contents: it deletes the stack's volumes.
+
 ---
 
 ## 2. Running Tests
