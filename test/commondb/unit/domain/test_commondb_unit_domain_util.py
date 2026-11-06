@@ -347,15 +347,14 @@ def test_create_demo_data_from_repository_deletes_then_copies_in_order() -> None
 
 
 @pytest.mark.parametrize(
-    ("sql_validation_error", "expected_exception", "expected_sql_config"),
+    ("sql_validation_error", "expected_exception"),
     [
-        (None, False, {"repository": {}}),
+        (None, False),
         (
             "SA_SQL repository requires a credential: set repository.defaults.props.pwd",
             False,
-            None,
         ),
-        ("Unrelated settings validation failed", True, None),
+        ("Unrelated settings validation failed", True),
     ],
     ids=["sql-configured", "sql-credentials-missing", "other-validation-error"],
 )
@@ -363,7 +362,6 @@ def test_load_demo_data_imports_modules_and_dispatches_each_service(
     monkeypatch: pytest.MonkeyPatch,
     sql_validation_error: str | None,
     expected_exception: bool,
-    expected_sql_config: dict | None,
 ) -> None:
     """Load app metadata and dispatch one demo-data operation per service."""
 
@@ -405,16 +403,55 @@ def test_load_demo_data_imports_modules_and_dispatches_each_service(
 
     if expected_exception:
         with pytest.raises(ValueError, match="Unrelated settings validation failed"):
-            load_demo_data(AppType.CASEDB, "demo", connect_timeout=4, verbose=False)
+            load_demo_data(
+                AppType.CASEDB,
+                "demo",
+                connect_timeout=4,
+                verbose=False,
+                load_sa_sql=True,
+            )
     else:
         load_demo_data(AppType.CASEDB, "demo", connect_timeout=4, verbose=False)
 
-    assert len(config_calls) == 3
+    assert len(config_calls) == (3 if expected_exception else 2)
     if not expected_exception:
         assert [args[1] for args in dispatched] == list(ServiceType)
         assert all(args[0] is AppType.CASEDB for args in dispatched)
-        assert all(args[6] == expected_sql_config for args in dispatched)
+        assert all(args[6] is None for args in dispatched)
         assert all(args[8:] == (4, False) for args in dispatched)
+
+
+def test_load_demo_data_raises_when_opted_in_without_sql_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate the SQL configuration when SQL loading is explicitly requested."""
+    calls = 0
+
+    class FakeAppCfg:
+        def __init__(self, *_args, **_kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 3:
+                raise ValueError("SQL credentials are missing")
+            self.cfg = {"repository": {}}
+
+    imported = {
+        "demo.domain": type("DomainModule", (), {"DOMAIN": object()}),
+        "demo.repositories.sa_model": object(),
+        "demo.domain.enum": type(
+            "EnumModule",
+            (),
+            {"ServiceType": Enum, "RepositoryType": _TestRepositoryType},
+        ),
+    }
+    monkeypatch.setattr(
+        util, "importlib", Mock(import_module=lambda name: imported[name])
+    )
+    monkeypatch.setattr(util, "get_app_cfg_class", lambda _app: FakeAppCfg)
+    monkeypatch.setattr(util, "set_env_variables", lambda *args, **kwargs: None)
+
+    with pytest.raises(ValueError, match="SQL credentials are missing"):
+        load_demo_data(AppType.CASEDB, "demo", load_sa_sql=True, verbose=False)
 
 
 @pytest.mark.parametrize(

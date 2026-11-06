@@ -234,8 +234,9 @@ def load_demo_data(
     module_root: str,
     connect_timeout: float = 1,
     verbose: bool = True,
+    load_sa_sql: bool = False,
 ) -> None:
-    """Load demo data for the given app type from zip archives into dict and SA repos."""
+    """Load demo data into dict and SA_SQLITE repos, optionally loading SA_SQL."""
     domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
     # Import the sa_model module to register the models
     importlib.import_module(f"{module_root}.repositories.sa_model")
@@ -252,21 +253,14 @@ def load_demo_data(
     sa_sqlite_app_cfg = app_cfg_class(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
-    set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
-    try:
+    sa_sql_app_cfg_data = None
+    # `etl.py load_demodata` is the canonical SQL database loader; this helper
+    # regenerates committed demo files unless SQL loading is explicitly requested.
+    if load_sa_sql:
+        set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
         sa_sql_app_cfg = app_cfg_class(
             app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
         )
-    except Exception as error:
-        if "SA_SQL repository requires a credential" not in str(error):
-            raise
-        sa_sql_app_cfg_data = None
-        if verbose:
-            print(
-                f"App {app_type.value}: SA_SQL credentials are not configured; "
-                "skipping SQL demo data"
-            )
-    else:
         sa_sql_app_cfg_data = cast(dict[str, Any], sa_sql_app_cfg.cfg)
     # user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
     user_id = NULL_ID
