@@ -105,9 +105,6 @@ disable = [
     "line-too-long",
     # A TODO marks work that is deliberately outside the current change.
     "fixme",
-    # False positives on built-in generic types and framework-generated fields;
-    # subscripting is also checked by mypy.
-    "unsubscriptable-object",
 ]
 
 [tool.ruff]
