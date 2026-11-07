@@ -54,10 +54,20 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
         client_credential_flow_request_headers: dict[str, str] | None = None,
         client_credential_flow_max_retries: int | None = None,
         client_credential_flow_base_delay: float | None = None,
+        discovery_timeout: float | None = None,
         **kwargs: Any,
     ):
         # Set IdpClient properties
-        """Initialize a OauthIdpClient instance."""
+        """Initialize an OauthIdpClient instance.
+
+        Args:
+            discovery_timeout: HTTP timeout for discovery requests; None selects
+                the class default.
+
+        Raises:
+            ValueError: If ``discovery_timeout`` is not positive.
+        """
+        self._set_discovery_timeout(discovery_timeout)
         issuer = server_cfg.issuer
         if issuer is None:
             # Fetch issuer later from discovery document

@@ -52,6 +52,7 @@ class OauthTokenClient:
         log_item_class: type[BaseLogItem] = LogItem,
         discovery_url: str | None = None,
         discovery_doc: dict[str, Any] | None = None,
+        discovery_timeout: float | None = None,
         ssl_context: ssl.SSLContext | bool = True,
         client_credential_flow_request_headers: dict[str, str] | None = None,
         client_credential_flow_max_retries: int | None = None,
@@ -73,8 +74,10 @@ class OauthTokenClient:
                 token attempts; None selects the class default.
 
         Raises:
+            ValueError: If ``discovery_timeout`` is not positive.
             InitializationServiceError: If discovery metadata cannot be loaded.
         """
+        self._set_discovery_timeout(discovery_timeout)
         self.ssl_context = ssl_context
         self._init_token_client(
             server_cfg,
@@ -89,6 +92,16 @@ class OauthTokenClient:
         self.update_server_config_from_discovery(url=discovery_url, doc=discovery_doc)
         if not self.scheme_name:
             self.scheme_name = self.server_cfg.issuer or ""
+
+    def _set_discovery_timeout(self, discovery_timeout: float | None) -> None:
+        """Set a positive HTTP timeout, using the class default for ``None``."""
+        if discovery_timeout is not None and discovery_timeout <= 0:
+            raise ValueError("discovery_timeout must be greater than 0")
+        self.discovery_timeout = (
+            self.DEFAULT_DISCOVERY_TIMEOUT
+            if discovery_timeout is None
+            else discovery_timeout
+        )
 
     def _init_token_client(
         self,
@@ -129,7 +142,7 @@ class OauthTokenClient:
     ) -> None:
         """Update OIDC configuration from a discovery URL or document.
 
-        URL requests use ``DEFAULT_DISCOVERY_TIMEOUT`` seconds for HTTPX's connect,
+        URL requests use ``self.discovery_timeout`` seconds for HTTPX's connect,
         read, write, and pool timeouts. This is not a total request deadline.
         URL metadata overrides the supplied document while preserving local
         credentials and ignoring unknown fields. Configuration updates are not
@@ -163,7 +176,7 @@ class OauthTokenClient:
         try:
             # Get discovery document
             with httpx.Client(
-                verify=self.ssl_context, timeout=self.DEFAULT_DISCOVERY_TIMEOUT
+                verify=self.ssl_context, timeout=self.discovery_timeout
             ) as client:
                 response = client.get(url)
                 response.raise_for_status()
@@ -183,17 +196,27 @@ class OauthTokenClient:
                     "53851a9e",
                     f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}",
                 )
-        except Exception as exception:
+        except httpx.TimeoutException as exception:
             msg = (
                 "Timed out accessing discovery URL "
-                f"(HTTP timeout: {self.DEFAULT_DISCOVERY_TIMEOUT} seconds)"
-                if isinstance(exception, httpx.TimeoutException)
-                else "Error accessing discovery URL"
+                f"(HTTP timeout: {self.discovery_timeout} seconds)"
             )
             if self.logger:
                 self.logger.error(
                     self._log_item_class(
-                        code="cfe970aa",
+                        code="2a316308",
+                        msg=msg,
+                        scheme_name=self.server_cfg.name,
+                        exception=exception,
+                    ).dumps()
+                )
+            raise exc.InitializationServiceError("66b9919e", msg) from exception
+        except Exception as exception:
+            msg = "Error accessing discovery URL"
+            if self.logger:
+                self.logger.error(
+                    self._log_item_class(
+                        code="2a316308",
                         msg=msg,
                         scheme_name=self.server_cfg.name,
                         exception=exception,

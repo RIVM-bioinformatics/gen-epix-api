@@ -91,6 +91,33 @@ class TestOauthTokenClient:
         # The provided configuration is copied, not updated in place
         assert server_cfg.token_endpoint is None
 
+    def test_oauth_idp_client_uses_discovery_timeout(
+        self, discovery_doc: dict[str, Any]
+    ) -> None:
+        """Use an explicitly configured timeout for IDP discovery requests."""
+        context_manager, _ = _create_http_client_mock(discovery_doc)
+
+        with patch(HTTPX_CLIENT, return_value=context_manager) as client_factory:
+            OauthIdpClient(server_cfg=_create_server_cfg(), discovery_timeout=2.5)
+
+        client_factory.assert_called_once_with(verify=True, timeout=2.5)
+
+    @pytest.mark.parametrize("discovery_timeout", [0, -1.0], ids=["zero", "negative"])
+    def test_init_rejects_non_positive_discovery_timeout(
+        self, discovery_timeout: float
+    ) -> None:
+        """Reject non-positive timeout values before making a discovery request."""
+        with patch(HTTPX_CLIENT) as client_factory:
+            with pytest.raises(
+                ValueError, match="discovery_timeout must be greater than 0"
+            ):
+                OauthTokenClient(
+                    server_cfg=_create_server_cfg(),
+                    discovery_timeout=discovery_timeout,
+                )
+
+        client_factory.assert_not_called()
+
     @pytest.mark.parametrize("client_class", [OauthTokenClient, OauthIdpClient])
     @pytest.mark.parametrize(
         "timeout_class",
@@ -134,6 +161,7 @@ class TestOauthTokenClient:
             log_message = json.loads(logger.error.call_args.args[0])
             assert log_message["msg"] == error.value.message
             assert log_message["scheme_name"] == server_cfg.name
+            assert log_message["code"] == "2a316308"
 
     @pytest.mark.parametrize("client_class", [OauthTokenClient, OauthIdpClient])
     def test_discovery_doc_without_url_does_not_make_request(
@@ -161,6 +189,7 @@ class TestOauthTokenClient:
         self, failure_stage: str, discovery_doc: dict[str, Any]
     ) -> None:
         """Keep non-timeout discovery failures distinguishable from timeouts."""
+        logger = Mock(spec=logging.Logger)
         context_manager, http_client = _create_http_client_mock(discovery_doc)
         failure = ValueError("invalid discovery response")
         if failure_stage == "get":
@@ -176,22 +205,27 @@ class TestOauthTokenClient:
             patch(HTTPX_CLIENT, return_value=context_manager),
             pytest.raises(exc.InitializationServiceError) as error,
         ):
-            OauthTokenClient(server_cfg=_create_server_cfg())
+            OauthTokenClient(server_cfg=_create_server_cfg(), logger=logger)
 
         assert error.value.message == "Error accessing discovery URL"
+        logger.error.assert_called_once()
+        log_message = json.loads(logger.error.call_args.args[0])
+        assert log_message["msg"] == error.value.message
+        assert log_message["code"] == "2a316308"
         if failure_stage == "validation":
             assert isinstance(error.value.__cause__, exc.InitializationServiceError)
         else:
             assert error.value.__cause__ is failure
 
     def test_discovery_refresh_preserves_credentials_and_uses_override(
-        self, discovery_doc: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+        self, discovery_doc: dict[str, Any]
     ) -> None:
         """Apply remote metadata without replacing local credentials."""
         token_client = OauthTokenClient(
-            server_cfg=_create_server_cfg(discovery_url=None), discovery_doc={}
+            server_cfg=_create_server_cfg(discovery_url=None),
+            discovery_doc={},
+            discovery_timeout=2.5,
         )
-        monkeypatch.setattr(token_client, "DEFAULT_DISCOVERY_TIMEOUT", 2.5)
         discovery_doc.update(client_id="untrusted", client_secret="untrusted", extra=1)
         context_manager, _ = _create_http_client_mock(discovery_doc)
 
