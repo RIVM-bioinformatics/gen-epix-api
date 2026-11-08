@@ -102,6 +102,20 @@ class CompositeFilter(Filter):
         )
         return self._match_row(row_iterator, mapped_values) ^ self.invert
 
+    def get_depth(self) -> int:
+        """Return the maximum number of nested composite filters.
+
+        The root composite has depth one. Leaf filters do not add to the depth.
+        """
+        return 1 + max(
+            (
+                child_filter.get_depth()
+                for child_filter in self.filters
+                if isinstance(child_filter, CompositeFilter)
+            ),
+            default=0,
+        )
+
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         """Validate child-filter cardinality and build matching functions."""

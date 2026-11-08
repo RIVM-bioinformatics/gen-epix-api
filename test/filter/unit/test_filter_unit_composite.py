@@ -138,6 +138,28 @@ def test_nested_composite_match() -> None:
     util.validate_filter_behavior(composite_filter, [{"a": "a"}], [True])
 
 
+def test_composite_filter_depth() -> None:
+    """Return the deepest nested composite level, excluding leaf filters."""
+    leaf_filter = ExistsFilter(key="a")
+    depth_one_filter = CompositeFilter(filters=[leaf_filter], operator="NOT")
+    depth_three_filter = CompositeFilter(
+        filters=[
+            ExistsFilter(key="a"),
+            CompositeFilter(
+                filters=[
+                    ExistsFilter(key="a"),
+                    CompositeFilter(filters=[ExistsFilter(key="a")], operator="NOT"),
+                ],
+                operator="AND",
+            ),
+        ],
+        operator="OR",
+    )
+
+    assert depth_one_filter.get_depth() == 1
+    assert depth_three_filter.get_depth() == 3
+
+
 def test_composite_filter_pydantic_and_plain_python_class() -> None:
     """Filter Pydantic models and ordinary objects without changing row identity."""
 
