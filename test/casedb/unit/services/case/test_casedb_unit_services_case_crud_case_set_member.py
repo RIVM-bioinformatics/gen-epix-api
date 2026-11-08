@@ -13,7 +13,12 @@ from gen_epix.casedb.policies.case_abac_policy import CaseAbacPolicy
 from gen_epix.casedb.services.case import crud_case_set_member
 from gen_epix.commondb.domain.enum import Role
 from gen_epix.fastapp import App, CrudOperation, EventTiming
-from gen_epix.filter import CompositeFilter, LogicalOperator, UuidSetFilter
+from gen_epix.filter import (
+    CompositeFilter,
+    EqualsStringFilter,
+    LogicalOperator,
+    UuidSetFilter,
+)
 
 
 class TestCaseSetMemberCrud(BaseCrudTestCase):
@@ -169,10 +174,9 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
             else [expected, False, expected]
         )
         read_cmd = self.service.crud.call_args.args[0]
-        assert read_cmd.operation == CrudOperation.READ_ALL
-        assert read_cmd.obj_ids is None
-        assert read_cmd.query_filter.key == "id"
-        assert read_cmd.query_filter.members == set(requested)
+        assert read_cmd.operation == CrudOperation.READ_SOME
+        assert read_cmd.obj_ids == requested
+        assert read_cmd.query_filter is None
 
     def test_unfiltered_bulk_read_is_rejected(
         self, monkeypatch: pytest.MonkeyPatch
@@ -183,7 +187,7 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
         cmd.is_read_all.return_value = True
         self._patch_case_abac(monkeypatch, case_abac)
 
-        with pytest.raises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.InvalidArgumentsError):
             crud_case_set_member._crud_case_set_member_with_abac(
                 self.service, self.uow, cmd
             )
@@ -332,7 +336,7 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
         cmd.is_read_all.return_value = True
         self._patch_case_abac(monkeypatch, case_abac)
 
-        with pytest.raises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.InvalidArgumentsError):
             crud_case_set_member._crud_case_set_member_with_abac(
                 self.service, self.uow, cmd
             )
@@ -448,22 +452,22 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
             pytest.param(
                 CompositeFilter(
                     filters=[
-                        UuidSetFilter(key="case_set_id", members={uuid4()}),
-                        UuidSetFilter(key="id", members={uuid4()}),
-                    ],
-                    operator=LogicalOperator.AND,
-                ),
-                id="and-one-bounded-child",
-            ),
-            pytest.param(
-                CompositeFilter(
-                    filters=[
                         UuidSetFilter(key="case_id", members={uuid4()}),
                         UuidSetFilter(key="case_set_id", members={uuid4()}),
                     ],
                     operator=LogicalOperator.OR,
                 ),
                 id="or-all-children-bounded",
+            ),
+            pytest.param(
+                CompositeFilter(
+                    filters=[
+                        EqualsStringFilter(key="case_id", value="case"),
+                        UuidSetFilter(key="case_set_id", members={uuid4()}),
+                    ],
+                    operator=LogicalOperator.OR,
+                ),
+                id="or-mixed-filter-types-on-parent-keys",
             ),
         ],
     )
@@ -486,6 +490,16 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
     @pytest.mark.parametrize(
         "query_filter",
         [
+            pytest.param(
+                CompositeFilter(
+                    filters=[
+                        UuidSetFilter(key="case_set_id", members={uuid4()}),
+                        UuidSetFilter(key="id", members={uuid4()}),
+                    ],
+                    operator=LogicalOperator.AND,
+                ),
+                id="and-one-bounded-child-with-wrong-key",
+            ),
             pytest.param(
                 CompositeFilter(
                     filters=[
@@ -535,20 +549,22 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
     )
     def test_unbounded_composite_query_still_rejected(self, monkeypatch, query_filter):
         cmd, abac, _, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
         cmd.is_read_all.return_value = True
         cmd.query_filter = query_filter
         self._patch_case_abac(monkeypatch, abac)
-        with pytest.raises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.InvalidArgumentsError):
             crud_case_set_member.case_service_crud_case_set_member(self.service, cmd)
         self.service.crud.assert_not_called()
 
     @pytest.mark.parametrize("key,invert", [("id", False), ("case_id", True)])
     def test_unbounded_query_still_rejected(self, monkeypatch, key, invert):
         cmd, abac, _, _, _ = self._configure_read()
+        cmd.operation = CrudOperation.READ_ALL
         cmd.is_read_all.return_value = True
         cmd.query_filter = UuidSetFilter(key=key, invert=invert, members={uuid4()})
         self._patch_case_abac(monkeypatch, abac)
-        with pytest.raises(exc.UnauthorizedAuthError):
+        with pytest.raises(exc.InvalidArgumentsError):
             crud_case_set_member.case_service_crud_case_set_member(self.service, cmd)
         self.service.crud.assert_not_called()
 
