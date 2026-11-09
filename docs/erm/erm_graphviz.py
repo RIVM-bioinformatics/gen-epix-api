@@ -97,9 +97,11 @@ class GraphvizErmGenerator(ErmGenerator):
                 persisted_models = domain.get_dag_sorted_models(
                     service_type=service_type, persistable=True
                 )
-                GraphvizErmGenerator._draw_scoped(
-                    persisted_models, dir / f"{tag}.persisted.png"
-                )
+                persisted_path = dir / f"{tag}.persisted.png"
+                if persisted_models and set(persisted_models) != model_classes:
+                    GraphvizErmGenerator._draw_scoped(persisted_models, persisted_path)
+                else:
+                    persisted_path.unlink(missing_ok=True)
 
     @staticmethod
     def _draw_scoped(model_classes: Collection[type[Model]], out: Path) -> None:
