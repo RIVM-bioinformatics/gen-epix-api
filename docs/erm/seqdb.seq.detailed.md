@@ -275,7 +275,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         UUID protocol_id FK
         UUID sample_id FK
         timestamp created_at
@@ -300,7 +300,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         FormatType format
         UUID content_hash
         string content
@@ -318,7 +318,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         FormatType format
         UUID content_hash
         string content
@@ -346,12 +346,14 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         UUID sample_id FK
         timestamp created_at
         timestamp modified_at
         UUID modified_by
         UUID id PK
+        string code
+        UUID seq_hash
         string uri
         UUID file_id FK
         enum file_format
@@ -361,8 +363,6 @@ erDiagram
         UUID read_set2_id FK
         UUID protocol_id FK
         list[Contig] contigs
-        UUID seq_hash
-        string code
         any qc_result
         any is_available
         any n_contigs
@@ -387,7 +387,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         FormatType format
         UUID content_hash
         string content
@@ -407,7 +407,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         FormatType format
         UUID content_hash
         string content
@@ -426,7 +426,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         FormatType format
         UUID content_hash
         string content
@@ -446,7 +446,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         enum format
         UUID content_hash
         string content

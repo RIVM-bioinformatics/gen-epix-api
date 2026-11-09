@@ -262,7 +262,7 @@ erDiagram
         UUID created_in_data_collection_id FK
         dict[UUID, UUID] cohort
         int count
-        timestamp case_date
+        timestamp timed_at
         dict[UUID, string] content
     }
 
