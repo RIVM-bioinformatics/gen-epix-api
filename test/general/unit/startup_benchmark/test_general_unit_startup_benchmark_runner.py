@@ -1,5 +1,7 @@
 import dataclasses
 import ssl
+from collections.abc import Callable
+from typing import cast
 
 import pytest
 
@@ -36,8 +38,22 @@ def test_request_deadline_restores_signal_handler():
 
     from scripts.startup_benchmark.runner import request_deadline
 
-    original = signal.getsignal(signal.SIGALRM)
+    signal_api = vars(signal)
+    sigalrm = signal_api.get("SIGALRM")
+    itimer_real = signal_api.get("ITIMER_REAL")
+    getsignal = signal_api.get("getsignal")
+    getitimer = signal_api.get("getitimer")
+    setitimer = signal_api.get("setitimer")
+    if any(
+        value is None
+        for value in (sigalrm, itimer_real, getsignal, getitimer, setitimer)
+    ):
+        pytest.skip("request deadlines use POSIX interval timers")
+    getsignal = cast(Callable[..., object], getsignal)
+    getitimer = cast(Callable[..., object], getitimer)
+
+    original = getsignal(sigalrm)
     with pytest.raises(TimeoutError), request_deadline(0.01):
         time.sleep(0.1)
-    assert signal.getsignal(signal.SIGALRM) == original
-    assert signal.getitimer(signal.ITIMER_REAL) == (0, 0)
+    assert getsignal(sigalrm) == original
+    assert getitimer(itimer_real) == (0, 0)

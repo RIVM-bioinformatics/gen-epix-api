@@ -174,7 +174,7 @@ def _crud_case_set_member_with_abac(
             not isinstance(member_id, UUID) for member_id in retval
         ):
             raise exc.UnauthorizedAuthError(
-                "9ef9c356", "Unable to verify access to case set members"
+                "81df183b", "Unable to verify access to case set members"
             )
         if not retval:
             return retval
@@ -195,22 +195,22 @@ def _crud_case_set_member_with_abac(
             not isinstance(member, model.CaseSetMember) for member in member_result
         ):
             raise exc.UnauthorizedAuthError(
-                "9ef9c356", "Unable to verify access to case set members"
+                "c214a8fd", "Unable to verify access to case set members"
             )
         members = member_result
     elif isinstance(retval, list):
         if any(not isinstance(member, model.CaseSetMember) for member in retval):
             raise exc.UnauthorizedAuthError(
-                "9ef9c356", "Unable to verify access to case set members"
+                "2deaa390", "Unable to verify access to case set members"
             )
-        members = retval
+        members = cast(list[model.CaseSetMember], retval)
         member_ids = []
     elif isinstance(retval, model.CaseSetMember):
         members = [retval]
         member_ids = []
     else:
         raise exc.UnauthorizedAuthError(
-            "9ef9c356", "Unable to verify access to case set members"
+            "e1b8eb2b", "Unable to verify access to case set members"
         )
 
     if not members and is_exists:
