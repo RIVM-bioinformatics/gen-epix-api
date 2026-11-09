@@ -488,7 +488,7 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
         assert abac.is_allowed.call_count == 2
 
     @pytest.mark.parametrize(
-        "query_filter",
+        ("query_filter", "error_type"),
         [
             pytest.param(
                 CompositeFilter(
@@ -498,6 +498,7 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
                     ],
                     operator=LogicalOperator.AND,
                 ),
+                exc.InvalidArgumentsError,
                 id="and-one-bounded-child-with-wrong-key",
             ),
             pytest.param(
@@ -508,6 +509,7 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
                     ],
                     operator=LogicalOperator.OR,
                 ),
+                exc.InvalidArgumentsError,
                 id="or-with-unbounded-child",
             ),
             pytest.param(
@@ -518,6 +520,7 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
                     ],
                     operator=LogicalOperator.AND,
                 ),
+                exc.InvalidArgumentsError,
                 id="and-without-bounded-child",
             ),
             pytest.param(
@@ -526,6 +529,7 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
                     operator=LogicalOperator.AND,
                     invert=True,
                 ),
+                exc.InvalidArgumentsError,
                 id="inverted-and",
             ),
             pytest.param(
@@ -533,6 +537,7 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
                     filters=[UuidSetFilter(key="case_id", members={uuid4()})],
                     operator=LogicalOperator.NOT,
                 ),
+                exc.InvalidArgumentsError,
                 id="not",
             ),
             pytest.param(
@@ -543,17 +548,20 @@ class TestCaseSetMemberCrud(BaseCrudTestCase):
                     ],
                     operator=LogicalOperator.XOR,
                 ),
+                exc.InvalidArgumentsError,
                 id="xor",
             ),
         ],
     )
-    def test_unbounded_composite_query_still_rejected(self, monkeypatch, query_filter):
+    def test_unbounded_composite_query_still_rejected(
+        self, monkeypatch, query_filter, error_type
+    ):
         cmd, abac, _, _, _ = self._configure_read()
         cmd.operation = CrudOperation.READ_ALL
         cmd.is_read_all.return_value = True
         cmd.query_filter = query_filter
         self._patch_case_abac(monkeypatch, abac)
-        with pytest.raises(exc.InvalidArgumentsError):
+        with pytest.raises(error_type):
             crud_case_set_member.case_service_crud_case_set_member(self.service, cmd)
         self.service.crud.assert_not_called()
 

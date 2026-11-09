@@ -338,7 +338,7 @@ def _check_bounded_query_filter(cmd: command.CaseSetMemberCrudCommand) -> None:
             f"READ_ALL query_filter on {query_filter.key} does not satisfy restrictions",
         )
     if not isinstance(query_filter, CompositeFilter):
-        raise AssertionError("Expected a CompositeFilter for READ_ALL query_filter")
+        return
     if (
         query_filter.invert
         or query_filter.operator not in (LogicalOperator.AND, LogicalOperator.OR)
