@@ -1,4 +1,3 @@
-import builtins
 import copy
 import dataclasses
 import json
@@ -271,22 +270,6 @@ def test_incompatible_diagnostics_rejected(artifact, diagnostics, tmp_path, key,
     diagnostics[key] = value
     with pytest.raises(ValueError, match="does not match"):
         html_reporting.generate_html(artifact, tmp_path / "report.html", diagnostics)
-
-
-@pytest.mark.parametrize("dependency", ["jinja2", "plotly.offline"])
-def test_missing_dependencies_explain_installation(
-    artifact, tmp_path, monkeypatch, dependency
-):
-    original_import = builtins.__import__
-
-    def import_without_dependency(name, *args, **kwargs):
-        if name == dependency:
-            raise ImportError("unavailable")
-        return original_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", import_without_dependency)
-    with pytest.raises(ValueError, match="pip install -r dev-requirements.txt"):
-        html_reporting.generate_html(artifact, tmp_path / "report.html")
 
 
 def test_atomic_write_failure_preserves_existing_output(

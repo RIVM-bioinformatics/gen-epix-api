@@ -47,6 +47,10 @@ def options(monkeypatch):
         ("slow", "timeout"),
     ],
 )
+@pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="Process-group cleanup uses Linux /proc and POSIX signals",
+)
 def test_readiness_and_cleanup(options, tmp_path, behavior, status):
     if status == "timeout":
         options = dataclasses.replace(options, readiness_timeout=0.4)
@@ -65,6 +69,10 @@ def test_readiness_and_cleanup(options, tmp_path, behavior, status):
     assert record.exit_code is not None
 
 
+@pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="Occupied-port probing relies on Linux socket error semantics",
+)
 def test_occupied_port_is_not_stopped(options, tmp_path):
     with socket.socket() as sock:
         sock.bind(("0.0.0.0", options.application.port))
@@ -82,6 +90,10 @@ def test_launch_failure(options, tmp_path):
     assert record.cleanup == "not_needed"
 
 
+@pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="Process-group cleanup uses Linux /proc and POSIX signals",
+)
 def test_refused_connections(options, tmp_path):
     options = dataclasses.replace(options, readiness_timeout=0.1)
     record = run_once(
@@ -96,6 +108,10 @@ def test_refused_connections(options, tmp_path):
     assert record.cleanup == "ok"
 
 
+@pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="Process-group cleanup uses Linux /proc and POSIX signals",
+)
 def test_interruption_cleans_process(options, tmp_path, monkeypatch):
     from scripts.startup_benchmark import runner
 
@@ -115,6 +131,10 @@ def test_interruption_cleans_process(options, tmp_path, monkeypatch):
     assert record.cleanup == "ok"
 
 
+@pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="Process-group cleanup uses Linux /proc and POSIX signals",
+)
 def test_descendant_ignoring_sigterm_is_killed(tmp_path):
     ready = tmp_path / "ready"
     script = 'import os,signal,time,sys; from pathlib import Path; os.setpgrp(); signal.signal(signal.SIGTERM, signal.SIG_IGN); Path(sys.argv[1]).write_text("ready"); time.sleep(120)'
@@ -178,6 +198,10 @@ def test_real_header_configuration_and_debug(app, monkeypatch):
     assert response.headers["X-Startup-Benchmark-Instance"] == "verified"
 
 
+@pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="Process-group cleanup uses Linux /proc and POSIX signals",
+)
 def test_port_race_cannot_accept_competing_instance(options, tmp_path, monkeypatch):
     import time
 

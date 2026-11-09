@@ -112,8 +112,8 @@ class Metadata(TypedDict):
     python: str
     os: str
     cpu_count: int | None
-    cpu_available: list[int]
-    resource_limits: dict[str, tuple[int, int]]
+    cpu_available: list[int] | None
+    resource_limits: dict[str, tuple[int, int] | None]
     dependencies: dict[str, str]
     environment: dict[str, Any]
     files: dict[str, str]

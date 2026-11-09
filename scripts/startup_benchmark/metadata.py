@@ -6,10 +6,10 @@ import json
 import os
 import platform
 import re
-import resource
 import subprocess
 import sys
 from pathlib import Path
+from typing import Callable, Iterable, cast
 
 from .models import ROOT, Metadata, Options
 
@@ -19,7 +19,7 @@ _SENSITIVE = re.compile(
 )
 
 
-def redact(value, key: str = ""):
+def redact(value: object, key: str = "") -> object:
     """Remove credentials recursively, including opaque environment values."""
     if _SENSITIVE.search(key):
         return "<redacted>"
@@ -40,7 +40,7 @@ def redact(value, key: str = ""):
     )
 
 
-def fingerprint(value) -> str:
+def fingerprint(value: object) -> str:
     """Hash a stable non-secret representation for report compatibility."""
     return hashlib.sha256(
         json.dumps(value, sort_keys=True, default=str).encode()
@@ -59,6 +59,29 @@ def file_fingerprints() -> dict[str, str]:
     return {
         str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in sorted(files)
+    }
+
+
+def _resource_limits() -> dict[str, tuple[int, int] | None]:
+    try:
+        resource_module = importlib.import_module("resource")
+    except ImportError:
+        resource_module = None
+
+    def get_limit(name: str) -> tuple[int, int] | None:
+        if resource_module is None:
+            return None
+        if not hasattr(resource_module, "getrlimit") or not hasattr(
+            resource_module, name
+        ):
+            return None
+        return cast(
+            Callable[[int], tuple[int, int]],
+            getattr(resource_module, "getrlimit"),
+        )(cast(int, getattr(resource_module, name)))
+
+    return {
+        name: get_limit(name) for name in ("RLIMIT_AS", "RLIMIT_CPU", "RLIMIT_NOFILE")
     }
 
 
@@ -87,6 +110,11 @@ def capture(options: Options, env: dict[str, str]) -> Metadata:
             )
         )
     }
+    get_affinity = cast(
+        Callable[[int], Iterable[int]] | None,
+        getattr(os, "sched_getaffinity", None),
+    )
+    cpu_available = sorted(get_affinity(0)) if get_affinity is not None else None
     return {
         "commit": git("rev-parse", "HEAD"),
         "dirty": bool(git("status", "--porcelain")),
@@ -94,11 +122,8 @@ def capture(options: Options, env: dict[str, str]) -> Metadata:
         "python": sys.version,
         "os": platform.platform(),
         "cpu_count": os.cpu_count(),
-        "cpu_available": sorted(os.sched_getaffinity(0)),
-        "resource_limits": {
-            name: resource.getrlimit(getattr(resource, name))
-            for name in ("RLIMIT_AS", "RLIMIT_CPU", "RLIMIT_NOFILE")
-        },
+        "cpu_available": cpu_available,
+        "resource_limits": _resource_limits(),
         "dependencies": {
             d.metadata["Name"]: d.version
             for d in importlib.metadata.distributions()

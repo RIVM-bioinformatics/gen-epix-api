@@ -144,7 +144,6 @@ def generate_html(data: dict, output: Path, diagnostics: dict | None = None) -> 
 
     Raises:
         ValueError: If artifacts, compatibility, or the output suffix are invalid,
-            or Jinja2 or Plotly is unavailable.
         OSError: If the dashboard cannot be written.
     """
     if output.suffix.lower() not in (".html", ".htm"):
@@ -172,14 +171,9 @@ def generate_html(data: dict, output: Path, diagnostics: dict | None = None) -> 
         "statistics": stats,
         "imports": _imports(diagnostics if diagnostics is not None else data),
     }
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        from plotly.offline import get_plotlyjs
-    except ImportError as error:
-        raise ValueError(
-            "HTML reporting requires Jinja2 and Plotly; install with "
-            "python -m pip install -r dev-requirements.txt"
-        ) from error
+    from jinja2 import Environment, FileSystemLoader, select_autoescape
+    from plotly.offline import get_plotlyjs
+
     environment = Environment(
         loader=FileSystemLoader(ASSETS), autoescape=select_autoescape(["html"])
     )

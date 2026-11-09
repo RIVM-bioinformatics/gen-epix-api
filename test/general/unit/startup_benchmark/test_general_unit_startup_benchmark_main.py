@@ -272,7 +272,10 @@ def test_report_rejects_input_overwrite(
     if overwrite in ("symlink", "hardlink"):
         output = tmp_path / "alias.html"
         if overwrite == "symlink":
-            output.symlink_to(source)
+            try:
+                output.symlink_to(source)
+            except (NotImplementedError, OSError) as error:
+                pytest.skip(f"Symlink creation is unavailable: {error}")
         else:
             output.hardlink_to(source)
     assert (

@@ -4,8 +4,9 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
+from scripts.startup_benchmark import metadata
 from scripts.startup_benchmark.metadata import redact
-from scripts.startup_benchmark.models import RunRecord
+from scripts.startup_benchmark.models import APPLICATIONS, Options, RunRecord
 from scripts.startup_benchmark.reporting import (
     compatible,
     generate,
@@ -73,6 +74,29 @@ def test_redaction():
         "other": "pwd=unsafe;server=local",
     }
     assert "unsafe" not in json.dumps(redact(value))
+
+
+def test_capture_without_posix_resource_apis(monkeypatch):
+    import_module = metadata.importlib.import_module
+
+    def without_resource(name, *args, **kwargs):
+        if name == "resource":
+            raise ImportError
+        return import_module(name, *args, **kwargs)
+
+    monkeypatch.setattr(metadata.importlib, "import_module", without_resource)
+    monkeypatch.delattr(metadata.os, "sched_getaffinity", raising=False)
+
+    captured = metadata.capture(
+        Options(APPLICATIONS["seqdb"], "NONE", "DICT_EMPTY"), {}
+    )
+
+    assert captured["cpu_available"] is None
+    assert captured["resource_limits"] == {
+        "RLIMIT_AS": None,
+        "RLIMIT_CPU": None,
+        "RLIMIT_NOFILE": None,
+    }
 
 
 def test_diagnostic_charts_and_offline_attachment(tmp_path):
