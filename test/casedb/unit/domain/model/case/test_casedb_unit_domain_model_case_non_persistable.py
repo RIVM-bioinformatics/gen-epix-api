@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -131,6 +132,24 @@ class TestCaseStats:
                 "must be before or equal",
                 id="dates-reversed",
             ),
+            pytest.param(
+                {
+                    "n_cases": 1,
+                    "first_case_date": NOW,
+                    "last_case_date": NOW.replace(tzinfo=timezone.utc),
+                },
+                "matching timezone awareness",
+                id="naive-first-aware-last",
+            ),
+            pytest.param(
+                {
+                    "n_cases": 1,
+                    "first_case_date": NOW.replace(tzinfo=timezone.utc),
+                    "last_case_date": NOW,
+                },
+                "matching timezone awareness",
+                id="aware-first-naive-last",
+            ),
             pytest.param({"n_cases": -1}, "greater than or equal", id="negative-total"),
             pytest.param(
                 {"n_own_cases": -1}, "greater than or equal", id="negative-own"
@@ -209,7 +228,7 @@ class TestCaseQuery:
         assert isinstance(nested_filter.filters[0], DateRangeFilter)
         assert isinstance(nested_filter.filters[1], ExistsFilter)
 
-        def map_date(value: date | str | None) -> date | None:
+        def map_date(value: Any) -> Any:
             return (
                 datetime.fromisoformat(value).date()
                 if isinstance(value, str)
@@ -272,6 +291,15 @@ class TestCaseSetQuery:
         query = CaseSetQuery(label="x", filter=composite)
         assert query.label == "x"
         assert query.filter == composite
+
+    def test_rejects_filter_beyond_maximum_composite_depth(self) -> None:
+        nested_filter = CompositeFilter(filters=[_uuid_filter()])
+
+        with pytest.raises(
+            ValidationError,
+            match="Case set query composite filters may be nested at most 1 levels deep",
+        ):
+            CaseSetQuery(label="x", filter=nested_filter)
 
     @pytest.mark.parametrize(
         "label, with_filter",
