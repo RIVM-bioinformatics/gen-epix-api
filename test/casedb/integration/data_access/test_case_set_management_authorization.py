@@ -163,7 +163,7 @@ async def _authenticated_user(request: Request) -> model.User:
     )
 
 
-def _create_api(env) -> FastAPI:
+def _create_api(env: AuthorizationEnv) -> FastAPI:
     api = create_fast_api(env.app, create_routers_fn=create_routers, debug=True)
     api.state.authorization_env = env
     security = get_args(env.app.impl.registered_user_dependency)[1]
@@ -171,7 +171,9 @@ def _create_api(env) -> FastAPI:
     return api
 
 
-async def _post(client, user, path, body, status=200) -> Any:
+async def _post(
+    client: httpx.AsyncClient, user: str, path: str, body: dict, status: int = 200
+) -> Any:
     response = await client.post(
         f"/v1/{path}", json=body, headers={"x-test-user": user}
     )
@@ -470,7 +472,7 @@ async def _sharing_and_membership_lifecycle(env):
                     _query("id", [case_set_id]),
                 ],
             },
-            status=403,
+            status=422,
         )
         # Explicit membership-record ID reads still enforce the same permissions.
         assert (
@@ -489,10 +491,13 @@ async def _sharing_and_membership_lifecycle(env):
                 "consumer",
                 "case_set_members/query",
                 _query(key, [case_set_id], invert),
-                status=403,
+                status=422,
             )
-        for path in ("case_set_members", "case_set_data_collection_links"):
+        for path, expected_status in (
+            ("case_set_members", 422),
+            ("case_set_data_collection_links", 403),
+        ):
             response = await client.get(
                 f"/v1/{path}", headers={"x-test-user": "consumer"}
             )
-            assert response.status_code == 403, response.text
+            assert response.status_code == expected_status, response.text

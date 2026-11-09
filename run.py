@@ -191,6 +191,8 @@ class Run:
                 "test/seqdb/integration",
                 "test/omopdb/unit",
                 "test/omopdb/integration",
+                "test/general/unit/startup_benchmark",
+                "test/general/integration/startup_benchmark",
                 "test/general/docs",
                 "test/general/migrations",
                 # The other tests in test/general/code are not normally included
@@ -272,6 +274,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
+                "test/general/unit/startup_benchmark",
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
@@ -289,6 +292,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
+                "test/general/integration/startup_benchmark",
                 "test/fastapp/integration",
                 "test/commondb/integration",
                 "test/casedb/integration",
@@ -309,12 +313,12 @@ class Run:
             ]
         )
 
-    def run_test(self, folders: str) -> None:
-        """Run tests in specified folder(s).
+    def run_test(self, folders: str, *additional_paths: str) -> None:
+        """Run tests in specified folders or test files.
 
         Args:
-            folders: Either a single folder path or JSON-encoded list of folder paths.
-                    Examples: "test/casedb" or '["test/casedb", "test/commondb"]'
+            folders: A folder path, test-file path, or JSON-encoded list of paths.
+            *additional_paths: Additional folder or test-file paths.
         """
         import json
 
@@ -324,13 +328,14 @@ class Run:
         if isinstance(folders, list):
             folder_list = folders
         elif isinstance(folders, str):
-            if Path(folders).is_dir():
+            if Path(folders).is_dir() or Path(folders).is_file():
                 folder_list = [folders]
             else:
                 folder_list = json.loads(folders)
         else:
             raise ValueError("Invalid type for folders argument")
 
+        folder_list.extend(additional_paths)
         pytest.main(Run.DEFAULT_PYTEST_ARGS + folder_list)
 
     ## Other

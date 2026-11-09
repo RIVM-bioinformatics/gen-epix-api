@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ data.application }} startup benchmark</title>
+  <style>{{ css | safe }}</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Saved startup evidence · Offline dashboard</p>
+    <h1>{{ data.application }} startup benchmark</h1>
+    <p>{{ data.options.idp_mode }} / {{ data.options.repository_mode }} · Commit {{ data.metadata.get('commit') or 'unknown' }}</p>
+    <p>Series {{ 'complete' if data.get('series_completed', True) else 'incomplete' }} · Configuration {{ 'valid' if data.get('configuration_valid', False) else 'invalid or unavailable' }}</p>
+  </header>
+
+  <section aria-labelledby="summary-title">
+    <h2 id="summary-title">Overall statistics</h2>
+    <p>Successful measured runs only. These statistics stay fixed when filtering.</p>
+    <div class="metrics">
+    {% for label, key in [('Minimum', 'minimum'), ('Maximum', 'maximum'), ('Mean', 'mean'), ('Median', 'median'), ('p95', 'p95'), ('Target', 'target_seconds')] %}
+      <div class="metric"><span>{{ label }}</span><strong>{{ '%.3f s' | format(stats[key]) if stats[key] is not none else 'Unavailable' }}</strong></div>
+    {% endfor %}
+    </div>
+    <p id="official-target" class="assessment {{ 'pass' if stats.target_pass else 'pending' }}">Official target: {{ 'PASS' if stats.target_pass else 'NOT PASSED' }} · p95 must be strictly below 15 seconds.</p>
+    <p>Measured runs: {{ stats.requested }} requested · {{ stats.attempted }} attempted · {{ stats.successes }} successful · {{ stats.failures }} failed · {{ stats.unattempted }} not attempted.</p>
+    <p>Valid target evidence requires at least 30 successful measurements, a complete failure-free series, valid configuration, and successful cleanup of every run.</p>
+  </section>
+
+  <section aria-labelledby="startup-title">
+    <h2 id="startup-title">Startup across runs</h2>
+    <div class="controls">
+      <label>First run <input id="run-min" type="number" min="0" step="1"></label>
+      <label>Last run <input id="run-max" type="number" min="0" step="1"></label>
+      <label class="check"><input id="trend" type="checkbox" checked> Five-sample trailing average</label>
+      <button id="reset" type="button">Reset controls</button>
+    </div>
+    <p id="selected-count" role="status"></p>
+    <p id="startup-empty" class="empty" hidden>No successful measured runs in this range.</p>
+    <div id="startup-chart" class="chart" aria-label="Startup duration by run"></div>
+    <p>Gaps retain failed or unattempted runs. Their markers use a separate status axis, without an assigned duration. The average uses the original sequence of successful measured runs; it first appears after five samples.</p>
+    <h3>Duration distribution</h3>
+    <label>Histogram bins <input id="bins" type="number" min="1" max="100" value="10" step="1"></label>
+    <div id="histogram" class="chart" aria-label="Histogram of startup durations"></div>
+
+    <h3>All attempts</h3>
+    <div class="controls">
+      <label>Kind <select id="kind"><option value="">All kinds</option></select></label>
+      <label>Status <select id="status"><option value="">All statuses</option></select></label>
+      <label>Sort <select id="attempt-sort"><option value="index">Run</option><option value="kind">Kind</option><option value="status">Status</option><option value="seconds">Seconds</option><option value="cleanup">Cleanup</option></select></label>
+      <label>Order <select id="attempt-order"><option value="asc">Ascending</option><option value="desc">Descending</option></select></label>
+    </div>
+    <p id="attempt-count" role="status"></p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Run</th><th>Kind</th><th>Status</th><th>Seconds</th><th>Cleanup</th><th>Error</th></tr></thead>
+      <tbody id="attempts"></tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="imports-title">
+    <h2 id="imports-title">Import analysis</h2>
+    <p>Diagnostic runs are separate from normal measurements. Self time is time spent in that import; cumulative time includes nested imports. Cumulative times must not be summed.</p>
+    <p id="imports-empty" class="empty" hidden>No import diagnostics available. Attach compatible diagnostic JSON with --diagnostics, or report a saved diagnose artifact.</p>
+    <div id="imports-panel" hidden>
+      <div class="controls">
+        <label>Diagnostic run <select id="import-run"></select></label>
+        <label>Module contains <input id="module-search" type="search" placeholder="e.g. gen_epix"></label>
+        <label>Sort <select id="import-sort"><option value="self_us">Self time</option><option value="cumulative_us">Cumulative time</option><option value="module">Module</option></select></label>
+        <label>Order <select id="import-order"><option value="desc">Descending</option><option value="asc">Ascending</option></select></label>
+      </div>
+      <p id="import-interpretation"></p>
+      <ul id="import-warnings"></ul>
+      <p id="import-count" role="status"></p>
+      <div id="import-chart" class="chart" aria-label="Top import timings"></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Occurrence</th><th>Module</th><th>Self ms</th><th>Cumulative ms</th><th>Observed chain</th></tr></thead>
+        <tbody id="import-rows"></tbody>
+      </table></div>
+      <div class="controls pagination">
+        <button id="previous" type="button">Previous</button>
+        <span id="page" role="status"></span>
+        <button id="next" type="button">Next</button>
+      </div>
+    </div>
+  </section>
+
+  <footer><h2>How to interpret these measurements</h2><p>{{ notes }}</p><p>Phase visualizations remain available in the existing directory report.</p><noscript>Enable JavaScript to explore charts and tables. The overall summary above is still available.</noscript></footer>
+</main>
+<script id="benchmark-data" type="application/json">{{ payload | tojson }}</script>
+<script id="plotly-bundle">{{ plotly_js | safe }}</script>
+<script>{{ javascript | safe }}</script>
+</body>
+</html>
