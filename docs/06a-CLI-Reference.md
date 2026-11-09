@@ -110,7 +110,7 @@ The entire file is one class passed to `fire.Fire(Run)`. Every public method bec
 
 ### Lazy imports
 
-Heavy modules (`uvicorn`, `pytest`, `subprocess`, the app modules themselves) are imported **inside** each method, not at the top of the file. This keeps CLI startup time negligible regardless of which command is invoked. Only lightweight imports used across multiple methods (`datetime`, `pathlib`, `fire`, and the enum/util imports needed for environment setup) are at module scope.
+`uvicorn`, `pytest`, `subprocess`, and application entrypoint modules are imported inside the relevant methods. However, module-level enum and utility imports execute `gen_epix/__init__.py`, which eagerly imports all three application domains. CLI startup therefore includes shared eager imports and is not necessarily negligible. These imports are investigation candidates; their performance impact must be measured. The separate [startup benchmark harness](./06-Development-Guide.md#startup-benchmark) measures fresh-process readiness without importing `gen_epix` in its parent entrypoint.
 
 ### Class-level configuration dictionaries
 
