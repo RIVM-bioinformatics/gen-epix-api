@@ -66,16 +66,32 @@ class RetryPolicy:
     def get_remote_http_status(exception: BaseException) -> int | None:
         """Return the HTTP status code returned by a remote service, if any.
 
+        TODO: Remove this helper once no caller uses a client older than
+        RemoteServiceError (e.g. juno-seqdb-etl); callers can then read
+        get_http_status_code() directly. When doing so:
+        - Stop reporting a local client failure as a remote status. The last fallback
+          below returns the own status (500) of any plain ServiceException, e.g.
+          3dd5acdb (request body could not be built, or a 2xx response could not be
+          parsed). A retry policy with 500 in it (lsp-data) then retries a
+          non-transient local error with the full backoff, and the caller logs it as
+          "remote unavailable". A local failure has no remote status: return None.
+          Real remote 500s stay retryable; they are RemoteServiceErrors.
+        - is_retryable_status and lsp-data's Airflow retry policies
+          (lsp_data/airflow/retry_policies.py) use this helper too; move them along.
+
         Args:
             exception: Exception raised while handling a command on a remote client.
 
         Returns:
-            The status code embedded in the message of a ``ServiceException``, the
-            status of its ``__cause__`` ``httpx.HTTPStatusError``, or the exception's
-            own status code, in that order. For a bare ``httpx.HTTPStatusError`` its
-            response status. ``None`` for any other exception.
+            For a ``RemoteServiceError`` its own status code. For another
+            ``ServiceException`` the status code embedded in its message, the status
+            of its ``__cause__`` ``httpx.HTTPStatusError``, or its own status code, in
+            that order. For a bare ``httpx.HTTPStatusError`` its response status.
+            ``None`` for any other exception.
         """
         if isinstance(exception, ServiceException):
+            if isinstance(exception, exc.RemoteServiceError):
+                return exception.get_http_status_code()
             message_status = RetryPolicy._get_http_status_from_message(exception)
             if message_status is not None:
                 return message_status
@@ -113,7 +129,7 @@ class RetryPolicy:
     def is_auth_failure(exception: BaseException) -> bool:
         """Return whether an exception, or any exception in its cause chain, is an ``AuthException``.
 
-        ``apply_handler`` re-wraps every handler error in a plain ``ServiceException``,
+        ``apply_handler`` re-wraps every handler error in a ``ServiceException``,
         so the cause chain has to be inspected to recognise e.g. token provider failures.
         """
         seen: set[int] = set()
@@ -385,7 +401,9 @@ class Client(App):
 
         Raises:
             NotImplementedError: If no route is registered for the command.
-            ServiceException: If the handler raises an exception.
+            RemoteServiceError: If the remote app answers with an HTTP error status;
+                its HTTP status is the remote app's status.
+            ServiceException: If the handler raises any other exception.
         """
         command_class = cmd.__class__
         route = self._routes.get(command_class, None)
@@ -401,15 +419,17 @@ class Client(App):
                 f"HTTP request error when handling remote command {command_class.NAME}: {e}",
             ) from e
         except httpx.HTTPStatusError as e:
-            # Handle HTTPStatusError with proper access to response attributes
-            status_code = (
-                getattr(e.response, "status_code", "unknown")
-                if hasattr(e, "response") and e.response
-                else "unknown"
-            )
-            raise exc.ServiceException(
+            # The remote status becomes this exception's status; API boundaries hide it,
+            # see RemoteServiceError
+            response = e.response if hasattr(e, "response") and e.response else None
+            status_code = response.status_code if response is not None else None
+            raise exc.RemoteServiceError(
                 "b7b0a22c",
-                f"HTTP status {status_code} error when handling remote command {command_class.NAME}: {e}",
+                f"HTTP status {status_code if status_code is not None else 'unknown'} "
+                f"error when handling remote command {command_class.NAME}: {e}",
+                http_props=(
+                    {"status_code": status_code} if status_code is not None else None
+                ),
             ) from e
         except Exception as e:
             raise exc.ServiceException(
