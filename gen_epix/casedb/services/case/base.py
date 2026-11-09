@@ -256,7 +256,7 @@ class BaseCaseService(DomainBaseCaseService):
         user_id: UUID,
         case_ids: Iterable[UUID] | None = None,
         case_set_ids: Iterable[UUID] | None = None,
-    ) -> dict[UUID, set[UUID]]:
+    ) -> dict[UUID, Set[UUID]]:
         """Retrieve the case sets linked to cases.
 
         Args:
@@ -330,7 +330,7 @@ class BaseCaseService(DomainBaseCaseService):
 
     @abstractmethod
     def _verify_case_set_member_case_type(
-        self, user: model.User, case_set_members: list[model.CaseSetMember]
+        self, user: model.User | None, case_set_members: list[model.CaseSetMember]
     ) -> None:
         """Verify that members and their case sets have matching case types.
 
