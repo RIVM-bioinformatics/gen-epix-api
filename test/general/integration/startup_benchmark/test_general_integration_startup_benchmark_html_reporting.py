@@ -24,7 +24,7 @@ def dashboard(tmp_path):
         "application": "casedb",
         "command": "benchmark",
         "options": {"idp_mode": "NONE", "repository_mode": "DICT_EMPTY"},
-        "metadata": {"commit": "abc"},
+        "metadata": {"commit": "abc", "dirty": False},
         "configuration_valid": True,
         "series_completed": True,
         "configuration_fingerprint": "same",

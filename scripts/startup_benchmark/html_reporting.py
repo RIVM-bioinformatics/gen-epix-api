@@ -48,6 +48,8 @@ def _validate(data: dict) -> None:
         and not isinstance(data["metadata"]["commit"], str)
     ):
         raise ValueError("Invalid benchmark commit metadata")
+    if not isinstance(data["metadata"].get("dirty"), bool):
+        raise ValueError("Invalid benchmark dirty metadata")
     for key in ("idp_mode", "repository_mode"):
         if not isinstance(data["options"].get(key), str):
             raise ValueError(f"Invalid benchmark option: {key}")  # noqa: TRY004

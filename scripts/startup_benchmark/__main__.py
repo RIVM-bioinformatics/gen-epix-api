@@ -268,6 +268,8 @@ def execute(args: Any) -> int:
         and status == 0
     ):
         status = 1
+        data["series_exit_code"] = status
+        save_json(output / "results.json", data)
     return status
 
 

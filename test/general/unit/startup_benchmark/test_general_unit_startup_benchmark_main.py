@@ -66,10 +66,28 @@ def test_gate_and_incremental_persistence(series, monkeypatch):
         return run(options, directory, index, kind, env)
 
     monkeypatch.setattr(cli, "run_once", checked)
-    assert cli.execute(args) == 0
-    assert json.loads((output / "results.json").read_text())["statistics"][
-        "target_pass"
-    ]
+    status = cli.execute(args)
+    saved = json.loads((output / "results.json").read_text())
+    assert status == saved["series_exit_code"] == 0
+    assert saved["statistics"]["target_pass"]
+
+
+@pytest.mark.parametrize("check_target,exit_code", [(True, 1), (False, 0)])
+def test_slow_series_target_gate(series, monkeypatch, check_target, exit_code):
+    args, output = series
+    args.check_target = check_target
+    monkeypatch.setattr(
+        cli,
+        "run_once",
+        lambda options, directory, index, kind, env: RunRecord(
+            index, kind, status="success", seconds=20, cleanup="ok"
+        ),
+    )
+    status = cli.execute(args)
+    saved = json.loads((output / "results.json").read_text())
+    assert status == saved["series_exit_code"] == exit_code
+    assert saved["statistics"]["successes"] == 30
+    assert not saved["statistics"]["target_pass"]
 
 
 @pytest.mark.parametrize(
@@ -87,8 +105,9 @@ def test_failure_and_partial_reports(
             index, kind, status=failure, cleanup="ok"
         ),
     )
-    assert cli.execute(args) == exit_code
+    status = cli.execute(args)
     saved = json.loads((output / "results.json").read_text())
+    assert status == saved["series_exit_code"] == exit_code
     assert saved["statistics"]["attempted"] == attempted
     assert (output / "report.md").exists()
 
@@ -96,8 +115,9 @@ def test_failure_and_partial_reports(
 def test_invalid_debug_retains_unattempted_series(series, monkeypatch):
     args, output = series
     monkeypatch.setattr(cli, "configuration_snapshot", lambda *args: {"debug": True})
-    assert cli.execute(args) == 2
+    status = cli.execute(args)
     saved = json.loads((output / "results.json").read_text())
+    assert status == saved["series_exit_code"] == 2
     assert saved["statistics"]["unattempted"] == 30
     assert "debug=True" in saved["configuration_error"]
 
@@ -106,7 +126,11 @@ def test_small_sample_gate_and_cleanup_failure(series, monkeypatch):
     args, output = series
     args.runs = 2
     args.check_target = True
-    assert cli.execute(args) == 1
+    status = cli.execute(args)
+    saved = json.loads((output / "results.json").read_text())
+    assert status == saved["series_exit_code"] == 1
+    assert saved["statistics"]["successes"] == 2
+    assert not saved["statistics"]["target_pass"]
     args.output = output / "failed-cleanup"
     monkeypatch.setattr(
         cli,
@@ -115,8 +139,9 @@ def test_small_sample_gate_and_cleanup_failure(series, monkeypatch):
             index, kind, status="success", seconds=2, cleanup="failed"
         ),
     )
-    assert cli.execute(args) == 1
+    status = cli.execute(args)
     saved = json.loads((args.output / "results.json").read_text())
+    assert status == saved["series_exit_code"] == 1
     assert not saved["configuration_valid"]
     assert saved["statistics"]["unattempted"] == 1
 
@@ -149,8 +174,9 @@ def test_interruption_after_final_measurement_invalidates_gate(series, monkeypat
             raise KeyboardInterrupt
 
     monkeypatch.setattr(cli.time, "sleep", interrupt_last_settle)
-    assert cli.execute(args) == 130
+    status = cli.execute(args)
     saved = json.loads((output / "results.json").read_text())
+    assert status == saved["series_exit_code"] == 130
     assert saved["statistics"]["successes"] == 30
     assert not saved["statistics"]["target_pass"]
     assert not saved["series_completed"]
@@ -163,7 +189,7 @@ def report_inputs(tmp_path):
         "application": "seqdb",
         "command": "benchmark",
         "options": {"idp_mode": "NONE", "repository_mode": "DICT_EMPTY"},
-        "metadata": {"commit": "abc"},
+        "metadata": {"commit": "abc", "dirty": False},
         "configuration_valid": True,
         "configuration_fingerprint": "same",
         "records": [

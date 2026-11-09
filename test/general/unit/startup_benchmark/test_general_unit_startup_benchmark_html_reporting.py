@@ -23,7 +23,7 @@ def artifact():
         "configuration_valid": True,
         "series_completed": True,
         "configuration_fingerprint": "same-configuration",
-        "metadata": {"commit": "abc"},
+        "metadata": {"commit": "abc", "dirty": False},
         "records": [
             dataclasses.asdict(
                 RunRecord(i + 1, "measured", status="success", seconds=14, cleanup="ok")
@@ -191,6 +191,8 @@ def test_html_safe_data(artifact, diagnostics, tmp_path):
         (("application",), []),
         (("command",), "other"),
         (("metadata",), {}),
+        (("metadata", "dirty"), None),
+        (("metadata", "dirty"), "false"),
         (("options", "idp_mode"), None),
         (("configuration_valid",), "true"),
         (("series_completed",), None),
@@ -216,6 +218,14 @@ def test_malformed_artifacts_rejected(artifact, tmp_path, path, value):
     with pytest.raises(ValueError, match="Invalid"):
         html_reporting.generate_html(artifact, output)
     assert not output.exists()
+
+
+@pytest.mark.parametrize("missing_from", ["benchmark", "diagnostics"])
+def test_missing_dirty_metadata_rejected(artifact, diagnostics, tmp_path, missing_from):
+    data = artifact if missing_from == "benchmark" else diagnostics
+    del data["metadata"]["dirty"]
+    with pytest.raises(ValueError, match="Invalid benchmark dirty metadata"):
+        html_reporting.generate_html(artifact, tmp_path / "report.html", diagnostics)
 
 
 @pytest.mark.parametrize("data", [None, [], "invalid"])
@@ -253,7 +263,8 @@ def test_malformed_imports_rejected(diagnostics, tmp_path, path, value):
         ("application", "casedb"),
         ("configuration_fingerprint", "different"),
         ("configuration_valid", False),
-        ("metadata", {"commit": "different"}),
+        ("metadata", {"commit": "different", "dirty": False}),
+        ("metadata", {"commit": "abc", "dirty": True}),
     ],
 )
 def test_incompatible_diagnostics_rejected(artifact, diagnostics, tmp_path, key, value):
