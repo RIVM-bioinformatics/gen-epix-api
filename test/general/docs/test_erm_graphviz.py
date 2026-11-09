@@ -1,3 +1,10 @@
+"""Test ERM diagrams when erdantic is available.
+
+CI may skip these tests because erdantic depends on pygraphviz, which is
+intentionally excluded from dev requirements due to installation difficulties.
+See ``docs/erm/erm_graphviz.py`` for details.
+"""
+
 from pathlib import Path
 from unittest.mock import patch
 

@@ -72,12 +72,16 @@ class GraphvizErmGenerator(ErmGenerator):
             warnings.filterwarnings(
                 "ignore", category=RuntimeWarning, module="pygraphviz.*"
             )
-            sorted_model_classes = domain.get_dag_sorted_models(persistable=True)
+            sorted_model_classes = domain.get_dag_sorted_models()
             GraphvizErmGenerator._draw_scoped(
                 sorted_model_classes, dir / f"{domain.name.lower()}.png"
             )
+            sorted_model_classes_persisted = domain.get_dag_sorted_models(
+                persistable=True
+            )
             GraphvizErmGenerator._draw_scoped(
-                sorted_model_classes, dir / f"{domain.name.lower()}.persisted.png"
+                sorted_model_classes_persisted,
+                dir / f"{domain.name.lower()}.persisted.png",
             )
 
     @staticmethod
