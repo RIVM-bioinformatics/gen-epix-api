@@ -73,7 +73,9 @@ class GraphvizErmGenerator(ErmGenerator):
                 "ignore", category=RuntimeWarning, module="pygraphviz.*"
             )
             sorted_model_classes = domain.get_dag_sorted_models(persistable=True)
-            erd.draw(*sorted_model_classes, out=dir / f"{domain.name.lower()}.png")
+            GraphvizErmGenerator._draw_scoped(
+                sorted_model_classes, dir / f"{domain.name.lower()}.png"
+            )
             GraphvizErmGenerator._draw_scoped(
                 sorted_model_classes, dir / f"{domain.name.lower()}.persisted.png"
             )
