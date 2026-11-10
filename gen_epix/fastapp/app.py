@@ -754,7 +754,7 @@ class App:
         which the caller re-raises, is not modified.
         """
         is_exempt = isinstance(exception, tuple(self.stack_trace_exemption))
-        exception_copy = copy.copy(exception)
+        exception_copy = self._copy_exception(exception)
         cause = exception.__cause__
         if is_exempt or cause is None or id(cause) in seen:
             exception_copy.__suppress_context__ = True
@@ -764,6 +764,23 @@ class App:
             cause, seen | {id(exception)}
         )
         return exception_copy
+
+    @staticmethod
+    def _copy_exception(exception: BaseException) -> BaseException:
+        """Copy an exception without its traceback and cause.
+
+        ``copy.copy`` rebuilds an exception from its ``args``, which fails for those
+        whose constructor needs more, such as ``httpx.HTTPStatusError`` (keyword-only
+        ``request`` and ``response``). For those the copy is made without calling the
+        constructor: same class, ``args`` and attributes.
+        """
+        try:
+            return copy.copy(exception)
+        except TypeError:
+            exception_copy = type(exception).__new__(type(exception))
+            exception_copy.__dict__.update(exception.__dict__)
+            exception_copy.args = exception.args
+            return exception_copy
 
     def _get_command_handler(self, cmd: Command) -> Callable:
         """Resolve a command handler while logging and unwinding a failed dispatch.

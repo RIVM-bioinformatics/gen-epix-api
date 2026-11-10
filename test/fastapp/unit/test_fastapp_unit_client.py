@@ -1079,12 +1079,20 @@ def _raise_read_timeout() -> None:
         raise httpx.ReadTimeout("timed out") from e
 
 
+def _raise_status_error() -> None:
+    """Raise an HTTP status error from a function of its own, to give it a frame."""
+    raise _status_error(500)
+
+
 class NotCopyable(Exception):
-    """An exception that ``copy.copy`` cannot rebuild from its ``args``."""
+    """An exception whose copy fails in a way no fallback can repair."""
 
     def __init__(self, message: str, extra: str) -> None:
         super().__init__(message)
         self.extra = extra
+
+    def __copy__(self) -> "NotCopyable":
+        raise RuntimeError("cannot be copied")
 
 
 class TestStackTraceExemption:
@@ -1152,6 +1160,21 @@ class TestStackTraceExemption:
 
         assert "HTTPStatusError" in self._logged_trace(record)
         assert "apply_handler" in self._logged_trace(record)
+
+    def test_a_status_error_is_trimmed_although_its_constructor_needs_more(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        try:
+            _raise_status_error()
+        except httpx.HTTPStatusError as error:
+            record, raised = self._failed_command(caplog, error, httpx.HTTPError)
+
+        assert record.exc_info is not None
+        assert record.exc_info[1] is not raised  # a trimmed copy, not the fallback
+        trace = self._logged_trace(record)
+        assert "HTTPStatusError: boom" in trace
+        assert "_raise_status_error" not in trace  # the registered type has no frames
+        assert "apply_handler" in trace
 
     @pytest.mark.parametrize("error", [ValueError("bad response"), KeyError("id")])
     def test_other_errors_keep_the_full_trace(
