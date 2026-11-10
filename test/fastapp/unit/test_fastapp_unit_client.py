@@ -21,7 +21,7 @@ from gen_epix.fastapp.enum import (
     HttpProtocol,
     StringCasing,
 )
-from gen_epix.fastapp.exc import AuthException, ServiceException
+from gen_epix.fastapp.exc import AuthException, RemoteServiceError, ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Model, Policy
 
 # Helpers and dummies for testing
@@ -416,7 +416,10 @@ class TestHeadersAndApplyHandler(BaseClientTestCase):
             e.value
         )
 
-    def test_apply_handler_wraps_http_status_error_with_status(self) -> None:
+    @pytest.mark.parametrize("status", [409, 418])
+    def test_apply_handler_wraps_http_status_error_with_status(
+        self, status: int
+    ) -> None:
         # Create input
         cmd = DummyCmd()
         self.register_route_for(DummyCmd, "endpoint")
@@ -424,15 +427,17 @@ class TestHeadersAndApplyHandler(BaseClientTestCase):
         # Set up mocks
         def _raise(_: Command) -> None:
             raise httpx.HTTPStatusError(
-                "boom", request=Mock(), response=Mock(status_code=418)
+                "boom", request=Mock(), response=Mock(status_code=status)
             )
 
         # Execute/Verify
-        with pytest.raises(ServiceException) as e:
+        with pytest.raises(RemoteServiceError) as e:
             self.app.apply_handler(cmd, _raise)
-        assert "HTTP status 418 error when handling remote command DummyCmd" in str(
-            e.value
+        assert (
+            f"HTTP status {status} error when handling remote command DummyCmd"
+            in str(e.value)
         )
+        assert e.value.get_http_status_code() == status
 
     def test_apply_handler_wraps_http_status_error_without_response(self) -> None:
         # Create input
@@ -448,11 +453,12 @@ class TestHeadersAndApplyHandler(BaseClientTestCase):
             raise err
 
         # Execute/Verify
-        with pytest.raises(ServiceException) as e:
+        with pytest.raises(RemoteServiceError) as e:
             self.app.apply_handler(cmd, _raise)
         assert "HTTP status unknown error when handling remote command DummyCmd" in str(
             e.value
         )
+        assert e.value.get_http_status_code() == 500
 
     def test_apply_handler_wraps_generic_exception(self) -> None:
         # Create input
@@ -957,6 +963,10 @@ class TestRetryPolicy:
         error = ServiceException("11111111", "no status here")
         error.__cause__ = _status_error(503)
         assert RetryPolicy.get_remote_http_status(error) == 503
+
+    def test_status_from_remote_service_error(self) -> None:
+        error = RemoteServiceError("11111111", "no status here", {"status_code": 409})
+        assert RetryPolicy.get_remote_http_status(error) == 409
 
     def test_status_fallback_and_non_http(self) -> None:
         assert (
