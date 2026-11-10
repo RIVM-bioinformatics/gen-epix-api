@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import traceback
 from test.util.mock_compat import Mock, patch
 from typing import Any, Callable, ClassVar, cast
 from uuid import UUID, uuid4
@@ -10,6 +11,7 @@ import httpx
 import pytest
 from pydantic import Field
 
+from gen_epix.fastapp.app import App
 from gen_epix.fastapp.client import Client, RetryPolicy
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.domain.entity import Entity
@@ -1069,126 +1071,31 @@ class TestClientRetry:
         assert retry_sleeps == []
 
 
-class Lookup:
-    """A find_result callable that answers in order, then keeps answering None."""
-
-    def __init__(self, *answers: Any) -> None:
-        self.answers = list(answers)
-        self.calls = 0
-
-    def __call__(self) -> Any:
-        self.calls += 1
-        if not self.answers:
-            return None
-        answer = self.answers.pop(0)
-        if isinstance(answer, BaseException):
-            raise answer
-        return answer
+def _raise_read_timeout() -> None:
+    """Raise a timeout with a cause of its own, like httpx does from httpcore."""
+    try:
+        raise OSError("socket detail")
+    except OSError as e:
+        raise httpx.ReadTimeout("timed out") from e
 
 
-class TestClientFindResult:
-    """`handle(cmd, find_result=...)` looks for the effect after every failed attempt."""
+class NotCopyable(Exception):
+    """An exception that ``copy.copy`` cannot rebuild from its ``args``."""
 
-    def test_found_result_stops_the_retries(self, retry_sleeps: list[float]) -> None:
-        handler = Flaky(httpx.ReadTimeout("t"))
-        lookup = Lookup("found")
-        client = _make_retry_client(handler, RETRY_POLICY)
-
-        assert client.handle(RetryCommand(), find_result=lookup) == "found"
-
-        assert handler.calls == 1
-        assert lookup.calls == 1
-        assert retry_sleeps == []
-
-    def test_lookup_runs_after_each_failed_attempt(
-        self, retry_sleeps: list[float]
-    ) -> None:
-        handler = Flaky(httpx.ReadTimeout("t"), _status_error(503))
-        lookup = Lookup(None, None)
-        client = _make_retry_client(handler, RETRY_POLICY)
-
-        assert client.handle(RetryCommand(), find_result=lookup) == "ok"
-
-        assert handler.calls == 3
-        assert lookup.calls == 2
-        assert retry_sleeps == [1, 2]
-
-    @pytest.mark.parametrize("status", [401, 403, 422])
-    def test_lookup_runs_after_a_failure_that_is_not_retried(
-        self, status: int, retry_sleeps: list[float]
-    ) -> None:
-        handler = Flaky(_status_error(status))
-        lookup = Lookup("found")
-        client = _make_retry_client(handler, RETRY_POLICY)
-
-        assert client.handle(RetryCommand(), find_result=lookup) == "found"
-
-        assert handler.calls == 1
-        assert retry_sleeps == []
-
-    def test_error_is_raised_when_nothing_is_found(
-        self, retry_sleeps: list[float]
-    ) -> None:
-        handler = Flaky(_status_error(422))
-        lookup = Lookup(None)
-        client = _make_retry_client(handler, RETRY_POLICY)
-
-        with pytest.raises(ServiceException, match="HTTP status 422"):
-            client.handle(RetryCommand(), find_result=lookup)
-
-        assert lookup.calls == 1
-
-    def test_lookup_runs_after_the_last_attempt(
-        self, retry_sleeps: list[float]
-    ) -> None:
-        handler = Flaky(*[_status_error(502) for _ in range(10)])
-        attempts = len(RETRY_POLICY.wait_schedule) + 1
-        lookup = Lookup(*[None] * (attempts - 1), "found")
-        client = _make_retry_client(handler, RETRY_POLICY)
-
-        assert client.handle(RetryCommand(), find_result=lookup) == "found"
-
-        assert handler.calls == attempts
-        assert lookup.calls == attempts
-
-    def test_failing_lookup_keeps_the_commands_error_and_the_retries(
-        self, retry_sleeps: list[float]
-    ) -> None:
-        handler = Flaky(_status_error(503), _status_error(400))
-        lookup = Lookup(RuntimeError("lookup down"), RuntimeError("lookup down"))
-        client = _make_retry_client(handler, RETRY_POLICY)
-
-        with pytest.raises(ServiceException, match="HTTP status 400"):
-            client.handle(RetryCommand(), find_result=lookup)
-
-        assert handler.calls == 2
-        assert lookup.calls == 2
-
-    def test_lookup_is_not_used_after_success(self, retry_sleeps: list[float]) -> None:
-        lookup = Lookup("found")
-        client = _make_retry_client(Flaky(), RETRY_POLICY)
-
-        assert client.handle(RetryCommand(), find_result=lookup) == "ok"
-
-        assert lookup.calls == 0
-
-    def test_lookup_works_without_a_retry_policy(self) -> None:
-        handler = Flaky(_status_error(503))
-        lookup = Lookup("found")
-        client = _make_retry_client(handler, None)
-
-        assert client.handle(RetryCommand(), find_result=lookup) == "found"
-
-        assert handler.calls == 1
+    def __init__(self, message: str, extra: str) -> None:
+        super().__init__(message)
+        self.extra = extra
 
 
-class TestStackTraceLogging:
-    """A failure of the request or of the remote's answer is logged without a stack trace."""
+class TestStackTraceExemption:
+    """A registered exception type ends the logged stack trace; nothing else changes."""
 
     @staticmethod
-    def _error_records(
-        error: BaseException, caplog: pytest.LogCaptureFixture
-    ) -> list[logging.LogRecord]:
+    def _failed_command(
+        caplog: pytest.LogCaptureFixture,
+        error: BaseException,
+        *exempt: type[Exception],
+    ) -> tuple[logging.LogRecord, ServiceException]:
         client = Client(
             Domain("trace-test"),
             "example.org",
@@ -1199,33 +1106,110 @@ class TestStackTraceLogging:
         )
         client.register_route(RetryCommand, "/retry")
         client.register_handler(RetryCommand, Flaky(error))
+        for exempt_class in exempt:
+            client.register_stack_trace_exemption(exempt_class)
         with caplog.at_level(logging.ERROR, logger="trace-test"):
-            with pytest.raises(ServiceException):
+            with pytest.raises(ServiceException) as raised:
                 client.handle(RetryCommand())
-        return [r for r in caplog.records if r.levelno == logging.ERROR]
-
-    @pytest.mark.parametrize(
-        "error",
-        [
-            httpx.ReadTimeout("t"),
-            httpx.ConnectError("c"),
-            _status_error(401),
-            _status_error(500),
-        ],
-    )
-    def test_http_errors_have_no_stack_trace(
-        self, error: BaseException, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        records = self._error_records(error, caplog)
-
+        records = [r for r in caplog.records if r.levelno == logging.ERROR]
         assert len(records) == 1
-        assert not records[0].exc_info
+        return records[0], raised.value
+
+    @staticmethod
+    def _logged_trace(record: logging.LogRecord) -> str:
+        assert isinstance(record.exc_info, tuple)
+        return "".join(traceback.format_exception(*record.exc_info))
+
+    def test_nothing_is_registered_by_default(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, _ = self._failed_command(caplog, httpx.ReadTimeout("t"))
+
+        trace = self._logged_trace(record)
+        assert "ReadTimeout" in trace
+        assert "apply_handler" in trace
+
+    def test_trace_ends_at_the_registered_type(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        try:
+            _raise_read_timeout()
+        except httpx.ReadTimeout as error:
+            record, _ = self._failed_command(caplog, error, httpx.HTTPError)
+
+        trace = self._logged_trace(record)
+        assert "ReadTimeout: timed out" in trace
+        assert "apply_handler" in trace  # where it failed in our code is kept
+        assert (
+            "_raise_read_timeout" not in trace
+        )  # the frames of the registered type are not
+        assert "OSError" not in trace  # nor are its causes
+
+    def test_a_registered_base_class_matches_subclasses(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, _ = self._failed_command(caplog, _status_error(500), httpx.HTTPError)
+
+        assert "HTTPStatusError" in self._logged_trace(record)
+        assert "apply_handler" in self._logged_trace(record)
 
     @pytest.mark.parametrize("error", [ValueError("bad response"), KeyError("id")])
-    def test_errors_in_the_clients_own_code_keep_their_stack_trace(
+    def test_other_errors_keep_the_full_trace(
         self, error: BaseException, caplog: pytest.LogCaptureFixture
     ) -> None:
-        records = self._error_records(error, caplog)
+        record, _ = self._failed_command(caplog, error, httpx.HTTPError)
 
-        assert len(records) == 1
-        assert records[0].exc_info
+        assert record.exc_info is not None
+        assert record.exc_info[1] is not None
+        assert record.exc_info[1].__cause__ is error  # the original, not a copy
+
+    def test_a_registered_top_level_type_gives_one_line(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, _ = self._failed_command(
+            caplog, httpx.ReadTimeout("t"), ServiceException
+        )
+
+        trace = self._logged_trace(record)
+        assert len(trace.strip().splitlines()) == 1
+        assert "ServiceException" in trace
+
+    def test_the_raised_exception_is_not_changed(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        try:
+            _raise_read_timeout()
+        except httpx.ReadTimeout as caught:
+            error = caught
+        _, raised = self._failed_command(caplog, error, httpx.HTTPError)
+
+        assert raised.__cause__ is error
+        assert isinstance(error.__cause__, OSError)
+        assert error.__traceback__ is not None
+        assert raised.__traceback__ is not None
+
+    def test_a_copy_that_fails_falls_back_to_the_full_trace(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, raised = self._failed_command(
+            caplog, NotCopyable("m", "x"), NotCopyable
+        )
+
+        assert record.exc_info is not None
+        assert record.exc_info[1] is raised  # the failure itself, logged in full
+
+    def test_the_chain_copy_ends_at_the_registered_cause(
+        self,
+    ) -> None:
+        app = App(logger=logging.getLogger("trace-test"))
+        app.register_stack_trace_exemption(OSError)
+        error = RuntimeError("wrapper")
+        error.__cause__ = OSError("socket")
+
+        assert app._is_stack_trace_exempt(error)
+        copied = app._get_log_exc_info(error)
+        assert isinstance(copied, RuntimeError)
+        assert copied is not error
+        assert copied.__cause__ is not error.__cause__
+        assert copied.__cause__.__traceback__ is None
+        assert error.__cause__.__cause__ is None

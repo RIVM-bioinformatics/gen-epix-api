@@ -126,22 +126,6 @@ class RetryPolicy:
         return False
 
     @staticmethod
-    def is_http_error(exception: BaseException) -> bool:
-        """Return whether an exception, or any exception in its cause chain, is an ``httpx.HTTPError``.
-
-        True for a timeout, a connection error and an error status of the remote, so
-        for every failure whose cause lies in the request or in the remote's answer.
-        """
-        seen: set[int] = set()
-        current: BaseException | None = exception
-        while current is not None and id(current) not in seen:
-            if isinstance(current, httpx.HTTPError):
-                return True
-            seen.add(id(current))
-            current = current.__cause__
-        return False
-
-    @staticmethod
     def is_auth_failure(exception: BaseException) -> bool:
         """Return whether an exception, or any exception in its cause chain, is an ``AuthException``.
 
@@ -295,40 +279,16 @@ class Client(App):
         """Policy for retrying transient failures, or None if retrying is disabled."""
         return self._retry_policy
 
-    def handle(
-        self,
-        cmd: Command,
-        find_result: Callable[[], Any | None] | None = None,
-    ) -> Any:
+    def handle(self, cmd: Command) -> Any:
         """Dispatch a command, retrying transient failures if a retry policy is set.
 
         Without a retry policy this is identical to ``App.handle``. With one, the
         whole command attempt is repeated according to the policy and the last
         exception is re-raised once the attempts are exhausted.
-
-        A retry is only safe for a command that can be repeated. For one that has an
-        effect only once (a registration that consumes its invitation, a record with a
-        unique key), a failed attempt may still have taken effect on the server, with
-        only the response lost, and the retry is then refused or repeats the effect.
-        Pass ``find_result`` to check for that: after every failed attempt, retried
-        or not and including the last, it is called, and a result other than None is
-        returned instead of the error, which also ends the retries.
-
-        Args:
-            cmd: The command to dispatch.
-            find_result: Returns what the command should have produced if it is
-                already on the server, else None. If it raises, that is logged and
-                treated as not found: the error raised is always the command's own.
-                Finding a result proves that it exists, not that this command
-                produced it, so the caller decides whether that is enough.
-
-        Returns:
-            The command's result, or the one ``find_result`` found after a failure.
         """
-        attempt = partial(self._attempt, find_result=find_result)
         policy = self._retry_policy
         if policy is None:
-            return attempt(cmd)
+            return self._handle_once(cmd)
         retrying = tenacity.Retrying(
             retry=tenacity.retry_if_exception(policy.is_retryable),
             wait=tenacity.wait_chain(
@@ -340,44 +300,7 @@ class Client(App):
             ),
             reraise=True,
         )
-        return retrying(attempt, cmd)
-
-    def _should_log_stack_trace(self, exception: exc.ServiceException) -> bool:
-        """Log no stack trace for a failure of the request or of the remote's answer.
-
-        The trace holds only local httpx frames; what the remote did is in its own log.
-        An error in the client's own code (a token provider, parsing the response) keeps it.
-        """
-        return not RetryPolicy.is_http_error(exception)
-
-    def _attempt(
-        self, cmd: Command, find_result: Callable[[], Any | None] | None
-    ) -> Any:
-        """Make one attempt; if it fails, return what ``find_result`` finds, if anything."""
-        if find_result is None:
-            return self._handle_once(cmd)
-        try:
-            return self._handle_once(cmd)
-        except Exception:  # pylint: disable=broad-exception-caught
-            found = self._find_result_after_failure(find_result)
-            if found is None:
-                raise
-            logger.warning(
-                "%s failed, but its effect is already on the server; using the result found",
-                type(cmd).__name__,
-            )
-            return found
-
-    @staticmethod
-    def _find_result_after_failure(find_result: Callable[[], Any | None]) -> Any | None:
-        """Run the lookup after a failed attempt; a lookup that fails finds nothing."""
-        try:
-            return find_result()
-        except Exception:  # pylint: disable=broad-exception-caught
-            logger.warning(
-                "Looking up the result after a failed command failed", exc_info=True
-            )
-            return None
+        return retrying(self._handle_once, cmd)
 
     def _handle_once(self, cmd: Command) -> Any:
         """Make a single attempt at handling a command. Override to wrap attempts."""

@@ -7,6 +7,7 @@ execution, and manages command-triggered cache invalidation.
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import uuid
@@ -113,6 +114,7 @@ class App:
         self._log_item_class = log_item_class
         self._timestamp_factory = timestamp_factory
         self._feature_flags: dict[Hashable, bool] = feature_flags or {}
+        self.stack_trace_exemption: set[type[Exception]] = set()
 
         # Initialize other members
         self._created_at = self.generate_timestamp()
@@ -647,8 +649,8 @@ class App:
             if type(cmd) in self._auto_invalidate_cache_set:
                 self.invalidate_cache(cmd)
         except exc.ServiceException as exception:
-            # Service errors capture the stack trace to aid diagnosis, unless the
-            # subclass knows that it adds nothing.
+            # Service errors capture the stack trace to aid diagnosis, except where the
+            # trace ends at a registered exception type (see register_stack_trace_exemption).
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
@@ -658,7 +660,7 @@ class App:
                         cmd=cmd,
                         exception=exception,
                     ),
-                    exc_info=self._should_log_stack_trace(exception),
+                    exc_info=self._get_log_exc_info(exception),
                 )
             self._command_stack.pop()
             raise exception
@@ -687,20 +689,81 @@ class App:
                         cmd=cmd,
                         exception=exception,
                     ),
-                    exc_info=True,
-                    stack_info=True,
+                    exc_info=self._get_log_exc_info(exception),
+                    stack_info=not self._is_stack_trace_exempt(exception),
                 )
             self._command_stack.pop()
             raise exception
         return retval
 
-    def _should_log_stack_trace(self, exception: exc.ServiceException) -> bool:
-        """Return whether a failed command is logged with the stack trace.
+    def register_stack_trace_exemption(self, exception_class: type[Exception]) -> None:
+        """End the logged stack trace of a failed command at ``exception_class``.
 
-        Override to leave it out for a failure whose trace says nothing more than
-        its message.
+        A command that fails because of an exception of this class, or of a subclass,
+        anywhere in the exception's cause chain, is logged with the trace up to that
+        exception only: the exception itself is logged as one line and its own frames
+        and causes are left out. Use it for errors whose trace says nothing more than
+        their message, such as an HTTP error of a remote app: the trace then shows where
+        in this app the command failed, not the frames of the libraries below it.
+
+        The exemption only changes what is logged. The exception is raised unchanged.
+        Nothing is registered by default, so an application that does not call this logs
+        every trace in full. The caller decides per instance, so a service can register
+        nothing while a client of that service does.
+
+        Args:
+            exception_class: Exception class to end the logged trace at; subclasses
+                match as well.
         """
-        return True
+        self.stack_trace_exemption.add(exception_class)
+
+    def _is_stack_trace_exempt(self, exception: BaseException) -> bool:
+        """Return whether the exception or one of its causes is a registered type."""
+        exempt_classes = tuple(self.stack_trace_exemption)
+        seen: set[int] = set()
+        current: BaseException | None = exception
+        while current is not None and id(current) not in seen:
+            if isinstance(current, exempt_classes):
+                return True
+            seen.add(id(current))
+            current = current.__cause__
+        return False
+
+    def _get_log_exc_info(self, exception: BaseException) -> bool | BaseException:
+        """Return the ``exc_info`` to log a failed command with.
+
+        True (the full trace) unless a registered exception type is in the cause chain;
+        then a copy of the chain that ends at that type. A copy that cannot be made
+        falls back to the full trace: logging must never replace the failure itself.
+        """
+        if not self._is_stack_trace_exempt(exception):
+            return True
+        try:
+            return self._copy_exception_chain_to_exemption(exception)
+        except Exception:  # pylint: disable=broad-exception-caught
+            return True
+
+    def _copy_exception_chain_to_exemption(
+        self, exception: BaseException, seen: frozenset[int] = frozenset()
+    ) -> BaseException:
+        """Copy the cause chain, ending at the first registered exception type.
+
+        ``copy.copy`` of an exception carries neither ``__traceback__`` nor
+        ``__cause__``, so the copy of the registered exception has no frames and no
+        cause; the frames and cause of the links above it are set here. The original,
+        which the caller re-raises, is not modified.
+        """
+        is_exempt = isinstance(exception, tuple(self.stack_trace_exemption))
+        exception_copy = copy.copy(exception)
+        cause = exception.__cause__
+        if is_exempt or cause is None or id(cause) in seen:
+            exception_copy.__suppress_context__ = True
+            return exception_copy
+        exception_copy.__traceback__ = exception.__traceback__
+        exception_copy.__cause__ = self._copy_exception_chain_to_exemption(
+            cause, seen | {id(exception)}
+        )
+        return exception_copy
 
     def _get_command_handler(self, cmd: Command) -> Callable:
         """Resolve a command handler while logging and unwinding a failed dispatch.
