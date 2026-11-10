@@ -1095,6 +1095,13 @@ class NotCopyable(Exception):
         raise RuntimeError("cannot be copied")
 
 
+class SelfCopy(Exception):
+    """An exception whose ``__copy__`` returns itself, so it is no independent copy."""
+
+    def __copy__(self) -> "SelfCopy":
+        return self
+
+
 class TestStackTraceExemption:
     """A registered exception type ends the logged stack trace; nothing else changes."""
 
@@ -1314,3 +1321,26 @@ class TestStackTraceExemptionOfUnexpectedErrors:
         assert record.exc_info is not None
         assert record.exc_info[1] is raised
         assert record.stack_info is not None
+
+    def test_a_failed_copy_keeps_the_caller_stack_too(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, raised = self._failed_app_command(
+            caplog, NotCopyable("m", "x"), NotCopyable
+        )
+
+        assert record.exc_info is not None
+        assert record.exc_info[1] is raised
+        assert record.stack_info is not None
+
+    def test_a_copy_that_is_the_exception_itself_is_refused(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        error = SelfCopy("m")
+        record, raised = self._failed_app_command(caplog, error, SelfCopy)
+
+        assert raised is error
+        assert record.exc_info is not None
+        assert record.exc_info[1] is error  # the full trace, not a trimmed copy
+        assert record.stack_info is not None
+        assert error.__suppress_context__ is False  # the original is not modified

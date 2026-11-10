@@ -679,7 +679,10 @@ class App:
             self._command_stack.pop()
             raise exception
         except Exception as exception:
-            # Any other unexpected error: add stack trace
+            # Any other unexpected error: add stack trace. The caller's stack is added
+            # only with the full trace: a trimmed copy stands for an exception whose
+            # frames say nothing more than its message.
+            log_exc_info = self._get_log_exc_info(exception)
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
@@ -689,8 +692,8 @@ class App:
                         cmd=cmd,
                         exception=exception,
                     ),
-                    exc_info=self._get_log_exc_info(exception),
-                    stack_info=not self._is_stack_trace_exempt(exception),
+                    exc_info=log_exc_info,
+                    stack_info=log_exc_info is True,
                 )
             self._command_stack.pop()
             raise exception
@@ -772,15 +775,19 @@ class App:
         ``copy.copy`` rebuilds an exception from its ``args``, which fails for those
         whose constructor needs more, such as ``httpx.HTTPStatusError`` (keyword-only
         ``request`` and ``response``). For those the copy is made without calling the
-        constructor: same class, ``args`` and attributes.
+        constructor: same class, ``args`` and attributes. A copy that is the exception
+        itself (a ``__copy__`` returning ``self``) is refused with ``ValueError``,
+        because trimming it would change the exception that is re-raised.
         """
         try:
-            return copy.copy(exception)
+            exception_copy = copy.copy(exception)
         except TypeError:
             exception_copy = type(exception).__new__(type(exception))
             exception_copy.__dict__.update(exception.__dict__)
             exception_copy.args = exception.args
-            return exception_copy
+        if exception_copy is exception:
+            raise ValueError("the copy of the exception is the exception itself")
+        return exception_copy
 
     def _get_command_handler(self, cmd: Command) -> Callable:
         """Resolve a command handler while logging and unwinding a failed dispatch.
