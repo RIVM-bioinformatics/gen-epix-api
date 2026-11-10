@@ -1213,3 +1213,81 @@ class TestStackTraceExemption:
         assert copied.__cause__ is not error.__cause__
         assert copied.__cause__.__traceback__ is None
         assert error.__cause__.__cause__ is None
+
+
+class TestStackTraceExemptionOfUnexpectedErrors:
+    """An error that no service wrapped is logged by the generic branch of `App`."""
+
+    @staticmethod
+    def _failed_app_command(
+        caplog: pytest.LogCaptureFixture,
+        error: BaseException,
+        *exempt: type[Exception],
+    ) -> tuple[logging.LogRecord, BaseException]:
+        app = App(logger=logging.getLogger("trace-test"))
+        app.register_handler(RetryCommand, Flaky(error))
+        for exempt_class in exempt:
+            app.register_stack_trace_exemption(exempt_class)
+        with caplog.at_level(logging.ERROR, logger="trace-test"):
+            with pytest.raises(Exception) as raised:
+                app.handle(RetryCommand())
+        records = [r for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(records) == 1
+        return records[0], raised.value
+
+    @staticmethod
+    def _wrapped_timeout() -> RuntimeError:
+        try:
+            try:
+                _raise_read_timeout()
+            except httpx.ReadTimeout as timeout:
+                raise RuntimeError("wrapper") from timeout
+        except RuntimeError as wrapper:
+            return wrapper
+        raise AssertionError("unreachable")
+
+    def test_nothing_is_registered_by_default(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, raised = self._failed_app_command(caplog, self._wrapped_timeout())
+
+        assert record.exc_info is not None
+        assert record.exc_info[1] is raised  # the failure itself, logged in full
+        assert record.stack_info is not None
+
+    def test_the_trace_ends_at_a_registered_cause_without_stack_info(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, _ = self._failed_app_command(
+            caplog, self._wrapped_timeout(), httpx.HTTPError
+        )
+
+        assert record.exc_info is not None
+        trace = "".join(traceback.format_exception(*record.exc_info))
+        assert "RuntimeError: wrapper" in trace
+        assert "ReadTimeout: timed out" in trace
+        assert "_raise_read_timeout" not in trace  # frames of the registered type
+        assert "OSError" not in trace  # and its causes
+        assert record.stack_info is None
+
+    def test_the_raised_exception_is_not_changed(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        error = self._wrapped_timeout()
+        _, raised = self._failed_app_command(caplog, error, httpx.HTTPError)
+
+        assert raised is error
+        assert isinstance(error.__cause__, httpx.ReadTimeout)
+        assert isinstance(error.__cause__.__cause__, OSError)
+        assert error.__traceback__ is not None
+
+    def test_an_unregistered_error_keeps_the_full_trace_and_stack_info(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, raised = self._failed_app_command(
+            caplog, ValueError("bad"), httpx.HTTPError
+        )
+
+        assert record.exc_info is not None
+        assert record.exc_info[1] is raised
+        assert record.stack_info is not None
