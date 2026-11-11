@@ -163,3 +163,92 @@ class TestOneBadSampleFailsOnItsOwn:
         stored_codes = {x.code for x in _read_all(env, command.SampleCrudCommand)}
         assert not stored_codes.intersection(codes)
         assert batch_result.has_log_code("02095f22")
+
+
+class TestChangedUnchangeableFieldFailsOnItsOwn:
+    """An existing sample re-uploaded with another code fails; the others are stored."""
+
+    def _upload(
+        self,
+        env: Env,
+        samples: list[model.SampleForUpload],
+        fail_batch_on_item_error: bool,
+        verify_only: bool = False,
+    ) -> model.SampleBatchUploadResult:
+        return env.handle(  # type: ignore[no-any-return]
+            command.UploadSamplesCommand(
+                user=env.get_root_user(),
+                sample_batch=model.SampleBatchForUpload(samples=samples, alleles=[]),
+                calculate_distances=False,
+                fail_batch_on_item_error=fail_batch_on_item_error,  # type: ignore[call-arg]
+                verify_only=verify_only,
+                on_exists=commondb_enum.UploadAction.UPDATE,
+            ),
+            use_endpoint=False,
+        )
+
+    def _store_sample(self, env: Env) -> model.SampleForUpload:
+        """Store a new sample and return it as an upload item of the stored sample."""
+        data_collection_id = _read_all(env, command.SampleCrudCommand)[
+            0
+        ].created_in_data_collection_id
+        protocol_id = _protocol_id_of_type(env, enum.ProtocolTypeSet.ASSEMBLY.value)
+        sample_for_upload = _sample_for_upload(
+            f"unchangeable_{uuid4().hex[:8]}",
+            data_collection_id,
+            protocol_id=protocol_id,
+        )
+        batch_result = self._upload(
+            env, [sample_for_upload], fail_batch_on_item_error=True
+        )
+        assert batch_result.status == EtlStatus.CREATED
+        stored_sample = next(
+            x
+            for x in _read_all(env, command.SampleCrudCommand)
+            if x.code == sample_for_upload.sample.code
+        )
+        return model.SampleForUpload(sample=stored_sample)
+
+    def _changed_and_new(
+        self, env: Env
+    ) -> tuple[list[model.SampleForUpload], model.SampleForUpload]:
+        existing = self._store_sample(env)
+        changed = model.SampleForUpload(
+            sample=existing.sample.model_copy(
+                update={"code": f"changed_{uuid4().hex[:8]}"}
+            )
+        )
+        data_collection_id = existing.sample.created_in_data_collection_id
+        protocol_id = _protocol_id_of_type(env, enum.ProtocolTypeSet.ASSEMBLY.value)
+        new = _sample_for_upload(
+            f"unchangeable_new_{uuid4().hex[:8]}",
+            data_collection_id,
+            protocol_id=protocol_id,
+        )
+        return [changed, new], new
+
+    def test_good_sample_is_stored(self, env: Env) -> None:
+        samples, new = self._changed_and_new(env)
+
+        batch_result = self._upload(env, samples, fail_batch_on_item_error=False)
+
+        stored_codes = {x.code for x in _read_all(env, command.SampleCrudCommand)}
+        assert new.sample.code in stored_codes
+        assert samples[0].sample.code not in stored_codes
+        assert [x.status for x in batch_result.samples] == [
+            EtlStatus.FAILED,
+            EtlStatus.CREATED,
+        ]
+        assert batch_result.samples[0].has_log_code("f5e09001")
+
+    def test_verify_only_reports_the_error(self, env: Env) -> None:
+        samples, new = self._changed_and_new(env)
+
+        batch_result = self._upload(
+            env, samples, fail_batch_on_item_error=False, verify_only=True
+        )
+
+        stored_codes = {x.code for x in _read_all(env, command.SampleCrudCommand)}
+        assert new.sample.code not in stored_codes
+        assert batch_result.samples[0].status == EtlStatus.FAILED
+        assert batch_result.samples[0].has_log_code("f5e09001")
