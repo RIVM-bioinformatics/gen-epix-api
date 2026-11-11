@@ -65,7 +65,7 @@ class CompositeFilter(Filter):
     """
 
     type: Literal[enum.FilterType.COMPOSITE.value] = enum.FilterType.COMPOSITE.value  # type: ignore[name-defined]
-    filters: list[FilterUnion | "CompositeFilter" | Filter] = Field(
+    filters: list[FilterUnion | CompositeFilter | Filter] = Field(
         description="The list of filters.", min_length=1, frozen=True
     )
     key: str | None = Field(default=None)
