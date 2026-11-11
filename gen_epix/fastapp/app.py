@@ -7,7 +7,6 @@ execution, and manages command-triggered cache invalidation.
 
 from __future__ import annotations
 
-import copy
 import json
 import logging
 import uuid
@@ -649,8 +648,8 @@ class App:
             if type(cmd) in self._auto_invalidate_cache_set:
                 self.invalidate_cache(cmd)
         except exc.ServiceException as exception:
-            # Service errors capture the stack trace to aid diagnosis, except where the
-            # trace ends at a registered exception type (see register_stack_trace_exemption).
+            # Service errors capture the stack trace to aid diagnosis, except for those
+            # caused by a registered exception type (see register_stack_trace_exemption).
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
@@ -660,7 +659,7 @@ class App:
                         cmd=cmd,
                         exception=exception,
                     ),
-                    exc_info=self._get_log_exc_info(exception),
+                    exc_info=not self._is_stack_trace_exempt(exception),
                 )
             self._command_stack.pop()
             raise exception
@@ -679,10 +678,9 @@ class App:
             self._command_stack.pop()
             raise exception
         except Exception as exception:
-            # Any other unexpected error: add stack trace. The caller's stack is added
-            # only with the full trace: a trimmed copy stands for an exception whose
-            # frames say nothing more than its message.
-            log_exc_info = self._get_log_exc_info(exception)
+            # Any other unexpected error: add stack trace, unless a registered
+            # exception type is in its cause chain.
+            has_stack_trace = not self._is_stack_trace_exempt(exception)
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
@@ -692,22 +690,20 @@ class App:
                         cmd=cmd,
                         exception=exception,
                     ),
-                    exc_info=log_exc_info,
-                    stack_info=log_exc_info is True,
+                    exc_info=has_stack_trace,
+                    stack_info=has_stack_trace,
                 )
             self._command_stack.pop()
             raise exception
         return retval
 
     def register_stack_trace_exemption(self, exception_class: type[Exception]) -> None:
-        """End the logged stack trace of a failed command at ``exception_class``.
+        """Log no stack trace for a failed command caused by ``exception_class``.
 
         A command that fails because of an exception of this class, or of a subclass,
-        anywhere in the exception's cause chain, is logged with the trace up to that
-        exception only: the exception itself is logged as one line and its own frames
-        and causes are left out. Use it for errors whose trace says nothing more than
-        their message, such as an HTTP error of a remote app: the trace then shows where
-        in this app the command failed, not the frames of the libraries below it.
+        anywhere in the exception's cause chain, is logged as one line, without a
+        stack trace. Use it for errors whose trace says nothing more than their
+        message, such as an HTTP error of a remote app.
 
         The exemption only changes what is logged. The exception is raised unchanged.
         Nothing is registered by default, so an application that does not call this logs
@@ -715,7 +711,7 @@ class App:
         nothing while a client of that service does.
 
         Args:
-            exception_class: Exception class to end the logged trace at; subclasses
+            exception_class: Exception class to log without a stack trace; subclasses
                 match as well.
         """
         self.stack_trace_exemption.add(exception_class)
@@ -731,63 +727,6 @@ class App:
             seen.add(id(current))
             current = current.__cause__
         return False
-
-    def _get_log_exc_info(self, exception: BaseException) -> bool | BaseException:
-        """Return the ``exc_info`` to log a failed command with.
-
-        True (the full trace) unless a registered exception type is in the cause chain;
-        then a copy of the chain that ends at that type. A copy that cannot be made
-        falls back to the full trace: logging must never replace the failure itself.
-        """
-        if not self._is_stack_trace_exempt(exception):
-            return True
-        try:
-            return self._copy_exception_chain_to_exemption(exception)
-        except Exception:  # pylint: disable=broad-exception-caught
-            return True
-
-    def _copy_exception_chain_to_exemption(
-        self, exception: BaseException, seen: frozenset[int] = frozenset()
-    ) -> BaseException:
-        """Copy the cause chain, ending at the first registered exception type.
-
-        ``copy.copy`` of an exception carries neither ``__traceback__`` nor
-        ``__cause__``, so the copy of the registered exception has no frames and no
-        cause; the frames and cause of the links above it are set here. The original,
-        which the caller re-raises, is not modified.
-        """
-        is_exempt = isinstance(exception, tuple(self.stack_trace_exemption))
-        exception_copy = self._copy_exception(exception)
-        cause = exception.__cause__
-        if is_exempt or cause is None or id(cause) in seen:
-            exception_copy.__suppress_context__ = True
-            return exception_copy
-        exception_copy.__traceback__ = exception.__traceback__
-        exception_copy.__cause__ = self._copy_exception_chain_to_exemption(
-            cause, seen | {id(exception)}
-        )
-        return exception_copy
-
-    @staticmethod
-    def _copy_exception(exception: BaseException) -> BaseException:
-        """Copy an exception without its traceback and cause.
-
-        ``copy.copy`` rebuilds an exception from its ``args``, which fails for those
-        whose constructor needs more, such as ``httpx.HTTPStatusError`` (keyword-only
-        ``request`` and ``response``). For those the copy is made without calling the
-        constructor: same class, ``args`` and attributes. A copy that is the exception
-        itself (a ``__copy__`` returning ``self``) is refused with ``ValueError``,
-        because trimming it would change the exception that is re-raised.
-        """
-        try:
-            exception_copy = copy.copy(exception)
-        except TypeError:
-            exception_copy = type(exception).__new__(type(exception))
-            exception_copy.__dict__.update(exception.__dict__)
-            exception_copy.args = exception.args
-        if exception_copy is exception:
-            raise ValueError("the copy of the exception is the exception itself")
-        return exception_copy
 
     def _get_command_handler(self, cmd: Command) -> Callable:
         """Resolve a command handler while logging and unwinding a failed dispatch.
