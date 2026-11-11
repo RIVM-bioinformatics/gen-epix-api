@@ -5,7 +5,8 @@ app, so the flag travels over the wire and the whole upload path is exercised:
 verification, upsert and storage. With fail_batch_on_item_error=False the persons
 that pass verification are stored even when another person in the same batch
 fails. A person fails here because its specimen carries an identifier that already
-belongs to another specimen.
+belongs to another specimen, or because it changes an unchangeable field of a
+stored observation (LSP-4178).
 """
 
 import logging
@@ -17,7 +18,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
+from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig, UploadAction
 from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.etl.enum import EtlStatus
@@ -32,6 +33,8 @@ _GENDER_CONCEPT_ID = UUID("1e7d7dc0-41ef-9b58-de77-cb4a4eff115b")
 _RACE_CONCEPT_ID = UUID("af5570f5-a181-0b7a-f78c-af4bc70a660f")
 _ETHNICITY_CONCEPT_ID = UUID("8a234c39-9f1d-de91-f9f6-bd90661f36db")
 _PERSON_TYPE_CONCEPT_ID = UUID("e8ac2efe-d38a-c881-c5dc-1812343e67c8")
+_OBSERVATION_CONCEPT_ID = UUID("5c8e3a21-7d4b-4f60-8e19-2a6b9d0c4f33")
+_OBSERVATION_TYPE_CONCEPT_ID = UUID("c1f09b7a-3e52-4d86-a0b8-6e4d2f9a1c55")
 _SPECIMEN_CONCEPT_ID = UUID("4d7a1f0e-6b55-4c1e-9a43-0f3c2a9d8e11")
 _SPECIMEN_TYPE_CONCEPT_ID = UUID("9b2e6c3d-1a7f-4e08-b5d4-7c6a2f1e0d22")
 
@@ -79,7 +82,9 @@ def create_ref_data(env: Env) -> RefData:
 
 
 def _person_for_upload(
-    ref_data: RefData, specimen_external_id: str | None = None
+    ref_data: RefData,
+    specimen_external_id: str | None = None,
+    person_id: UUID | None = None,
 ) -> model.PersonForUpload:
     """A new person with a given id, optionally with one identified specimen."""
     specimens = None
@@ -99,7 +104,7 @@ def _person_for_upload(
             )
         ]
     return model.PersonForUpload(
-        id=uuid4(),
+        id=person_id or uuid4(),
         person=model.Person(
             year_of_birth=1990,
             gender_concept_id=_GENDER_CONCEPT_ID,
@@ -116,12 +121,14 @@ def _upload(
     ref_data: RefData,
     persons: list[model.PersonForUpload],
     fail_batch_on_item_error: bool,
+    on_exists: UploadAction = UploadAction.ERROR,
 ) -> model.PersonBatchUploadResult:
     return env.handle(  # type: ignore[no-any-return]
         command.UploadPersonsCommand(
             user=ref_data.root_user,
             person_batch=model.PersonBatchForUpload(persons=persons),
             fail_batch_on_item_error=fail_batch_on_item_error,  # type: ignore[call-arg]
+            on_exists=on_exists,  # type: ignore[call-arg]
         )
     )
 
@@ -187,4 +194,79 @@ class TestOneBadPersonFailsOnItsOwn:
 
         stored_person_ids = _stored_person_ids(env, ref_data)
         assert not stored_person_ids.intersection(x.id for x in persons)
+        assert batch_result.has_log_code("02095f22")
+
+
+def _person_with_observation(
+    ref_data: RefData, person_id: UUID, observation_id: UUID, observation_date: date
+) -> model.PersonForUpload:
+    """A person with fixed ids and one observation on the given date."""
+    person = _person_for_upload(ref_data, person_id=person_id)
+    person.observations = [
+        model.ObservationForUpload(  # type: ignore[call-arg]
+            observation_id=observation_id,
+            observation_concept_id=_OBSERVATION_CONCEPT_ID,
+            observation_date=observation_date,
+            observation_type_concept_id=_OBSERVATION_TYPE_CONCEPT_ID,
+        )
+    ]
+    return person
+
+
+def _batch_with_changed_observation_date(
+    env: Env, ref_data: RefData
+) -> list[model.PersonForUpload]:
+    """A stored person re-uploaded with another observation_date, and a new person."""
+    person_id, observation_id = uuid4(), uuid4()
+    create_result = _upload(
+        env,
+        ref_data,
+        [
+            _person_with_observation(
+                ref_data, person_id, observation_id, date(2026, 10, 1)
+            )
+        ],
+        fail_batch_on_item_error=True,
+    )
+    assert create_result.persons[0].status == EtlStatus.CREATED
+    return [
+        _person_with_observation(
+            ref_data, person_id, observation_id, date(2026, 10, 2)
+        ),
+        _person_for_upload(ref_data),
+    ]
+
+
+class TestChangedUnchangeableField:
+    """Changing an unchangeable field of a stored observation fails only its person."""
+
+    def test_other_person_is_stored(self, env: Env, ref_data: RefData) -> None:
+        persons = _batch_with_changed_observation_date(env, ref_data)
+
+        batch_result = _upload(
+            env,
+            ref_data,
+            persons,
+            fail_batch_on_item_error=False,
+            on_exists=UploadAction.UPDATE,
+        )
+
+        assert batch_result.persons[0].status == EtlStatus.FAILED
+        assert batch_result.persons[1].status == EtlStatus.CREATED
+        assert persons[1].id in _stored_person_ids(env, ref_data)
+        assert batch_result.has_log_code("c0f70912")
+        assert not batch_result.has_log_code("05358e8a")
+
+    def test_default_stores_nothing(self, env: Env, ref_data: RefData) -> None:
+        persons = _batch_with_changed_observation_date(env, ref_data)
+
+        batch_result = _upload(
+            env,
+            ref_data,
+            persons,
+            fail_batch_on_item_error=True,
+            on_exists=UploadAction.UPDATE,
+        )
+
+        assert persons[1].id not in _stored_person_ids(env, ref_data)
         assert batch_result.has_log_code("02095f22")

@@ -47,6 +47,8 @@ class BatchUploader:
         self.upload_batch_command_class = upload_batch_command_class
         self.service = service
         self.stored_model_field_props = stored_model_field_props
+        # Stored objects read during verification, reused by update_objects
+        self._stored_objs: dict[type[Model], dict[UUID, Model]] = {}
 
         # Derive some constants for convenience
         self.cmd_batch_field_name = (
@@ -148,6 +150,7 @@ class BatchUploader:
         self.verify_user_rights(cmd)
 
         # Initialize the upload result
+        self._stored_objs = {}
         batch_result = self.init_batch_upload_result(cmd)
         batch_result.add_info(
             code="4f9046fe",
@@ -430,6 +433,8 @@ class BatchUploader:
         )
         # Verify reference data last since it may depend on parent and children verification
         success &= self.verify_refdata(cmd, batch_result, uow)
+        # Compare unchangeable fields last: it needs the final existing/new and status per item
+        success &= self.verify_unchangeable_fields(cmd, batch_result, uow)
         return success
 
     def upsert_batch(
@@ -2215,6 +2220,125 @@ class BatchUploader:
                 )
         return False
 
+    def verify_unchangeable_fields(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        batch_result: BaseBatchUploadResult,
+        uow: BaseUnitOfWork,
+    ) -> bool:
+        """Fail items that would change an unchangeable field of a stored object.
+
+        Selects the items that the upsert phase will update (existing and still
+        PENDING), reads their stored objects once and keeps them for
+        ``update_objects``.
+
+        Args:
+            cmd: Upload command carrying the batch and requesting user context.
+            batch_result: Batch result after the other verification steps.
+            uow: Active unit of work used to read the stored objects.
+
+        Returns:
+            False if any item would change an unchangeable field.
+        """
+        assert isinstance(cmd, command.Command)
+        user_id = cmd.user.id if cmd.user else None
+        parents_for_upload = self.get_parents_for_upload(cmd)
+        parent_results = self.get_parent_results(batch_result)
+
+        parent_pairs: list[tuple[Model, UploadResult]] = []
+        for parent_for_upload, parent_result in zip(parents_for_upload, parent_results):
+            parent = parent_for_upload.get_parent()
+            if (
+                parent is None
+                or parent_result.is_new
+                or parent_result.status != EtlStatus.PENDING
+            ):
+                continue
+            parent_pairs.append((parent, parent_result))
+        success = self._verify_unchangeable_fields_for_model(
+            uow, user_id, self.parent_class, parent_pairs
+        )
+        for (
+            child_model_class,
+            children_field_name,
+        ) in self.child_children_field_name_map.items():
+            child_pairs: list[tuple[Model, UploadResult]] = [
+                (child_for_upload, child_result)
+                for _, parent_result, child_for_upload, child_result in (
+                    self._get_parents_and_children(
+                        parents_for_upload, parent_results, children_field_name
+                    )
+                )
+                if parent_result.status != EtlStatus.FAILED
+                and not child_result.is_new
+                and child_result.status == EtlStatus.PENDING
+            ]
+            success &= self._verify_unchangeable_fields_for_model(
+                uow, user_id, child_model_class, child_pairs
+            )
+        return success
+
+    def _verify_unchangeable_fields_for_model(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        model_class: type[Model],
+        obj_result_pairs: list[tuple[Model, UploadResult]],
+    ) -> bool:
+        """Read the stored objects of one model, keep them, and check unchangeable fields."""
+        id_field_name = model_class.ENTITY.get_id_field_name()
+        pairs = [
+            (obj, obj_result)
+            for obj, obj_result in obj_result_pairs
+            if not self.is_null(getattr(obj, id_field_name))
+        ]
+        if not pairs:
+            return True
+        stored_objs: list[Model] = self.service.repository.crud(
+            uow,
+            user_id,
+            model_class,
+            CrudOperation.READ_SOME,
+            obj_ids=[getattr(obj, id_field_name) for obj, _ in pairs],
+        )
+        # READ_SOME returns the objects aligned with obj_ids, as update_objects relies on
+        cache = self._stored_objs.setdefault(model_class, {})
+        success = True
+        for (obj, obj_result), stored_obj in zip(pairs, stored_objs):
+            cache[getattr(obj, id_field_name)] = stored_obj
+            error = self._get_unchangeable_field_error(model_class, obj, stored_obj)
+            if error:
+                obj_result.add_error("f5e09001", error)
+                success = False
+        return success
+
+    def _get_unchangeable_field_error(
+        self, model_class: type[Model], obj: Model, existing_obj: Model
+    ) -> str | None:
+        """Describe the first unchangeable field whose stored value would change.
+
+        An unchangeable field is only an error if the value is actually changing.
+        Re-uploading the same value (e.g. a full record with one extra field added)
+        is fine. None or NULL_ID means "not specified" and is a no-op, so that
+        partial-update payloads don't fail.
+
+        Returns:
+            The error message, or None if no unchangeable field would change.
+        """
+        id_field_name = model_class.ENTITY.get_id_field_name()
+        for field_name, field_props in self.stored_model_field_props[
+            model_class
+        ].items():
+            if field_name == id_field_name:
+                continue  # ID field is the lookup key; never part of updates
+            existing_value = getattr(existing_obj, field_name)
+            if field_props.is_mutable_value(existing_value):
+                continue
+            new_value = getattr(obj, field_name)
+            if not self.is_null(new_value) and new_value != existing_value:
+                return f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}."
+        return None
+
     def update_objects(
         self,
         uow: BaseUnitOfWork,
@@ -2256,18 +2380,30 @@ class BatchUploader:
             return success
 
         # Retrieve existing objects (aligned with valid_pairs / obj_ids)
-        existing_objs: list[Model] = self.service.repository.crud(
-            uow,
-            user_id,
-            model_class,
-            CrudOperation.READ_SOME,
-            obj_ids=obj_ids,
-        )
+        # (already read during verification, if possible)
+        stored_objs = self._stored_objs.get(model_class, {})
+        existing_objs: list[Model]
+        if all(x in stored_objs for x in obj_ids):
+            existing_objs = [stored_objs[x] for x in obj_ids]
+        else:
+            existing_objs = self.service.repository.crud(
+                uow,
+                user_id,
+                model_class,
+                CrudOperation.READ_SOME,
+                obj_ids=obj_ids,
+            )
 
         # Determine which objects actually need to be updated instead of having identical data
         to_update_objs: list[Model] = []
         to_update_obj_results: list[model.UploadResult] = []
         for (obj, obj_result), existing_obj in zip(valid_pairs, existing_objs):
+            # Safeguard: verification already reports this error
+            error = self._get_unchangeable_field_error(model_class, obj, existing_obj)
+            if error:
+                obj_result.add_error("f5e09001", error)
+                success = False
+                continue
             # Only check props for updates, other fields are not updatable
             is_updated = False
             for field_name, field_props in stored_model_field_props.items():
@@ -2276,19 +2412,7 @@ class BatchUploader:
                 existing_value = getattr(existing_obj, field_name)
                 new_value = getattr(obj, field_name)
                 if not field_props.is_mutable_value(existing_value):
-                    # Immutable field: only an error if the value is actually changing.
-                    # Re-uploading the same value (e.g. a full record with one extra
-                    # field added) is fine and requires no action for this field.
-                    # None or NULL_ID means "not specified" — treat as a no-op for
-                    # immutable fields so that partial-update payloads don't fail.
-                    if not self.is_null(new_value) and new_value != existing_value:
-                        obj_result.add_error(
-                            "f5e09001",
-                            f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}.",
-                        )
-                        success = False
-                        break
-                    continue
+                    continue  # Unchangeable field, checked above
                 # Mutable field: apply update if value differs
                 if existing_value is None:
                     # Existing value is None: set new value if not None
