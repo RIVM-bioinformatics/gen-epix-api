@@ -55,7 +55,7 @@ server = [
     "slowapi==0.1.10",
     "cryptography==50.0.2",
     "oauthlib==4.0.1",
-    "python-multipart==0.0.32",
+    "python-multipart==0.0.33",
     "scipy==1.18.1",
     "numpy==2.5.4",
     "biopython==1.88",
