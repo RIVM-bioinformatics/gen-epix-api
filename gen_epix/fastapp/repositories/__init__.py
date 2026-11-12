@@ -1,6 +1,7 @@
 """Repository implementations and unit-of-work exports."""
 
 # pylint: disable=useless-import-alias
+import builtins
 from typing import TYPE_CHECKING
 
 from gen_epix._lazy import LazyExport, exports_from, lazy_exports
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 
 # The SQLAlchemy implementations are resolved on first access, so that the
 # dictionary implementations can be imported without SQLAlchemy installed
-_LAZY_EXPORTS: dict[str, LazyExport] = exports_from(
+_LAZY_EXPORTS: builtins.dict[str, LazyExport] = exports_from(
     "gen_epix.fastapp.repositories.sa",
     "SAMapper",
     "SARepository",

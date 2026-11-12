@@ -67,6 +67,12 @@ class CaseStats(fastapp.Model):
                 raise ValueError(
                     "first_case_date and last_case_date must be provided when n_cases is greater than 0"
                 )
+            if (self.first_case_date.utcoffset() is None) != (
+                self.last_case_date.utcoffset() is None
+            ):
+                raise ValueError(
+                    "first_case_date and last_case_date must have matching timezone awareness"
+                )
             if self.first_case_date > self.last_case_date:
                 raise ValueError(
                     "first_case_date must be before or equal to last_case_date"
@@ -81,6 +87,9 @@ class CaseQuery(Model):
         snake_case_plural_name="case_queries",
         persistable=False,
     )
+
+    CASE_QUERY_MAX_COMPOSITE_FILTER_DEPTH: ClassVar[int] = 2
+
     label: str | None = Field(default=None, description="The label for the query.")
     case_type_id: UUID = Field(
         description="The ID of the CaseType that the cases must belong to.",
@@ -95,8 +104,25 @@ class CaseQuery(Model):
     )
     # TODO: add data_collection_id
     filter: CompositeFilter | None = Field(
-        default=None, description="The filter to apply. Not applied if not provided."
+        default=None,
+        description=(
+            "The filter to apply. Not applied if not provided. Composite filters "
+            f"may be nested at most {CASE_QUERY_MAX_COMPOSITE_FILTER_DEPTH} levels deep."
+        ),
     )
+
+    @model_validator(mode="after")
+    def _validate_filter_depth(self) -> Self:
+        """Limit case-query composites to the nesting required by query filters."""
+        if (
+            self.filter is not None
+            and self.filter.get_depth() > self.CASE_QUERY_MAX_COMPOSITE_FILTER_DEPTH
+        ):
+            raise ValueError(
+                "Case query composite filters may be nested at most "
+                f"{self.CASE_QUERY_MAX_COMPOSITE_FILTER_DEPTH} levels deep."
+            )
+        return self
 
 
 class CaseSetQuery(Model):
@@ -106,8 +132,28 @@ class CaseSetQuery(Model):
         snake_case_plural_name="case_set_queries",
         persistable=False,
     )
+    CASE_SET_QUERY_MAX_COMPOSITE_FILTER_DEPTH: ClassVar[int] = 1
+
     label: str = Field(description="The label for the query.")
-    filter: CompositeFilter = Field(description="The filter to apply.")
+    filter: CompositeFilter = Field(
+        description=(
+            "The filter to apply. Composite filters may be nested at most "
+            f"{CASE_SET_QUERY_MAX_COMPOSITE_FILTER_DEPTH} levels deep."
+        )
+    )
+
+    @model_validator(mode="after")
+    def _validate_filter_depth(self) -> Self:
+        """Limit case-set-query composites to the nesting required by query filters."""
+        if (
+            self.filter is not None
+            and self.filter.get_depth() > self.CASE_SET_QUERY_MAX_COMPOSITE_FILTER_DEPTH
+        ):
+            raise ValueError(
+                "Case set query composite filters may be nested at most "
+                f"{self.CASE_SET_QUERY_MAX_COMPOSITE_FILTER_DEPTH} levels deep."
+            )
+        return self
 
 
 class BaseCaseRights(Model):

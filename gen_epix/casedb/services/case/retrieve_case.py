@@ -16,7 +16,11 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.filter.base import Filter
 from gen_epix.filter.composite import CompositeFilter
+from gen_epix.filter.equals_boolean import EqualsBooleanFilter
+from gen_epix.filter.equals_uuid import EqualsUuidFilter
+from gen_epix.filter.no_filter import NoFilter
 from gen_epix.filter.string_set import StringSetFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
 
@@ -104,6 +108,7 @@ def case_service_retrieve_cases_by_query(
             datetime_range_filter=datetime_range_filter,
             filter_content=True,
             # Disable the helper's early max results limit if case_set_ids and filters are applied, since we need to apply it after filtering by case sets and filters, which happens after retrieving the cases
+            # TODO: this may introduce a performance issue since all cases are retrieved before applying the max results limit; potentially this can be optimized partially by filtering on accessible cases at the repository level, as a result of which a limit and offset can be applied, which in turn allows iteratively querying up to the maximum allowed results rather than reading all cases
             apply_max_n_cases=False,
         )
 
@@ -119,7 +124,9 @@ def case_service_retrieve_cases_by_query(
 
         # Filter cases by filters
         if case_query.filter:
-            filter_mapping_functions = _get_map_functions_for_filters(ref_cols)
+            filter_mapping_functions = _get_map_functions_for_filters(
+                ref_cols, case_query.filter.filters
+            )
             cases = [
                 x
                 for x, y in zip(
@@ -193,7 +200,7 @@ def _verify_filter_validity(
     user: model.User,
     case_query: model.CaseQuery,
     uow: BaseUnitOfWork,
-) -> list[model.RefCol]:
+) -> list[model.RefCol | None]:
     """Normalize and validate content-filter keys and members.
 
     Args:
@@ -329,7 +336,7 @@ def _verify_case_filter(
     uow: BaseUnitOfWork,
     user: model.User,
     composite_filter: CompositeFilter,
-) -> list[model.RefCol]:
+) -> list[model.RefCol | None]:
     """Resolve filter metadata and validate concept and region members.
 
     Args:
@@ -345,39 +352,22 @@ def _verify_case_filter(
         InvalidArgumentsError: If a set-backed column uses a non-string-set filter or
             contains a member outside its configured domain.
     """
-    # Retrieve Cols corresponding to filter keys
-    filter_col_ids = composite_filter.get_keys()
-    filter_cols: list[model.Col] = self.repository.crud(
-        uow,
-        user.id,
-        model.Col,
-        CrudOperation.READ_SOME,
-        obj_ids=filter_col_ids,
+    filter_metadata = _get_filter_column_metadata(
+        self, uow, user, composite_filter.filters
     )
-    # Retrieve cols for Cols
-    ref_cols: list[model.RefCol] = self.repository.crud(
-        uow,
-        user.id,
-        model.RefCol,
-        CrudOperation.READ_SOME,
-        obj_ids=list(
-            {x.ref_col_id for x in filter_cols}
-        ),  # TODO: consider READ_SOME allowing duplicate ids
-    )
-    ref_cols_map = {x.id: x for x in ref_cols}
-    ref_cols = [ref_cols_map[x.ref_col_id] for x in filter_cols]
     # Verify filter validity
     concept_valid_values: dict[UUID, set[str]] = {}
     region_valid_values: dict[UUID, set[str]] = {}
-    for col, ref_col, filter in zip(  # type: ignore[assignment]
-        filter_cols, ref_cols, composite_filter.filters
-    ):
+    for child_filter, (col, ref_col) in zip(composite_filter.filters, filter_metadata):
+        if isinstance(child_filter, NoFilter):
+            continue
+        assert col is not None and ref_col is not None
         if ref_col.concept_set_id or ref_col.region_set_id:
-            if isinstance(filter, StringSetFilter):
+            if isinstance(child_filter, StringSetFilter):
                 validate_concept_or_region(
                     self,
                     user,
-                    filter,
+                    child_filter,
                     concept_valid_values,
                     region_valid_values,
                     col,
@@ -386,10 +376,54 @@ def _verify_case_filter(
             else:
                 raise exc.InvalidArgumentsError(
                     "290ab290",
-                    f"Column {col.id}: invalid filter type: {filter.__class__.__name__}",
+                    f"Column {col.id}: invalid filter type: {child_filter.__class__.__name__}",
                 )
 
-    return ref_cols
+    return [ref_col for _, ref_col in filter_metadata]
+
+
+def _get_filter_column_metadata(
+    self: BaseCaseService,
+    uow: BaseUnitOfWork,
+    user: model.User,
+    filters: Iterable[Filter],
+) -> list[tuple[model.Col | None, model.RefCol | None]]:
+    """Fetch unique column metadata and align it with the original filters."""
+    filters = list(filters)
+    filter_col_ids = [
+        cast(UUID, child_filter.key)
+        for child_filter in filters
+        if not isinstance(child_filter, NoFilter)
+    ]
+    unique_filter_col_ids = list(dict.fromkeys(filter_col_ids))
+    filter_cols: list[model.Col] = self.repository.crud(
+        uow,
+        user.id,
+        model.Col,
+        CrudOperation.READ_SOME,
+        obj_ids=unique_filter_col_ids,
+    )
+    filter_cols_map = {cast(UUID, col.id): col for col in filter_cols}
+    ref_col_ids = list(dict.fromkeys(col.ref_col_id for col in filter_cols))
+    ref_cols: list[model.RefCol] = self.repository.crud(
+        uow,
+        user.id,
+        model.RefCol,
+        CrudOperation.READ_SOME,
+        obj_ids=ref_col_ids,
+    )
+    ref_cols_map = {ref_col.id: ref_col for ref_col in ref_cols}
+    return [
+        (
+            (None, None)
+            if isinstance(child_filter, NoFilter)
+            else (
+                filter_cols_map[cast(UUID, child_filter.key)],
+                ref_cols_map[filter_cols_map[cast(UUID, child_filter.key)].ref_col_id],
+            )
+        )
+        for child_filter in filters
+    ]
 
 
 def validate_concept_or_region(
@@ -489,19 +523,25 @@ def _get_valid_concepts(
 
 
 def _get_map_functions_for_filters(
-    ref_cols: Iterable[model.RefCol],
+    ref_cols: Iterable[model.RefCol | None],
+    filters: Iterable[Filter],
 ) -> list[Callable[[Any], Any]]:
-    """Build value-normalization functions in the same order as filter columns."""
+    """Build value-normalization functions in the same order as leaf filters."""
     # Check validity of filter and generate map_fns
     map_fns: list[Callable[[Any], Any]] = []
-    for ref_col in ref_cols:
-        _get_map_function_for_col(map_fns, ref_col)
+    for ref_col, child_filter in zip(ref_cols, filters):
+        if isinstance(child_filter, NoFilter):
+            map_fns.append(lambda value: value)
+        else:
+            assert ref_col is not None
+            _get_map_function_for_col(map_fns, ref_col, child_filter)
     return map_fns
 
 
 def _get_map_function_for_col(
     map_fns: list[Callable[[Any], Any]],
     ref_col: model.RefCol,
+    child_filter: Filter,
 ) -> None:
     """Append a value converter for one filter column type.
 
@@ -523,7 +563,23 @@ def _get_map_function_for_col(
             else x
         ),
     }
-    if ref_col.col_type in mapping:
+    if isinstance(child_filter, (EqualsUuidFilter, UuidSetFilter)):
+        map_fns.append(lambda value: UUID(value) if isinstance(value, str) else value)
+    elif isinstance(child_filter, EqualsBooleanFilter):
+
+        def _map_boolean(value: Any) -> Any:
+            if value is None or isinstance(value, bool):
+                return value
+            if isinstance(value, str):
+                normalized = value.strip().casefold()
+                if normalized == "true":
+                    return True
+                if normalized == "false":
+                    return False
+            raise ValueError(f"Invalid boolean case content: {value!r}")
+
+        map_fns.append(_map_boolean)
+    elif ref_col.col_type in mapping:
         map_fns.append(mapping[ref_col.col_type])
     elif ref_col.col_type in enum.ColTypeSet.COL_TYPES_STR_LIKE.value:
         map_fns.append(lambda x: x if isinstance(x, str) else str(x))

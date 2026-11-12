@@ -31,14 +31,14 @@
         "justMyCode": true
 },
 {
-        "name": "api.casedb.local.mock.sa_sqlite_empty",
+        "name": "api.casedb.local.idps.sa_sqlite_empty",
         "type": "debugpy",
         "request": "launch",
         "program": "run.py",
         "args": [
                 "api",
                 "CASEDB",
-                "MOCK",
+                "IDPS",
                 "SA_SQLITE_EMPTY"
         ],
         "justMyCode": true
@@ -112,14 +112,14 @@
         "justMyCode": true
 },
 {
-        "name": "api.seqdb.local.mock.sa_sqlite_empty",
+        "name": "api.seqdb.local.idps.sa_sqlite_empty",
         "type": "debugpy",
         "request": "launch",
         "program": "run.py",
         "args": [
                 "api",
                 "SEQDB",
-                "MOCK",
+                "IDPS",
                 "SA_SQLITE_EMPTY"
         ],
         "justMyCode": true
@@ -736,7 +736,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/casedb/unit/case_date"
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_case_date.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -832,7 +832,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/casedb/unit/client"
+                "test/casedb/unit/services/test_casedb_unit_services_client.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -868,7 +868,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/casedb/unit/services/abac"
+                "test/casedb/unit/services/test_casedb_unit_services_abac.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -892,7 +892,25 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/casedb/unit/services/case/crud"
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_data_collection_link.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_identifier.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_set.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_set_category.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_set_data_collection_link.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_set_member.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_set_status.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_type.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_type_set.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_type_set_category.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_type_set_member.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_common.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_dim.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_genetic_distance_protocol.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_ref_col.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_ref_dim.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_tree_algorithm.py",
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_crud_tree_algorithm_class.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -904,7 +922,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/casedb/unit/services/case/retrieve_case"
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_retrieve_case.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -916,7 +934,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/casedb/unit/services/case/retrieve_stats"
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_retrieve_stats.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -928,7 +946,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/casedb/unit/services/case/update_case_created_in_data_collection"
+                "test/casedb/unit/services/case/test_casedb_unit_services_case_update_case_created_in_data_collection.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1012,7 +1030,8 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/commondb/test_client"
+                "test/commondb/unit/test/test_commondb_unit_test_endpoint_test_client.py",
+                "test/commondb/unit/test/test_commondb_unit_test_test_client.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1036,7 +1055,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/commondb/unit/auth"
+                "test/commondb/unit/api/test_commondb_unit_api_auth.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1096,7 +1115,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/commondb/unit/logging"
+                "test/commondb/unit/config/test_commondb_unit_config_json_logging.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1108,7 +1127,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/commondb/unit/model"
+                "test/commondb/unit/domain/model"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1156,7 +1175,8 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/commondb/unit/upload"
+                "test/commondb/unit/domain/model/test_commondb_unit_domain_model_upload.py",
+                "test/commondb/unit/services/test_commondb_unit_services_upload.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1204,7 +1224,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/end_to_end/client_credential_flow/apps"
+                "test/end_to_end/client_credential_flow"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1360,7 +1380,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/fastapp/unit/auth"
+                "test/fastapp/unit/services/auth"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1546,6 +1566,23 @@
         "justMyCode": true
 },
 {
+    "name": "test.general.unit.startup_benchmark",
+    "type": "debugpy",
+    "request": "launch",
+    "program": "run.py",
+    "args": ["run_test", "test/general/unit/startup_benchmark"],
+    "justMyCode": true
+},
+
+{
+    "name": "test.general.integration.startup_benchmark",
+    "type": "debugpy",
+    "request": "launch",
+    "program": "run.py",
+    "args": ["run_test", "test/general/integration/startup_benchmark"],
+    "justMyCode": true
+},
+{
         "name": "test.omopdb",
         "type": "debugpy",
         "request": "launch",
@@ -1624,7 +1661,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/omopdb/test_client"
+                "test/omopdb/unit/services/test_omopdb_unit_services_client.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1744,7 +1781,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/omopdb/unit/services/omop/upload"
+                "test/omopdb/unit/services/omop/test_omopdb_unit_services_omop_upload.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1756,19 +1793,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/omopdb/unit/upload"
-        ],
-        "console": "integratedTerminal",
-        "justMyCode": true
-},
-{
-        "name": "test.r",
-        "type": "debugpy",
-        "request": "launch",
-        "program": "run.py",
-        "args": [
-                "run_test",
-                "test/r"
+                "test/omopdb/unit/domain/model/omop/test_omopdb_unit_domain_model_omop_upload.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1900,7 +1925,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/calculate_seq_distance"
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_calculate_seq_distance.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1960,7 +1985,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/domain/models_for_upload"
+                "test/seqdb/unit/domain/model/seq/test_seqdb_unit_domain_model_seq_upload.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1972,7 +1997,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/models_for_upload"
+                "test/seqdb/unit/domain/model/seq/test_seqdb_unit_domain_model_seq_upload.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -1984,7 +2009,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/client"
+                "test/seqdb/unit/services/test_seqdb_unit_services_client.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -2032,7 +2057,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/services/seq/calculate_phylogenetic_tree"
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_calculate_phylogenetic_tree.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -2044,7 +2069,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/services/seq/calculate_seq_distance"
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_calculate_seq_distance.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -2056,7 +2081,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/services/seq/convert_seq_format"
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_convert_seq_format.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -2068,7 +2093,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/services/seq/retrieve_best"
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_retrieve_best.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -2080,7 +2105,9 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/services/seq/upload"
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_upload_upsert_batch.py",
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_upload_verify_batch.py",
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_upload_verify_batch_refdata.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -2092,7 +2119,10 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/seqdb/unit/upload"
+                "test/seqdb/unit/domain/model/seq/test_seqdb_unit_domain_model_seq_upload.py",
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_upload_upsert_batch.py",
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_upload_verify_batch.py",
+                "test/seqdb/unit/services/seq/test_seqdb_unit_services_seq_upload_verify_batch_refdata.py"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
@@ -2200,7 +2230,7 @@
         "program": "run.py",
         "args": [
                 "run_test",
-                "test/util"
+                "test/unit"
         ],
         "console": "integratedTerminal",
         "justMyCode": true
