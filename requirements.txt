@@ -39,7 +39,7 @@ python-dateutil==2.9.0.post0
 
 # mock OIDC server (test/test_client/oauth) — needed in Docker for the IDP compose stack
 cryptography==50.0.2
-oauthlib==4.0.0
+oauthlib==4.0.1
 
 # remote client retry and settings
 tenacity==9.2.*
