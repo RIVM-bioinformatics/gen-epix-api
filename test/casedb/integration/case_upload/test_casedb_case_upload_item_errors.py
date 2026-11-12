@@ -93,7 +93,9 @@ def create_ref_data(env: Env) -> RefData:
     env.create_dim(root_user, "dim1_1_1")
     col = env.create_col(root_user, "col1_1_1_1")
     data_collection = env.create_data_collection(root_user, "data_collection1")
-    assert case_type.id and col.id and data_collection.id
+    assert case_type.id
+    assert col.id
+    assert data_collection.id
     return RefData(root_user, case_type.id, col.id, data_collection.id)
 
 
