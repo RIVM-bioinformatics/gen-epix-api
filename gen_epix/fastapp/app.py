@@ -113,7 +113,7 @@ class App:
         self._log_item_class = log_item_class
         self._timestamp_factory = timestamp_factory
         self._feature_flags: dict[Hashable, bool] = feature_flags or {}
-        self.stack_trace_exemption: set[type[Exception]] = set()
+        self.stack_trace_exemptions: set[type[Exception]] = set()
 
         # Initialize other members
         self._created_at = self.generate_timestamp()
@@ -659,7 +659,7 @@ class App:
                         cmd=cmd,
                         exception=exception,
                     ),
-                    exc_info=not self._is_stack_trace_exempt(exception),
+                    exc_info=not self._is_exempted_from_stack_trace(exception),
                 )
             self._command_stack.pop()
             raise exception
@@ -680,7 +680,7 @@ class App:
         except Exception as exception:
             # Any other unexpected error: add stack trace, unless a registered
             # exception type is in its cause chain.
-            has_stack_trace = not self._is_stack_trace_exempt(exception)
+            has_stack_trace = not self._is_exempted_from_stack_trace(exception)
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
@@ -714,11 +714,11 @@ class App:
             exception_class: Exception class to log without a stack trace; subclasses
                 match as well.
         """
-        self.stack_trace_exemption.add(exception_class)
+        self.stack_trace_exemptions.add(exception_class)
 
-    def _is_stack_trace_exempt(self, exception: BaseException) -> bool:
+    def _is_exempted_from_stack_trace(self, exception: BaseException) -> bool:
         """Return whether the exception or one of its causes is a registered type."""
-        exempt_classes = tuple(self.stack_trace_exemption)
+        exempt_classes = tuple(self.stack_trace_exemptions)
         seen: set[int] = set()
         current: BaseException | None = exception
         while current is not None and id(current) not in seen:
