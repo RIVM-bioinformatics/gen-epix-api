@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Generator, Hashable, Iterable, Iterator
-from typing import Any, Literal, Self
+from typing import Any, Literal, Self, TypeAlias
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -47,10 +47,10 @@ FilterUnion = (
     | UuidSetFilter
     | NoFilter
 )
-_RowMapFunction = (
+_RowMapFunction: TypeAlias = (
     dict[Hashable, Callable[[Any], Any]]
     | Callable[[Any], Any]
-    | list[Callable[[Any], Any]]
+    | list["_RowMapFunction"]
     | None
 )
 
@@ -90,7 +90,7 @@ class CompositeFilter(Filter):
     def _matches_row_with_map(
         self,
         row: dict[Hashable, Any | None] | BaseModel,
-        map_fns: list[Callable[[Any], Any]],
+        map_fns: list[Any],
         map_fn: _RowMapFunction,
         na_values: set[Any] | None,
         is_model: bool,
@@ -205,7 +205,7 @@ class CompositeFilter(Filter):
     def _iter_mapped_row_values(
         self,
         row: dict[Hashable, Any | None] | BaseModel,
-        map_fns: list[Callable[[Any], Any]],
+        map_fns: list[Any],
         map_fn: _RowMapFunction,
         is_model: bool,
     ) -> Iterator[tuple[Any, _RowMapFunction]]:
@@ -445,10 +445,10 @@ class CompositeFilter(Filter):
         map_fn: (
             dict[Hashable, Callable[[Any], Any]]
             | Callable[[Any], Any]
-            | list[Callable[[Any], Any]]
+            | list[Any]
             | None
         ) = None,
-    ) -> list[Callable[[Any], Any]]:
+    ) -> list[Any]:
         """Normalize row-value mappings to one function per child filter.
 
         Args:
@@ -479,7 +479,7 @@ class CompositeFilter(Filter):
         map_fn: (
             Callable[[Any], Any]
             | dict[Hashable, Callable[[Any], Any]]
-            | list[Callable[[Any], Any]]
+            | list[Any]
             | None
         ) = None,
         is_model: bool = False,
@@ -533,7 +533,7 @@ class CompositeFilter(Filter):
         map_fn: (
             dict[Hashable, Callable[[Any], Any]]
             | Callable[[Any], Any]
-            | list[Callable[[Any], Any]]
+            | list[Any]
             | None
         ) = None,
         is_model: bool = False,
@@ -592,7 +592,7 @@ class CompositeFilter(Filter):
         map_fn: (
             dict[Hashable, Callable[[Any], Any]]
             | Callable[[Any], Any]
-            | list[Callable[[Any], Any]]
+            | list[Any]
             | None
         ) = None,
         is_model: bool = False,
