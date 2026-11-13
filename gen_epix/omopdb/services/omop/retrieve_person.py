@@ -1,7 +1,11 @@
-"""Repository-backed workflows for retrieving OMOP persons and identifiers."""
+"""Retrieve OMOP persons by identifier or modification-time query.
 
-import gen_epix.omopdb.domain.command as command
-import gen_epix.omopdb.domain.model as model
+The public service functions delegate person lookups to the OMOP repository.
+Identifier retrieval returns complete person records; query retrieval returns
+matching identifiers within a repository-managed unit of work.
+"""
+
+from gen_epix.omopdb.domain import command, model
 from gen_epix.omopdb.services.omop.base import BaseOmopService
 
 
@@ -10,8 +14,8 @@ def omop_service_retrieve_persons_by_id(
 ) -> list[model.FullPerson]:
     """Retrieve full person records for the requested identifiers.
 
-    The modification-time range is used only to identify the persons. All of
-    their linked data is included, even when it falls outside that range.
+    All linked data for each requested person is included. An empty identifier
+    list returns an empty result without querying the repository.
     """
     person_ids = cmd.person_ids or []
     if person_ids == []:

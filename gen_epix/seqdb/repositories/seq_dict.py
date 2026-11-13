@@ -57,6 +57,14 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         db: dict[model.Model, dict[UUID, list[model.Model]]] = {  # type: ignore[assignment]
             x: {y: [] for y in sample_ids} for x in model_classes  # type: ignore[misc]
         }
+        invalid_ids = [x for x in sample_ids if x not in self.db[model.Sample]]
+        if invalid_ids:
+            invalid_ids_str = ", ".join(str(x) for x in invalid_ids)
+            raise exc.InvalidIdsError(
+                "e6de62b3",
+                f"Invalid sample IDs: {invalid_ids_str}",
+                ids=invalid_ids,
+            )
         for model_class in model_classes:
             objs_by_sample = db[model_class]  # type: ignore[index]
             if model_class == model.Sample:

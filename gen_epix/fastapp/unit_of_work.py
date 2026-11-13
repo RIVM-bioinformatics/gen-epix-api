@@ -48,6 +48,9 @@ class BaseUnitOfWork(abc.ABC):
         self._is_managing_context = True
         return self
 
+    # TODO: LSP-3893 `KeyboardInterrupt` is passed as `BaseException`, but this
+    # signature only accepts `Exception`; confirm the intended context-manager
+    # exception contract before changing annotations or adding tests.
     def __exit__(
         self,
         exception_class: type[Exception] | None,

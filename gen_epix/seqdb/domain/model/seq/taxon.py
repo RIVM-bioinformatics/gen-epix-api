@@ -57,6 +57,9 @@ class Taxon(Model):
         """Normalize an NCBI taxon identifier, accepting its standard prefix."""
         if isinstance(value, str):
             return int(value.replace(cls.NCBI_TAXON_PREFIX, ""))
+        # TODO: LSP-3893 Explicit None fails despite the optional field, while 1.9 is
+        # silently truncated to 1; confirm accepted numeric inputs before preserving None
+        # and rejecting non-integral identifiers.
         return int(value)
 
     @field_validator("ncbi_ancestor_taxids", mode="before")

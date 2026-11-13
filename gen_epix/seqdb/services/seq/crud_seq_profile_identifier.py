@@ -29,8 +29,6 @@ def seq_service_crud_seq_profile_identifier(
     Raises:
         AssertionError: The command operation is unsupported.
     """
-    user_id = cmd.user.id if cmd.user else None
-    seq_profile_identifiers: list[model.SeqProfileIdentifier] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
         # TODO: Specific logic for create operation to be added
         pass

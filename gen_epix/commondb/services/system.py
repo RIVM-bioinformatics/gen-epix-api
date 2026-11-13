@@ -182,7 +182,7 @@ class SystemService(BaseSystemService):
                 crud_command_class = domain.get_crud_command_for_model(model_class)
                 records = self.app.handle(
                     crud_command_class(
-                        user=cmd.user,
+                        user=None,
                         operation=CrudOperation.READ_ALL,
                         limit=1,
                         return_id=True,

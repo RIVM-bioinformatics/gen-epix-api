@@ -61,6 +61,9 @@ class CommondbSAMapper(SAMapper):
                 continue
             curr_value = getattr(row, row_field_name)
             new_value = obj_dict[field_name]
+            # TODO: LSP-3893 A non-metadata input field of None with a populated row
+            # value is assigned as None, despite the documented preserve-value rule.
+            # Confirm whether None means omitted or an explicit clear before changing it.
             if curr_value != new_value:
                 setattr(row, row_field_name, new_value)
                 is_updated = True

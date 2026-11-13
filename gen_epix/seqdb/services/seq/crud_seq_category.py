@@ -29,8 +29,6 @@ def seq_service_crud_seq_category(
     Raises:
         AssertionError: The command operation is unsupported.
     """
-    user_id = cmd.user.id if cmd.user else None
-    seq_categories: list[model.SeqCategory] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
         # TODO: Specific logic for create operation to be added
         pass

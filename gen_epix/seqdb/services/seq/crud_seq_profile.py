@@ -61,6 +61,11 @@ def seq_service_crud_seq_profile(
     if cmd.is_create():
         # After creating new profiles, calculate distances between these new profiles and
         # all existing profiles, as well as between the new profiles themselves, and store these distances in the database. This is needed to make sure that distance information is available immediately after upload for all profiles, without needing to wait for a separate distance calculation step to complete.
+        # TODO: LSP-3893 A CREATE_ONE command returns a scalar UUID or SeqProfile, but
+        # this loop assumes lists: UUID results raise TypeError and model results can
+        # assign field/value pairs as IDs instead of assigning the created profile ID
+        # and calculating distances. Confirm whether single-profile creates are
+        # supported here and should be normalized.
         for seq_profile_id, seq_profile in zip(cast(list[UUID], retval), seq_profiles):
             seq_profile.id = seq_profile_id
         sub_cmd = command.CalculateSeqDistancesForNewProfilesCommand(

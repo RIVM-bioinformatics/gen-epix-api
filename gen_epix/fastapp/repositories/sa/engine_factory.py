@@ -71,5 +71,9 @@ class EngineFactory:
         connect_args: dict | None = None,
     ) -> tuple:
         """Compose key."""
+        # TODO: LSP-3893 A valid nested connect argument such as pyodbc
+        # attrs_before contains a dict that is unhashable here; expected: accept
+        # and forward valid DBAPI connect_args, actual: fail while looking up
+        # the engine cache key. Confirm the intended cache-key contract.
         frozen = tuple(sorted(connect_args.items())) if connect_args else ()
         return (connection_string, echo, pool_recycle, frozen)

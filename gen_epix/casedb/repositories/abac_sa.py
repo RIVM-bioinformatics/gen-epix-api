@@ -1,4 +1,8 @@
-"""Provide casedb SQLAlchemy persistence behavior for ABAC policy data."""
+"""Provide casedb's SQLAlchemy-backed ABAC repository adapter.
+
+AbacSARepository combines shared SQLAlchemy persistence with the casedb ABAC
+repository contract.
+"""
 
 from gen_epix.casedb.domain.repository import BaseAbacRepository
 from gen_epix.fastapp.repositories import SARepository

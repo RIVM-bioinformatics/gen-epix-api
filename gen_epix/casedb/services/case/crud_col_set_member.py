@@ -1,4 +1,8 @@
-"""Handle CRUD operations for column-set-member entities."""
+"""Handle column-set-member CRUD through the case service.
+
+The command handler delegates persistence to ``BaseCaseService`` and uses shared
+case-service helpers for cascade deletion and optional column-set access filtering.
+"""
 
 from uuid import UUID
 
@@ -25,7 +29,21 @@ def case_service_crud_col_set_member(
     | bool
     | None
 ):
-    """Handle CRUD operations for ColSetMember entities."""
+    """Run a ColSetMember CRUD command in a case-service unit of work.
+
+    Configured linked entities are cascade-deleted before the command is delegated
+    to the service's CRUD handler. The active path does not apply ABAC filtering.
+
+    Args:
+        self: Case service handling the command.
+        cmd: CRUD command for ColSetMember entities.
+
+    Returns:
+        The result produced by the service's CRUD handler.
+
+    Raises:
+        AssertionError: If the command has no authenticated user.
+    """
     with self.repository.uow() as uow:
         assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)

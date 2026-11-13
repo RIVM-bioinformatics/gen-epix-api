@@ -3,7 +3,7 @@
 import math
 from collections.abc import Hashable
 from decimal import Decimal
-from typing import Literal, NoReturn, TypedDict
+from typing import Any, Literal, NoReturn, TypedDict
 
 from gen_epix.fastapp.enum import OnException
 from gen_epix.transform.adapter import ObjectAdapter

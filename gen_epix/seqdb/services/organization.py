@@ -1,4 +1,4 @@
-"""Implement seqdb application service behavior for services.organization."""
+"""Bind SeqDB user and invitation models to shared organization operations."""
 
 from typing import Any
 

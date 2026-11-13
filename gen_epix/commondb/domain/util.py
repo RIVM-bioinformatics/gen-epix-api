@@ -9,7 +9,7 @@ import pickle
 from collections.abc import Hashable, Iterable
 from enum import Enum
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from gen_epix import fastapp
@@ -25,8 +25,11 @@ from gen_epix.fastapp import Command, Domain, Model, ModelFieldProps, exc
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories.dict import DictRepository
-from gen_epix.fastapp.repositories.sa import SARepository
 from gen_epix.util import get_package_root
+
+if TYPE_CHECKING:
+    # Only needed for annotations; a runtime import would load SQLAlchemy
+    from gen_epix.fastapp.repositories.sa import SARepository
 
 
 def _get_identity_provider_settings_file(
@@ -188,7 +191,7 @@ def create_demo_data_from_repository(
     user_id: UUID,
     entities: list[Entity],
     dict_repository: DictRepository,
-    sa_repository: SARepository,
+    sa_repository: "SARepository",
     module_root: str,
 ) -> None:
     """Populate an SA repository from a dict repository for the given entities."""
@@ -231,8 +234,9 @@ def load_demo_data(
     module_root: str,
     connect_timeout: float = 1,
     verbose: bool = True,
+    load_sa_sql: bool = False,
 ) -> None:
-    """Load demo data for the given app type from zip archives into dict and SA repos."""
+    """Load demo data into dict and SA_SQLITE repos, optionally loading SA_SQL."""
     domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
     # Import the sa_model module to register the models
     importlib.import_module(f"{module_root}.repositories.sa_model")
@@ -249,15 +253,19 @@ def load_demo_data(
     sa_sqlite_app_cfg = app_cfg_class(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
-    set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
-    sa_sql_app_cfg = app_cfg_class(
-        app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
-    )
+    sa_sql_app_cfg_data = None
+    # `etl.py load_demodata` is the canonical SQL database loader; this helper
+    # regenerates committed demo files unless SQL loading is explicitly requested.
+    if load_sa_sql:
+        set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
+        sa_sql_app_cfg = app_cfg_class(
+            app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
+        )
+        sa_sql_app_cfg_data = cast(dict[str, Any], sa_sql_app_cfg.cfg)
     # user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
     user_id = NULL_ID
     dict_app_cfg_data = cast(dict[str, Any], dict_app_cfg.cfg)
     sa_sqlite_app_cfg_data = cast(dict[str, Any], sa_sqlite_app_cfg.cfg)
-    sa_sql_app_cfg_data = cast(dict[str, Any], sa_sql_app_cfg.cfg)
     for service_type in enum.ServiceType:
         _load_demo_data_for_service(
             app_type,
@@ -280,7 +288,7 @@ def _load_demo_data_for_service(
     domain: Domain,
     dict_app_cfg_data: dict[str, Any],
     sa_sqlite_app_cfg_data: dict[str, Any],
-    sa_sql_app_cfg_data: dict[str, Any],
+    sa_sql_app_cfg_data: dict[str, Any] | None,
     user_id: UUID,
     connect_timeout: float,
     verbose: bool,
@@ -360,18 +368,20 @@ def _load_demo_data_for_service(
         print(
             f"App {app_type.value}, service {service_type.value}: sa_sqlite repository written to file in {end_time - start_time}s"
         )
+    if sa_sql_app_cfg_data is None:
+        return
     # Create empty SA_SQL repository or loaded with demo data
     sa_sql_repository_cfg = cast(
         dict[str, Any],
         cast(dict[str, Any], sa_sql_app_cfg_data["repository"])[service_type.value],
     )
     connection_string = sa_sql_repository_cfg["props"]["connection_string"]
-    if "mssql" in connection_string:
+    if "mssql+pyodbc" in connection_string:
         connect_args = {
             "timeout": connect_timeout,
             "login_timeout": connect_timeout,
         }
-    elif "pyodcb" in connection_string:
+    elif "pyodbc" in connection_string:
         connect_args = {
             "connect_timeout": connect_timeout,
             "timeout": connect_timeout,

@@ -3,6 +3,7 @@
 import json
 import sys
 from typing import Any, cast
+from uuid import UUID
 
 import numpy as np
 import scipy  # type: ignore[import-untyped]

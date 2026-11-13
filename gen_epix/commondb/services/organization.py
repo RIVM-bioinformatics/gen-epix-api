@@ -253,6 +253,24 @@ class OrganizationService(BaseOrganizationService):
             roles=roles,
         )
 
+    def retrieve_own_user(self, cmd: command.RetrieveOwnUserCommand) -> model.User:
+        """Retrieve the command's authenticated user.
+
+        Args:
+            cmd: Command carrying the user that is requested.
+
+        Returns:
+            The user the command is executed as.
+
+        Raises:
+            UnauthorizedAuthError: If the command has no authenticated user.
+        """
+        if cmd.user is None:
+            raise exc.UnauthorizedAuthError(
+                "c3b5a2d7", "Command has no authenticated user"
+            )
+        return cmd.user
+
     @staticmethod
     def _classify_invitation_for_registration(
         invitation: model.UserInvitation,

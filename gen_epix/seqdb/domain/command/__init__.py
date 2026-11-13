@@ -60,6 +60,9 @@ from gen_epix.commondb.domain.command import (
 from gen_epix.commondb.domain.command import (
     RetrieveOwnPermissionsCommand as RetrieveOwnPermissionsCommand,
 )
+from gen_epix.commondb.domain.command import (
+    RetrieveOwnUserCommand as RetrieveOwnUserCommand,
+)
 from gen_epix.commondb.domain.command import SiteCrudCommand as SiteCrudCommand
 from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand as UpdateAssociationCommand,

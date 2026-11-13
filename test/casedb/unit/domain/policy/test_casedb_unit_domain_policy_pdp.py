@@ -33,6 +33,15 @@ class _ConcretePolicyDecisionPoint(BasePolicyDecisionPoint):
     ) -> bool:
         return True
 
+    def filter_case_ids(
+        self,
+        cmd: command.CaseCrudCommand | command.CaseIdentifierCrudCommand,
+        case_data_collection_ids: Iterable[tuple[UUID, UUID, frozenset[UUID]]],
+        right: enum.CaseRight,
+        on_filtered: Literal[OnException.SKIP, OnException.RAISE] = OnException.RAISE,
+    ) -> Iterable[UUID]:
+        return ()
+
     def filter_case_set_ids(
         self,
         cmd: command.CaseSetCrudCommand,

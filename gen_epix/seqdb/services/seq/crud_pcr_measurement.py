@@ -47,6 +47,10 @@ def seq_service_crud_pcr_measurement(
         # TODO: Specific logic for delete operation to be added, e.g. check for foreign key constraints before deletion
         pass
 
+    # TODO: LSP-3893 Valid UPSERT_ONE/UPSERT_SOME commands with PCR measurement objects
+    # pass CrudCommand validation but raise AssertionError here instead of delegating
+    # to self.crud(cmd); confirm PCR measurement upserts are intended before changing
+    # this operation contract.
     else:
         raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 

@@ -1,9 +1,8 @@
 """Implement seqdb sequence service behavior for services.seq.retrieve_sample."""
 
-import gen_epix.seqdb.domain.command as command
-import gen_epix.seqdb.domain.model as model
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter.uuid_set import UuidSetFilter
+from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 from gen_epix.seqdb.domain.service import BaseSeqService
 

@@ -1,5 +1,7 @@
 """Transformer for replacing an entire adapted object with a callable result."""
 
+# pylint: disable=too-few-public-methods
+
 from collections.abc import Callable
 from typing import Any
 

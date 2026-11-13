@@ -23,8 +23,7 @@ def seq_service_crud_locus_set(
     Raises:
         AssertionError: The command operation is unsupported.
     """
-    user_id = cmd.user.id if cmd.user else None
-    locus_sets: list[model.LocusSet] = cmd.get_objs()  # type: ignore[assignment]
+    # pylint: disable=fixme
     if cmd.is_create():
         # TODO: Specific logic for create operation to be added
         pass
@@ -44,4 +43,5 @@ def seq_service_crud_locus_set(
     else:
         raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 
+    # pylint: enable=fixme
     return self.crud(cmd)  # type: ignore[return-value]

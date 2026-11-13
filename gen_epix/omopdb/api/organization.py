@@ -1,4 +1,8 @@
-"""API schemas extending shared organization endpoint permissions for OmopDB."""
+"""Expose permission schemas for OmopDB organization endpoints.
+
+`CommandName` limits API permissions to commands registered by `DOMAIN`, while
+`ApiPermission` pairs those commands with the shared permission type.
+"""
 
 from enum import Enum
 
@@ -16,6 +20,14 @@ class ApiPermission(BaseModel, frozen=True):
     """Represents an OmopDB command permission exposed by organization APIs."""
 
     command_name: CommandName = (  # pyright: ignore[reportInvalidTypeForm]
-        copy_model_field(Permission, "command_name")
+        copy_model_field(
+            Permission,
+            "command_name",
+            description="Name of the OmopDB command this permission applies to.",
+        )
     )
-    permission_type: PermissionType = copy_model_field(Permission, "permission_type")
+    permission_type: PermissionType = copy_model_field(
+        Permission,
+        "permission_type",
+        description="Operation permitted for the command.",
+    )

@@ -55,10 +55,11 @@ class SeqSARepository(SARepository, BaseSeqRepository):
 
         # Initialize some
         sample_id_set = set(sample_ids)
-        model_classes = (
+        model_classes = cast(
+            list[type[model.Model]],
             [model.Sample, model.SampleIdentifier]
             + model.FullSample.DATA_CLASSES
-            + model.FullSample.IDENTIFIER_CLASSES
+            + model.FullSample.IDENTIFIER_CLASSES,
         )
         db: dict[type[model.Model], dict[UUID, list[model.Model]]] = {
             model_class: {sample_id: [] for sample_id in sample_ids}
@@ -81,7 +82,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
                     id_field_name = "internal_id"
                 id_field = getattr(sa_model_class, id_field_name)  # type: ignore[attr-defined]
                 stmt: sa.Select = sa.select(sa_model_class).where(
-                    id_field.in_(sample_id_set)  # type: ignore[attr-defined]
+                    id_field.in_(sample_id_set)
                 )
                 mapper = self.get_mapper(model_class)
                 objs_by_sample = db[model_class]
@@ -89,6 +90,15 @@ class SeqSARepository(SARepository, BaseSeqRepository):
                     obj = cast(model.Model, mapper.load(row[0]))
                     sample_id = cast(UUID, getattr(obj, id_field_name))
                     objs_by_sample[sample_id].append(obj)
+                if model_class == model.Sample:
+                    invalid_ids = [x for x in sample_ids if not objs_by_sample[x]]
+                    invalid_ids_str = ", ".join(str(x) for x in invalid_ids)
+                    if invalid_ids:
+                        raise exc.InvalidIdsError(
+                            "eca0e66d",
+                            f"Invalid sample IDs: {invalid_ids_str}",
+                            ids=invalid_ids,
+                        )
 
             # Create FullSamples
             class_field_map = (

@@ -11,6 +11,10 @@ from gen_epix.seqdb.domain.model.seq.base import BaseSeq
 from gen_epix.seqdb.domain.model.seq.taxon import Taxon
 
 
+# TODO: LSP-3893 Given an update/delete RefSeqCrudCommand for an existing reference
+# sequence, the model contract expects mutation to be rejected, but the CRUD service
+# currently delegates these operations to generic CRUD; confirm whether policy blocks
+# every such caller before relying on this immutability guarantee.
 class RefSeq(BaseSeq):
     """
     Represents an immutable reference sequence for a taxon.

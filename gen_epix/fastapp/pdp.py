@@ -90,10 +90,10 @@ class PolicyDecisionPoint:
             self._policies[command_class][timing].remove(policy)
         else:
             has_policy = False
-            for timing in self._policies[command_class]:
-                if policy in self._policies[command_class][timing]:
+            for registered_timing in self._policies[command_class]:
+                if policy in self._policies[command_class][registered_timing]:
                     has_policy = True
-                    self._policies[command_class][timing].remove(policy)
+                    self._policies[command_class][registered_timing].remove(policy)
             if not has_policy:
                 raise exc.InitializationServiceError(
                     "8674aea7",
@@ -126,8 +126,7 @@ class PolicyDecisionPoint:
             UnauthorizedAuthError: If a BEFORE policy denies the command.
         """
         policies = self.get_policies(type(cmd), timing)
-        if not policies:
-            return retval if timing == EventTiming.AFTER else None
+        result = retval if timing == EventTiming.AFTER else None
         if timing == EventTiming.BEFORE:
             for policy in policies:
                 if not policy.is_allowed(cmd):
@@ -135,13 +134,11 @@ class PolicyDecisionPoint:
                         f"Policy {policy.__class__.__name__} denied"
                         f" {cmd.__class__.__name__} command {cmd.id}"
                     )
-            return None
         elif timing == EventTiming.DURING:
             # Add policies to command so that they can be used during command execution
-            cmd._policies.extend(policies)
-            return None
+            cmd._policies.extend(policies)  # pylint: disable=protected-access
         elif timing == EventTiming.AFTER:
             # Execute policies that may alter the return value
             for policy in policies:
-                retval = policy.filter(cmd, retval)
-            return retval
+                result = policy.filter(cmd, result)
+        return result

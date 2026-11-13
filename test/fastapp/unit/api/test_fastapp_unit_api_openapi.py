@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from test.util.mock_compat import MagicMock
 
+import gen_epix.fastapp.api.openapi as openapi_module
 from gen_epix.fastapp.api.openapi import (
     create_custom_openapi_function,
     fix_schema_nullable_and_single_element,
@@ -19,14 +20,21 @@ class TestFixSchemaNullableAndSingleElement:
         schema = {
             "properties": {
                 "field": {
-                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "anyOf": [
+                        {"type": "string", "format": "date", "description": "Date."},
+                        {"type": "null"},
+                    ],
                 }
             }
         }
         fix_schema_nullable_and_single_element(schema)
         assert "anyOf" not in schema["properties"]["field"]
-        assert schema["properties"]["field"]["type"] == "string"
-        assert schema["properties"]["field"]["nullable"] is True
+        assert schema["properties"]["field"] == {
+            "type": "string",
+            "format": "date",
+            "description": "Date.",
+            "nullable": True,
+        }
 
     def test_handles_multiple_anyof_items_with_null(self) -> None:
         """Verify handles multiple items in anyOf with null."""
@@ -62,6 +70,48 @@ class TestFixSchemaNullableAndSingleElement:
             schema["properties"]["field"]["anyOf"]
             == original["properties"]["field"]["anyOf"]
         )
+
+    def test_recurses_into_anyof_without_null(self) -> None:
+        """Verify nested schemas are fixed inside anyOf without null."""
+        schema = {
+            "anyOf": [
+                {
+                    "properties": {
+                        "field": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"type": "null"},
+                            ]
+                        }
+                    }
+                },
+                True,
+            ]
+        }
+
+        fix_schema_nullable_and_single_element(schema)
+
+        assert schema["anyOf"][0]["properties"]["field"] == {
+            "type": "string",
+            "nullable": True,
+        }
+        assert schema["anyOf"][1] is True
+
+    def test_recurses_into_schema_lists(self) -> None:
+        """Verify nested schemas in list-valued fields are fixed."""
+        schema = {
+            "prefixItems": [
+                {"anyOf": [{"type": "integer"}, {"type": "null"}]},
+                "metadata",
+            ]
+        }
+
+        fix_schema_nullable_and_single_element(schema)
+
+        assert schema["prefixItems"] == [
+            {"type": "integer", "nullable": True},
+            "metadata",
+        ]
 
     def test_handles_nested_dictionaries(self) -> None:
         """Verify recursively processes nested dictionaries."""
@@ -124,6 +174,19 @@ class TestCreateCustomOpenAPIFunction:
         """Verify returns a callable function."""
         openapi_fn = create_custom_openapi_function()
         assert callable(openapi_fn)
+
+    def test_no_argument_factory_uses_default_schema_kwargs(self, monkeypatch) -> None:
+        """Verify a no-argument factory applies the OpenAPI defaults."""
+        monkeypatch.setattr(openapi_module, "get_openapi", lambda **kwargs: kwargs)
+
+        result = create_custom_openapi_function()()
+
+        assert result == {
+            "title": "API",
+            "description": "API description",
+            "version": "0.0.0",
+            "separate_input_output_schemas": False,
+        }
 
     def test_function_returns_dict(self) -> None:
         """Verify custom OpenAPI function returns a dict."""
@@ -201,9 +264,10 @@ class TestCreateCustomOpenAPIFunction:
         result = openapi_fn()
         assert isinstance(result, dict)
 
-    def test_with_mock_auth_service(self) -> None:
-        """Verify handles auth_service properly."""
-        # Create mock auth service
+    def test_adds_token_name_to_security_scheme(self, monkeypatch) -> None:
+        """Verify token names are added to matching security schemes."""
+        schema = {"components": {"securitySchemes": {"oauth2": {}}}}
+        monkeypatch.setattr(openapi_module, "get_openapi", lambda **_: schema)
         mock_idp_client = MagicMock()
         mock_idp_client.scheme_name = "oauth2"
         mock_idp_client.token_name = "access_token"
@@ -218,14 +282,12 @@ class TestCreateCustomOpenAPIFunction:
             },
             auth_service=mock_auth_service,
         )
-        # Should not raise error even if auth_service is provided
-        try:
-            result = openapi_fn()
-            assert isinstance(result, dict)
-        except KeyError:
-            # It's OK if we get a KeyError due to mock limitations
-            # The important thing is that the function attempts to process auth_service
-            pass
+        result = openapi_fn()
+
+        assert (
+            result["components"]["securitySchemes"]["oauth2"]["x-tokenName"]
+            == "access_token"
+        )
 
 
 class TestOpenAPIIntegration:
@@ -263,3 +325,4 @@ class TestOpenAPIIntegration:
         # Both should be valid dicts
         assert isinstance(schema1, dict)
         assert isinstance(schema2, dict)
+        assert schema1 is not schema2

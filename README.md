@@ -12,7 +12,7 @@ The platform is currently at the beta release stage and as such not yet usable f
 
 A guide for contributors can be found [here](docs/contributors/README.md)
 
-This repository contains the code for the backend and is one of several that together comprise the platform. See <https://github.com/RIVM-bioinformatics/gen-epix> for an overview of the repositories.
+This repository contains the code for the backend and is one of several that together comprise the platform.
 
 ## Architecture and Project Structure
 
@@ -102,10 +102,12 @@ Project tree (trimmed to the main structure):
 
    ```console
    pip install -r requirements.txt
-   pip install --no-binary :all: pyodbc==5.2.*
+   pip install --no-binary :all: pyodbc==5.3.*
    ```
 
    **Some hardware architectures (especially Apple M1/M2/M3 chips) require pyodbc to be compiled from source for compatibility***
+
+   When installing Gen-EpiX as a package into another project instead, use `pip install "gen-epix[server]"` to run or compose an application, or plain `pip install gen-epix` to only call the applications through the remote clients.
 
 4. For development, add testing tools:
 

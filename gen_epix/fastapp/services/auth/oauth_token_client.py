@@ -1,0 +1,427 @@
+"""OAuth client for obtaining tokens from an identity provider.
+
+``OauthTokenClient`` resolves OIDC metadata and requests client-credentials tokens
+over HTTP without depending on the application's inbound authentication layer.
+"""
+
+import base64
+import logging
+import math
+import ssl
+import time
+import urllib.parse
+from typing import Any, ClassVar
+
+import httpx
+
+from gen_epix.fastapp import exc
+from gen_epix.fastapp.log import BaseLogItem, LogItem
+from gen_epix.fastapp.services.auth.model import OidcServerCfg
+
+
+class OauthTokenClient:
+    """Encapsulates obtaining tokens from an OAuth identity provider.
+
+    This is the outbound half of the OAuth integration: it resolves the provider
+    configuration from its discovery document and retrieves tokens through the
+    Client Credentials flow. It has no dependency on the web framework, so that
+    it can be used by a client that only calls a remote application.
+    ``OauthIdpClient`` extends it with the validation of incoming tokens.
+
+    Attributes:
+        server_cfg: A copy of provider configuration, updated during discovery.
+        logger: Optional logger for discovery errors and token request failures.
+        ssl_context: Certificate verification settings for outbound HTTP requests.
+        scheme_name: Issuer used to identify this provider in token request logs.
+    """
+
+    DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS: ClassVar[dict[str, str]] = {
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES: int = 3
+    DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY: float = 1.0  # in seconds
+    DEFAULT_DISCOVERY_TIMEOUT: float = 10.0  # seconds per HTTP timeout phase
+
+    # Name under which this provider appears in log messages
+    scheme_name: str
+
+    def __init__(
+        self,
+        server_cfg: OidcServerCfg,
+        logger: logging.Logger | None = None,
+        log_item_class: type[BaseLogItem] = LogItem,
+        discovery_url: str | None = None,
+        discovery_doc: dict[str, Any] | None = None,
+        discovery_timeout: float | None = None,
+        ssl_context: ssl.SSLContext | bool = True,
+        client_credential_flow_request_headers: dict[str, str] | None = None,
+        client_credential_flow_max_retries: int | None = None,
+        client_credential_flow_base_delay: float | None = None,
+    ):
+        """Initialize the client and resolve the provider's discovery metadata.
+
+        Args:
+            server_cfg: Provider settings; the supplied model is copied.
+            logger: Destination for discovery errors and token request failures.
+            log_item_class: Factory for structured log entries.
+            discovery_url: Override for the configured discovery URL.
+            discovery_doc: Initial metadata applied before fetching the URL.
+            ssl_context: Certificate verification settings for outbound requests.
+            client_credential_flow_request_headers: Default token request headers.
+            client_credential_flow_max_retries: Retries after the first token
+                request; None selects the class default.
+            client_credential_flow_base_delay: Fixed delay in seconds between
+                token attempts; None selects the class default.
+
+        Raises:
+            ValueError: If ``discovery_timeout`` is not positive.
+            InitializationServiceError: If discovery metadata cannot be loaded.
+        """
+        self._set_discovery_timeout(discovery_timeout)
+        self.ssl_context = ssl_context
+        self._init_token_client(
+            server_cfg,
+            logger=logger,
+            log_item_class=log_item_class,
+            client_credential_flow_request_headers=client_credential_flow_request_headers,
+            client_credential_flow_max_retries=client_credential_flow_max_retries,
+            client_credential_flow_base_delay=client_credential_flow_base_delay,
+        )
+        # The issuer may only become known from the discovery document
+        self.scheme_name = self.server_cfg.issuer or ""
+        self.update_server_config_from_discovery(url=discovery_url, doc=discovery_doc)
+        if not self.scheme_name:
+            self.scheme_name = self.server_cfg.issuer or ""
+
+    def _set_discovery_timeout(self, discovery_timeout: float | None) -> None:
+        """Set a positive HTTP timeout, using the class default for ``None``."""
+        if discovery_timeout is not None and discovery_timeout <= 0:
+            raise ValueError("discovery_timeout must be greater than 0")
+        self.discovery_timeout = (
+            self.DEFAULT_DISCOVERY_TIMEOUT
+            if discovery_timeout is None
+            else discovery_timeout
+        )
+
+    def _init_token_client(
+        self,
+        server_cfg: OidcServerCfg,
+        logger: logging.Logger | None,
+        log_item_class: type[BaseLogItem],
+        client_credential_flow_request_headers: dict[str, str] | None,
+        client_credential_flow_max_retries: int | None,
+        client_credential_flow_base_delay: float | None,
+    ) -> None:
+        """Set the properties needed for discovery and token retrieval.
+
+        Shared with subclasses that have their own initializer. ``ssl_context`` and
+        ``scheme_name`` are set by the caller.
+        """
+        self.server_cfg = server_cfg.model_copy()
+        self.logger = logger
+        self._log_item_class = log_item_class
+        self._client_credential_flow_request_headers = (
+            client_credential_flow_request_headers
+            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS
+        )
+        self._client_credential_flow_max_retries = (
+            self.DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES
+            if client_credential_flow_max_retries is None
+            else client_credential_flow_max_retries
+        )
+        self._client_credential_flow_base_delay = (
+            self.DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY
+            if client_credential_flow_base_delay is None
+            else client_credential_flow_base_delay
+        )
+
+    def update_server_config_from_discovery(
+        self,
+        url: str | None = None,
+        doc: dict[str, Any] | None = None,
+    ) -> None:
+        """Update OIDC configuration from a discovery URL or document.
+
+        URL requests use ``self.discovery_timeout`` seconds for HTTPX's connect,
+        read, write, and pool timeouts. This is not a total request deadline.
+        URL metadata overrides the supplied document while preserving local
+        credentials and ignoring unknown fields. Configuration updates are not
+        rolled back if validation fails.
+
+        Args:
+            url: Discovery URL override; a false value uses the configured URL.
+            doc: Metadata to apply first. Supplying a document without a URL
+                skips the HTTP request and required-field validation.
+
+        Raises:
+            InitializationServiceError: If discovery data is missing, unavailable,
+                invalid, or the request times out.
+        """
+        url = url or self.server_cfg.discovery_url
+        if url is None and doc is None:
+            raise exc.InitializationServiceError(
+                "109f98e6",
+                "No discovery URL or document provided for OIDC configuration",
+            )
+
+        # Special case: discovery document provided -> update from that first
+        if doc:
+            # Update current configuration from provided discovery document
+            for key, value in doc.items():
+                setattr(self.server_cfg, key, value)
+
+        # Update from discovery URL
+        if not url:
+            return
+        try:
+            # Get discovery document
+            with httpx.Client(
+                verify=self.ssl_context, timeout=self.discovery_timeout
+            ) as client:
+                response = client.get(url)
+                response.raise_for_status()
+                discovery_doc = response.json()
+
+            # Update current configuration with discovery data, preserving client credentials
+            for key, value in discovery_doc.items():
+                if (
+                    key not in OidcServerCfg.NON_SPEC_FIELDS
+                    and key in self.server_cfg.__class__.model_fields
+                ):
+                    setattr(self.server_cfg, key, value)
+
+            if not self.server_cfg.is_valid():
+                invalid_fields = self.server_cfg.get_invalid_fields()
+                raise exc.InitializationServiceError(
+                    "53851a9e",
+                    f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}",
+                )
+        except httpx.TimeoutException as exception:
+            msg = (
+                "Timed out accessing discovery URL "
+                f"(HTTP timeout: {self.discovery_timeout} seconds)"
+            )
+            if self.logger:
+                self.logger.error(
+                    self._log_item_class(
+                        code="2a316308",
+                        msg=msg,
+                        scheme_name=self.server_cfg.name,
+                        exception=exception,
+                    ).dumps()
+                )
+            raise exc.InitializationServiceError("66b9919e", msg) from exception
+        except Exception as exception:
+            msg = "Error accessing discovery URL"
+            if self.logger:
+                self.logger.error(
+                    self._log_item_class(
+                        code="2a316308",
+                        msg=msg,
+                        scheme_name=self.server_cfg.name,
+                        exception=exception,
+                    ).dumps()
+                )
+            raise exc.InitializationServiceError("66b9919e", msg) from exception
+
+    def retrieve_jwt_with_client_credentials_flow(
+        self,
+        scope: str,
+        headers: dict[str, str] | None = None,
+        max_retries: int | None = None,
+        base_delay: float | None = None,
+    ) -> str:
+        """Call server to get token through OAuth Client Credentials flow.
+
+        Args:
+            scope: Scope string to encode in the token request.
+            headers: Request headers; empty or omitted uses configured defaults.
+            max_retries: Retries after the first attempt; None uses client settings.
+            base_delay: Seconds between attempts; None uses client settings.
+
+        Returns:
+            The provider's access token, without its advertised expiry.
+
+        Raises:
+            InitializationServiceError: If missing endpoint metadata cannot be
+                refreshed from discovery.
+            ServiceUnavailableError: If the token endpoint is still missing or
+                all request attempts fail.
+        """
+        token, _ = self.retrieve_jwt_with_client_credentials_flow_and_expiry(
+            scope, headers, max_retries, base_delay
+        )
+        return token
+
+    def retrieve_jwt_with_client_credentials_flow_and_expiry(
+        self,
+        scope: str,
+        headers: dict[str, str] | None = None,
+        max_retries: int | None = None,
+        base_delay: float | None = None,
+    ) -> tuple[str, float | None]:
+        """Return an OAuth access token and its advertised lifetime in seconds.
+
+        Each request uses HTTP Basic client authentication. Failures are retried
+        with a fixed delay. Request headers are copied before adding credentials.
+
+        Args:
+            scope: Scope string to encode in the token request.
+            headers: Request headers; empty or omitted uses configured defaults.
+            max_retries: Retries after the first attempt; zero permits one attempt,
+                and None uses client settings.
+            base_delay: Seconds between attempts; None uses client settings.
+
+        Returns:
+            A pair of access token and expiry in seconds. Missing, nonnumeric,
+            boolean, overflowing, or nonfinite expiry values become None. Finite
+            zero and negative values are preserved for callers to interpret.
+
+        Raises:
+            InitializationServiceError: If missing endpoint metadata cannot be
+                refreshed from discovery.
+            ServiceUnavailableError: If the token endpoint is still missing or
+                all request attempts fail.
+        """
+        # Parse input
+        headers = dict(headers or self._client_credential_flow_request_headers)
+        if max_retries is None:
+            max_retries = self._client_credential_flow_max_retries
+        if base_delay is None:
+            base_delay = self._client_credential_flow_base_delay
+        # Add basic auth header
+        self._set_authorization_header(headers)
+        # Get token endpoint URL
+        url = self._get_token_endpoint()
+        # Create request body
+        token_data = self._generate_token_data(scope)
+        # Call server with retries
+        return self._request_token_with_retries(
+            headers, max_retries, base_delay, url, token_data
+        )
+
+    def _request_token_with_retries(
+        self,
+        headers: dict[str, str],
+        max_retries: int,
+        base_delay: float,
+        url: str,
+        token_data: str,
+    ) -> tuple[str, float | None]:
+        """Request a token, retry failures, and normalize the advertised expiry.
+
+        Args:
+            headers: Complete headers, including client authentication.
+            max_retries: Number of retries after the initial request.
+            base_delay: Fixed delay in seconds between failed attempts.
+            url: Token endpoint.
+            token_data: Encoded client-credentials request body.
+
+        Returns:
+            The access token and finite numeric expiry, or None for unknown expiry.
+
+        Raises:
+            ServiceUnavailableError: If every request attempt fails.
+        """
+        last_exception: Exception | None = None
+        for attempt in range(max_retries + 1):
+            try:
+                with httpx.Client(verify=self.ssl_context) as client:
+                    response = client.post(
+                        url,
+                        data=token_data,
+                        headers=headers,
+                    )
+                    response.raise_for_status()
+                    token_response = response.json()
+                    token: str = token_response["access_token"]
+                    expires_in = token_response.get("expires_in")
+                    if isinstance(expires_in, bool) or not isinstance(
+                        expires_in, (int, float)
+                    ):
+                        expires_in = None
+                    try:
+                        expires_in = (
+                            float(expires_in) if expires_in is not None else None
+                        )
+                    except OverflowError:
+                        expires_in = None
+                    if expires_in is not None and not math.isfinite(expires_in):
+                        expires_in = None
+                    return token, expires_in
+            except Exception as exception:
+                last_exception = exception
+                if self.logger:
+                    self.logger.warning(
+                        self._log_item_class(
+                            code="a7f3e9d2",
+                            msg=f"OAuth Client Credentials flow token retrieval attempt {attempt + 1} failed for server {self.server_cfg.name}",
+                            scheme_name=self.scheme_name,
+                            exception=exception,
+                        ).dumps()
+                    )
+            if attempt < max_retries:
+                time.sleep(base_delay)
+
+        self._log_failed_token_retrieval_attempts(max_retries)
+        raise exc.ServiceUnavailableError(
+            "721b8f82",
+            f"Token retrieval failed for server {self.server_cfg.name}: {last_exception}",
+        )
+
+    def _log_failed_token_retrieval_attempts(self, max_retries: int) -> None:
+        """Log failed token retrieval attempts."""
+        if self.logger:
+            self.logger.error(
+                self._log_item_class(
+                    code="f8a3d7b2",
+                    msg=f"OAuth Client Credentials flow token retrieval failed after {max_retries + 1} attempts for server {self.server_cfg.name}",
+                    scheme_name=self.scheme_name,
+                ).dumps()
+            )
+
+    def _generate_token_data(self, scope: str) -> str:
+        """Helper method to build token data / request body for client credentials flow."""
+        token_data: str = "&".join(
+            (
+                "grant_type=client_credentials",
+                f"scope={urllib.parse.quote(scope)}",
+            )
+        )
+
+        return token_data
+
+    def _set_authorization_header(self, headers: dict[str, str]) -> None:
+        """Set HTTP Basic client authentication in the supplied headers in place."""
+        headers["Authorization"] = (
+            "Basic "
+            + base64.b64encode(
+                f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
+            ).decode()
+        )
+
+    def _get_token_endpoint(self) -> str:
+        """Return the token endpoint, refreshing discovery if it is absent.
+
+        Raises:
+            InitializationServiceError: If discovery cannot refresh the metadata.
+            ServiceUnavailableError: If the refreshed metadata has no endpoint.
+        """
+        url = self.server_cfg.token_endpoint
+        if not isinstance(url, str):
+            # Try to get from discovery document
+            if self.logger and self.logger.level <= logging.DEBUG:
+                self.logger.debug(
+                    self._log_item_class(
+                        code="8f3a2b1c",
+                        msg=f"Token endpoint URL is not set in OIDC server configuration for server {self.server_cfg.name}, trying to update from discovery URL",
+                        scheme_name=self.scheme_name,
+                    ).dumps()
+                )
+            self.update_server_config_from_discovery()
+            url = self.server_cfg.token_endpoint
+        if not isinstance(url, str):
+            raise exc.ServiceUnavailableError(
+                "3266c09e", "Token endpoint URL is not set"
+            )
+        return url

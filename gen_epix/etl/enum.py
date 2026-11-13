@@ -2,6 +2,7 @@
 
 The public types are ``EtlStatus``, for individual outcomes, and
 ``EtlStatusSet``, for groups of statuses by outcome.
+They provide the shared status vocabulary used by ETL result models and aggregation.
 """
 
 from enum import Enum

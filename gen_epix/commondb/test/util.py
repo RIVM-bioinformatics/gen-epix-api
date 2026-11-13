@@ -118,6 +118,9 @@ def parse_stats(df: list[dict], stats: Any, **kwargs: Any) -> None:
                 "total_time": function_profile.tottime,
                 "total_time_per_call": function_profile.percall_tottime,
                 "cumulative_time": function_profile.cumtime,
+                # TODO: LSP-3893 When cumtime differs from percall_cumtime, this
+                # reports the cumulative total instead of time per call; confirm
+                # the profiler's per-call semantics for recursive profiles.
                 "cumulative_time_per_call": function_profile.cumtime,
                 "file_name": function_profile.file_name,
                 "line_number": function_profile.line_number,

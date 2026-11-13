@@ -1,4 +1,10 @@
-"""Define the commondb system service contract and command handlers."""
+"""Define the shared commondb system service contract.
+
+`BaseSystemService` extends the application service lifecycle with handlers for
+data resets, outages, package licenses, and feature flags. Concrete services
+implement these operations; command dispatch and persistence remain with the
+application and repository layers.
+"""
 
 import abc
 from enum import Enum
@@ -10,7 +16,12 @@ from gen_epix.fastapp import BaseService
 
 
 class BaseSystemService(BaseService[BaseSystemRepository]):
-    """Encapsulates system-outage, package-license, and feature-flag operations."""
+    """Encapsulates system-level command registration and service contracts.
+
+    Concrete services implement outage, package-license, feature-flag, and data
+    reset operations while this base registers their command handlers and defines
+    the service type.
+    """
 
     SERVICE_TYPE = ServiceType.SYSTEM
 

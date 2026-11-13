@@ -3,7 +3,7 @@ from test.util.mock_compat import MagicMock, Mock, patch
 from types import SimpleNamespace
 from uuid import UUID
 
-from gen_epix.fastapp.enum import AuthProtocol
+from gen_epix.fastapp.enum import AuthProtocol, HttpMethod
 from gen_epix.omopdb.domain import command, model
 from gen_epix.omopdb.services.client import OmopdbClient
 
@@ -86,3 +86,60 @@ def test_retrieve_persons_by_query_posts_query_body() -> None:
     assert method == "POST"
     assert posted_route.endswith("/retrieve/person_ids_by_query")
     assert posted_json == query.model_dump(mode="json")
+
+
+def test_upload_persons_sends_command_and_parses_result() -> None:
+    app = _make_app()
+    cmd = command.UploadPersonsCommand(
+        person_batch=model.PersonBatchForUpload(persons=[])
+    )
+    response = {
+        "batch_id": "11111111-1111-1111-1111-111111111111",
+        "persons": [],
+    }
+
+    with patch.object(app, "request", return_value=response) as request:
+        result = app.upload_persons(cmd)
+
+    assert result == model.PersonBatchUploadResult(**response)
+    request.assert_called_once_with(cmd, HttpMethod.POST, model=cmd, exclude={"user"})
+
+
+def test_retrieve_persons_by_id_posts_ids_and_parses_response() -> None:
+    app = _make_app()
+    person_id = UUID("11111111-1111-1111-1111-111111111111")
+    cmd = command.RetrievePersonsByIdCommand(person_ids=[person_id])
+
+    with patch.object(app, "request", return_value=[]) as request:
+        result = app.retrieve_persons_by_id(cmd)
+
+    assert result == []
+    request.assert_called_once()
+    assert request.call_args.args == (cmd, HttpMethod.POST)
+    assert request.call_args.kwargs["model"].person_ids == [person_id]
+
+
+def test_retrieve_specimen_ids_by_cohort_ids_posts_cohort_data() -> None:
+    app = _make_app()
+    cohort_definition_id = UUID("11111111-1111-1111-1111-111111111111")
+    cohort_id = UUID("22222222-2222-2222-2222-222222222222")
+    cmd = command.RetrieveSpecimenIdsByCohortIdsCommand(
+        cohort_definition_id=cohort_definition_id,
+        cohort_ids=[cohort_id],
+    )
+    response = {"specimen_ids_by_cohort_id": {}}
+
+    with patch.object(app, "request", return_value=response) as request:
+        result = app.retrieve_specimen_ids_by_cohort_ids(cmd)
+
+    assert result == model.SpecimenIdsByCohortResult(**response)
+    request.assert_called_once()
+    assert request.call_args.args == (cmd, HttpMethod.POST)
+    body = request.call_args.kwargs["model"]
+    assert body.cohort_definition_id == cohort_definition_id
+    assert body.cohort_ids == [cohort_id]
+
+
+def test_delete_all_ref_data_route_and_timeout_are_registered() -> None:
+    assert OmopdbClient.ROUTE_MAP[command.DeleteAllRefDataCommand] == "/ref_data"
+    assert OmopdbClient.DEFAULT_HTTP_TIMEOUTS[command.DeleteAllRefDataCommand] == 300.0

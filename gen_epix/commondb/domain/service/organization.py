@@ -34,6 +34,7 @@ class BaseOrganizationService(BaseService[BaseOrganizationRepository]):
             self.retrieve_invite_user_constraints,
         )
         f(command.RegisterInvitedUserCommand, self.register_invited_user)
+        f(command.RetrieveOwnUserCommand, self.retrieve_own_user)
         f(command.UpdateUserCommand, self.update_user)
         f(command.AnonymizeUserCommand, self.anonymize_user)
 
@@ -99,6 +100,21 @@ class BaseOrganizationService(BaseService[BaseOrganizationRepository]):
 
         Returns:
             Roles and organizations available for invitation.
+
+        Raises:
+            NotImplementedError: Always; concrete services implement retrieval.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_own_user(self, cmd: command.RetrieveOwnUserCommand) -> model.User:
+        """Retrieve the command's current user.
+
+        Args:
+            cmd: Command whose user is requested.
+
+        Returns:
+            The user the command is executed as.
 
         Raises:
             NotImplementedError: Always; concrete services implement retrieval.

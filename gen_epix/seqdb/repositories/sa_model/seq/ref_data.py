@@ -195,8 +195,8 @@ class SeqCategorySet(Base, RowMetadataMixin):
 
     __tablename__, __table_args__ = create_table_args(model.SeqCategorySet)
 
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.SeqCategory, "code")
-    name: Mapped[str] = create_mapped_column(DOMAIN, model.SeqCategory, "name")
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.SeqCategorySet, "code")
+    name: Mapped[str] = create_mapped_column(DOMAIN, model.SeqCategorySet, "name")
 
 
 class Taxon(Base, RowMetadataMixin):
@@ -287,9 +287,7 @@ class TreeAlgorithm(Base, RowMetadataMixin):
     is_ultrametric: Mapped[bool] = create_mapped_column(
         DOMAIN, model.TreeAlgorithm, "is_ultrametric"
     )
-    rank: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.TreeAlgorithmClass, "rank"
-    )
+    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.TreeAlgorithm, "rank")
 
     tree_algorithm_class: Mapped[TreeAlgorithmClass] = relationship(
         "TreeAlgorithmClass",

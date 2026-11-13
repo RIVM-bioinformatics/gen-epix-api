@@ -179,6 +179,9 @@ class AppImplDetails(BaseModel):
         cls, value: tuple[Enum, ...] | list[Enum]
     ) -> list[Enum]:
         """Normalize service types to a unique list in dependency order."""
+        # TODO: LSP-3893 A tuple containing duplicate service types bypasses
+        # the uniqueness check applied to lists; confirm tuples must enforce
+        # the documented unique-service invariant before changing behavior.
         if isinstance(value, tuple):
             return list(value)
         if len(set(value)) != len(value):

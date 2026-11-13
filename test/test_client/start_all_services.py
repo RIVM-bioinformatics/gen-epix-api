@@ -27,15 +27,11 @@ SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
 
 
 @contextmanager
-def omopdb_server(use_dict_repository: bool) -> Generator[ServerManager, None, None]:
+def omopdb_server() -> Generator[ServerManager, None, None]:
     """Start omopdb server"""
 
     omopdb_app_cfg = OmopdbAppCfg(
-        repository_type_enum=(
-            omopdb_enum.RepositoryType.DICT
-            if use_dict_repository
-            else omopdb_enum.RepositoryType.SA_SQL
-        ),
+        repository_type_enum=omopdb_enum.RepositoryType,
         log_setup=True,
     )
     omopdb_app_composer = OmopdbAppComposer(omopdb_app_cfg, log_setup=True)
@@ -61,16 +57,12 @@ def omopdb_server(use_dict_repository: bool) -> Generator[ServerManager, None, N
 
 
 @contextmanager
-def seqdb_server(use_dict_repository: bool) -> Generator[ServerManager, None, None]:
+def seqdb_server() -> Generator[ServerManager, None, None]:
     """Start seqdb server"""
 
     # Create seqdb app and fastapi instance
     seqdb_app_cfg = SeqdbAppCfg(
-        repository_type_enum=(
-            seqdb_enum.RepositoryType.DICT
-            if use_dict_repository
-            else seqdb_enum.RepositoryType.SA_SQL
-        ),
+        repository_type_enum=seqdb_enum.RepositoryType,
         log_setup=True,
     )
     seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=True)
@@ -97,16 +89,12 @@ def seqdb_server(use_dict_repository: bool) -> Generator[ServerManager, None, No
 
 
 @contextmanager
-def casedb_server(use_dict_repository: bool) -> Generator[ServerManager, None, None]:
+def casedb_server() -> Generator[ServerManager, None, None]:
     """Start casedb server"""
 
     # Create casedb app and fastapi instance
     casedb_app_cfg = CasedbAppCfg(
-        repository_type_enum=(
-            casedb_enum.RepositoryType.DICT
-            if use_dict_repository
-            else casedb_enum.RepositoryType.SA_SQL
-        ),
+        repository_type_enum=casedb_enum.RepositoryType,
         log_setup=True,
     )
     casedb_app_composer = CasedbAppComposer(casedb_app_cfg, log_setup=True)
@@ -134,7 +122,7 @@ def casedb_server(use_dict_repository: bool) -> Generator[ServerManager, None, N
 
 @contextmanager
 def platform_mock_dict_demo(
-    use_dict_repository: bool, start_omopdb: bool
+    start_omopdb: bool,
 ) -> Generator[dict[str, ServerManager], None, None]:
     """Start seqdb, and casedb (and optionally omopdb) for local platform.
 
@@ -150,12 +138,12 @@ def platform_mock_dict_demo(
 
     servers: dict[str, ServerManager] = {}
     try:
-        with seqdb_server(use_dict_repository) as seqdb:
+        with seqdb_server() as seqdb:
             servers["seqdb"] = seqdb
-            with casedb_server(use_dict_repository) as casedb:
+            with casedb_server() as casedb:
                 servers["casedb"] = casedb
                 if start_omopdb:
-                    with omopdb_server(use_dict_repository) as omop:
+                    with omopdb_server() as omop:
                         servers["omopdb"] = omop
                         yield servers
                 else:
@@ -165,7 +153,7 @@ def platform_mock_dict_demo(
         pass
 
 
-def run_platform(use_dict_repository: bool, start_omopdb: bool) -> None:
+def run_platform(start_omopdb: bool) -> None:
     """CLI runner to start the local platform and block until Ctrl+C."""
     print("Starting local platform (mock.dict_demo)...")
     print(" - casedb:  https://127.0.0.1:8000")
@@ -176,7 +164,7 @@ def run_platform(use_dict_repository: bool, start_omopdb: bool) -> None:
         print(" - omopdb:  [disabled placeholder]")
 
     stop = False
-    with platform_mock_dict_demo(use_dict_repository, start_omopdb):
+    with platform_mock_dict_demo(start_omopdb):
         print("All services are up. Press Ctrl+C to stop.")
         try:
             while not stop:

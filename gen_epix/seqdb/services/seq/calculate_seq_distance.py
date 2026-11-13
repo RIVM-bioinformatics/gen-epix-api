@@ -34,7 +34,7 @@ class _ParsedNextcladeProfile(BaseModel):
     substitutions: dict[int, str]
     deletions: set[int]
     insertions: dict[int, str]
-    missing: set[int]
+    missings: set[int]
     non_acgtns: dict[int, str]
     variant_states: dict[int, tuple[str, str | None]]
     alignment_start: int
@@ -1226,13 +1226,13 @@ def _parse_nextclade_profile_content(content: str) -> _ParsedNextcladeProfile:
         str(nextclade_fields["substitutions"])
     )
     deletions = _parse_nextclade_ranges(str(nextclade_fields.get("deletions", "")))
-    missing = _parse_nextclade_ranges(str(nextclade_fields.get("missings", "")))
+    missings = _parse_nextclade_ranges(str(nextclade_fields.get("missings", "")))
     non_acgtns = _parse_nextclade_non_acgtns(
         str(nextclade_fields.get("non_acgtns", ""))
     )
 
     alignment_start = int(nextclade_fields.get("alignment_start", 0))
-    _all_positions = set(substitutions) | deletions | missing | set(non_acgtns)
+    _all_positions = set(substitutions) | deletions | missings | set(non_acgtns)
     _default_end = max(_all_positions) if _all_positions else 0
     alignment_end = int(nextclade_fields.get("alignment_end", _default_end))
     if alignment_end < alignment_start:
@@ -1247,14 +1247,14 @@ def _parse_nextclade_profile_content(content: str) -> _ParsedNextcladeProfile:
     variant_states.update(
         {position: ("non_acgtn", base) for position, base in non_acgtns.items()}
     )
-    variant_states.update({position: ("missings", None) for position in missing})
+    variant_states.update({position: ("missings", None) for position in missings})
 
     return _ParsedNextcladeProfile(
         substitutions=substitutions,
         deletions=deletions,
         # Insertions do not affect SNP Hamming over reference positions.
         insertions={},
-        missing=missing,
+        missings=missings,
         non_acgtns=non_acgtns,
         variant_states=variant_states,
         alignment_start=alignment_start,

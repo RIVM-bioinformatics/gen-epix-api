@@ -68,22 +68,14 @@ class BaseIsOrganizationAdminPolicy(BaseAbacPolicy):
 class BaseReadOrganizationResultsOnlyPolicy(BaseAbacPolicy):
     """Encapsulates a policy that limits reads to the user's organization results."""
 
-    pass
-
 
 class BaseReadSelfResultsOnlyPolicy(BaseAbacPolicy):
     """Encapsulates a policy that limits reads to results owned by the current user."""
-
-    pass
 
 
 class BaseReadUserPolicy(BaseAbacPolicy):
     """Encapsulates a policy governing which user records a caller may read."""
 
-    pass
-
 
 class BaseUpdateUserPolicy(BaseAbacPolicy):
     """Encapsulates a policy governing which user records a caller may update."""
-
-    pass

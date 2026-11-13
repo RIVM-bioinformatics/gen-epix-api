@@ -1,4 +1,7 @@
-"""add unit to ref_col and concept_set.
+"""Add and remove unit columns for reference columns and concept sets.
+
+The Alembic ``upgrade`` and ``downgrade`` functions manage nullable unit enum
+columns on ``case.ref_col`` and ``ontology.concept_set``.
 
 Revision ID: 33287eafdd16
 Revises: bbc386e12a58

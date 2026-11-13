@@ -6,6 +6,11 @@ from gen_epix.commondb.domain.service.rbac import BaseRbacService
 from gen_epix.fastapp import Policy
 
 
+# TODO: LSP-3893 When a caller evaluates a role create/update command containing
+# permissions the acting user does not hold, the documented contract requires
+# denying privilege elevation; this class inherits Policy.is_allowed(), which
+# raises NotImplementedError instead. Confirm whether this is intentionally an
+# incomplete base for a concrete subclass or should implement the check here.
 class BaseIsPermissionSubsetNewRolePolicy(Policy):
     """Encapsulates prevention of creation or updates that would elevate a role's permissions.
 

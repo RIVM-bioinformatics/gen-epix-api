@@ -5,10 +5,11 @@ Tests follow the style and conventions of the commondb upload tests,
 using typed variables, explicit mocking, and clear structure.
 """
 
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from test.util.mock_compat import Mock
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -22,11 +23,259 @@ from gen_epix.casedb.services.case.retrieve_case import (
     case_service_retrieve_cases_by_query,
 )
 from gen_epix.commondb.domain.enum import Role
+from gen_epix.filter.base import Filter
 from gen_epix.filter.composite import CompositeFilter
-from gen_epix.filter.enum import FilterType, LogicalOperator
+from gen_epix.filter.contains_string import ContainsStringFilter
+from gen_epix.filter.date_range import DateRangeFilter
+from gen_epix.filter.enum import ComparisonOperator, FilterType, LogicalOperator
+from gen_epix.filter.equals_boolean import EqualsBooleanFilter
+from gen_epix.filter.equals_number import EqualsNumberFilter
+from gen_epix.filter.equals_string import EqualsStringFilter
+from gen_epix.filter.equals_uuid import EqualsUuidFilter
 from gen_epix.filter.exists import ExistsFilter
+from gen_epix.filter.no_filter import NoFilter
+from gen_epix.filter.number_range import NumberRangeFilter
 from gen_epix.filter.number_set import NumberSetFilter
+from gen_epix.filter.partial_date_range import PartialDateRangeFilter
+from gen_epix.filter.regex import RegexFilter
 from gen_epix.filter.string_set import StringSetFilter
+from gen_epix.filter.uuid_set import UuidSetFilter
+
+
+@dataclass(frozen=True)
+class _CaseQueryFilterSpec:
+    name: str
+    col_type: enum.ColType | None
+    values: tuple[str, str, str]
+    matching_case_indexes: tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...]]
+
+
+def _uuid_case_values(start: int) -> tuple[str, str, str]:
+    """Return three distinct UUID strings for the filter fixture."""
+    return str(UUID(int=start)), str(UUID(int=start + 1)), str(UUID(int=start + 2))
+
+
+_CaseQueryCompositeCase = tuple[
+    _CaseQueryFilterSpec,
+    bool,
+    _CaseQueryFilterSpec,
+    bool,
+    LogicalOperator,
+    bool,
+]
+_SINGLETON_MATCHES = ((0,), (1,), (2,))
+_ALL_PRESENT_MATCHES: tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...]] = (
+    (0, 1, 2),
+    (0, 1, 2),
+    (0, 1, 2),
+)
+_BOOLEAN_MATCHES = ((0, 2), (1,), (0, 2))
+_ALL_CASES_MATCH: tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...]] = (
+    (0, 1, 2, 3, 4),
+    (0, 1, 2, 3, 4),
+    (0, 1, 2, 3, 4),
+)
+_ALL_CASE_QUERY_FILTER_SPECS = (
+    _CaseQueryFilterSpec(
+        "ExistsFilter", enum.ColType.TEXT, ("a", "b", "c"), _ALL_PRESENT_MATCHES
+    ),
+    _CaseQueryFilterSpec(
+        "EqualsBooleanFilter",
+        enum.ColType.TEXT,
+        ("true", "false", "TRUE"),
+        _BOOLEAN_MATCHES,
+    ),
+    _CaseQueryFilterSpec(
+        "EqualsNumberFilter",
+        enum.ColType.DECIMAL_0,
+        ("1", "2", "3"),
+        _SINGLETON_MATCHES,
+    ),
+    _CaseQueryFilterSpec(
+        "EqualsStringFilter", enum.ColType.TEXT, ("a", "b", "c"), _SINGLETON_MATCHES
+    ),
+    _CaseQueryFilterSpec(
+        "EqualsUuidFilter",
+        enum.ColType.ID_PERSON,
+        _uuid_case_values(101),
+        _SINGLETON_MATCHES,
+    ),
+    _CaseQueryFilterSpec(
+        "ContainsStringFilter",
+        enum.ColType.TEXT,
+        ("alpha", "bravo", "charlie"),
+        _SINGLETON_MATCHES,
+    ),
+    _CaseQueryFilterSpec(
+        "DateRangeFilter",
+        enum.ColType.TIME_DAY,
+        ("2021-01-01", "2022-01-01", "2023-01-01"),
+        _SINGLETON_MATCHES,
+    ),
+    _CaseQueryFilterSpec(
+        "NumberRangeFilter",
+        enum.ColType.DECIMAL_1,
+        ("1.1", "2.2", "3.3"),
+        _SINGLETON_MATCHES,
+    ),
+    _CaseQueryFilterSpec(
+        "PartialDateRangeFilter",
+        enum.ColType.TIME_YEAR,
+        ("2021", "2022", "2023"),
+        _SINGLETON_MATCHES,
+    ),
+    _CaseQueryFilterSpec(
+        "RegexFilter",
+        enum.ColType.TEXT,
+        ("alpha", "bravo", "charlie"),
+        _SINGLETON_MATCHES,
+    ),
+    _CaseQueryFilterSpec(
+        "NumberSetFilter",
+        enum.ColType.DECIMAL_1,
+        ("1.1", "2.2", "3.3"),
+        _SINGLETON_MATCHES,
+    ),
+    _CaseQueryFilterSpec(
+        "StringSetFilter", enum.ColType.TEXT, ("a", "b", "c"), _SINGLETON_MATCHES
+    ),
+    _CaseQueryFilterSpec(
+        "UuidSetFilter",
+        enum.ColType.ID_PERSON,
+        _uuid_case_values(201),
+        _SINGLETON_MATCHES,
+    ),
+    _CaseQueryFilterSpec("NoFilter", None, ("a", "b", "c"), _ALL_CASES_MATCH),
+)
+_CASE_QUERY_FILTER_SPECS_BY_NAME = {
+    spec.name: spec for spec in _ALL_CASE_QUERY_FILTER_SPECS
+}
+_CASE_QUERY_FILTER_FIELD_IDS = {
+    spec.name: UUID(int=index + 1)
+    for index, spec in enumerate(_ALL_CASE_QUERY_FILTER_SPECS)
+}
+# Add/replace filters here to interactively test different filter combinations. Not all combinations are tested because of the large number of possibilities and the time it takes to evaluate them all.
+_REDUCED_CASE_QUERY_FILTER_SPECS = tuple(
+    y
+    for x, y in _CASE_QUERY_FILTER_SPECS_BY_NAME.items()
+    if x in ("EqualsStringFilter", "EqualsNumberFilter")
+)
+_ALL_CASE_QUERY_BINARY_OPERATORS = (x for x in LogicalOperator)
+_REDUCED_CASE_QUERY_BINARY_OPERATORS = (LogicalOperator.AND, LogicalOperator.OR)
+
+
+@pytest.fixture(scope="module")
+def case_query_filter_cases() -> list[model.Case]:
+    """Return three populated cases, one all-None case, and one empty case."""
+    case_type_id = UUID(int=9001)
+    data_collection_id = UUID(int=9002)
+    rows: list[dict[UUID, str | None]] = []
+    for index in range(3):
+        row: dict[UUID, str | None] = {}
+        for spec in _ALL_CASE_QUERY_FILTER_SPECS:
+            row[_CASE_QUERY_FILTER_FIELD_IDS[spec.name]] = spec.values[index]
+        rows.append(row)
+    rows.append({field_id: None for field_id in _CASE_QUERY_FILTER_FIELD_IDS.values()})
+    rows.append({})
+    return [
+        model.Case(
+            id=UUID(int=10001 + index),
+            code=None,
+            case_type_id=case_type_id,
+            created_in_data_collection_id=data_collection_id,
+            count=1,
+            timed_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            content=row,
+        )
+        for index, row in enumerate(rows)
+    ]
+
+
+def _create_case_query_leaf_filter(
+    spec: _CaseQueryFilterSpec, target_case_index: int, invert: bool
+) -> Filter:
+    """Create one non-composite filter matching a fixture case's field value."""
+    key = str(_CASE_QUERY_FILTER_FIELD_IDS[spec.name])
+    value = spec.values[target_case_index]
+    builders: dict[str, Callable[[], Filter]] = {
+        "ExistsFilter": lambda: ExistsFilter(key=key, invert=invert),
+        "EqualsBooleanFilter": lambda: EqualsBooleanFilter(
+            key=key, value=value.casefold() == "true", invert=invert
+        ),
+        "EqualsNumberFilter": lambda: EqualsNumberFilter(
+            key=key, value=int(value), invert=invert
+        ),
+        "EqualsStringFilter": lambda: EqualsStringFilter(
+            key=key, value=value, invert=invert
+        ),
+        "EqualsUuidFilter": lambda: EqualsUuidFilter(
+            key=key, value=UUID(value), invert=invert
+        ),
+        "ContainsStringFilter": lambda: ContainsStringFilter(
+            key=key, value=value, invert=invert
+        ),
+        "DateRangeFilter": lambda: DateRangeFilter(
+            key=key,
+            lower_bound=date.fromisoformat(value),
+            upper_bound=date.fromisoformat(value),
+            upper_bound_censor=ComparisonOperator.STE,
+            invert=invert,
+        ),
+        "NumberRangeFilter": lambda: NumberRangeFilter(
+            key=key,
+            lower_bound=Decimal(value),
+            upper_bound=Decimal(value),
+            upper_bound_censor=ComparisonOperator.STE,
+            invert=invert,
+        ),
+        "PartialDateRangeFilter": lambda: PartialDateRangeFilter(
+            key=key,
+            lower_bound=value,
+            upper_bound=str(int(value) + 1),
+            invert=invert,
+        ),
+        "RegexFilter": lambda: RegexFilter(
+            key=key, pattern=f"^{value}$", invert=invert
+        ),
+        "NumberSetFilter": lambda: NumberSetFilter(
+            key=key, members=frozenset({Decimal(value)}), invert=invert
+        ),
+        "StringSetFilter": lambda: StringSetFilter(
+            key=key, members=frozenset({value}), invert=invert
+        ),
+        "UuidSetFilter": lambda: UuidSetFilter(
+            key=key, members=frozenset({UUID(value)}), invert=invert
+        ),
+        "NoFilter": lambda: NoFilter(invert=invert),
+    }
+    return builders[spec.name]()
+
+
+def _case_query_leaf_matches(
+    spec: _CaseQueryFilterSpec,
+    target_case_index: int,
+    row_index: int,
+    invert: bool,
+) -> bool:
+    """Calculate an expected leaf result from fixture partitions."""
+    return (row_index in spec.matching_case_indexes[target_case_index]) ^ invert
+
+
+def _case_query_operator_matches(
+    first_match: bool, second_match: bool, operator: LogicalOperator
+) -> bool:
+    """Calculate expected results for every valid two-child operator."""
+    matches_by_operator = {
+        LogicalOperator.AND: first_match and second_match,
+        LogicalOperator.OR: first_match or second_match,
+        LogicalOperator.XOR: first_match != second_match,
+        LogicalOperator.NAND: not (first_match and second_match),
+        LogicalOperator.NOR: not (first_match or second_match),
+        LogicalOperator.XNOR: first_match == second_match,
+        LogicalOperator.IMPLIES: not first_match or second_match,
+        LogicalOperator.NIMPLIES: first_match and not second_match,
+    }
+    return matches_by_operator[operator]
 
 
 class _FakeCaseAbacPolicy(BaseCaseAbacPolicy):
@@ -209,8 +458,6 @@ class BaseRetrieveCaseTestCase:
             return_value=(cases, is_max_results_exceeded)
         )
 
-    # NoFilter not used due to composite key semantics
-
     def create_composite_filter(
         self,
         filters: list[Any],
@@ -288,6 +535,151 @@ class BaseRetrieveCaseTestCase:
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
     """Tests covering branches of case_service_retrieve_cases_by_query."""
+
+    def execute_case_filter_query(
+        self,
+        cases: list[model.Case],
+        filters: list[Filter],
+        operator: LogicalOperator = LogicalOperator.AND,
+        composite_invert: bool = False,
+    ) -> model.CaseQueryResult:
+        """Run a CaseQuery using the requested leaf filters and fixture cases."""
+        filter_col_ids = {
+            UUID(child_filter.key)
+            for child_filter in filters
+            if isinstance(child_filter.key, str)
+        }
+        cols: list[model.Col] = []
+        ref_cols: list[model.RefCol] = []
+        for spec in _ALL_CASE_QUERY_FILTER_SPECS:
+            col_id = _CASE_QUERY_FILTER_FIELD_IDS[spec.name]
+            if col_id in filter_col_ids and spec.col_type is not None:
+                col, ref_col = self.create_col(col_id, uuid4(), spec.col_type)
+                cols.append(col)
+                ref_cols.append(ref_col)
+
+        self.set_repository_cols_and_ref_cols(cols, ref_cols)
+        self.set_repository_case_type(self.create_case_type(read_max_n_cases=100))
+        self.set_retrieve_cases_result(cases)
+        self.service.app.handle = Mock(return_value=[])
+
+        case_query = model.CaseQuery(
+            label=None,
+            case_type_id=self.case_type_id,
+            case_set_ids=None,
+            datetime_range_filter=None,
+            filter=CompositeFilter(
+                filters=filters,
+                operator=operator,
+                invert=composite_invert,
+            ),
+        )
+        cmd = command.RetrieveCasesByQueryCommand(user=self.user, case_query=case_query)
+        self.attach_abac_policy(cmd)
+        return case_service_retrieve_cases_by_query(self.service, cmd)
+
+    @pytest.mark.parametrize(
+        "filter_spec, target_case_index, invert",
+        [
+            pytest.param(
+                spec,
+                target_case_index,
+                invert,
+                id=f"{spec.name}-case-{target_case_index + 1}-invert-{invert}",
+            )
+            for spec in _ALL_CASE_QUERY_FILTER_SPECS
+            for target_case_index in range(3)
+            for invert in (False, True)
+        ],
+    )
+    def test_case_query_single_leaf_filter_matches_fixture_cases(
+        self,
+        case_query_filter_cases: list[model.Case],
+        filter_spec: _CaseQueryFilterSpec,
+        target_case_index: int,
+        invert: bool,
+    ) -> None:
+        """Match one configured leaf filter against all five fixture cases."""
+        leaf_filter = _create_case_query_leaf_filter(
+            filter_spec, target_case_index, invert
+        )
+        result = self.execute_case_filter_query(case_query_filter_cases, [leaf_filter])
+        expected_ids = [
+            case.id
+            for row_index, case in enumerate(case_query_filter_cases)
+            if _case_query_leaf_matches(
+                filter_spec, target_case_index, row_index, invert
+            )
+        ]
+        assert result.case_ids == expected_ids
+        assert result.is_max_results_exceeded is False
+
+    @pytest.mark.parametrize(
+        "combination",
+        [
+            pytest.param(
+                (
+                    first_spec,
+                    first_invert,
+                    second_spec,
+                    second_invert,
+                    operator,
+                    composite_invert,
+                ),
+                id=(
+                    f"{first_spec.name}-i{int(first_invert)}-"
+                    f"{second_spec.name}-i{int(second_invert)}-"
+                    f"{operator.name}-outer-{int(composite_invert)}"
+                ),
+            )
+            for first_spec in _REDUCED_CASE_QUERY_FILTER_SPECS
+            for first_invert in (False, True)
+            for second_spec in _REDUCED_CASE_QUERY_FILTER_SPECS
+            for second_invert in (False, True)
+            for operator in _REDUCED_CASE_QUERY_BINARY_OPERATORS
+            for composite_invert in (False, True)
+        ],
+    )
+    def test_case_query_composite_filter_matches_all_combinations(
+        self,
+        case_query_filter_cases: list[model.Case],
+        combination: _CaseQueryCompositeCase,
+    ) -> None:
+        """Match every supported pair of leaf filters and logical operators."""
+        (
+            first_spec,
+            first_invert,
+            second_spec,
+            second_invert,
+            operator,
+            composite_invert,
+        ) = combination
+        filters = [
+            _create_case_query_leaf_filter(first_spec, 0, first_invert),
+            _create_case_query_leaf_filter(second_spec, 1, second_invert),
+        ]
+        result = self.execute_case_filter_query(
+            case_query_filter_cases,
+            filters,
+            operator=operator,
+            composite_invert=composite_invert,
+        )
+        expected_ids: list[UUID] = []
+        for row_index, case in enumerate(case_query_filter_cases):
+            first_match = _case_query_leaf_matches(
+                first_spec, 0, row_index, first_invert
+            )
+            second_match = _case_query_leaf_matches(
+                second_spec, 1, row_index, second_invert
+            )
+            expected_match = (
+                _case_query_operator_matches(first_match, second_match, operator)
+                ^ composite_invert
+            )
+            if expected_match:
+                expected_ids.append(cast(UUID, case.id))
+        assert result.case_ids == expected_ids
+        assert result.is_max_results_exceeded is False
 
     def test_zero_case_set_ids_raises_not_implemented(self) -> None:
         # 1. Input

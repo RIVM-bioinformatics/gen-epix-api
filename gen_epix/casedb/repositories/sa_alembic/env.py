@@ -1,4 +1,9 @@
-"""Alembic environment for casedb."""
+"""Configure and run Alembic migrations for the casedb repository.
+
+The migration runners use metadata from the sibling metadata module and resolve
+the database URL from Alembic's ``-x url=...`` argument or ``ALEMBIC_URL``.
+Alembic selects offline SQL rendering or execution through a live connection.
+"""
 
 from __future__ import annotations
 
@@ -14,6 +19,13 @@ config = context.config
 
 
 def _configure_url() -> None:
+    """Set Alembic's database URL from command-line or environment settings.
+
+    The ``-x url=...`` argument takes precedence over ``ALEMBIC_URL``.
+
+    Raises:
+        ValueError: If neither source supplies a database URL.
+    """
     url = context.get_x_argument(as_dictionary=True).get("url") or os.getenv(
         "ALEMBIC_URL"
     )
@@ -23,7 +35,11 @@ def _configure_url() -> None:
 
 
 def run_migrations_offline() -> None:
-    """Run migrations using a configured URL without a live connection."""
+    """Render and run migrations without opening a database connection.
+
+    Configures Alembic with the target metadata and named parameter binding
+    before executing migrations in the current Alembic context.
+    """
     _configure_url()
     context.configure(
         url=config.get_main_option("sqlalchemy.url"),
@@ -40,7 +56,11 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations through a live SQLAlchemy connection."""
+    """Run migrations through a live SQLAlchemy connection.
+
+    Ensures the Alembic schema exists on SQL Server, then configures metadata
+    comparison and executes migrations using the connection.
+    """
     _configure_url()
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),

@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from pathlib import Path
+from test.util.mock_compat import Mock
 from typing import Any, ClassVar, cast
-from unittest.mock import Mock
 
 import pytest
 import sqlalchemy as sa
 from sqlalchemy.orm import Session, declarative_base
 
 import gen_epix.fastapp.exc as exc
+import gen_epix.fastapp.repositories.sa.repository as repository_module
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
 from gen_epix.fastapp.model import Model
@@ -17,11 +18,15 @@ from gen_epix.fastapp.repositories.sa.mapper import SAMapper
 from gen_epix.fastapp.repositories.sa.repository import SARepository
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.filter import (
+    ComparisonOperator,
     CompositeFilter,
     EqualsNumberFilter,
     EqualsStringFilter,
+    ExistsFilter,
     LogicalOperator,
     NumberRangeFilter,
+    NumberSetFilter,
+    StringSetFilter,
 )
 
 Base: Any = declarative_base()
@@ -287,6 +292,26 @@ def test_read_some_raises_invalid_ids(repo: SARepository) -> None:
         repo.read_some(RepoModel, ["missing-id"])
 
 
+def test_delete_some_uses_supplied_session_for_uncommitted_rows(
+    repo: SARepository,
+) -> None:
+    with repo.get_session() as session:
+        session.add(repo.to_sql("user", RepoModel, _make_obj(1)))
+        session.flush()
+
+        assert repo.delete_some(RepoModel, "user", ["id-1"], session=session) == [
+            "id-1"
+        ]
+        assert repo.exists_some(RepoModel, ["id-1"], session=session) == [False]
+
+
+def test_delete_some_rejects_missing_ids(repo: SARepository) -> None:
+    with pytest.raises(exc.InvalidIdsError, match="8e431d94") as error:
+        repo.delete_some(RepoModel, "user", ["missing-id"])
+
+    assert error.value.ids == ["missing-id"]
+
+
 def test_read_some_reports_duplicate_ids(repo: SARepository) -> None:
     repo.create_one(RepoModel, "user", _make_obj(1))
 
@@ -333,6 +358,82 @@ def test_create_some_exact_batch_without_flush(repo: SARepository) -> None:
 
     assert [obj.id for obj in created] == ["id-1", "id-2"]
     assert repo.exists_some(RepoModel, ["id-1", "id-2"]) == [True, True]
+
+
+def test_create_some_without_flush_rejects_multiple_batches(
+    repo: SARepository,
+) -> None:
+    repo._max_insert_batch_size = 1  # pylint: disable=protected-access
+    objs = [_make_obj(1), _make_obj(2)]
+
+    with pytest.raises(exc.RepositoryServiceError, match="fa00ce85"):
+        repo.create_some(RepoModel, "user", objs, flush=False)
+
+
+@pytest.mark.parametrize(
+    ("filter_", "limit", "offset", "expected_ids"),
+    [
+        pytest.param(
+            EqualsNumberFilter(key="value", value=1),
+            2,
+            2,
+            [],
+            id="offset-past-end",
+        ),
+        pytest.param(
+            EqualsNumberFilter(key="value", value=99),
+            2,
+            0,
+            [],
+            id="empty-filter-result",
+        ),
+        pytest.param(
+            NumberRangeFilter(
+                key="value",
+                lower_bound=1,
+                upper_bound=3,
+                upper_bound_censor=ComparisonOperator.STE,
+            ),
+            0,
+            0,
+            ["id-1", "id-2", "id-3"],
+            id="unbounded",
+        ),
+        pytest.param(
+            NumberRangeFilter(
+                key="value",
+                lower_bound=1,
+                upper_bound=3,
+                upper_bound_censor=ComparisonOperator.STE,
+            ),
+            2,
+            2,
+            ["id-3"],
+            id="page-reaches-end",
+        ),
+        pytest.param(
+            NumberRangeFilter(key="value", lower_bound=1, upper_bound=3),
+            1,
+            1,
+            ["id-2"],
+            id="bounded-page",
+        ),
+    ],
+)
+def test_apply_read_all_obj_pagination_boundaries(
+    repo: SARepository,
+    filter_: Any,
+    limit: int,
+    offset: int,
+    expected_ids: list[str],
+) -> None:
+    repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2), _make_obj(3)])
+    result = cast(
+        list[RepoModel],
+        repo.read_all(RepoModel, None, obj_filter=filter_, limit=limit, offset=offset),
+    )
+
+    assert [obj.id for obj in result] == expected_ids
 
 
 def test_read_all_applies_zero_range_bound(repo: SARepository) -> None:
@@ -417,6 +518,94 @@ def test_split_filter_and_get_where_clause(repo: SARepository) -> None:
     assert where_clause is not None
 
 
+@pytest.mark.parametrize(
+    ("filter_", "expected_ids"),
+    [
+        pytest.param(ExistsFilter(key="label"), ["id-1", "id-2", "id-3"], id="exists"),
+        pytest.param(ExistsFilter(key="label", invert=True), [], id="not-exists"),
+        pytest.param(
+            StringSetFilter(key="label", members=frozenset({"l-1", "l-3"})),
+            ["id-1", "id-3"],
+            id="string-set",
+        ),
+        pytest.param(
+            NumberSetFilter(key="value", members=frozenset({1, 3}), invert=True),
+            ["id-2"],
+            id="inverted-number-set",
+        ),
+        pytest.param(
+            NumberRangeFilter(
+                key="value",
+                lower_bound=1,
+                lower_bound_censor=ComparisonOperator.GT,
+                upper_bound=3,
+                upper_bound_censor=ComparisonOperator.STE,
+            ),
+            ["id-2", "id-3"],
+            id="bounded-range",
+        ),
+        pytest.param(
+            NumberRangeFilter(
+                key="value",
+                lower_bound=2,
+                lower_bound_censor=ComparisonOperator.GT,
+            ),
+            ["id-3"],
+            id="lower-only-range",
+        ),
+        pytest.param(
+            NumberRangeFilter(
+                key="value",
+                upper_bound=1,
+                upper_bound_censor=ComparisonOperator.STE,
+            ),
+            ["id-1"],
+            id="upper-only-range",
+        ),
+    ],
+)
+def test_read_all_translates_exists_set_and_range_filters(
+    repo: SARepository, filter_: Any, expected_ids: list[str]
+) -> None:
+    repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2), _make_obj(3)])
+
+    objs = cast(list[RepoModel], repo.read_all(RepoModel, filter_))
+
+    assert [obj.id for obj in objs] == expected_ids
+
+
+def test_split_filter_keeps_or_with_unmapped_branch_in_python(
+    repo: SARepository,
+) -> None:
+    filter_ = CompositeFilter(
+        operator=LogicalOperator.OR,
+        filters=[
+            EqualsNumberFilter(key="value", value=1),
+            EqualsStringFilter(key="unknown", value="x"),
+        ],
+    )
+
+    where_filter, remainder_filter = repo.split_filter(RepoModel, filter_)
+
+    assert where_filter is None
+    assert remainder_filter == filter_
+
+
+def test_split_filter_handles_empty_and_and_composites(repo: SARepository) -> None:
+    only_sql_filter = EqualsNumberFilter(key="value", value=1)
+    only_python_filter = EqualsStringFilter(key="unknown", value="x")
+
+    assert repo.split_filter(RepoModel, None) == (None, None)
+    assert repo.split_filter(
+        RepoModel,
+        CompositeFilter(operator=LogicalOperator.AND, filters=[only_sql_filter]),
+    ) == (only_sql_filter, None)
+    assert repo.split_filter(
+        RepoModel,
+        CompositeFilter(operator=LogicalOperator.AND, filters=[only_python_filter]),
+    ) == (None, only_python_filter)
+
+
 def test_print_db_content(
     repo: SARepository, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -466,6 +655,42 @@ def test_clear_repository_content_smoke_in_memory() -> None:
         entities=[RepoModel.ENTITY],
         connection_string="sqlite:///:memory:",
     )
+
+
+def test_clear_repository_content_disposes_engine_for_default_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = sa.create_engine("sqlite:///:memory:")
+    dispose = Mock(wraps=engine.dispose)
+    monkeypatch.setattr(engine, "dispose", dispose)
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+
+    SARepository.clear_repository_content(
+        entities=[RepoModel.ENTITY], connection_string="sqlite:///:memory:"
+    )
+
+    dispose.assert_called_once_with()
+
+
+def test_clear_repository_content_disposes_engine_when_inspection_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+    monkeypatch.setattr(
+        repository_module, "inspect", Mock(side_effect=RuntimeError("inspect failed"))
+    )
+
+    with pytest.raises(RuntimeError, match="inspect failed"):
+        SARepository.clear_repository_content(
+            entities=[], connection_string="sqlite:///:memory:"
+        )
+
+    engine.dispose.assert_called_once_with()
 
 
 def test_clear_repository_content_drops_default_schema_tables(tmp_path: Path) -> None:
@@ -573,6 +798,25 @@ def test_test_connection() -> None:
     assert SARepository.test_connection("not-a-valid-sqlalchemy-url") is not None
 
 
+def test_test_connection_disposes_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The probe engine is disposed whether or not the connection succeeds."""
+    engine = Mock()
+    create_engine = Mock(return_value=engine)
+    monkeypatch.setattr(sa, "create_engine", create_engine)
+
+    assert SARepository.test_connection("mssql+pyodbc://db", timeout=30) is None
+    create_engine.assert_called_once_with(
+        "mssql+pyodbc://db", connect_args={"timeout": 30}
+    )
+    engine.connect.return_value.close.assert_called_once_with()
+    engine.dispose.assert_called_once_with()
+
+    error = RuntimeError("Login timeout expired")
+    engine.connect.side_effect = error
+    assert SARepository.test_connection("mssql+pyodbc://db") is error
+    assert engine.dispose.call_count == 2
+
+
 def test_clear_repository_content_drops_alembic_tracking_table(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -621,6 +865,130 @@ def test_clear_repository_content_alembic_schema_defaults_to_noop() -> None:
     )
 
 
+def _create_alembic_tracked_repo_engine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[str, sa.Engine]:
+    """A sqlite database with the repo_model table and an Alembic version stamp.
+
+    The ``alembic`` schema is an attached database, and every engine the
+    repository creates is this one, so the attachment is always there.
+    """
+    connection_string = f"sqlite:///{(tmp_path / 'main.sqlite').as_posix()}"
+    alembic_file = tmp_path / "alembic.sqlite"
+    engine = sa.create_engine(connection_string)
+
+    @sa.event.listens_for(engine, "connect")
+    def _attach_alembic_schema(dbapi_connection: Any, connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute(f"ATTACH DATABASE '{alembic_file.as_posix()}' AS alembic")
+        cursor.close()
+
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+    SARepoModel.__table__.create(engine)
+    with engine.begin() as conn:
+        conn.execute(
+            sa.text(
+                "CREATE TABLE alembic.alembic_version "
+                "(version_num VARCHAR(32) NOT NULL)"
+            )
+        )
+        conn.execute(sa.text("INSERT INTO alembic.alembic_version VALUES ('deadbeef')"))
+    return connection_string, engine
+
+
+def test_find_remaining_content_empty_after_clear(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    connection_string, _ = _create_alembic_tracked_repo_engine(tmp_path, monkeypatch)
+    kwargs = {
+        "entities": [RepoModel.ENTITY],
+        "connection_string": connection_string,
+        "alembic_schema": "alembic",
+    }
+
+    SARepository.clear_repository_content(**kwargs)
+
+    assert not SARepository.find_remaining_content(**kwargs)
+
+
+def test_find_remaining_content_reports_tables_left_by_denied_drops(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """clear_repository_content swallows a denied DROP; this is what catches it."""
+    connection_string, _ = _create_alembic_tracked_repo_engine(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        sa.Table, "drop", Mock(side_effect=RuntimeError("DROP TABLE permission denied"))
+    )
+    kwargs = {
+        "entities": [RepoModel.ENTITY],
+        "connection_string": connection_string,
+        "alembic_schema": "alembic",
+    }
+
+    SARepository.clear_repository_content(**kwargs)
+
+    assert SARepository.find_remaining_content(**kwargs) == [
+        "table repo_model still exists",
+        "table alembic.alembic_version still exists",
+    ]
+
+
+def test_find_remaining_content_reports_legacy_table_left_by_denied_drop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A table that is no longer an entity is checked too."""
+    connection_string, engine = _create_alembic_tracked_repo_engine(
+        tmp_path, monkeypatch
+    )
+    with engine.begin() as conn:
+        conn.execute(sa.text("CREATE TABLE legacy_model (id INTEGER PRIMARY KEY)"))
+    drop = sa.Table.drop
+
+    def _deny_legacy_drop(table: sa.Table, *args: Any, **kwargs: Any) -> None:
+        if table.name == "legacy_model":
+            raise RuntimeError("DROP TABLE permission denied")
+        drop(table, *args, **kwargs)
+
+    monkeypatch.setattr(sa.Table, "drop", _deny_legacy_drop)
+    kwargs = {
+        "entities": [RepoModel.ENTITY],
+        "connection_string": connection_string,
+        "alembic_schema": "alembic",
+    }
+
+    SARepository.clear_repository_content(**kwargs)
+
+    assert SARepository.find_remaining_content(**kwargs) == [
+        "table legacy_model still exists"
+    ]
+
+
+def test_find_remaining_content_disposes_engine_when_inspection_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+    inspector = Mock()
+    inspector.get_table_names.side_effect = RuntimeError("permission denied")
+    monkeypatch.setattr(repository_module, "inspect", Mock(return_value=inspector))
+
+    with pytest.raises(RuntimeError, match="permission denied"):
+        SARepository.find_remaining_content(
+            entities=[], connection_string="mssql+pyodbc://db", alembic_schema="alembic"
+        )
+
+    engine.dispose.assert_called_once_with()
+
+
+def test_find_remaining_content_requires_connection_string() -> None:
+    with pytest.raises(ValueError, match="connection_string is required"):
+        SARepository.find_remaining_content(entities=[])
+
+
 def test_check_schema_matches_reports_missing_table(tmp_path: Path) -> None:
     sqlite_file = tmp_path / "check_missing_table.sqlite"
     connection_string = f"sqlite:///{sqlite_file.as_posix()}"
@@ -630,6 +998,20 @@ def test_check_schema_matches_reports_missing_table(tmp_path: Path) -> None:
     )
 
     assert problems == ["table repo_model does not exist"]
+
+
+def test_check_schema_matches_requires_connection_string() -> None:
+    with pytest.raises(ValueError, match="connection_string is required"):
+        SARepository.check_schema_matches(entities=[])
+
+
+def test_create_sa_repository_rejects_nonexistent_sqlite_file(tmp_path: Path) -> None:
+    connection_string = f"sqlite:///{(tmp_path / 'missing.sqlite').as_posix()}"
+
+    with pytest.raises(ValueError, match="Unable to derive file"):
+        SARepository.create_sa_repository(
+            entities=[], connection_string=connection_string
+        )
 
 
 def test_check_schema_matches_empty_for_matching_schema(tmp_path: Path) -> None:

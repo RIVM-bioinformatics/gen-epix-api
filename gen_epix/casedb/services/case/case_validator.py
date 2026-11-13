@@ -321,14 +321,13 @@ class CaseValidator:
             AssertionError: If aligned result state is missing or a transformation
                 unexpectedly produces ``None`` from a non-``None`` value.
         """
-        msg_template = "{orig_value}"
         # @ABAC: use CompleteCaseType to loop over allowed Cols
         for col in self.complete_case_type.cols.values():
             col_id = col.id
             assert col_id is not None
             ref_col = self.complete_case_type.ref_cols[col.ref_col_id]
             transform_fn, code, msg_template = self._get_individual_value_transformer(
-                ref_col, msg_template
+                ref_col
             )
             self._transform_column_values(
                 col_id,
@@ -341,9 +340,19 @@ class CaseValidator:
             )
 
     def _get_individual_value_transformer(
-        self, ref_col: model.RefCol, msg_template: str
+        self, ref_col: model.RefCol
     ) -> tuple[Callable, str, str]:
-        """Select the value transformer and issue metadata for a reference column."""
+        """Select the value transformer and issue metadata for a reference column.
+
+        Args:
+            ref_col: The reference column for which to select the transformer.
+
+        Returns:
+            A tuple containing the transformation function, issue code, and message template.
+        """
+        msg_template = (
+            "{orig_value} is not a valid " + ref_col.col_type.value + " value"
+        )
         if ref_col.col_type == ColType.REGULAR_LANGUAGE:
             assert ref_col.id is not None
             pattern = self.regex_patterns[ref_col.id]
@@ -370,9 +379,6 @@ class CaseValidator:
         elif ref_col.col_type in ColTypeSet.TIME.value:
             transform_fn = self.TIME_MATCHERS[ref_col.col_type]
             code = "e4f1a2b9"
-            msg_template = (
-                "{orig_value} is not a valid " + ref_col.col_type.value + " value"
-            )
         elif ref_col.col_type in ColTypeSet.NUMBER.value:
             n_decimals = self.N_DECIMALS[ref_col.col_type]
             code = "f5a2b3c0"
@@ -412,10 +418,10 @@ class CaseValidator:
                 continue
             # Update value
             self._transform_individual_value(
-                col_id,
-                content[col_id],
+                content,
                 updated_content,
                 data_issues,
+                col_id,
                 transform_fn,
                 code,
                 msg_template,
@@ -423,15 +429,16 @@ class CaseValidator:
 
     @staticmethod
     def _transform_individual_value(
-        col_id: UUID,
-        orig_value: str | None,
+        content: dict[UUID, str | None],
         updated_content: dict[UUID, str | None],
         data_issues: list[model.CaseDataIssue],
+        col_id: UUID,
         transform_fn: Callable,
         code: str,
         msg_template: str,
     ) -> None:
         """Transform one value and append its issue, if any."""
+        orig_value = content[col_id]
         new_value: str | None | NoReturn = transform_fn(orig_value)  # type: ignore[assignment]
         if new_value == NoReturn:
             # No mapping found
@@ -459,11 +466,7 @@ class CaseValidator:
                     message="Value transformed",
                 )
             )
-            if new_value is None:
-                raise AssertionError(
-                    f"Unexpected None value after transformation of value {orig_value} for Col {col_id}"
-                )
-                # Add to updated_content
+        # Add to updated_content
         updated_content[col_id] = new_value
 
     def transform_value_pairs(
@@ -590,7 +593,7 @@ class CaseValidator:
                 iso_datetime_value: str | None = updated_content.get(col_id)
                 if iso_datetime_value is None:
                     continue
-                if not re.match(ISODATE_PATTERN, iso_datetime_value):
+                if ISODATE_PATTERN.fullmatch(iso_datetime_value) is None:
                     raise AssertionError(
                         f"Unexpected non-ISO datetime value {iso_datetime_value} for case date calculation"
                     )
@@ -1019,26 +1022,22 @@ class CaseValidator:
         """
         # Add derived value to updated_content
         orig_updated_value = updated_content.get(col_pair[1])
-        if new_value == orig_updated_value:
+        if new_value == orig_updated_value and col_pair[1] in updated_content:
             # Same value, no need to log data issue
             return
         updated_content[col_pair[1]] = new_value
 
         # Log data issue in validation report
-        if (
-            col_pair[1] in updated_content
-            and updated_content[col_pair[1]] is not None
-            and updated_content[col_pair[1]] != new_value
-        ):
+        if col_pair[1] in updated_content and orig_updated_value is not None:
             # Overwrite existing different value
             data_issues.append(
                 model.CaseDataIssue(
                     col_id=col_pair[1],
-                    original_value=content[col_pair[1]],
+                    original_value=content.get(col_pair[1]),
                     updated_value=new_value,
                     data_issue_type=DataIssueType.CONFLICT,
                     code=code,
-                    message=f"Value overwritten based on derived value from '{content[col_pair[0]]}'",
+                    message=f"Value derived from '{content.get(col_pair[0])}' in more than one way ('{orig_updated_value}', '{new_value}')",
                 )
             )
         else:

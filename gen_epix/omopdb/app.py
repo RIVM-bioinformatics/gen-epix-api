@@ -20,8 +20,8 @@ SCHEMA_KWARGS = {
         "email": "ids-bioinformatics@rivm.nl",
     },
     "license_info": {
-        "name": "License to be confirmed",
-        "identifier": "Apache-2.0",
+        "name": "European Union Public Licence Version 1.2",
+        "identifier": "EUPL-1.2",
     },
 }
 
@@ -44,5 +44,5 @@ FAST_API = create_fast_api(
     },
 )
 
-# TODO: app variable added for backwards compatibility with startup code that imports "app". Remove once that code is updated as well.
+# Keep the `app` alias while startup code still imports it.
 app = FAST_API

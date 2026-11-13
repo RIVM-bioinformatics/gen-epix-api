@@ -7,9 +7,9 @@ class DictUnitOfWork(BaseUnitOfWork):
     """Encapsulates a unit of work for the in-memory dictionary repository."""
 
     def commit(self) -> None:
-        """Commit the requested value."""
+        """Keep changes already applied to the dictionary repository."""
         pass
 
     def rollback(self) -> None:
-        """Rollback the requested value."""
+        """Leave immediately applied dictionary changes unchanged."""
         pass

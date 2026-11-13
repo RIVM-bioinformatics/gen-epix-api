@@ -17,7 +17,7 @@ from uuid import UUID
 from fastapi import APIRouter, FastAPI, status
 from fastapi.concurrency import run_in_threadpool
 
-from gen_epix.fastapp import exc, model
+from gen_epix.fastapp import exc, literal, model
 from gen_epix.fastapp.api import exc as api_exc
 from gen_epix.fastapp.api.crud_endpoint_set import CrudEndpointSet
 from gen_epix.fastapp.app import App
@@ -68,10 +68,10 @@ class CrudEndpointGenerator:
     enforced by the command policies and handlers invoked through ``App.handle``.
     """
 
-    DEFAULT_BATCH_ROUTE_SUFFIX = "/batch"
-    DEFAULT_QUERY_ROUTE_SUFFIX = "/query"
-    DEFAULT_IDS_ROUTE_SUFFIX = "/ids"
-    DEFAULT_EXISTS_ROUTE_SUFFIX = "/exists"
+    DEFAULT_BATCH_ROUTE_SUFFIX = literal.DEFAULT_BATCH_ROUTE_SUFFIX
+    DEFAULT_QUERY_ROUTE_SUFFIX = literal.DEFAULT_QUERY_ROUTE_SUFFIX
+    DEFAULT_IDS_ROUTE_SUFFIX = literal.DEFAULT_IDS_ROUTE_SUFFIX
+    DEFAULT_EXISTS_ROUTE_SUFFIX = literal.DEFAULT_EXISTS_ROUTE_SUFFIX
 
     CRUD_OPERATION_TO_ENDPOINT_TYPE: dict[CrudOperation, CrudEndpointType] = {
         CrudOperation.READ_ALL: CrudEndpointType.GET_ALL,
@@ -767,7 +767,7 @@ class CrudEndpointGenerator:
                     objs=(
                         update_objs
                         if route.model_class is create_api_model_class
-                        else [route.model_class.to_model(x) for x in update_objs]  # type: ignore[attr-defined]
+                        else [create_api_model_class.to_model(x) for x in update_objs]  # type: ignore[attr-defined]
                     ),
                     return_id=route.put_returns_id,
                 )
@@ -855,7 +855,7 @@ class CrudEndpointGenerator:
             raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(user: user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore[valid-type]
+        async def endpoint_function(user: user_dependency) -> Any:  # type: ignore[valid-type]
             """Endpoint function."""
             obj_ids = None
             try:
@@ -863,8 +863,6 @@ class CrudEndpointGenerator:
                     user=user,
                     operation=CrudOperation.DELETE_ALL,
                     return_id=route.delete_all_returns_id,
-                    limit=limit or 0,
-                    offset=offset or 0,
                 )
                 retval = await run_in_threadpool(route.app.handle, cmd)
                 return retval
@@ -926,6 +924,7 @@ class CrudEndpointGenerator:
                     ),
                     request_ids=invalid_obj_ids,
                 )
+                raise NotImplementedError(_EXCEPTION_HANDLER_MUST_RAISE)
             try:
                 cmd = route.crud_command_class(
                     user=user,
@@ -980,11 +979,11 @@ class CrudEndpointGenerator:
             include_extras=True,
         )
         if not operation_id:
-            tokens = endpoint.split("/")
+            tokens = endpoint.strip("/").split("/")
             if tokens[-1] == "{object_id}" or method.value.upper() == "POST":
-                operation_id = tokens[1] + "__" + method.value.lower() + "_one"
+                operation_id = tokens[0] + "__" + method.value.lower() + "_one"
             else:
-                operation_id = tokens[1] + "__" + method.value.lower() + "_all"
+                operation_id = tokens[0] + "__" + method.value.lower() + "_all"
 
         fast_api.add_api_route(
             "/" + endpoint,

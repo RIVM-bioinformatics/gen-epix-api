@@ -124,4 +124,7 @@ class BaseAbacService(BaseService[BaseAbacRepository]):
         Raises:
             NotImplementedError: Always; concrete services implement the update.
         """
+        # TODO: LSP-3893 A concrete subclass missing this override still registers
+        # the command, which then raises NotImplementedError; clarify whether this
+        # hook must be abstract or conditionally registered.
         raise NotImplementedError()

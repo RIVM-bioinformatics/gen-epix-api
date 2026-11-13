@@ -21,8 +21,6 @@ def seq_service_crud_seq(
     Raises:
         AssertionError: The command operation is unsupported.
     """
-    user_id = cmd.user.id if cmd.user else None
-    seqs: list[model.Seq] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
         # TODO: Specific logic for create operation to be added
         pass
@@ -40,6 +38,9 @@ def seq_service_crud_seq(
         pass
 
     else:
+        # TODO: LSP-3893 SeqCrudCommand accepts UPSERT_ONE and UPSERT_SOME, but this
+        # dispatcher rejects them before generic CRUD handles them as writes; confirm
+        # whether SeqDB intentionally narrows the shared CRUD operation contract.
         raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 
     return self.crud(cmd)  # type: ignore[return-value]

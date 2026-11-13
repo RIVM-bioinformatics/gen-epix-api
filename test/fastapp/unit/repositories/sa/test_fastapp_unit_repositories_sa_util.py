@@ -4,7 +4,7 @@ from enum import Enum
 
 import pytest
 import sqlalchemy as sa
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, JsonValue
 
 from gen_epix.fastapp.repositories.sa.util import create_sa_type_from_field_info
 
@@ -29,6 +29,7 @@ class ColumnModel(BaseModel):
     count: int
     status: Status
     payload: Payload
+    report: JsonValue | None = None
 
 
 def test_create_sa_type_maps_primitives_enums_and_models() -> None:
@@ -45,6 +46,15 @@ def test_create_sa_type_maps_primitives_enums_and_models() -> None:
         create_sa_type_from_field_info(ColumnModel.model_fields["payload"], Payload),
         sa.JSON,
     )
+
+
+def test_create_sa_type_maps_optional_json_value_to_json() -> None:
+    """Map an optional JsonValue field, a type alias rather than a class, to JSON."""
+    sa_type = create_sa_type_from_field_info(
+        ColumnModel.model_fields["report"], JsonValue | None
+    )
+
+    assert isinstance(sa_type, sa.JSON)
 
 
 def test_create_sa_type_uses_bounded_or_unbounded_text() -> None:

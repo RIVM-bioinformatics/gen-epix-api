@@ -8,6 +8,9 @@ from gen_epix.commondb.policies import (
 )
 
 
+# TODO: LSP-3893 OmopDB self-result EXISTS_ONE/EXISTS_SOME reads can reach the
+# inherited filter with a bool retval, which it iterates and raises TypeError;
+# clarify whether unauthorized existence should return False or be rejected.
 class ReadSelfResultsOnlyPolicy(CommonReadSelfResultsOnlyPolicy):
     """Encapsulates restrictions on shared self-result reads according to OmopDB command metadata."""
 

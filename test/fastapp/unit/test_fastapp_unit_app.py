@@ -448,3 +448,9 @@ def test_get_feature_flag_uses_default_when_string_key_is_missing() -> None:
 
     assert app.get_feature_flag("missing") is False
     assert app.get_feature_flag("missing", default=True) is True
+
+
+def test_destructor_handles_partial_initialization() -> None:
+    app = object.__new__(App)
+
+    app.__del__()

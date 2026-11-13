@@ -19,6 +19,32 @@ Developer command (run.py)
 
 See [01-Getting-Started](./01-Getting-Started.md) for initial setup and quickstart.
 
+### Local Docker stacks
+
+Choose one standalone Compose stack and run it from the repository root:
+
+| Compose file | Dataset and persistence | Authentication |
+| --- | --- | --- |
+| `docker-compose.yml` | `DICT_EMPTY`: initially empty, in-memory repositories; data is lost when the applications stop. | `NONE`: local root-user fallback without an identity provider. |
+| `docker-compose.sql.yml` | `SA_SQL`: SQL Server databases with migrations applied; data persists in Docker volumes. | `NONE`: local root-user fallback without an identity provider. |
+| `docker-compose.sql.idp.yml` | `SA_SQL`: SQL Server databases with migrations applied; data persists in Docker volumes. | `MOCK`: a local OIDC provider issues JWTs for the registered `mock` client, mapped to the root user. |
+
+For example:
+
+```bash
+docker compose -f docker-compose.sql.idp.yml up --build --wait
+docker compose -f docker-compose.sql.idp.yml down
+```
+
+The SQL stacks create schemas; they do not load a demo dataset. All three stacks
+use this repository's application startup and require no sibling checkout.
+CASEDB communicates with SEQDB over HTTP; the OIDC stack authenticates that
+connection with the registered client. These are local development stacks with
+root access. See [Configuration & Runtime](./05-Configuration-and-Runtime.md) for
+repository modes and [Security](./03-Security.md) for authentication behavior.
+The SQL Compose files document client settings and startup commands. Avoid
+`down -v` when retaining database contents: it deletes the stack's volumes.
+
 ---
 
 ## 2. Running Tests
@@ -199,6 +225,28 @@ mypy, and writes output to `test/output/`. (Source: `run.py`; Source:
 
 (Source: `requirements.txt#L3-L35`; Source: `dev-requirements.txt#L1-L25`)
 
+### Installing as a package: client versus server
+
+`pyproject.toml` splits the runtime dependencies in two, for projects that install
+`gen-epix` as a package instead of from `requirements.txt`:
+
+| Install | Contents | Use |
+|---------|----------|-----|
+| `pip install gen-epix` | Base `dependencies` | Domain models, commands and the remote clients (`CasedbClient`, `SeqdbClient`, `OmopdbClient`, `CommondbClient`) |
+| `pip install "gen-epix[server]"` | Base plus the `server` extra: FastAPI, Starlette, gunicorn, slowapi, python-multipart, SQLAlchemy, Alembic, cryptography, oauthlib, NumPy, SciPy, Biopython, cachetools, tomli-w, fire | Running an application, composing one in-process (`AppComposer`), SQLAlchemy repositories, the services and their calculations, `run.py` |
+
+`requirements.txt` equals the base dependencies plus the `server` extra; a test
+keeps them in sync. (Source: `test/general/code/test_general_dependency_list.py`)
+
+The client side stays importable without the `server` extra because packages that
+re-export server-side names resolve them on first access (`gen_epix/_lazy.py`),
+and because the request and response models live in `*_schema.py` modules apart
+from the routes. When adding an export, keep anything that imports a `server`
+package out of the import chain of the remote clients;
+`test/general/code/test_general_client_import_isolation.py` fails otherwise. The
+`client-install` CI job also runs that test in an installation without the extra,
+and fails if one of the extra's packages is installed there.
+
 ---
 
 ## 5. Graphify Setup For Coding Agents
@@ -314,3 +362,123 @@ Operator Note: `CASEDB` env setup also sets `SEQDB` env variables, so multi-app 
 - `gen_epix/commondb/env.py#L185-L197`
 - `requirements.txt#L3-L35`
 - `dev-requirements.txt#L1-L25`
+
+## Startup benchmark
+
+The standard-library harness measures a fresh interpreter through the first
+completed `HTTP 200 GET /v1/health` from the launched instance. Select `casedb`,
+`seqdb`, or `omopdb` and explicitly supply both existing development modes:
+
+```bash
+# Measure 30 normal application starts.
+.venv/bin/python -m scripts.startup_benchmark benchmark casedb \
+  --idp-mode IDPS \
+  --repository-mode DICT_DEMO \
+  --runs 30 \
+  --output test/output/startup_benchmark/casedb-benchmark
+
+# Collect import and startup phase diagnostics: 30 runs of each kind.
+.venv/bin/python -m scripts.startup_benchmark diagnose casedb \
+  --idp-mode IDPS \
+  --repository-mode DICT_DEMO \
+  --kind both \
+  --runs 30 \
+  --output test/output/startup_benchmark/casedb-diagnostics
+
+# Combine the results in one offline HTML report.
+.venv/bin/python -m scripts.startup_benchmark report \
+  --input test/output/startup_benchmark/casedb-benchmark/results.json \
+  --diagnostics test/output/startup_benchmark/casedb-diagnostics/diagnostics.json \
+  --output test/output/startup_benchmark/casedb-report.html
+```
+
+The positional-input report still writes Markdown, SVG, and JSON to a directory.
+The `--input` form writes one offline HTML dashboard with embedded Plotly charts,
+run filters, fixed overall statistics, and searchable import rankings. Install
+its Jinja2/Plotly dependencies from `dev-requirements.txt`, then open the HTML
+directly in a browser. Reporting reads saved JSON without starting applications
+and does not require Linux/WSL. Diagnostics are optional and must match the saved
+benchmark evidence. See the [dashboard usage guide](../scripts/startup_benchmark/README.md#offline-html-dashboard).
+
+`NONE` and `DICT_EMPTY` are local examples, not a reference deployment. The
+harness requires Python 3.14+ and Linux/WSL. It uses the invoking interpreter,
+existing fixed ports (8000, 8001, 8002), `run.py api ... --noreload`, and
+`WEB_CONCURRENCY=1`. It never starts external services, resets repositories,
+flushes caches, or stops unrelated listeners. Fixed ports prevent concurrent
+runs of the same app. Production application code and `Run.api` are unchanged.
+
+Benchmark defaults are 30 measured runs, zero warmups, a 60-second readiness
+limit, a 0.05-second polling interval, a 0.25-second request timeout bounded by
+the deadline, and a one-second pause after cleanup. Override these with
+`--runs`, `--warmups`, `--readiness-timeout`, `--poll-interval`,
+`--request-timeout`, and `--settle-seconds`. Warmups remain visible and are
+excluded from statistics. Diagnostics default to one run per selected kind;
+`--kind imports|phases|both` controls independent diagnostic launches.
+
+Reports are written to unique directories beneath ignored
+`test/output/startup_benchmark/`, or a new `--output` directory. Each attempt is
+persisted atomically before the next launch. JSON retains failures, cleanup,
+log paths, metadata, configuration snapshots, and diagnostic data. Markdown
+and standalone SVG reports can be regenerated offline. Attached diagnostics
+must match application, commit, and non-secret configuration fingerprints.
+Raw process logs can contain ordinary application output; use the redacted
+JSON configuration when sharing configuration details.
+
+Every run merges a fresh `X-Startup-Benchmark-Instance` nonce into the existing
+`<APP>_API__HTTP_HEADER__GENERAL` dictionary override. Caller headers are
+preserved. Readiness requires status 200, the expected nonce, and a live child.
+The configuration checker currently warns that this extra header is an
+unrecognized key even though middleware reads it. `debug=True` disables that
+middleware and is rejected without changing the caller's configuration.
+Configuration-only subprocesses capture preflight and post-measurement
+snapshots without constructing repositories or serving an app. Their imports
+can affect ordinary system caches; neither subprocess enters a measured timer.
+Process-specific addresses in callable representations are normalized for
+configuration comparison. Settings/logging-file selection follows the existing
+launcher, which rebuilds `SETTINGS_FILES` and `LOG_CONFIG_FILE`.
+
+TLS follows the launcher's certificate files. An incomplete certificate pair
+is rejected. Verification is enabled by default; use `--ca-file` for a custom
+CA or explicit, recorded `--insecure` for a local experiment. Requests bypass
+proxies and never follow redirects. Inherited import profiling and subprocess
+coverage activation are refused for normal measurements. Cleanup sends SIGTERM
+to the process group, waits up to ten seconds, escalates to SIGKILL, and verifies
+termination before another launch. Occupied ports, identity conflicts, failed
+cleanup, configuration changes, and interruption abort remaining attempts.
+Ordinary startup failures remain recorded and subsequent runs continue.
+
+Statistics describe **successful measured runs**. p90 and p95 use nearest rank:
+the sorted sample at `ceil(p × n)`. The signed margin is `15.0 − p95` seconds;
+threshold exceedances count successful samples strictly above 15 seconds.
+`--check-target` opts into a CI gate that requires at least 30 successful
+measurements, a complete failure-free series, valid cleanup/configuration, and
+`p95 < 15.0`. Smaller samples are exploratory. Exit statuses are 0 for completed
+commands, 1 for startup failures or a failed requested gate, 2 for invalid
+options/configuration, and 130 for interruption; partial reports retain all
+attempted and unattempted runs.
+
+The experiment is **fresh-process startup with ordinary system caches**.
+Filesystem, shared libraries, bytecode, and external databases can retain
+caches; startup can read data, acquire connections, create root users, or check
+SQLite schemas. Thirty samples give a coarse empirical p95, not strong
+confidence about a population p95. Fully cold experiments require externally
+controlled fresh environments. Health proves endpoint service by this instance,
+not database, IDP, or business-operation readiness. Polling and request overhead
+are included without mathematical correction.
+
+Import diagnostics retain raw `-X importtime` stderr and repeated module
+occurrences, reconstruct observed postorder execution chains, and flag malformed
+or incomplete trees. Cumulative subtree times must never be summed. Threaded
+imports can disrupt the trace. Phase diagnostics install signature-preserving
+sync/async wrappers in a separate child before running the existing launcher.
+Preparation changes import order and is explicitly recorded. Inclusive spans,
+derived synchronous exclusive times, overlapping spans, gaps, and incomplete
+spans describe that instrumented run; they do not partition normal startup.
+Engine creation alone does not prove a database connection. Keep the existing
+in-process casedb pyinstrument/cProfile startup tooling separate.
+
+Harness tests live under `test/general/unit/startup_benchmark/` and
+`test/general/integration/startup_benchmark/`. Both are registered in the curated
+suite and VS Code; lifecycle tests use controlled standard-library HTTP children
+and do not require external databases. Adding an application requires a typed
+descriptor in `scripts/startup_benchmark/models.py` and launcher contract coverage.

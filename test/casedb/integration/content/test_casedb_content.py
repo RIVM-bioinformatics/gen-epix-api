@@ -22,6 +22,7 @@ from gen_epix.fastapp import CrudOperation, PermissionType, exc
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import CompositeFilter, StringSetFilter
 from gen_epix.filter.enum import LogicalOperator
+from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
@@ -534,12 +535,78 @@ class TestContent:
                 # profiler = pyinstrument.Profiler(async_mode="enabled")
                 # profiler.start()
 
-                seq_distances: list[seqdb_model.SeqDistance] = app.handle(
+                candidate_distance_case_ids = [
+                    case.id for case in cases if case.content.get(dist_col.id)
+                ]
+
+                candidate_distance_case_id_set = set(candidate_distance_case_ids)
+                case_profile_ids = {
+                    case.id: UUID(profile_id)
+                    for case in cases
+                    if case.id in candidate_distance_case_id_set
+                    and (profile_id := case.content.get(dist_col.id))
+                }
+                if not case_profile_ids:
+                    continue
+                dist_ref_col = complete_case_type.ref_cols[dist_col.ref_col_id]
+                distance_protocol: model.GeneticDistanceProtocol = app.handle(
+                    command.GeneticDistanceProtocolCrudCommand(
+                        user=org_user,
+                        operation=CrudOperation.READ_ONE,
+                        obj_ids=dist_ref_col.genetic_distance_protocol_id,
+                    )
+                )
+                stored_distances: list[seqdb_model.SeqDistance] = app.handle(
+                    seqdb_command.RetrieveSeqDistancesBySeqProfilesCommand(
+                        user=org_user,
+                        seq_profile_ids=list(set(case_profile_ids.values())),
+                        protocol_id=distance_protocol.seqdb_seq_distance_protocol_id,
+                    )
+                )
+                stored_profile_ids = {x.seq_profile_id for x in stored_distances}
+                requested_distance_case_ids = [
+                    case_id
+                    for case_id in candidate_distance_case_ids
+                    if case_profile_ids[case_id] in stored_profile_ids
+                ]
+                if not requested_distance_case_ids:
+                    continue
+                missing_distance_content_case_ids = [
+                    case_id
+                    for case_id in case_ids
+                    if case_id not in candidate_distance_case_id_set
+                ]
+                if missing_distance_content_case_ids:
+                    filtered_content_case_ids = [
+                        *requested_distance_case_ids,
+                        *missing_distance_content_case_ids,
+                    ]
+                    filtered_content_distances: list[model.CaseSeqDistance] = (
+                        app.handle(
+                            command.RetrieveSeqDistancesByCasesCommand(
+                                user=org_user,
+                                case_type_id=complete_case_type.id,
+                                genetic_distance_col_id=dist_col.id,
+                                case_ids=filtered_content_case_ids,
+                                filter_other_cases=True,
+                            )
+                        )
+                    )
+                    distances_by_case_id = {
+                        distance.id: distance for distance in filtered_content_distances
+                    }
+                    assert set(distances_by_case_id) == set(filtered_content_case_ids)
+                    assert all(
+                        distances_by_case_id[case_id].distances == {}
+                        for case_id in missing_distance_content_case_ids
+                    )
+
+                seq_distances: list[model.CaseSeqDistance] = app.handle(
                     command.RetrieveSeqDistancesByCasesCommand(
-                        user=root_user,
+                        user=org_user,
                         case_type_id=complete_case_type.id,
                         genetic_distance_col_id=dist_col.id,
-                        case_ids=case_ids,
+                        case_ids=requested_distance_case_ids,
                         filter_other_cases=True,
                     )
                 )
@@ -550,29 +617,22 @@ class TestContent:
                 #     f.write("".join(profiler.output_text()))
 
                 assert all(
-                    isinstance(seq_distance, seqdb_model.SeqDistance)
+                    isinstance(seq_distance, model.CaseSeqDistance)
                     for seq_distance in seq_distances
                 )
                 distance_case_ids = [seq_distance.id for seq_distance in seq_distances]
                 assert len(distance_case_ids) == len(set(distance_case_ids))
                 assert set(distance_case_ids).issubset(set(case_ids))
-                profile_ids = {
-                    UUID(case.content[dist_col.id])
-                    for case in cases
-                    if case.content.get(dist_col.id)
-                }
-                assert all(
-                    profile_id in profile_ids
-                    for seq_distance in seq_distances
-                    for profile_id in seq_distance.get_profile_distance_map()
-                )
                 if seq_distances:
                     found_some_seq_distances = True
-                if first_seq_distance_case_data is None and len(case_ids) >= 2:
+                if (
+                    first_seq_distance_case_data is None
+                    and len(requested_distance_case_ids) >= 2
+                ):
                     first_seq_distance_case_data = (
                         complete_case_type,
                         dist_col,
-                        case_ids,
+                        requested_distance_case_ids,
                     )
 
             if found_similar_cases:

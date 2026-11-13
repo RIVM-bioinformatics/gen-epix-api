@@ -14,7 +14,6 @@ from typing import Any, ClassVar, Literal
 
 import jwt
 
-from gen_epix import fastapp
 from gen_epix.commondb import api
 from gen_epix.commondb.domain import command, enum, model, util
 from gen_epix.fastapp import Client, HttpProtocol, exc
@@ -23,8 +22,7 @@ from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, HttpMethod, OAuthFlow
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command, Permission
-from gen_epix.fastapp.services.auth.model import OidcServerCfg
-from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
+from gen_epix.fastapp.services.auth import OauthTokenClient, OidcServerCfg
 
 # Decode options for reading the ``exp`` claim of a token without verifying it
 _UNVERIFIED_OPTIONS = {"verify_signature": False}
@@ -51,6 +49,7 @@ class CommondbClient(Client):
             "/data_collection_sets"
         ),
         command.RetrieveOwnPermissionsCommand: "/user_me/permissions",
+        command.RetrieveOwnUserCommand: "/user_me",
         command.AnonymizeUserCommand: "/user",
         command.UpdateUserCommand: "/update_user",
         command.UpdateUserOwnOrganizationCommand: "/update_user_own_organization",
@@ -130,7 +129,9 @@ class CommondbClient(Client):
             oauth_flow = OAuthFlow(oauth_flow)
         default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         oauth_token_refresh_margin = (
-            oauth_token_refresh_margin or self.DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN
+            self.DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN
+            if oauth_token_refresh_margin is None
+            else oauth_token_refresh_margin
         )
 
         super().__init__(
@@ -178,6 +179,7 @@ class CommondbClient(Client):
         self.register_handler(
             command.RetrieveOwnPermissionsCommand, self.retrieve_own_permissions
         )
+        self.register_handler(command.RetrieveOwnUserCommand, self.retrieve_own_user)
         self.register_handler(command.AnonymizeUserCommand, self.anonymize_user)
         self.register_handler(command.UpdateUserCommand, self.update_user)
         self.register_handler(
@@ -203,7 +205,7 @@ class CommondbClient(Client):
         self.register_handler(command.RetrieveOutagesCommand, self.retrieve_outages)
 
         # Initialize IDP client if needed
-        oauth_idp_client: OauthIdpClient | None = None
+        oauth_idp_client: OauthTokenClient | None = None
         if auth_protocol == AuthProtocol.NONE:
             pass
         elif auth_protocol == AuthProtocol.OAUTH2:
@@ -221,7 +223,7 @@ class CommondbClient(Client):
                 raise exc.InitializationServiceError(
                     "683cf2a0", "OAuth scope must be provided for OAUTH2 auth protocol"
                 )
-            oauth_idp_client = OauthIdpClient(
+            oauth_idp_client = OauthTokenClient(
                 server_cfg=OidcServerCfg(
                     name="",
                     label="",
@@ -377,7 +379,10 @@ class CommondbClient(Client):
         try:
             return super()._handle_once(cmd)
         except exc.ServiceException as e:
-            if fastapp.RetryPolicy.get_remote_http_status(e) != 401:
+            if not (
+                isinstance(e, exc.RemoteServiceError)
+                and e.get_http_status_code() == 401
+            ):
                 raise
         self._oauth_header_cache = None
         return super()._handle_once(cmd)
@@ -456,6 +461,11 @@ class CommondbClient(Client):
         """Retrieve the set of permissions for the authenticated user."""
         response_body: list[dict[str, Any]] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
         return {Permission(**x) for x in response_body}
+
+    def retrieve_own_user(self, cmd: command.RetrieveOwnUserCommand) -> model.User:
+        """Retrieve the user the client is authenticated as."""
+        response_body: dict[str, Any] = self.request(cmd, HttpMethod.GET)  # type: ignore[assignment]
+        return model.User(**response_body)
 
     def anonymize_user(self, cmd: command.AnonymizeUserCommand) -> None:
         """Anonymize a user's personal data."""

@@ -47,6 +47,8 @@ class BatchUploader:
         self.upload_batch_command_class = upload_batch_command_class
         self.service = service
         self.stored_model_field_props = stored_model_field_props
+        # Stored objects read during verification, reused by update_objects
+        self._stored_objs: dict[type[Model], dict[UUID, Model]] = {}
 
         # Derive some constants for convenience
         self.cmd_batch_field_name = (
@@ -64,10 +66,12 @@ class BatchUploader:
         self.parent_for_upload_class = (
             self.batch_for_upload_class.PARENT_FOR_UPLOAD_CLASS
         )
-        self.parent_identifier_class: type[BaseIdentifier] = self.parent_for_upload_class.IDENTIFIER_CLASS  # type: ignore[assignment]
+        self.parent_identifier_class: type[BaseIdentifier] = (
+            self.parent_for_upload_class.IDENTIFIER_CLASS
+        )
         self.parent_class = self.parent_for_upload_class.PARENT_CLASS
         self.parent_result_class = self.batch_upload_result_class.PARENT_RESULT_CLASS
-        self.parent_id_field_name = self.parent_class.ENTITY.get_id_field_name()  # type: ignore[union-attr]
+        self.parent_id_field_name = self.parent_class.ENTITY.get_id_field_name()
         self.child_for_upload_class_map = (
             self.parent_for_upload_class.CHILD_FOR_UPLOAD_CLASS_MAP
         )
@@ -86,9 +90,9 @@ class BatchUploader:
             self.parent_for_upload_class.CHILD_PARENT_ID_FIELD_NAME_MAP
         )
         self.child_id_field_name_map = {
-            x: x.ENTITY.get_id_field_name() for x in self.child_children_field_name_map  # type: ignore[union-attr]
+            x: x.ENTITY.get_id_field_name() for x in self.child_children_field_name_map
         }
-        self.child_identifier_class_map: dict[type[Model], type[BaseIdentifier]] = {  # type: ignore[assignment]
+        self.child_identifier_class_map: dict[type[Model], type[BaseIdentifier]] = {
             x: y.IDENTIFIER_CLASS
             for x, y in self.child_for_upload_class_map.items()
             if issubclass(y, IdentifiersMixin)
@@ -148,6 +152,7 @@ class BatchUploader:
         self.verify_user_rights(cmd)
 
         # Initialize the upload result
+        self._stored_objs = {}
         batch_result = self.init_batch_upload_result(cmd)
         batch_result.add_info(
             code="4f9046fe",
@@ -165,15 +170,15 @@ class BatchUploader:
                 code="a3f7e9d2",
                 message="Verification ended",
             )
+            # Propagate before deciding on a failed verification: that decision
+            # needs each parent's final status.
+            for parent_result in batch_result.get_parent_results():
+                parent_result.propagate_child_failures()
+                self._skip_descendants_of_skipped_new_objects(parent_result)
             if not success:
                 # Record the batch-level failure regardless of verify_only,
                 # so that a dry run reports the same outcome as a real run.
-                batch_result.add_error(
-                    code="02095f22",
-                    message="Verification found errors, upload will not proceed",
-                )
-            for parent_result in batch_result.get_parent_results():
-                parent_result.propagate_child_failures()
+                success = self._handle_verification_failure(cmd, batch_result)
 
             if cmd.verify_only:
                 # Stop here if only verification was requested; mark all
@@ -228,6 +233,90 @@ class BatchUploader:
         batch_result.resolve_status()
 
         return batch_result
+
+    def _handle_verification_failure(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        batch_result: BaseBatchUploadResult,
+    ) -> bool:
+        """Record a failed verification and decide whether the other parents go ahead.
+
+        The other parents are uploaded only when the command allows it
+        (``fail_batch_on_item_error=False``) and every failure can be traced to a
+        parent. An error on the batch itself (e.g. SEQDB's missing new alleles)
+        stops the batch, as does a failed verification without a failed parent.
+
+        A parent counts as having work left when it did not fail and anything in
+        its result tree is still PENDING: a parent that is itself SKIPPED (e.g.
+        ``on_exists=SKIP``, or not provided) can still have children to write.
+
+        Args:
+            cmd: Upload command carrying the batch and its options.
+            batch_result: Batch result after verification and failure propagation.
+
+        Returns:
+            True if the results that are still PENDING may be uploaded.
+        """
+        has_batch_error = batch_result.has_errors()
+        parent_results = batch_result.get_parent_results()
+        n_failed = sum(1 for x in parent_results if x.status == EtlStatus.FAILED)
+        n_pending = sum(
+            1
+            for x in parent_results
+            if x.status != EtlStatus.FAILED
+            and x.get_status_count(include_self=True)[EtlStatus.PENDING] > 0
+        )
+        if (
+            cmd.fail_batch_on_item_error
+            or has_batch_error
+            or n_failed == 0
+            or n_pending == 0
+        ):
+            batch_result.add_error(
+                code="02095f22",
+                message="Verification found errors, upload will not proceed",
+            )
+            return False
+        batch_result.add_error(
+            code="c0f70912",
+            message=(
+                f"Verification failed for {n_failed} item(s); "
+                f"the other {n_pending} item(s) are eligible for upload"
+            ),
+        )
+        for parent_result in parent_results:
+            if parent_result.status == EtlStatus.FAILED:
+                # Its children and identifiers must not be written either
+                parent_result.convert_status(EtlStatus.PENDING, EtlStatus.SKIPPED)
+        return True
+
+    @staticmethod
+    def _skip_descendants_of_skipped_new_objects(
+        parent_result: model.ParentUploadResult,
+    ) -> None:
+        """Skip the children and identifiers of a new object that is not created.
+
+        A parent or child that does not exist and is left out by ``on_new=SKIP``
+        is never stored, so nothing that links to it can be written either. An
+        existing object left out by ``on_exists=SKIP``, or a parent that was not
+        provided, keeps its PENDING children and identifiers.
+
+        Args:
+            parent_result: Parent result after verification.
+        """
+        if parent_result.is_new and parent_result.status == EtlStatus.SKIPPED:
+            parent_result.convert_status(EtlStatus.PENDING, EtlStatus.SKIPPED)
+            return
+        for field_name in parent_result.get_child_results_field_names():
+            child_results: list[UploadResult] = getattr(parent_result, field_name) or []
+            for child_result in child_results:
+                if not child_result.is_new or child_result.status != EtlStatus.SKIPPED:
+                    continue
+                for identifier_result in (
+                    child_result.get_identifier_upload_results() or []
+                ):
+                    if identifier_result.status == EtlStatus.PENDING:
+                        identifier_result.status = EtlStatus.SKIPPED
 
     def verify_user_rights(self, cmd: command.UploadBatchCommandMixin) -> None:
         """Verify that the user has rights to perform the upload.
@@ -346,6 +435,8 @@ class BatchUploader:
         )
         # Verify reference data last since it may depend on parent and children verification
         success &= self.verify_refdata(cmd, batch_result, uow)
+        # Compare immutable fields last: it needs the final existing/new and status per item
+        success &= self.verify_immutable_fields(cmd, batch_result, uow)
         return success
 
     def upsert_batch(
@@ -435,7 +526,7 @@ class BatchUploader:
                 # This child model does not have identifiers, skip
                 continue
             # Get child_for_upload-result pairs
-            child_result_pairs = []
+            child_result_pairs: list[tuple] = []
             for parent_for_upload, parent_result in parent_result_pairs:
                 child_result_pairs.extend(
                     zip(
@@ -1164,7 +1255,7 @@ class BatchUploader:
             uow,
             cmd.user.id if cmd.user else None,
             self.parent_class,
-            to_update_parent_result_pairs,
+            to_update_parent_result_pairs,  # type: ignore[arg-type]
         )
 
         # Update parent IDs in ParentForUpload instances (should already be set, but just in case)
@@ -1629,6 +1720,7 @@ class BatchUploader:
                         "d3ac4368",
                         f"{identifier_class.NAME} ({identifier_for_upload.identifier_issuer_id}, {identifier_for_upload.external_id}) already exists and cannot be updated",
                     )
+                    success = False
                     continue
                 assert identifier_for_upload.identifier_issuer_id is not None
                 # Create Identifier object and add to list
@@ -2020,7 +2112,7 @@ class BatchUploader:
         if len(is_id_indices) == 0:
             return objs_exist
         # Retrieve which of the actual IDs also exists
-        is_id_obj_ids: list[UUID] = [obj_ids[i] for i in is_id_indices]
+        is_id_obj_ids: list[UUID] = [cast(UUID, obj_ids[i]) for i in is_id_indices]
         is_id_objs_exist: list[bool] = self.service.repository.crud(
             uow,
             user_id,
@@ -2055,7 +2147,7 @@ class BatchUploader:
             if self.is_null(obj_id):
                 # Assign a new ID
                 obj_id = self.service.generate_id()
-                setattr(obj, obj_id_field_name, obj_id)  # type: ignore[assignment]
+                setattr(obj, obj_id_field_name, obj_id)
         try:
             created_obj_ids = self._create_objects_in_service(
                 uow,
@@ -2089,8 +2181,9 @@ class BatchUploader:
         user: model.User | None,
     ) -> list[UUID]:
         """Create objects locally or dispatch creation to their owning service."""
+        retval: list[UUID]
         if is_same_service:
-            return self.service.repository.crud(
+            retval = self.service.repository.crud(
                 uow,
                 user_id,
                 model_class,
@@ -2098,10 +2191,11 @@ class BatchUploader:
                 objs=to_create_objs,
                 return_id=True,  # Avoid returning the whole object list again
             )
+            return retval
         crud_command_class = self.service.app.domain.get_crud_command_for_model(
             model_class
         )
-        return self.service.app.handle(
+        retval = self.service.app.handle(
             crud_command_class(
                 user=user,
                 operation=CrudOperation.CREATE_SOME,
@@ -2109,6 +2203,7 @@ class BatchUploader:
                 return_id=True,  # Avoid returning the whole object list again
             )
         )
+        return retval
 
     @staticmethod
     def _mark_duplicate_created_objects(
@@ -2129,6 +2224,133 @@ class BatchUploader:
                     "is a duplicate and could not be created.",
                 )
         return False
+
+    def verify_immutable_fields(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        batch_result: BaseBatchUploadResult,
+        uow: BaseUnitOfWork,
+    ) -> bool:
+        """Fail items that would change an immutable field of a stored object.
+
+        Selects the items that the upsert phase will update (existing and still
+        PENDING), reads their stored objects once and keeps them for
+        ``update_objects``.
+
+        Args:
+            cmd: Upload command carrying the batch and requesting user context.
+            batch_result: Batch result after the other verification steps.
+            uow: Active unit of work used to read the stored objects.
+
+        Returns:
+            False if any item would change an immutable field.
+        """
+        assert isinstance(cmd, command.Command)
+        user_id = cmd.user.id if cmd.user else None
+        parents_for_upload = self.get_parents_for_upload(cmd)
+        parent_results = self.get_parent_results(batch_result)
+
+        parent_pairs: list[tuple[Model, UploadResult]] = []
+        for parent_for_upload, parent_result in zip(parents_for_upload, parent_results):
+            parent = parent_for_upload.get_parent()
+            if (
+                parent is None
+                or parent_result.is_new
+                or parent_result.status != EtlStatus.PENDING
+            ):
+                continue
+            parent_pairs.append((parent, parent_result))
+        success = self._verify_immutable_fields_for_model(
+            uow, user_id, self.parent_class, parent_pairs
+        )
+        for (
+            child_model_class,
+            children_field_name,
+        ) in self.child_children_field_name_map.items():
+            child_pairs: list[tuple[Model, UploadResult]] = [
+                (child_for_upload, child_result)
+                for _, parent_result, child_for_upload, child_result in (
+                    self._get_parents_and_children(
+                        parents_for_upload, parent_results, children_field_name
+                    )
+                )
+                if parent_result.status != EtlStatus.FAILED
+                and not child_result.is_new
+                and child_result.status == EtlStatus.PENDING
+            ]
+            success &= self._verify_immutable_fields_for_model(
+                uow, user_id, child_model_class, child_pairs
+            )
+        return success
+
+    def _verify_immutable_fields_for_model(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        model_class: type[Model],
+        obj_result_pairs: list[tuple[Model, UploadResult]],
+    ) -> bool:
+        """Read the stored objects of one model, keep them, and check immutable fields."""
+        id_field_name = model_class.ENTITY.get_id_field_name()
+        pairs = [
+            (obj, obj_result)
+            for obj, obj_result in obj_result_pairs
+            if not self.is_null(getattr(obj, id_field_name))
+        ]
+        if not pairs:
+            return True
+        stored_objs: list[Model] = self.service.repository.crud(
+            uow,
+            user_id,
+            model_class,
+            CrudOperation.READ_SOME,
+            obj_ids=[getattr(obj, id_field_name) for obj, _ in pairs],
+        )
+        # READ_SOME returns the objects aligned with obj_ids, as update_objects relies on
+        cache = self._stored_objs.setdefault(model_class, {})
+        success = True
+        for (obj, obj_result), stored_obj in zip(pairs, stored_objs):
+            cache[getattr(obj, id_field_name)] = stored_obj
+            immutable_field_changed, error = self._has_immutable_field_update(
+                model_class, obj, stored_obj
+            )
+            if immutable_field_changed:
+                assert isinstance(error, str)
+                obj_result.add_error("f5e09001", error)
+                success = False
+        return success
+
+    def _has_immutable_field_update(
+        self, model_class: type[Model], obj: Model, existing_obj: Model
+    ) -> tuple[bool, str | None]:
+        """Determine if an immutable field would have its stored value changed.
+
+        An immutable field is only changed if the value is actually changing.
+        Re-uploading the same value (e.g. a full record with one extra field added)
+        is fine. None or NULL_ID means "not specified" and is a no-op, so that
+        partial-update payloads don't fail.
+
+        Returns:
+            Whether an immutable field would change
+            The error message for the first immutable field that would change. The
+            error message is None if no immutable field would change.
+        """
+        id_field_name = model_class.ENTITY.get_id_field_name()
+        for field_name, field_props in self.stored_model_field_props[
+            model_class
+        ].items():
+            if field_name == id_field_name:
+                continue  # ID field is the lookup key; never part of updates
+            existing_value = getattr(existing_obj, field_name)
+            if field_props.is_mutable_value(existing_value):
+                continue
+            new_value = getattr(obj, field_name)
+            if not self.is_null(new_value) and new_value != existing_value:
+                return (
+                    True,
+                    f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}.",
+                )
+        return False, None
 
     def update_objects(
         self,
@@ -2171,18 +2393,33 @@ class BatchUploader:
             return success
 
         # Retrieve existing objects (aligned with valid_pairs / obj_ids)
-        existing_objs: list[Model] = self.service.repository.crud(
-            uow,
-            user_id,
-            model_class,
-            CrudOperation.READ_SOME,
-            obj_ids=obj_ids,
-        )
+        # (already read during verification, if possible)
+        stored_objs = self._stored_objs.get(model_class, {})
+        existing_objs: list[Model]
+        if all(x in stored_objs for x in obj_ids):
+            existing_objs = [stored_objs[x] for x in obj_ids]
+        else:
+            existing_objs = self.service.repository.crud(
+                uow,
+                user_id,
+                model_class,
+                CrudOperation.READ_SOME,
+                obj_ids=obj_ids,
+            )
 
         # Determine which objects actually need to be updated instead of having identical data
         to_update_objs: list[Model] = []
         to_update_obj_results: list[model.UploadResult] = []
         for (obj, obj_result), existing_obj in zip(valid_pairs, existing_objs):
+            # Safeguard: verification already reports this error
+            immutable_field_changed, error = self._has_immutable_field_update(
+                model_class, obj, existing_obj
+            )
+            if immutable_field_changed:
+                assert isinstance(error, str)
+                obj_result.add_error("f5e09001", error)
+                success = False
+                continue
             # Only check props for updates, other fields are not updatable
             is_updated = False
             for field_name, field_props in stored_model_field_props.items():
@@ -2191,19 +2428,7 @@ class BatchUploader:
                 existing_value = getattr(existing_obj, field_name)
                 new_value = getattr(obj, field_name)
                 if not field_props.is_mutable_value(existing_value):
-                    # Immutable field: only an error if the value is actually changing.
-                    # Re-uploading the same value (e.g. a full record with one extra
-                    # field added) is fine and requires no action for this field.
-                    # None or NULL_ID means "not specified" — treat as a no-op for
-                    # immutable fields so that partial-update payloads don't fail.
-                    if not self.is_null(new_value) and new_value != existing_value:
-                        obj_result.add_error(
-                            "f5e09001",
-                            f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}.",
-                        )
-                        success = False
-                        break
-                    continue
+                    continue  # Unchangeable field, checked above
                 # Mutable field: apply update if value differs
                 if existing_value is None:
                     # Existing value is None: set new value if not None
@@ -2319,6 +2544,7 @@ class BatchUploader:
             None, add it to content.
         - A key from updates exists in content:
             - If the new value is None: the key is then also removed from content.
+              If the original value was None, this does not count as an update.
             - If the new value is different from the existing value.
         """
         is_updated = False
@@ -2335,6 +2561,7 @@ class BatchUploader:
                 if value is None:
                     # New value is None, remove the key
                     if orig_value is not None:
+                        # Only consider it an update if the original value was not None
                         is_updated = True
                     del content[key]
                 elif orig_value != value:

@@ -29,8 +29,6 @@ def seq_service_crud_locus_code_map(
     Raises:
         AssertionError: The command operation is unsupported.
     """
-    user_id = cmd.user.id if cmd.user else None
-    locus_code_maps: list[model.LocusCodeMap] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
         # TODO: Specific logic for create operation to be added
         pass

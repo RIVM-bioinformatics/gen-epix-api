@@ -1,7 +1,7 @@
 # SA_SQL compose stack — SQL Server 2022 backend with persistent storage.
 # Starts CASEDB (8000), SEQDB (8001), OMOPDB (8002) against an empty but
-# fully-initialized SQL Server schema. Use this to reproduce lsp-data seeding
-# behaviour locally.
+# fully-initialized SQL Server schema. Use this for local SQL-backed data loading
+# and debugging.
 #
 # Usage:
 #   docker compose -f docker-compose.sql.yml up --wait
@@ -13,7 +13,7 @@
 services:
 
   lsp_sql:
-    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:2b5b581621126574f3d1f75e78d3eebe8d05aedb59ad0cfdf9aa42cb0634d726
+    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:05644dad1266ca3d445d1e8f6d2ebb9a6a03df9a39376e0f7b48917356dca9d9
     user: root
     environment:
       MSSQL_SA_PASSWORD: "Your_password123"
@@ -38,7 +38,7 @@ services:
 
   # One-shot container: creates the service databases then exits.
   init-db:
-    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:2b5b581621126574f3d1f75e78d3eebe8d05aedb59ad0cfdf9aa42cb0634d726
+    image: mcr.microsoft.com/mssql/server:2025-latest@sha256:05644dad1266ca3d445d1e8f6d2ebb9a6a03df9a39376e0f7b48917356dca9d9
     depends_on:
       lsp_sql:
         condition: service_healthy

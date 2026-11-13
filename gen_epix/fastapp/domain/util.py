@@ -17,6 +17,9 @@ def create_keys(keys: dict[int, Key | str | tuple | Callable]) -> dict[int, Key]
         if isinstance(y, Key):
             retval[x] = y
         else:
+            # TODO: LSP-3893 Callable definitions appear intended to generate keys, but
+            # Key(y) treats them as field names; confirm the callable contract before
+            # choosing how to construct the Key.
             retval[x] = Key(y)
     return retval
 

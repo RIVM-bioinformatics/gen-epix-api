@@ -1,8 +1,11 @@
-"""initial_schema.
+"""Define the initial OMOP database schema revision.
 
 Revision ID: 252f23d99c89
 Revises:
 Create Date: 2026-08-24 11:44:20.021343
+
+`upgrade` creates the organization, ABAC, system, and OMOP tables, while
+`downgrade` removes them. Missing schemas are created for SQL Server.
 """
 
 from __future__ import annotations

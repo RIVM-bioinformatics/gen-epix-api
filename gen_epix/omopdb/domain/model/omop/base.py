@@ -97,6 +97,8 @@ def validate_int_key_args(data: Any, uuid_field_name: str, int_field_name: str) 
         # UUID provided directly without an int_id → normalise to UUID object and accept
         if isinstance(uuid_id, str):
             data[uuid_field_name] = UUID(uuid_id)
+        elif not isinstance(uuid_id, UUID):
+            raise ValueError(f"{uuid_field_name} must be a UUID or UUID string")
         return
     elif not isinstance(int_id, int):
         raise ValueError(f"{int_field_name} not provided or not an integer")

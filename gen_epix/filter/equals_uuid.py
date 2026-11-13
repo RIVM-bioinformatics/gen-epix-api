@@ -1,4 +1,4 @@
-"""UUID equality filter models."""
+"""Define a UUID equality filter model for the shared filtering API."""
 
 from typing import Literal
 from uuid import UUID

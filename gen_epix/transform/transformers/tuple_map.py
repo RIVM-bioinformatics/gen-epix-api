@@ -77,8 +77,10 @@ class TupleMapTransformer(Transformer):
         # Verify input
         self._n_src_fields = len(row_src_fields)
         self._n_tgt_fields = len(row_tgt_fields)
-        map_src_fields = map_src_fields or row_src_fields
-        map_tgt_fields = map_tgt_fields or row_tgt_fields
+        if map_src_fields is None:
+            map_src_fields = row_src_fields
+        if map_tgt_fields is None:
+            map_tgt_fields = row_tgt_fields
         self._verify_map_fields(map_src_fields, map_tgt_fields, is_active_map_field)
         self._verify_row_fields(row_src_fields, row_tgt_fields)
         if default_values is None:
@@ -185,7 +187,7 @@ class TupleMapTransformer(Transformer):
                 values = self._default_values
             else:
                 raise ValueError(
-                    f"Transformer {self.name}: Invalid on_no_match value: {self._on_no_match.value}"
+                    f"Transformer {self.name}: Invalid on_no_match value: {self._on_no_match}"
                 )
         else:
             values = self._tuple_map[key]

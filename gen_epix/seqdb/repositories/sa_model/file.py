@@ -2,7 +2,7 @@
 
 # pylint: disable=too-few-public-methods
 
-import sqlalchemy.orm as orm
+from sqlalchemy import orm
 from sqlalchemy.orm import Mapped
 
 from gen_epix.commondb.repositories.sa_model import (

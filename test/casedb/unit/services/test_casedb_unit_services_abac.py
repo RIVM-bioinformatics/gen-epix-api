@@ -192,6 +192,12 @@ class BaseAbacTestCase:
 class TestRegisterPolicies(BaseAbacTestCase):
     """Test registration of policies."""
 
+    def test_retrieve_seq_distances_is_registered_for_case_abac(self) -> None:
+        assert (
+            command.RetrieveSeqDistancesByCasesCommand
+            in BaseAbacService.CASE_ABAC_COMMANDS
+        )
+
     def test_register_policies_registers_case_abac_commands(self) -> None:
         """register_policies registers CaseAbacPolicy for all CASE_ABAC_COMMANDS with DURING timing."""
         self.service.app.register_policy = Mock()  # type: ignore[method-assign]

@@ -20,4 +20,3 @@ class StreamProcessor(ABC):
         Yields:
             Transformation results in input order.
         """
-        pass

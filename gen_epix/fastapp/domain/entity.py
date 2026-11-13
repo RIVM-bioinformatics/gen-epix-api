@@ -265,14 +265,6 @@ class Entity(BaseModel):
                 )
             self._fields[self.id_field_name]["type"] = FieldType.ID
 
-        # Set LINK and RELATIONSHIP fields
-        for link in self.links.values():
-            self._fields[link.link_field_name]["type"] = FieldType.LINK
-            if link.relationship_field_name:
-                self._fields[link.relationship_field_name][
-                    "type"
-                ] = FieldType.RELATIONSHIP
-
         # Set COMPUTED fields
         for field_name in model_class.model_computed_fields:
             self._fields[field_name]["type"] = FieldType.COMPUTED

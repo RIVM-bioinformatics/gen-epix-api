@@ -127,6 +127,10 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
     ) -> set[UUID]:
         """Retrieve organizations affected by site-linked contact command objects."""
         contacts: list[model.Contact] = cmd.get_objs()  # type: ignore[assignment]
+        # TODO: LSP-3893 A contact write with a site_id must resolve that site's
+        # organization, but this ContactCrudCommand queries contacts by site ID and
+        # can return unrelated records or none. Confirm whether contacts without a
+        # site_id should be ignored or denied before changing the lookup contract.
         sites: list[model.Site] = self.abac_service.app.handle(
             command.ContactCrudCommand(
                 user=cmd.user,

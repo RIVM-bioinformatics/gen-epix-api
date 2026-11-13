@@ -116,6 +116,9 @@ class SiteMixin(RowMetadataMixin):
 class ContactMixin(RowMetadataMixin):
     """Encapsulates SQLAlchemy columns and site relationship for contact rows."""
 
+    # TODO: LSP-3893 Assigning None to Contact.site_id is permitted by this
+    # optional annotation, but the domain field is required and the mapped SQL
+    # column is non-nullable; clarify whether site-less contacts should persist.
     @declared_attr
     def site_id(cls) -> Mapped[UUID | None]:
         """Map the optional site ID column."""

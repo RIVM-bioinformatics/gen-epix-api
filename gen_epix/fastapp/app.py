@@ -114,6 +114,7 @@ class App:
         self._log_item_class = log_item_class
         self._timestamp_factory = timestamp_factory
         self._feature_flags: dict[Hashable, bool] = feature_flags or {}
+        self.stack_trace_exemptions: set[type[Exception]] = set()
 
         # Initialize other members
         self._created_at = self.generate_timestamp()
@@ -662,7 +663,8 @@ class App:
             if type(cmd) in self._auto_invalidate_cache_set:
                 self.invalidate_cache(cmd)
         except exc.ServiceException as exception:
-            # Service errors should always capture the stack trace to aid diagnosis.
+            # Service errors capture the stack trace to aid diagnosis, except for those
+            # caused by a registered exception type (see register_stack_trace_exemption).
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
@@ -672,7 +674,7 @@ class App:
                         cmd=cmd,
                         exception=exception,
                     ),
-                    exc_info=True,
+                    exc_info=not self._is_exempted_from_stack_trace(exception),
                 )
             self._pop_command_stack()
             raise exception
@@ -691,7 +693,9 @@ class App:
             self._pop_command_stack()
             raise exception
         except Exception as exception:
-            # Any other unexpected error: add stack trace
+            # Any other unexpected error: add stack trace, unless a registered
+            # exception type is in its cause chain.
+            has_stack_trace = not self._is_exempted_from_stack_trace(exception)
             if self._logger:
                 self._logger.error(
                     self.create_log_message(
@@ -701,12 +705,43 @@ class App:
                         cmd=cmd,
                         exception=exception,
                     ),
-                    exc_info=True,
-                    stack_info=True,
+                    exc_info=has_stack_trace,
+                    stack_info=has_stack_trace,
                 )
             self._pop_command_stack()
             raise exception
         return retval
+
+    def register_stack_trace_exemption(self, exception_class: type[Exception]) -> None:
+        """Log no stack trace for a failed command caused by ``exception_class``.
+
+        A command that fails because of an exception of this class, or of a subclass,
+        anywhere in the exception's cause chain, is logged as one line, without a
+        stack trace. Use it for errors whose trace says nothing more than their
+        message, such as an HTTP error of a remote app.
+
+        The exemption only changes what is logged. The exception is raised unchanged.
+        Nothing is registered by default, so an application that does not call this logs
+        every trace in full. The caller decides per instance, so a service can register
+        nothing while a client of that service does.
+
+        Args:
+            exception_class: Exception class to log without a stack trace; subclasses
+                match as well.
+        """
+        self.stack_trace_exemptions.add(exception_class)
+
+    def _is_exempted_from_stack_trace(self, exception: BaseException) -> bool:
+        """Return whether the exception or one of its causes is a registered type."""
+        exempt_classes = tuple(self.stack_trace_exemptions)
+        seen: set[int] = set()
+        current: BaseException | None = exception
+        while current is not None and id(current) not in seen:
+            if isinstance(current, exempt_classes):
+                return True
+            seen.add(id(current))
+            current = current.__cause__
+        return False
 
     def _get_command_handler(self, cmd: Command) -> Callable:
         """Resolve a command handler while logging and unwinding a failed dispatch.
@@ -962,8 +997,9 @@ class App:
 
     def __del__(self) -> None:
         """Del the requested value."""
-        if self._logger:
-            self._logger.info(self.create_log_message("aa21c54a", "STOPPING_APP"))
+        logger = getattr(self, "_logger", None)
+        if logger:
+            logger.info(self.create_log_message("aa21c54a", "STOPPING_APP"))
 
     @staticmethod
     def _get_bool_from_cfg_value(value: Any) -> bool:

@@ -1,18 +1,9 @@
-import base64
-import gzip
-import hashlib
-import json
-from pathlib import Path
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
-from pydantic import ValidationError
 
-from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.seqdb.domain import model
-from gen_epix.seqdb.domain.model.seq.base import encode_ascii_as_gzip_base64
 from gen_epix.seqdb.domain.model.seq.seq import Seq
 
 
@@ -57,7 +48,7 @@ class TestNextcladeSequenceConversion:
             ("1,3-4,6", "nCn nAn".replace(" ", "")),
         ],
     )
-    def test_missings_support_single_ranges_and_multiple_ranges(
+    def test_missing_support_single_ranges_and_multiple_ranges(
         self, missings: str, expected: str
     ) -> None:
         assert convert("ACGTAC", missings=missings) == expected

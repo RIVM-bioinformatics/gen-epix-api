@@ -1,4 +1,8 @@
-"""Non-persistable OMOP models for retrieval requests and assembled results."""
+"""Non-persistable OMOP models for retrieval requests and assembled results.
+
+Defines person query and result models, cohort specimen results, and `FullPerson`,
+which groups a person with clinical records and identifiers for OMOP repositories.
+"""
 
 from datetime import datetime
 from typing import ClassVar, Self
@@ -72,6 +76,7 @@ class PersonQuery(Model):
         persistable=False,
     )
     label: str | None = Field(default=None, description="The label for the query.")
+    # TODO: add demographic criteria fields and/or Filter.
     modified_since: datetime | None = Field(
         default=None,
         description="The lower bound of the last modified datetime range to filter by. Inclusive. Not applied if not provided.",

@@ -1,4 +1,4 @@
-"""Numeric equality filter models."""
+"""Define the EqualsNumberFilter for numeric equality comparisons."""
 
 from decimal import Decimal
 from typing import Literal

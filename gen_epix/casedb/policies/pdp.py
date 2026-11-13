@@ -105,6 +105,31 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
 
         return all(is_accessible.values())
 
+    def filter_case_ids(
+        self,
+        cmd: command.CaseCrudCommand | command.CaseIdentifierCrudCommand,
+        case_data_collection_ids: Iterable[tuple[UUID, UUID, frozenset[UUID]]],
+        right: enum.CaseRight,
+        on_filtered: Literal[OnException.SKIP, OnException.RAISE] = OnException.RAISE,
+    ) -> Iterable[UUID]:
+        """Yield Case IDs accessible with the requested right.
+
+        Raises:
+            UnauthorizedAuthError: If an inaccessible case is encountered and
+                `on_filtered` is `OnException.RAISE`.
+        """
+        # Parse input
+        if right not in enum.CaseRightSet.CASE.value:
+            raise ValueError(f"Invalid case right for case set: {right}")
+
+        yield from self._filter_case_or_set_ids(
+            cmd,
+            case_data_collection_ids,
+            right,
+            is_case=True,
+            on_filtered=on_filtered,
+        )
+
     def filter_case_set_ids(
         self,
         cmd: command.CaseSetCrudCommand,
@@ -122,21 +147,42 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
         if right not in enum.CaseRightSet.CASE_SET.value:
             raise ValueError(f"Invalid case right for case set: {right}")
 
+        yield from self._filter_case_or_set_ids(
+            cmd,
+            case_set_data_collection_ids,
+            right,
+            is_case=False,
+            on_filtered=on_filtered,
+        )
+
+    def _filter_case_or_set_ids(
+        self,
+        cmd: (
+            command.CaseCrudCommand
+            | command.CaseIdentifierCrudCommand
+            | command.CaseSetCrudCommand
+        ),
+        case_or_set_data_collection_ids: Iterable[tuple[UUID, UUID, frozenset[UUID]]],
+        right: enum.CaseRight,
+        is_case: bool = True,
+        on_filtered: Literal[OnException.SKIP, OnException.RAISE] = OnException.RAISE,
+    ) -> Iterable[UUID]:
+        """Filter case or case-set IDs based on access rights."""
         case_abac = self.get_case_abac(cmd)
 
         # Special case: full access
         if case_abac.is_full_access:
-            for case_set_id, _, _ in case_set_data_collection_ids:
-                yield case_set_id
+            for case_or_set_id, _, _ in case_or_set_data_collection_ids:
+                yield case_or_set_id
             return
 
-        # Loop over each (case_set_id, case_type_id, data_collection_ids) and determine if the CaseSet is readable
+        # Loop over each (case_or_set_id, case_type_id, data_collection_ids) and determine if the Case or CaseSet is readable
         cache: dict[tuple[UUID, frozenset[UUID]], bool] = {}
         for (
-            case_set_id,
+            case_or_set_id,
             case_type_id,
             data_collection_ids,
-        ) in case_set_data_collection_ids:
+        ) in case_or_set_data_collection_ids:
             is_accessible = cache.get((case_type_id, data_collection_ids))
             if is_accessible is None:
                 # Not cached
@@ -164,10 +210,10 @@ class PolicyDecisionPoint(BasePolicyDecisionPoint):
                     user_id = self.get_command_user_id(cmd)
                     raise exc.UnauthorizedAuthError(
                         "dad1bec1",
-                        f"User {user_id} is not authorized to access case set {case_set_id}",
+                        f"User {user_id} is not authorized to access {'case' if is_case else 'case set'} {case_or_set_id}",
                     )
             # Yield the case set ID since accessible
-            yield case_set_id
+            yield case_or_set_id
 
     # def get_readable_cols_by_data_collection(
     #     self, case_type_id: UUID

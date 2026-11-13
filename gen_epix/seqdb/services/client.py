@@ -21,6 +21,7 @@ class SeqdbClient(CommondbClient):
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
     ROUTE_MAP: dict[type[Command], str] = {
+        command.DeleteAllOperationalDataCommand: "/operational_data",
         command.DeleteAllRefDataCommand: "/ref_data",
         command.CalculatePhylogeneticTreeCommand: "/calculate/phylogenetic_tree",
         command.ConvertSeqFormatCommand: "/convert/seq_format",
@@ -164,6 +165,7 @@ class SeqdbClient(CommondbClient):
         """Stream genetic sequence FASTA data by sequence IDs."""
         request_body = api.RetrieveSeqFastaRequestBody(
             seq_ids=cmd.seq_ids,
+            wrap=cmd.wrap,
             file_name="dummy.fasta",
         )
         return self.stream(cmd, HttpMethod.POST, model=request_body)

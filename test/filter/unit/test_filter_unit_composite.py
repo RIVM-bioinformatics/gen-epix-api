@@ -1,13 +1,17 @@
 """Unit tests for CompositeFilter."""
 
 import datetime
+from collections.abc import Callable, Hashable
 from test.filter.unit import util
+from typing import Any
 
 import pytest
 from pydantic import BaseModel
 
+from gen_epix.filter.base import Filter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.date_range import DateRangeFilter
+from gen_epix.filter.enum import LogicalOperator, LogicalOperatorSet
 from gen_epix.filter.exists import ExistsFilter
 from gen_epix.filter.number_range import NumberRangeFilter
 from gen_epix.filter.partial_date_range import PartialDateRangeFilter
@@ -55,6 +59,114 @@ def test_not_nested_composite_match() -> None:
         CompositeFilter(filters=[sub_filter1, sub_filter2], operator="NOT")
 
 
+@pytest.mark.parametrize(
+    ("value", "string_set_invert", "exists_invert", "expected"),
+    [
+        pytest.param("member", False, False, True, id="member-neither-inverted"),
+        pytest.param("member", False, True, False, id="member-exists-inverted"),
+        pytest.param("member", True, False, False, id="member-set-inverted"),
+        pytest.param("member", True, True, False, id="member-both-inverted"),
+        pytest.param("other", False, False, False, id="other-neither-inverted"),
+        pytest.param("other", False, True, False, id="other-exists-inverted"),
+        pytest.param("other", True, False, True, id="other-set-inverted"),
+        pytest.param("other", True, True, False, id="other-both-inverted"),
+        pytest.param(None, False, False, False, id="none-neither-inverted"),
+        pytest.param(None, False, True, False, id="none-exists-inverted"),
+        pytest.param(None, True, False, False, id="none-set-inverted"),
+        pytest.param(None, True, True, True, id="none-both-inverted"),
+    ],
+)
+def test_string_set_and_exists_composite_respects_subfilter_inversion(
+    value: str | None,
+    string_set_invert: bool,
+    exists_invert: bool,
+    expected: bool,
+) -> None:
+    """Compose StringSetFilter and ExistsFilter using each child's inversion."""
+    child_filters: list[Filter] = [
+        StringSetFilter(
+            members=frozenset({"member"}), key="value", invert=string_set_invert
+        ),
+        ExistsFilter(key="value", invert=exists_invert),
+    ]
+    composite_filter = CompositeFilter(
+        filters=child_filters,
+        operator=LogicalOperator.AND,
+    )
+    row: dict[Hashable, Any | None] = {"value": value}
+
+    assert composite_filter.match_row(row) is expected
+    assert list(composite_filter.match_rows([row])) == [expected]
+    assert list(composite_filter.filter_rows([row])) == ([row] if expected else [])
+
+
+def test_logical_operator_sets_partition_all_operators() -> None:
+    """Classify every logical operator into exactly one arity group."""
+    unary = LogicalOperatorSet.UNARY.value
+    binary = LogicalOperatorSet.BINARY.value
+    multary = LogicalOperatorSet.MULTARY.value
+
+    assert unary == {LogicalOperator.NOT}
+    assert binary == {
+        LogicalOperator.XOR,
+        LogicalOperator.NAND,
+        LogicalOperator.NOR,
+        LogicalOperator.XNOR,
+        LogicalOperator.IMPLIES,
+        LogicalOperator.NIMPLIES,
+    }
+    assert multary == {LogicalOperator.AND, LogicalOperator.OR}
+    assert unary | binary | multary == set(LogicalOperator)
+    assert not (unary & binary or unary & multary or binary & multary)
+
+
+@pytest.mark.parametrize(
+    "operator", sorted(LogicalOperatorSet.UNARY.value, key=lambda item: item.value)
+)
+@pytest.mark.parametrize("child_count", [0, 2], ids=["too-few", "too-many"])
+def test_unary_composite_operators_require_one_child(
+    operator: LogicalOperator, child_count: int
+) -> None:
+    """Reject unary operators with a child count other than one."""
+    with pytest.raises(ValueError):
+        CompositeFilter(
+            filters=[ExistsFilter() for _ in range(child_count)],
+            operator=operator,
+        )
+
+
+@pytest.mark.parametrize(
+    "operator", sorted(LogicalOperatorSet.BINARY.value, key=lambda item: item.value)
+)
+@pytest.mark.parametrize("child_count", [1, 3], ids=["too-few", "too-many"])
+def test_binary_composite_operators_require_two_children(
+    operator: LogicalOperator, child_count: int
+) -> None:
+    """Reject binary operators with a child count other than two."""
+    with pytest.raises(ValueError, match="Exactly two filters"):
+        CompositeFilter(
+            filters=[ExistsFilter() for _ in range(child_count)],
+            operator=operator,
+        )
+
+
+@pytest.mark.parametrize(
+    "operator", sorted(LogicalOperatorSet.MULTARY.value, key=lambda item: item.value)
+)
+@pytest.mark.parametrize("child_count", [1, 2, 3])
+def test_multary_composite_operators_accept_one_or_more_children(
+    operator: LogicalOperator, child_count: int
+) -> None:
+    """Accept multary operators with any positive child count."""
+    composite_filter = CompositeFilter(
+        filters=[ExistsFilter() for _ in range(child_count)],
+        operator=operator,
+    )
+
+    assert composite_filter.operator is operator
+    assert len(composite_filter.filters) == child_count
+
+
 def test_nested_composite_match() -> None:
     """Evaluate a composite filter nested inside another composite."""
     sub_filter1 = StringSetFilter(members={"a", "b", "c"}, key="a")
@@ -73,6 +185,28 @@ def test_nested_composite_match() -> None:
     util.validate_filter_behavior(composite_filter, [{"a": "a"}], [True])
 
 
+def test_composite_filter_depth() -> None:
+    """Return the deepest nested composite level, excluding leaf filters."""
+    leaf_filter = ExistsFilter(key="a")
+    depth_one_filter = CompositeFilter(filters=[leaf_filter], operator="NOT")
+    depth_three_filter = CompositeFilter(
+        filters=[
+            ExistsFilter(key="a"),
+            CompositeFilter(
+                filters=[
+                    ExistsFilter(key="a"),
+                    CompositeFilter(filters=[ExistsFilter(key="a")], operator="NOT"),
+                ],
+                operator="AND",
+            ),
+        ],
+        operator="OR",
+    )
+
+    assert depth_one_filter.get_depth() == 1
+    assert depth_three_filter.get_depth() == 3
+
+
 def test_composite_filter_pydantic_and_plain_python_class() -> None:
     """Filter Pydantic models and ordinary objects without changing row identity."""
 
@@ -82,8 +216,7 @@ def test_composite_filter_pydantic_and_plain_python_class() -> None:
         x: int
         y: str
 
-    # pylint: disable=too-few-public-methods
-    class PlainXY:
+    class PlainXY:  # pylint: disable=too-few-public-methods
         """Represent filterable coordinates using a plain Python object."""
 
         def __init__(self, x: int, y: str):
@@ -178,6 +311,50 @@ def test_composite_map_function() -> None:
         [False, True, True, True, True, True, True, True],
         map_fn=map_fn,
     )
+
+
+@pytest.mark.parametrize(
+    "mapping_kind",
+    ["keyed-dict", "shared-callable", "per-child-list"],
+)
+def test_nested_composite_map_function_applies_to_row_apis(
+    mapping_kind: str,
+) -> None:
+    """Propagate date mapping through nested row matching and filtering."""
+    rows = [
+        {"date": "2022-02-01"},
+        {"date": "2022-04-01"},
+        {"date": None},
+    ]
+    date_filter = DateRangeFilter(
+        lower_bound=datetime.date(2022, 1, 1),
+        upper_bound=datetime.date(2022, 3, 1),
+        key="date",
+    )
+    nested_filter = CompositeFilter(filters=[date_filter])
+    composite_filter = CompositeFilter(filters=[nested_filter])
+
+    def map_date(value: Any) -> Any:
+        return datetime.date.fromisoformat(value) if isinstance(value, str) else value
+
+    if mapping_kind == "keyed-dict":
+        map_fn: (
+            dict[Hashable, Callable[[Any], Any]]
+            | Callable[[Any], Any]
+            | list[Callable[[Any], Any]]
+        ) = {"date": map_date}
+    elif mapping_kind == "shared-callable":
+        map_fn = map_date
+    else:
+        map_fn = [map_date]
+
+    assert composite_filter.match_row(rows[0], map_fn=map_fn)
+    assert list(composite_filter.match_rows(rows, map_fn=map_fn)) == [
+        True,
+        False,
+        False,
+    ]
+    assert list(composite_filter.filter_rows(rows, map_fn=map_fn)) == [rows[0]]
 
 
 def test_composite_construction_retains_child_filters() -> None:

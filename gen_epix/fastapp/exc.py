@@ -7,6 +7,9 @@ from typing import Any
 class DomainException(Exception):
     """Base error that carries a stable application error code and message."""
 
+    # TODO: LSP-3893 ServiceUnavailableError("E") sets a default message, but
+    # str(error) retains the original argument; confirm whether logs should show
+    # the effective message or preserve the code before changing exception output.
     def __init__(self, code: str, message: str | None):
         """Initialize a DomainException instance."""
         self.code = code
@@ -170,6 +173,18 @@ class ServiceException(DomainException):
         self.http_props["status_code"] = self.http_props.get(
             "status_code", http_status_code
         )
+
+
+class RemoteServiceError(ServiceException):
+    """A remote app answered a command with an HTTP error status.
+
+    The HTTP status is the one the remote app answered with, so a direct caller of the
+    remote client can act on it. An API that makes remote calls must not pass it on to
+    its own caller: commondb's handle_exception turns any RemoteServiceError into an
+    opaque 500.
+    """
+
+    pass
 
 
 class InitializationServiceError(ServiceException):

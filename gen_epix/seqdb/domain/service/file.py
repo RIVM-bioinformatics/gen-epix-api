@@ -1,4 +1,4 @@
-"""Define seqdb domain interfaces and policies for domain.service.file."""
+"""Define the abstract seqdb file-service interface and command handlers."""
 
 from abc import abstractmethod
 from uuid import UUID
@@ -14,7 +14,11 @@ class BaseFileService(BaseService):
     SERVICE_TYPE = ServiceType.FILE
 
     def register_handlers(self) -> None:
-        """Register default CRUD and seqdb-specific file command handlers."""
+        """Register generic CRUD handlers and file-specific command handlers.
+
+        The file CRUD handler replaces the generic CRUD handler for
+        ``FileCrudCommand``.
+        """
         self.register_default_crud_handlers()
         f = self.app.register_handler
         f(
