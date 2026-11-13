@@ -93,8 +93,8 @@ echo 'Initialization and migration jobs exited successfully.'
 The sequence is intentional: SQL health first, then synchronous one-shot jobs;
 `set -e` stops on a nonzero exit. `--no-deps` prevents implicit service startup.
 Only `lsp_sql`, `init-db`, `migrate-casedb`, and `migrate-seqdb` are invoked.
-Initialization also creates the empty commondb and omopdb databases because the
-existing job does so; their migrations are unnecessary for this topology.
+Initialization also creates the empty omopdb database because the existing job
+does so; its migration is unnecessary for this topology.
 The shared commondb models are included in each application's own migration tree.
 No application service is requested, even if the commented API services are later
 restored. Existing containers are not stopped by these commands.

@@ -42,7 +42,7 @@ compose=(docker compose -f "$compose_file")
 "${compose[@]}" up -d --wait lsp_sql
 "${compose[@]}" run --rm init-db
 
-for migration in commondb casedb seqdb omopdb; do
+for migration in casedb seqdb omopdb; do
     "${compose[@]}" run --rm "migrate-$migration"
 done
 
