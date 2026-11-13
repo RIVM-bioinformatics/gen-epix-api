@@ -66,7 +66,6 @@ services:
   migrate-commondb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: alembic -c gen_epix/commondb/repositories/alembic.ini upgrade head
     environment:
       ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=commondb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
@@ -78,7 +77,6 @@ services:
   migrate-seqdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: alembic -c gen_epix/seqdb/repositories/alembic.ini upgrade head
     environment:
       ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=seqdb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
@@ -90,7 +88,6 @@ services:
   migrate-omopdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: alembic -c gen_epix/omopdb/repositories/alembic.ini upgrade head
     environment:
       ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=omopdb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
@@ -102,7 +99,6 @@ services:
   migrate-casedb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: alembic -c gen_epix/casedb/repositories/alembic.ini upgrade head
     environment:
       ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=casedb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
@@ -114,7 +110,6 @@ services:
   seqdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: python run.py api SEQDB NONE SA_SQL --noreload
     environment:
       SEQDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
@@ -135,7 +130,6 @@ services:
   omopdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: python run.py api OMOPDB NONE SA_SQL --noreload
     environment:
       OMOPDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
@@ -156,7 +150,6 @@ services:
   casedb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: python run.py api CASEDB NONE SA_SQL --noreload
     environment:
       CASEDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql

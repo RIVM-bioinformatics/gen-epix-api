@@ -46,7 +46,7 @@ activate a project `.venv` with Python 3.14+ and `requirements.txt` and
 `dev-requirements.txt` installed per the repository development guide.
 The host also needs unixODBC, Microsoft's ODBC Driver 18, and `pyodbc` (the Docker
 image installs these separately; installing a Python package alone is insufficient).
-Docker must be able to pull the pinned SQL image and build `Dockerfile.dev`.
+Docker must be able to pull the pinned SQL image and build the root `Dockerfile`.
 
 IDPS reads `config/identity_providers.toml`. As inspected, this includes
 `rivm_signicat` at

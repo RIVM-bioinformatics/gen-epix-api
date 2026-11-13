@@ -9,7 +9,6 @@ services:
   seqdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: python run.py api SEQDB NONE DICT_EMPTY --noreload
     ports:
       - "8001:8001"
@@ -23,7 +22,6 @@ services:
   omopdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: python run.py api OMOPDB NONE DICT_EMPTY --noreload
     ports:
       - "8002:8002"
@@ -37,7 +35,6 @@ services:
   casedb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: python run.py api CASEDB NONE DICT_EMPTY --noreload
     environment:
       CASEDB_SERVICE__SEQDB__PROPS__SEQDB_CLIENT_TYPE: REMOTE

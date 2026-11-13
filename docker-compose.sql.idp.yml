@@ -81,7 +81,6 @@ services:
   migrate-commondb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: alembic -c gen_epix/commondb/repositories/alembic.ini upgrade head
     environment:
       ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=commondb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
@@ -93,7 +92,6 @@ services:
   migrate-seqdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: alembic -c gen_epix/seqdb/repositories/alembic.ini upgrade head
     environment:
       ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=seqdb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
@@ -105,7 +103,6 @@ services:
   migrate-omopdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: alembic -c gen_epix/omopdb/repositories/alembic.ini upgrade head
     environment:
       ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=omopdb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
@@ -117,7 +114,6 @@ services:
   migrate-casedb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: alembic -c gen_epix/casedb/repositories/alembic.ini upgrade head
     environment:
       ALEMBIC_URL: "mssql+pyodbc:///?odbc_connect=DRIVER={ODBC Driver 18 for SQL Server};SERVER=lsp_sql;DATABASE=casedb;UID=sa;PWD=Your_password123;TrustServerCertificate=yes"
@@ -126,13 +122,12 @@ services:
         condition: service_completed_successfully
     restart: "no"
 
-  # Mock OAuth 2.0 / OIDC server. Runs without SSL (certs are stripped from the
-  # image by Dockerfile.dev). The discovery URL exposed to host-side API clients
+  # Mock OAuth 2.0 / OIDC server. Runs without SSL (.dockerignore keeps cert/
+  # out of the image). The discovery URL exposed to host-side API clients
   # is http://localhost:8080/.well-known/openid-configuration.
   mock-oidc:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     # Bypass start_server.py/ServerManager — it hardcodes --host localhost regardless
     # of the host argument, so only loopback would be reachable from other containers.
     command: python -m uvicorn test.test_client.oauth.server:app --host 0.0.0.0 --port 8080
@@ -158,7 +153,6 @@ services:
   init-mock-oidc:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     depends_on:
       mock-oidc:
         condition: service_healthy
@@ -171,7 +165,6 @@ services:
   seqdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: python run.py api SEQDB MOCK SA_SQL --noreload
     environment:
       SEQDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
@@ -196,7 +189,6 @@ services:
   omopdb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: python run.py api OMOPDB MOCK SA_SQL --noreload
     environment:
       OMOPDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
@@ -221,7 +213,6 @@ services:
   casedb:
     build:
       context: .
-      dockerfile: Dockerfile.dev
     command: python run.py api CASEDB MOCK SA_SQL --noreload
     environment:
       CASEDB_REPOSITORY__DEFAULTS__PROPS__SERVER: lsp_sql
