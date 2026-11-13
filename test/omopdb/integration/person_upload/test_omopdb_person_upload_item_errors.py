@@ -4,7 +4,7 @@ Runs UploadPersonsCommand through DICT HTTP and directly against SQLite, exercis
 verification, upsert and storage. With fail_batch_on_item_error=False the persons
 that pass verification are stored even when another person in the same batch
 fails. A person fails here because its specimen carries an identifier that already
-belongs to another specimen, or because it changes an unchangeable field of a
+belongs to another specimen, or because it changes an immutable field of a
 stored observation (LSP-4178).
 """
 
@@ -214,7 +214,7 @@ def _batch_with_changed_observation_date(
 
 
 class TestChangedUnchangeableField:
-    """Changing an unchangeable field of a stored observation fails only its person."""
+    """Changing an immutable field of a stored observation fails only its person."""
 
     def test_other_person_is_stored(self, env: Env, ref_data: RefData) -> None:
         persons = _batch_with_changed_observation_date(env, ref_data)

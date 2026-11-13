@@ -8,7 +8,7 @@ when another sample in the same batch fails.
 
 from test.seqdb.integration.upload_samples.ref_data import (
     SeqUploadRefData,
-    sample_for_upload,
+    create_sample_for_upload,
 )
 from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 from typing import Any
@@ -16,6 +16,7 @@ from uuid import uuid4
 
 import pytest
 
+from gen_epix.commondb.domain.enum import UploadAction
 from gen_epix.etl.enum import EtlStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, model
@@ -60,7 +61,7 @@ class TestOneBadSampleFailsOnItsOwn:
         protocols = [good_protocol, _bad_protocol(ref_data, bad_kind), good_protocol]
         sample_batch = model.SampleBatchForUpload(
             samples=[
-                sample_for_upload(ref_data, code, seq_protocol=protocol)
+                create_sample_for_upload(ref_data, code, seq_protocol=protocol)
                 for code, protocol in zip(codes, protocols)
             ],
             alleles=[],
@@ -123,21 +124,18 @@ class TestChangedUnchangeableFieldFailsOnItsOwn:
                 calculate_distances=False,
                 fail_batch_on_item_error=fail_batch_on_item_error,  # type: ignore[call-arg]
                 verify_only=verify_only,
-                on_exists=commondb_enum.UploadAction.UPDATE,
+                on_exists=UploadAction.UPDATE,
             ),
             use_endpoint=False,
         )
 
-    def _store_sample(self, env: Env) -> model.SampleForUpload:
+    def _store_sample(
+        self, env: Env, ref_data: SeqUploadRefData
+    ) -> model.SampleForUpload:
         """Store a new sample and return it as an upload item of the stored sample."""
-        data_collection_id = _read_all(env, command.SampleCrudCommand)[
-            0
-        ].created_in_data_collection_id
-        protocol_id = _protocol_id_of_type(env, enum.ProtocolTypeSet.ASSEMBLY.value)
-        sample_for_upload = _sample_for_upload(
-            f"unchangeable_{uuid4().hex[:8]}",
-            data_collection_id,
-            protocol_id=protocol_id,
+        sample_for_upload = create_sample_for_upload(
+            ref_data,
+            f"immutable_{uuid4().hex[:8]}",
         )
         batch_result = self._upload(
             env, [sample_for_upload], fail_batch_on_item_error=True
@@ -151,25 +149,22 @@ class TestChangedUnchangeableFieldFailsOnItsOwn:
         return model.SampleForUpload(sample=stored_sample)
 
     def _changed_and_new(
-        self, env: Env
+        self, env: Env, ref_data: SeqUploadRefData
     ) -> tuple[list[model.SampleForUpload], model.SampleForUpload]:
-        existing = self._store_sample(env)
+        existing = self._store_sample(env, ref_data)
         changed = model.SampleForUpload(
             sample=existing.sample.model_copy(
                 update={"code": f"changed_{uuid4().hex[:8]}"}
             )
         )
-        data_collection_id = existing.sample.created_in_data_collection_id
-        protocol_id = _protocol_id_of_type(env, enum.ProtocolTypeSet.ASSEMBLY.value)
-        new = _sample_for_upload(
-            f"unchangeable_new_{uuid4().hex[:8]}",
-            data_collection_id,
-            protocol_id=protocol_id,
+        new = create_sample_for_upload(
+            ref_data,
+            f"immutable_new_{uuid4().hex[:8]}",
         )
         return [changed, new], new
 
-    def test_good_sample_is_stored(self, env: Env) -> None:
-        samples, new = self._changed_and_new(env)
+    def test_good_sample_is_stored(self, env: Env, ref_data: SeqUploadRefData) -> None:
+        samples, new = self._changed_and_new(env, ref_data)
 
         batch_result = self._upload(env, samples, fail_batch_on_item_error=False)
 
@@ -182,8 +177,10 @@ class TestChangedUnchangeableFieldFailsOnItsOwn:
         ]
         assert batch_result.samples[0].has_log_code("f5e09001")
 
-    def test_verify_only_reports_the_error(self, env: Env) -> None:
-        samples, new = self._changed_and_new(env)
+    def test_verify_only_reports_the_error(
+        self, env: Env, ref_data: SeqUploadRefData
+    ) -> None:
+        samples, new = self._changed_and_new(env, ref_data)
 
         batch_result = self._upload(
             env, samples, fail_batch_on_item_error=False, verify_only=True

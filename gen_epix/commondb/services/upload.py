@@ -66,10 +66,12 @@ class BatchUploader:
         self.parent_for_upload_class = (
             self.batch_for_upload_class.PARENT_FOR_UPLOAD_CLASS
         )
-        self.parent_identifier_class: type[BaseIdentifier] = self.parent_for_upload_class.IDENTIFIER_CLASS  # type: ignore[assignment]
+        self.parent_identifier_class: type[BaseIdentifier] = (
+            self.parent_for_upload_class.IDENTIFIER_CLASS
+        )
         self.parent_class = self.parent_for_upload_class.PARENT_CLASS
         self.parent_result_class = self.batch_upload_result_class.PARENT_RESULT_CLASS
-        self.parent_id_field_name = self.parent_class.ENTITY.get_id_field_name()  # type: ignore[union-attr]
+        self.parent_id_field_name = self.parent_class.ENTITY.get_id_field_name()
         self.child_for_upload_class_map = (
             self.parent_for_upload_class.CHILD_FOR_UPLOAD_CLASS_MAP
         )
@@ -88,9 +90,9 @@ class BatchUploader:
             self.parent_for_upload_class.CHILD_PARENT_ID_FIELD_NAME_MAP
         )
         self.child_id_field_name_map = {
-            x: x.ENTITY.get_id_field_name() for x in self.child_children_field_name_map  # type: ignore[union-attr]
+            x: x.ENTITY.get_id_field_name() for x in self.child_children_field_name_map
         }
-        self.child_identifier_class_map: dict[type[Model], type[BaseIdentifier]] = {  # type: ignore[assignment]
+        self.child_identifier_class_map: dict[type[Model], type[BaseIdentifier]] = {
             x: y.IDENTIFIER_CLASS
             for x, y in self.child_for_upload_class_map.items()
             if issubclass(y, IdentifiersMixin)
@@ -433,8 +435,8 @@ class BatchUploader:
         )
         # Verify reference data last since it may depend on parent and children verification
         success &= self.verify_refdata(cmd, batch_result, uow)
-        # Compare unchangeable fields last: it needs the final existing/new and status per item
-        success &= self.verify_unchangeable_fields(cmd, batch_result, uow)
+        # Compare immutable fields last: it needs the final existing/new and status per item
+        success &= self.verify_immutable_fields(cmd, batch_result, uow)
         return success
 
     def upsert_batch(
@@ -524,7 +526,7 @@ class BatchUploader:
                 # This child model does not have identifiers, skip
                 continue
             # Get child_for_upload-result pairs
-            child_result_pairs = []
+            child_result_pairs: list[tuple] = []
             for parent_for_upload, parent_result in parent_result_pairs:
                 child_result_pairs.extend(
                     zip(
@@ -1253,7 +1255,7 @@ class BatchUploader:
             uow,
             cmd.user.id if cmd.user else None,
             self.parent_class,
-            to_update_parent_result_pairs,
+            to_update_parent_result_pairs,  # type: ignore[arg-type]
         )
 
         # Update parent IDs in ParentForUpload instances (should already be set, but just in case)
@@ -2110,7 +2112,7 @@ class BatchUploader:
         if len(is_id_indices) == 0:
             return objs_exist
         # Retrieve which of the actual IDs also exists
-        is_id_obj_ids: list[UUID] = [obj_ids[i] for i in is_id_indices]
+        is_id_obj_ids: list[UUID] = [cast(UUID, obj_ids[i]) for i in is_id_indices]
         is_id_objs_exist: list[bool] = self.service.repository.crud(
             uow,
             user_id,
@@ -2145,7 +2147,7 @@ class BatchUploader:
             if self.is_null(obj_id):
                 # Assign a new ID
                 obj_id = self.service.generate_id()
-                setattr(obj, obj_id_field_name, obj_id)  # type: ignore[assignment]
+                setattr(obj, obj_id_field_name, obj_id)
         try:
             created_obj_ids = self._create_objects_in_service(
                 uow,
@@ -2179,8 +2181,9 @@ class BatchUploader:
         user: model.User | None,
     ) -> list[UUID]:
         """Create objects locally or dispatch creation to their owning service."""
+        retval: list[UUID]
         if is_same_service:
-            return self.service.repository.crud(
+            retval = self.service.repository.crud(
                 uow,
                 user_id,
                 model_class,
@@ -2188,10 +2191,11 @@ class BatchUploader:
                 objs=to_create_objs,
                 return_id=True,  # Avoid returning the whole object list again
             )
+            return retval
         crud_command_class = self.service.app.domain.get_crud_command_for_model(
             model_class
         )
-        return self.service.app.handle(
+        retval = self.service.app.handle(
             crud_command_class(
                 user=user,
                 operation=CrudOperation.CREATE_SOME,
@@ -2199,6 +2203,7 @@ class BatchUploader:
                 return_id=True,  # Avoid returning the whole object list again
             )
         )
+        return retval
 
     @staticmethod
     def _mark_duplicate_created_objects(
@@ -2220,13 +2225,13 @@ class BatchUploader:
                 )
         return False
 
-    def verify_unchangeable_fields(
+    def verify_immutable_fields(
         self,
         cmd: command.UploadBatchCommandMixin,
         batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
-        """Fail items that would change an unchangeable field of a stored object.
+        """Fail items that would change an immutable field of a stored object.
 
         Selects the items that the upsert phase will update (existing and still
         PENDING), reads their stored objects once and keeps them for
@@ -2238,7 +2243,7 @@ class BatchUploader:
             uow: Active unit of work used to read the stored objects.
 
         Returns:
-            False if any item would change an unchangeable field.
+            False if any item would change an immutable field.
         """
         assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
@@ -2255,7 +2260,7 @@ class BatchUploader:
             ):
                 continue
             parent_pairs.append((parent, parent_result))
-        success = self._verify_unchangeable_fields_for_model(
+        success = self._verify_immutable_fields_for_model(
             uow, user_id, self.parent_class, parent_pairs
         )
         for (
@@ -2273,19 +2278,19 @@ class BatchUploader:
                 and not child_result.is_new
                 and child_result.status == EtlStatus.PENDING
             ]
-            success &= self._verify_unchangeable_fields_for_model(
+            success &= self._verify_immutable_fields_for_model(
                 uow, user_id, child_model_class, child_pairs
             )
         return success
 
-    def _verify_unchangeable_fields_for_model(
+    def _verify_immutable_fields_for_model(
         self,
         uow: BaseUnitOfWork,
         user_id: UUID | None,
         model_class: type[Model],
         obj_result_pairs: list[tuple[Model, UploadResult]],
     ) -> bool:
-        """Read the stored objects of one model, keep them, and check unchangeable fields."""
+        """Read the stored objects of one model, keep them, and check immutable fields."""
         id_field_name = model_class.ENTITY.get_id_field_name()
         pairs = [
             (obj, obj_result)
@@ -2306,24 +2311,29 @@ class BatchUploader:
         success = True
         for (obj, obj_result), stored_obj in zip(pairs, stored_objs):
             cache[getattr(obj, id_field_name)] = stored_obj
-            error = self._get_unchangeable_field_error(model_class, obj, stored_obj)
-            if error:
+            immutable_field_changed, error = self._has_immutable_field_update(
+                model_class, obj, stored_obj
+            )
+            if immutable_field_changed:
+                assert isinstance(error, str)
                 obj_result.add_error("f5e09001", error)
                 success = False
         return success
 
-    def _get_unchangeable_field_error(
+    def _has_immutable_field_update(
         self, model_class: type[Model], obj: Model, existing_obj: Model
-    ) -> str | None:
-        """Describe the first unchangeable field whose stored value would change.
+    ) -> tuple[bool, str | None]:
+        """Determine if an immutable field would have its stored value changed.
 
-        An unchangeable field is only an error if the value is actually changing.
+        An immutable field is only changed if the value is actually changing.
         Re-uploading the same value (e.g. a full record with one extra field added)
         is fine. None or NULL_ID means "not specified" and is a no-op, so that
         partial-update payloads don't fail.
 
         Returns:
-            The error message, or None if no unchangeable field would change.
+            Whether an immutable field would change
+            The error message for the first immutable field that would change. The
+            error message is None if no immutable field would change.
         """
         id_field_name = model_class.ENTITY.get_id_field_name()
         for field_name, field_props in self.stored_model_field_props[
@@ -2336,8 +2346,11 @@ class BatchUploader:
                 continue
             new_value = getattr(obj, field_name)
             if not self.is_null(new_value) and new_value != existing_value:
-                return f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}."
-        return None
+                return (
+                    True,
+                    f"Field {field_name} with existing value {existing_value} may not be updated to {new_value}.",
+                )
+        return False, None
 
     def update_objects(
         self,
@@ -2399,8 +2412,11 @@ class BatchUploader:
         to_update_obj_results: list[model.UploadResult] = []
         for (obj, obj_result), existing_obj in zip(valid_pairs, existing_objs):
             # Safeguard: verification already reports this error
-            error = self._get_unchangeable_field_error(model_class, obj, existing_obj)
-            if error:
+            immutable_field_changed, error = self._has_immutable_field_update(
+                model_class, obj, existing_obj
+            )
+            if immutable_field_changed:
+                assert isinstance(error, str)
                 obj_result.add_error("f5e09001", error)
                 success = False
                 continue

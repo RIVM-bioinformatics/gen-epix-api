@@ -3669,12 +3669,12 @@ class TestChildOrderCreateOrdering(BaseUploadTestCase):
 
 
 class TestUnchangeableFieldsInVerification(BaseUploadTestCase):
-    """LSP-4178: a changed unchangeable field fails its item during verification."""
+    """LSP-4178: a changed immutable field fails its item during verification."""
 
     def _bad_and_good_parent(
         self,
     ) -> tuple[ParentForUpload, ParentForUpload, Parent, Parent]:
-        """An existing parent that changes an unchangeable field, and a good one."""
+        """An existing parent that changes an immutable field, and a good one."""
         bad = self.create_parent_for_upload(parent_id=self.random_ids[0], x="new")
         good = self.create_parent_for_upload(parent_id=self.random_ids[1], a="new_a")
         existing_bad = self.get_parent_from_for_upload(bad, x="existing")
@@ -3746,7 +3746,7 @@ class TestUnchangeableFieldsInVerification(BaseUploadTestCase):
         assert result.has_log_code("f5e09001")
         self.service.repository.crud.assert_not_called()
 
-    def test_child_changing_unchangeable_field_fails_its_parent(self) -> None:
+    def test_child_changing_immutable_field_fails_its_parent(self) -> None:
         child_id = self.random_ids[2]
         child = self.create_child1_for_upload(
             child_id=child_id,
