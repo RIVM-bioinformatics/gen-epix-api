@@ -25,7 +25,7 @@ fire==0.7.1
 dynaconf==3.3.3
 tomli-w==1.2.0
 PyYAML==6.0.3
-python-multipart==0.0.32
+python-multipart==0.0.33
 
 # calculation
 scipy==1.18.1
@@ -33,7 +33,7 @@ numpy==2.5.4
 biopython==1.88
 
 # other
-cachetools==7.3.0
+cachetools==7.3.1
 slowapi==0.1.10
 python-dateutil==2.9.0.post0
 

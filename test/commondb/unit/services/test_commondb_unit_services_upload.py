@@ -240,6 +240,16 @@ class BaseUploadTestCase:
             ),
         )
 
+    def mock_crud_exists(self, exists: list[bool]) -> None:
+        """Let EXISTS_SOME return `exists` and every other read return no objects."""
+
+        def crud(
+            uow: Any, user_id: Any, model_class: Any, operation: Any, **kwargs: Any
+        ) -> list[bool]:
+            return exists if operation == CrudOperation.EXISTS_SOME else []
+
+        self.service.repository.crud.side_effect = crud
+
     def get_parent_from_for_upload(
         self,
         parent_for_upload: ParentForUpload,
@@ -767,7 +777,9 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         """Test 3.1.2: Reference model ID found - should succeed."""
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
-        child1_for_upload = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=None)  # type: ignore[arg-type]
+        child1_for_upload = self.create_child1_for_upload(
+            ref1_id=existing_ref1.id, ref1_code=None
+        )  # type: ignore[arg-type]
         parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
@@ -843,7 +855,9 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         other_existing_ref1 = self.create_ref1(
             self.random_ids[0], "other_existing_code"
         )
-        child1_for_upload = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=other_existing_ref1.code)  # type: ignore[arg-type]
+        child1_for_upload = self.create_child1_for_upload(
+            ref1_id=existing_ref1.id, ref1_code=other_existing_ref1.code
+        )  # type: ignore[arg-type]
         parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         self.service.repository.read_fields.side_effect = [
@@ -861,7 +875,9 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         """Test 3.3.2: Reference model ID and code match - should succeed."""
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
-        child1_for_upload = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=existing_ref1.code)  # type: ignore[arg-type]
+        child1_for_upload = self.create_child1_for_upload(
+            ref1_id=existing_ref1.id, ref1_code=existing_ref1.code
+        )  # type: ignore[arg-type]
         parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
@@ -928,7 +944,8 @@ class Test4ParentLinks(BaseUploadTestCase):
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
         child1_for_upload = self.create_child1_for_upload(
-            parent_id=NULL_ID, ref1_id=existing_ref1.id  # type: ignore[arg-type]
+            parent_id=NULL_ID,
+            ref1_id=existing_ref1.id,  # type: ignore[arg-type]
         )
         parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
@@ -956,7 +973,8 @@ class Test4ParentLinks(BaseUploadTestCase):
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
         child1_for_upload = self.create_child1_for_upload(
-            parent_id=self.parent_id, ref1_id=existing_ref1.id  # type: ignore[arg-type]
+            parent_id=self.parent_id,
+            ref1_id=existing_ref1.id,  # type: ignore[arg-type]
         )
         parent_for_upload = self.create_parent_for_upload(
             parent_id=self.parent_id, children1=[child1_for_upload]
@@ -986,7 +1004,8 @@ class Test4ParentLinks(BaseUploadTestCase):
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
         child1_for_upload = self.create_child1_for_upload(
-            parent_id=self.parent_id, ref1_id=existing_ref1.id  # type: ignore[arg-type]
+            parent_id=self.parent_id,
+            ref1_id=existing_ref1.id,  # type: ignore[arg-type]
         )
         parent_for_upload = self.create_parent_for_upload(
             parent_id=self.parent_id, children1=[child1_for_upload]
@@ -1074,7 +1093,9 @@ class Test5FieldMutability(BaseUploadTestCase):
         new_value = {"key3": "value3"}
         resulting_value = existing_value.copy()
         resulting_value.update(new_value)
-        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, c=new_value
+        )  # type: ignore[arg-type]
         existing_parent = self.get_parent_from_for_upload(
             parent_for_upload, c=existing_value
         )
@@ -1096,7 +1117,9 @@ class Test5FieldMutability(BaseUploadTestCase):
         existing_value = {"key1": "value1", "key2": "value2"}
         new_value = {"key3": None}
         resulting_value = existing_value
-        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, c=new_value
+        )  # type: ignore[arg-type]
         existing_parent = self.get_parent_from_for_upload(
             parent_for_upload, c=existing_value
         )
@@ -1119,7 +1142,9 @@ class Test5FieldMutability(BaseUploadTestCase):
         new_value = {"key1": "new_value1"}
         resulting_value = existing_value.copy()
         resulting_value.update(new_value)
-        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, c=new_value
+        )  # type: ignore[arg-type]
         existing_parent = self.get_parent_from_for_upload(
             parent_for_upload, c=existing_value
         )
@@ -1142,7 +1167,9 @@ class Test5FieldMutability(BaseUploadTestCase):
         new_value = {"key1": None}
         resulting_value = existing_value.copy()
         resulting_value.pop("key1")
-        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, c=new_value
+        )  # type: ignore[arg-type]
         existing_parent = self.get_parent_from_for_upload(
             parent_for_upload, c=existing_value
         )
@@ -1205,12 +1232,12 @@ class Test5FieldMutability(BaseUploadTestCase):
             [existing_parent],  # Existing parents
         ]
         batch_result = self.upload_batch(parent_for_upload)
-        # update_objects() intentionally does not abort the rest of the batch
-        # for a per-object immutable-field error, but the batch-level status
-        # must still reflect that this parent failed.
+        # The error is found during verification, so nothing is upserted or rolled back
         self.expectBatchFailed(batch_result)
         self.expectStatusCount(batch_result, n_failed=1)
-        self.uow.rollback.assert_called_once()
+        assert batch_result.parents[0].has_log_code("f5e09001")
+        assert batch_result.has_log_code("02095f22")
+        self.uow.rollback.assert_not_called()
 
     def test_5_2_4_immutable_uuid_null_id_treated_as_not_specified(self) -> None:
         """Test 5.2.4: Immutable UUID field - NULL_ID is treated as "not specified", no error."""
@@ -1368,9 +1395,7 @@ class Test6Identifiers(BaseUploadTestCase):
         self.expectBatchProcessed(batch_result)
         self.expectStatusCount(batch_result, n_created=2)
         assert batch_result.parents[0].id == created_parent_id
-        assert (
-            batch_result.parents[0].identifiers[0].id == created_identifier_id
-        )  # type: ignore[index]
+        assert batch_result.parents[0].identifiers[0].id == created_identifier_id  # type: ignore[index]
 
     def test_6_2_3_1_multiple_identifiers_some_existing_same_parent(self) -> None:
         """Test 6.2.3.1: Multiple Identifiers, some existing for same parent - should succeed."""
@@ -1726,8 +1751,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
             [existing_identifier],  # The existing Identifiers
         ]
         self.service.repository.crud.side_effect = [
+            [existing_child],  # Existing child, read during verification
             [created_parent_id],  # Create parent
-            [existing_child],  # Existing child for update check
         ]
         self.service.repository.read_fields.side_effect = [
             [(existing_child2_id, created_parent_id)],
@@ -1776,8 +1801,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
             [existing_identifier],  # The existing Identifiers
         ]
         self.service.repository.crud.side_effect = [
+            [existing_child],  # Existing child, read during verification
             [created_parent_id],  # Create parent
-            [existing_child],  # Existing child for update check
         ]
         self.service.repository.read_fields.side_effect = [
             [(existing_child2_id, created_parent_id)],
@@ -1814,9 +1839,7 @@ class Test9Child2Identifiers(BaseUploadTestCase):
             [self.identifier_issuer],  # The identifier issuers in the Identifiers
             [existing_identifier],  # The existing Identifiers
         ]
-        self.service.repository.crud.side_effect = [
-            [True],  # Child exists
-        ]
+        self.mock_crud_exists([True])
         self.service.repository.read_fields.side_effect = [
             [(existing_child2_id, created_parent_id)],
         ]
@@ -1917,8 +1940,8 @@ class Test9Child2Identifiers(BaseUploadTestCase):
             self.random_ids[2],  # Spare ID in case another Identifier is created
         ]
         self.service.repository.crud.side_effect = [
+            [existing_child],  # Existing child, read during verification
             [created_parent_id],  # Create parent
-            [existing_child],  # Existing child for update check
         ]
         self.service.repository.read_fields.side_effect = [
             [(self.child2_id, created_parent_id)],
@@ -2320,6 +2343,7 @@ class TestUploadEdgeCases(BaseUploadTestCase):
         ]
         self.service.repository.crud.side_effect = [
             [True],
+            [],  # Stored parent, read during verification
         ]
 
         batch_result = self.upload_batch(parent_for_upload)
@@ -2379,7 +2403,7 @@ class TestUploadEdgeCases(BaseUploadTestCase):
         self.service.repository.read_fields.return_value = [
             (self.ref1_id, "ref1_code"),
         ]
-        self.service.repository.crud.return_value = [True]
+        self.mock_crud_exists([True])
 
         batch_result = self.batch_uploader.upload_batch(cmd)
 
@@ -3260,7 +3284,7 @@ class TestDuplicateIds(BaseUploadTestCase):
         pb = self._make_parent(id_b, children1=[self._make_child1(c1b)])
 
         # Both parents exist; child objects_exist is also called (two IDs each time).
-        self.service.repository.crud.return_value = [True, True]
+        self.mock_crud_exists([True, True])
         # Both children reference self.ref1_id; resolve it so the batch is
         # genuinely clean, isolating this test to duplicate-ID detection only.
         self.service.repository.read_fields.return_value = [(self.ref1_id, "ref1_code")]
@@ -3307,7 +3331,7 @@ class TestVerificationAttributionAndDryRun(BaseUploadTestCase):
         self.service.repository.read_fields.return_value = [
             (self.ref1_id, "ref1_code"),
         ]
-        self.service.repository.crud.return_value = [True]
+        self.mock_crud_exists([True])
         cmd = self._make_child_parent_id_mismatch_cmd().model_copy(
             update={"verify_only": True}
         )
@@ -3326,7 +3350,7 @@ class TestVerificationAttributionAndDryRun(BaseUploadTestCase):
         self.service.repository.read_fields.return_value = [
             (self.ref1_id, "ref1_code"),
         ]
-        self.service.repository.crud.return_value = [True]
+        self.mock_crud_exists([True])
 
         dry_run_cmd = self._make_child_parent_id_mismatch_cmd().model_copy(
             update={"verify_only": True}
@@ -3642,3 +3666,124 @@ class TestChildOrderCreateOrdering(BaseUploadTestCase):
             if len(call.args) > 3 and call.args[3] == CrudOperation.CREATE_SOME
         ]
         assert created_model_classes.index(Child1) < created_model_classes.index(Child2)
+
+
+class TestUnchangeableFieldsInVerification(BaseUploadTestCase):
+    """LSP-4178: a changed immutable field fails its item during verification."""
+
+    def _bad_and_good_parent(
+        self,
+    ) -> tuple[ParentForUpload, ParentForUpload, Parent, Parent]:
+        """An existing parent that changes an immutable field, and a good one."""
+        bad = self.create_parent_for_upload(parent_id=self.random_ids[0], x="new")
+        good = self.create_parent_for_upload(parent_id=self.random_ids[1], a="new_a")
+        existing_bad = self.get_parent_from_for_upload(bad, x="existing")
+        existing_good = self.get_parent_from_for_upload(good, a="old_a")
+        return bad, good, existing_bad, existing_good
+
+    def _upload(
+        self, parents: list[ParentForUpload], **cmd_updates: Any
+    ) -> ParentBatchUploadResult:
+        cmd = self.create_command_for_parents(parents).model_copy(update=cmd_updates)
+        return self.upload_batch(cmd)
+
+    def test_other_parent_is_stored_when_flag_is_false(self) -> None:
+        bad, good, existing_bad, existing_good = self._bad_and_good_parent()
+        self.service.repository.crud.side_effect = [
+            [True, True],  # Parents exist
+            [existing_bad, existing_good],  # Stored parents, read in verification
+            [existing_good.parent_id],  # Updated parent IDs
+        ]
+        batch_result = self._upload([bad, good], fail_batch_on_item_error=False)
+
+        assert batch_result.parents[0].status == EtlStatus.FAILED
+        assert batch_result.parents[0].has_log_code("f5e09001")
+        assert batch_result.parents[1].status == EtlStatus.UPDATED
+        assert batch_result.has_log_code("c0f70912")
+        assert not batch_result.has_log_code("05358e8a")
+        assert existing_good.a == "new_a"
+        self.uow.rollback.assert_not_called()
+
+    def test_nothing_is_stored_with_default_flag(self) -> None:
+        bad, good, existing_bad, existing_good = self._bad_and_good_parent()
+        self.service.repository.crud.side_effect = [
+            [True, True],
+            [existing_bad, existing_good],
+        ]
+        batch_result = self._upload([bad, good])
+
+        assert batch_result.parents[0].has_log_code("f5e09001")
+        assert batch_result.has_log_code("02095f22")
+        assert not batch_result.has_log_code("05358e8a")
+        assert existing_good.a == "old_a"  # Not updated
+        assert self.service.repository.crud.call_count == 2  # No UPDATE_SOME
+
+    def test_verify_only_reports_the_error(self) -> None:
+        bad, good, existing_bad, existing_good = self._bad_and_good_parent()
+        self.service.repository.crud.side_effect = [
+            [True, True],
+            [existing_bad, existing_good],
+        ]
+        batch_result = self._upload([bad, good], verify_only=True)
+
+        assert batch_result.parents[0].has_log_code("f5e09001")
+        assert batch_result.has_log_code("02095f22")
+
+    def test_update_objects_uses_objects_read_in_verification(self) -> None:
+        """update_objects does not read again, but still checks as a safeguard."""
+        bad, _, existing_bad, _ = self._bad_and_good_parent()
+        parent = bad.get_parent()
+        assert parent is not None
+        result = ParentUploadResult()
+        parent.parent_id = self.random_ids[0]  # type: ignore[attr-defined]
+        self.batch_uploader._stored_objs = {Parent: {self.random_ids[0]: existing_bad}}
+
+        success = self.batch_uploader.update_objects(
+            self.uow, None, Parent, [(parent, result)]
+        )
+
+        assert not success
+        assert result.has_log_code("f5e09001")
+        self.service.repository.crud.assert_not_called()
+
+    def test_child_changing_immutable_field_fails_its_parent(self) -> None:
+        child_id = self.random_ids[2]
+        child = self.create_child1_for_upload(
+            child_id=child_id,
+            parent_id=self.random_ids[0],
+            ref1_id=self.ref1_id,
+            x="new",
+        )
+        bad = self.create_parent_for_upload(
+            parent_id=self.random_ids[0], children1=[child]
+        )
+        good = self.create_parent_for_upload(parent_id=self.random_ids[1], a="new_a")
+        existing_bad = self.get_parent_from_for_upload(bad)
+        existing_good = self.get_parent_from_for_upload(good, a="old_a")
+        existing_child = Child1(
+            child1_id=child_id,
+            parent_id=self.random_ids[0],
+            ref1_id=self.ref1_id,
+            a="test_a",
+            b=[],
+            c={},
+            x="existing",
+            y=None,
+            z=None,
+        )
+        self.service.repository.read_fields.side_effect = [
+            [(child_id, self.random_ids[0])],  # Child exists
+            [(self.ref1_id, "ref1_code")],
+        ]
+        self.service.repository.crud.side_effect = [
+            [True, True],  # Parents exist
+            [existing_bad, existing_good],  # Stored parents (bad one is unchanged)
+            [existing_child],  # Stored child
+            [existing_good.parent_id],  # Updated parent IDs
+        ]
+        batch_result = self._upload([bad, good], fail_batch_on_item_error=False)
+
+        assert batch_result.parents[0].status == EtlStatus.FAILED
+        assert (batch_result.parents[0].children1 or [])[0].has_log_code("f5e09001")
+        assert batch_result.parents[1].status == EtlStatus.UPDATED
+        assert batch_result.has_log_code("c0f70912")

@@ -14,7 +14,7 @@ black==26.10.*
 ruff==0.17.*
 pylint==4.1.*
 mypy==2.4.*
-coverage==7.17.2
+coverage==7.17.3
 # profiling, used by gen_epix.util.profile_method
 pyinstrument==5.1.*
 
@@ -24,7 +24,7 @@ plotly>=6,<8
 
 
 # stubs
-pandas-stubs==3.0.*
+pandas-stubs==3.1.*
 openpyxl==3.1.*
 types-cachetools==7.0.*
 types-PyYAML==6.0.*

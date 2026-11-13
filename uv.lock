@@ -89,11 +89,11 @@ wheels = [
 
 [[package]]
 name = "cachetools"
-version = "7.3.0"
+version = "7.3.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5f/6b/6c1553e1e8f672f9423344a1915aad1537439ad3d14a3fbc1a02159cfd94/cachetools-7.3.0.tar.gz", hash = "sha256:3f63fc208410f0c3a3b37883c4903ecdacd6f0b259134e6d2e82debd5b2e01de", size = 48563, upload-time = "2026-11-05T20:38:46.434Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/d7/c2d7834f49eb10ba2eb55797a8a2e64c03679ec82cce58cfe1f03bb55024/cachetools-7.3.1.tar.gz", hash = "sha256:32e20b38b9cb7ff8d9fa7692e2f8969be3010083e6e7eac54226d51a91425d15", size = 49536, upload-time = "2026-11-12T21:25:12.764Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/aa/e54a49d0927b2fa7b86bc94dbde57125e38e8cfca7a31b6764e8dbf35e9f/cachetools-7.3.0-py3-none-any.whl", hash = "sha256:2105787c94619bde7072624fec0fe7b8a08bb7bf6c757c318f8925573c6f07c9", size = 19575, upload-time = "2026-11-05T20:38:44.928Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/ba/8f2b8d09957f8e8fed09236f22f7737b812bed5939cc6e2f5d9e77b0d71b/cachetools-7.3.1-py3-none-any.whl", hash = "sha256:0a2c9cfc6c6556161570c06d52b8939734d316ccf7ecad158fdb34b300808fce", size = 19785, upload-time = "2026-11-12T21:25:10.989Z" },
 ]
 
 [[package]]
@@ -592,7 +592,7 @@ server = [
 requires-dist = [
     { name = "alembic", marker = "extra == 'server'", specifier = "==1.20.1" },
     { name = "biopython", marker = "extra == 'server'", specifier = "==1.88" },
-    { name = "cachetools", marker = "extra == 'server'", specifier = "==7.3.0" },
+    { name = "cachetools", marker = "extra == 'server'", specifier = "==7.3.1" },
     { name = "cryptography", marker = "extra == 'server'", specifier = "==50.0.2" },
     { name = "dynaconf", specifier = "==3.3.3" },
     { name = "fastapi", extras = ["standard"], marker = "extra == 'server'", specifier = ">=0.162.2,<0.163.0" },
@@ -606,7 +606,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = "==2.*" },
     { name = "pyjwt", specifier = "==2.15.1" },
     { name = "python-dateutil", specifier = "==2.9.0.post0" },
-    { name = "python-multipart", marker = "extra == 'server'", specifier = "==0.0.32" },
+    { name = "python-multipart", marker = "extra == 'server'", specifier = "==0.0.33" },
     { name = "pyyaml", specifier = "==6.0.3" },
     { name = "scipy", marker = "extra == 'server'", specifier = "==1.18.1" },
     { name = "slowapi", marker = "extra == 'server'", specifier = "==0.1.10" },
@@ -1327,11 +1327,11 @@ wheels = [
 
 [[package]]
 name = "python-multipart"
-version = "0.0.32"
+version = "0.0.33"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5b/42/55c32bb9b12693c092ad250a0e82edb5b31ddeda6eb772de5f308b3804ad/python_multipart-0.0.32.tar.gz", hash = "sha256:be54b7f3fa167bb83e4fcd936b887b708f4e57fe75911c02aebf53efaf8d938e", size = 46881, upload-time = "2026-06-04T16:18:58.647Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9f/b7/15b905f6142a9a8a68f66900788da1a32e4d4254452783b37ad1eccb0506/python_multipart-0.0.33.tar.gz", hash = "sha256:b8112424a6abd162ec08d390565dd113ad699f2fe6fef3c987b8bbcbfe9e390d", size = 50499, upload-time = "2026-10-31T14:23:47.461Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl", hash = "sha256:ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23", size = 30042, upload-time = "2026-06-04T16:18:57.319Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/1b/6b1b4164ec734cac911460ab599bfbe46afedd42c5c9627fe4235942c314/python_multipart-0.0.33-py3-none-any.whl", hash = "sha256:8f16c07b36add9da6b2ee87d3efcaf0a45a6de9c3d0a5dd94e9ccf7675a7bc45", size = 32253, upload-time = "2026-10-31T14:23:46.33Z" },
 ]
 
 [[package]]
