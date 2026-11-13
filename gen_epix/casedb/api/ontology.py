@@ -5,6 +5,7 @@ from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
+from fastapi.concurrency import run_in_threadpool
 
 # The request and response models stay importable from this module
 # pylint: disable=useless-import-alias, unused-import
@@ -59,7 +60,7 @@ def create_ontology_endpoints(
                 obj_id1=disease_id,
                 association_objs=request_body.etiologies,
             )
-            retval: list[model.Etiology] = app.handle(cmd)
+            retval: list[model.Etiology] = await run_in_threadpool(app.handle, cmd)
         except Exception as exception:
             handle_exception("d5459ee4", user, exception)
         return retval

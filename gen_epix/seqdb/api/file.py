@@ -6,6 +6,7 @@ from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
+from fastapi.concurrency import run_in_threadpool
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
@@ -49,7 +50,8 @@ def create_file_endpoints(
     ) -> UUID:
         """Create a file from decoded request content through its command."""
         try:
-            retval: UUID = app.handle(
+            retval: UUID = await run_in_threadpool(
+                app.handle,
                 command.CreateFileCommand(
                     user=user,
                     file=model.File(
@@ -57,7 +59,7 @@ def create_file_endpoints(
                     ),
                     format=request_body.format,
                     compression=request_body.compression,
-                )
+                ),
             )
         except Exception as exception:
             # TODO: LSP-3893 If app.handle() raises, CreateFileRequestBody has no

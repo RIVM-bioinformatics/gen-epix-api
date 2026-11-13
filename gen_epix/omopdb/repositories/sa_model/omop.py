@@ -6,9 +6,7 @@ mixins supply row metadata and data lineage fields. These mappings provide
 persistence metadata to the OmopDB repository composition.
 """
 
-from __future__ import (
-    annotations,
-)
+from __future__ import annotations
 
 from datetime import date, datetime
 from uuid import UUID

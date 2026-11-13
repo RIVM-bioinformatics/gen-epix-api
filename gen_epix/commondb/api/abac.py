@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any, NoReturn
 
 from fastapi import APIRouter, FastAPI
+from fastapi.concurrency import run_in_threadpool
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
@@ -46,7 +47,7 @@ def create_abac_endpoints(
         """Retrieve names and email addresses of the user's organization admins."""
         try:
             cmd = command.RetrieveOrganizationAdminNameEmailsCommand(user=user)
-            retval: list[model.UserNameEmail] = app.handle(cmd)
+            retval: list[model.UserNameEmail] = await run_in_threadpool(app.handle, cmd)
         except Exception as exception:
             handle_exception("fd6a9c3e", None, exception)
         return retval
