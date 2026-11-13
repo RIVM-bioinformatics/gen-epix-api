@@ -32,6 +32,7 @@
 **/secrets.dev.yaml
 **/values.dev.yaml
 /test/output/
+/cert
 LICENSE
 README.md
 azure-deploy-acc.yml
