@@ -10,7 +10,7 @@ SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = False
 DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_EMPTY
-# DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_EMPTY
+# SQLite runs directly; HTTP endpoint use is not supported because of threading.
 
 # Variables used in tests
 REFDATA_ADMIN_OR_ABOVE_USERS = [

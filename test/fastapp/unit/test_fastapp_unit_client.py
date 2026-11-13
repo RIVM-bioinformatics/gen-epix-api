@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import traceback
 from test.util.mock_compat import Mock, patch
 from typing import Any, Callable, ClassVar, cast
 from uuid import UUID, uuid4
@@ -9,6 +11,7 @@ import httpx
 import pytest
 from pydantic import Field
 
+from gen_epix.fastapp.app import App
 from gen_epix.fastapp.client import Client, RetryPolicy
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.domain.entity import Entity
@@ -1066,3 +1069,180 @@ class TestClientRetry:
 
         assert handler.calls == 1
         assert retry_sleeps == []
+
+
+def _raise_read_timeout() -> None:
+    """Raise a timeout with a cause of its own, like httpx does from httpcore."""
+    try:
+        raise OSError("socket detail")
+    except OSError as e:
+        raise httpx.ReadTimeout("timed out") from e
+
+
+class TestStackTraceExemption:
+    """A registered exception type suppresses the logged stack trace; nothing else changes."""
+
+    @staticmethod
+    def _failed_client_command(
+        caplog: pytest.LogCaptureFixture,
+        error: BaseException,
+        *exempt: type[Exception],
+    ) -> tuple[logging.LogRecord, ServiceException]:
+        client = Client(
+            Domain("trace-test"),
+            "example.org",
+            8000,
+            protocol=HttpProtocol.HTTP,
+            add_generated_crud_route_handlers=False,
+            logger=logging.getLogger("trace-test"),
+        )
+        client.register_route(RetryCommand, "/retry")
+        client.register_handler(RetryCommand, Flaky(error))
+        for exempt_class in exempt:
+            client.register_stack_trace_exemption(exempt_class)
+        with caplog.at_level(logging.ERROR, logger="trace-test"):
+            with pytest.raises(ServiceException) as raised:
+                client.handle(RetryCommand())
+        return TestStackTraceExemption._the_error_record(caplog), raised.value
+
+    @staticmethod
+    def _failed_app_command(
+        caplog: pytest.LogCaptureFixture,
+        error: BaseException,
+        *exempt: type[Exception],
+    ) -> tuple[logging.LogRecord, BaseException]:
+        """Fail a command on an `App` directly: the error is not a ServiceException."""
+        app = App(logger=logging.getLogger("trace-test"))
+        app.register_handler(RetryCommand, Flaky(error))
+        for exempt_class in exempt:
+            app.register_stack_trace_exemption(exempt_class)
+        with caplog.at_level(logging.ERROR, logger="trace-test"):
+            with pytest.raises(Exception) as raised:
+                app.handle(RetryCommand())
+        return TestStackTraceExemption._the_error_record(caplog), raised.value
+
+    @staticmethod
+    def _the_error_record(caplog: pytest.LogCaptureFixture) -> logging.LogRecord:
+        records = [r for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(records) == 1
+        return records[0]
+
+    @staticmethod
+    def _wrapped_timeout() -> RuntimeError:
+        try:
+            try:
+                _raise_read_timeout()
+            except httpx.ReadTimeout as timeout:
+                raise RuntimeError("wrapper") from timeout
+        except RuntimeError as wrapper:
+            return wrapper
+        raise AssertionError("unreachable")
+
+    def test_nothing_is_registered_by_default(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, raised = self._failed_client_command(caplog, httpx.ReadTimeout("t"))
+
+        assert record.exc_info is not None
+        assert record.exc_info[1] is raised
+        assert "ReadTimeout" in "".join(traceback.format_exception(*record.exc_info))
+
+    def test_a_registered_cause_suppresses_the_trace(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, _ = self._failed_client_command(
+            caplog, httpx.ReadTimeout("t"), httpx.HTTPError
+        )
+
+        assert not record.exc_info
+        assert "HTTP request error" in record.getMessage()  # the message still says why
+
+    def test_a_registered_base_class_matches_subclasses(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, _ = self._failed_client_command(
+            caplog, _status_error(500), httpx.HTTPError
+        )
+
+        assert not record.exc_info
+
+    @pytest.mark.parametrize("error", [ValueError("bad response"), KeyError("id")])
+    def test_other_errors_keep_the_full_trace(
+        self, error: BaseException, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, _ = self._failed_client_command(caplog, error, httpx.HTTPError)
+
+        assert record.exc_info is not None
+        assert record.exc_info[1] is not None
+        assert record.exc_info[1].__cause__ is error
+
+    def test_a_registered_top_level_type_suppresses_the_trace(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, _ = self._failed_client_command(
+            caplog, ValueError("v"), ServiceException
+        )
+
+        assert not record.exc_info
+
+    def test_the_raised_exception_is_not_changed(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        try:
+            _raise_read_timeout()
+        except httpx.ReadTimeout as caught:
+            error = caught
+        _, raised = self._failed_client_command(caplog, error, httpx.HTTPError)
+
+        assert raised.__cause__ is error
+        assert isinstance(error.__cause__, OSError)
+        assert error.__traceback__ is not None
+        assert raised.__traceback__ is not None
+
+    def test_a_cause_cycle_ends(self) -> None:
+        app = App(logger=logging.getLogger("trace-test"))
+        app.register_stack_trace_exemption(OSError)
+        first, second = RuntimeError("first"), RuntimeError("second")
+        first.__cause__, second.__cause__ = second, first
+
+        assert not app._is_stack_trace_exempt(first)
+
+    def test_an_unexpected_error_with_a_registered_cause_has_no_trace(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, _ = self._failed_app_command(
+            caplog, self._wrapped_timeout(), httpx.HTTPError
+        )
+
+        assert not record.exc_info
+        assert record.stack_info is None
+
+    def test_an_unexpected_error_keeps_trace_and_stack_info_by_default(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, raised = self._failed_app_command(caplog, self._wrapped_timeout())
+
+        assert record.exc_info is not None
+        assert record.exc_info[1] is raised
+        assert record.stack_info is not None
+
+    def test_an_unexpected_unregistered_error_keeps_trace_and_stack_info(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        record, raised = self._failed_app_command(
+            caplog, ValueError("bad"), httpx.HTTPError
+        )
+
+        assert record.exc_info is not None
+        assert record.exc_info[1] is raised
+        assert record.stack_info is not None
+
+    def test_an_unexpected_error_is_raised_unchanged(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        error = self._wrapped_timeout()
+        _, raised = self._failed_app_command(caplog, error, httpx.HTTPError)
+
+        assert raised is error
+        assert isinstance(error.__cause__, httpx.ReadTimeout)
+        assert error.__traceback__ is not None
