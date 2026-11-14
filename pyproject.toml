@@ -59,7 +59,7 @@ server = [
     "scipy==1.18.1",
     "numpy==2.5.4",
     "biopython==1.88",
-    "cachetools==7.3.1",
+    "cachetools==8.0.0",
     "tomli-w==1.2.0",
     "fire==0.7.1",
 ]
