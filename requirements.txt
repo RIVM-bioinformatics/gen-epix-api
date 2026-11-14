@@ -5,7 +5,7 @@
 fastapi[standard]>=0.162.2,<0.163.0 
 # fastapi[standard]==0.141.1
 gunicorn==26.2.*
-starlette==1.9.*
+starlette==1.10.*
 httpx==0.28.1
 httpx2==2.16.0
 urllib3==2.8.0
