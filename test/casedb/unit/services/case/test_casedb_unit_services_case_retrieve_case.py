@@ -545,9 +545,14 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
     ) -> model.CaseQueryResult:
         """Run a CaseQuery using the requested leaf filters and fixture cases."""
         filter_col_ids = {
-            UUID(child_filter.key)
+            UUID(key)
             for child_filter in filters
-            if isinstance(child_filter.key, str)
+            for key in (
+                child_filter.get_keys()
+                if isinstance(child_filter, CompositeFilter)
+                else [child_filter.key]
+            )
+            if isinstance(key, str)
         }
         cols: list[model.Col] = []
         ref_cols: list[model.RefCol] = []
@@ -612,6 +617,36 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
             )
         ]
         assert result.case_ids == expected_ids
+        assert result.is_max_results_exceeded is False
+
+    def test_nested_case_query_filter_validates_and_maps_leaf_filters(
+        self, case_query_filter_cases: list[model.Case]
+    ) -> None:
+        """Validate and map nested leaves with different column types."""
+        nested_filter = CompositeFilter(
+            filters=[
+                _create_case_query_leaf_filter(
+                    _CASE_QUERY_FILTER_SPECS_BY_NAME["EqualsNumberFilter"],
+                    target_case_index=0,
+                    invert=False,
+                ),
+                _create_case_query_leaf_filter(
+                    _CASE_QUERY_FILTER_SPECS_BY_NAME["EqualsStringFilter"],
+                    target_case_index=1,
+                    invert=False,
+                ),
+            ],
+            operator=LogicalOperator.OR,
+        )
+
+        result = self.execute_case_filter_query(
+            case_query_filter_cases, [nested_filter]
+        )
+
+        assert result.case_ids == [
+            case_query_filter_cases[0].id,
+            case_query_filter_cases[1].id,
+        ]
         assert result.is_max_results_exceeded is False
 
     @pytest.mark.parametrize(

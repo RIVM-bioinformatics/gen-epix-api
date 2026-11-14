@@ -16,13 +16,16 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.filter.base import Filter
-from gen_epix.filter.composite import CompositeFilter
-from gen_epix.filter.equals_boolean import EqualsBooleanFilter
-from gen_epix.filter.equals_uuid import EqualsUuidFilter
-from gen_epix.filter.no_filter import NoFilter
-from gen_epix.filter.string_set import StringSetFilter
-from gen_epix.filter.uuid_set import UuidSetFilter
+from gen_epix.filter import (
+    CompositeFilter,
+    EqualsBooleanFilter,
+    EqualsUuidFilter,
+    ExistsFilter,
+    Filter,
+    NoFilter,
+    StringSetFilter,
+    UuidSetFilter,
+)
 
 
 def case_service_retrieve_cases_by_query(
@@ -352,34 +355,41 @@ def _verify_case_filter(
         InvalidArgumentsError: If a set-backed column uses a non-string-set filter or
             contains a member outside its configured domain.
     """
-    filter_metadata = _get_filter_column_metadata(
-        self, uow, user, composite_filter.filters
-    )
-    # Verify filter validity
     concept_valid_values: dict[UUID, set[str]] = {}
     region_valid_values: dict[UUID, set[str]] = {}
-    for child_filter, (col, ref_col) in zip(composite_filter.filters, filter_metadata):
-        if isinstance(child_filter, NoFilter):
-            continue
-        assert col is not None and ref_col is not None
-        if ref_col.concept_set_id or ref_col.region_set_id:
-            if isinstance(child_filter, StringSetFilter):
-                validate_concept_or_region(
-                    self,
-                    user,
-                    child_filter,
-                    concept_valid_values,
-                    region_valid_values,
-                    col,
-                    ref_col,
-                )
-            else:
-                raise exc.InvalidArgumentsError(
-                    "290ab290",
-                    f"Column {col.id}: invalid filter type: {child_filter.__class__.__name__}",
-                )
 
-    return [ref_col for _, ref_col in filter_metadata]
+    def _verify_filters(filters: Iterable[Filter]) -> list[model.RefCol | None]:
+        """Validate child filters recursively and return leaf metadata in order."""
+        filters = list(filters)
+        filter_metadata = _get_filter_column_metadata(self, uow, user, filters)
+        ref_cols: list[model.RefCol | None] = []
+        for child_filter, (col, ref_col) in zip(filters, filter_metadata):
+            if isinstance(child_filter, CompositeFilter):
+                ref_cols.extend(_verify_filters(child_filter.filters))
+                continue
+            ref_cols.append(ref_col)
+            if isinstance(child_filter, NoFilter):
+                continue
+            assert col is not None and ref_col is not None
+            if ref_col.concept_set_id or ref_col.region_set_id:
+                if isinstance(child_filter, StringSetFilter):
+                    validate_concept_or_region(
+                        self,
+                        user,
+                        child_filter,
+                        concept_valid_values,
+                        region_valid_values,
+                        col,
+                        ref_col,
+                    )
+                elif not isinstance(child_filter, ExistsFilter):
+                    raise exc.InvalidArgumentsError(
+                        "290ab290",
+                        f"Column {col.id}: invalid filter type: {child_filter.__class__.__name__}",
+                    )
+        return ref_cols
+
+    return _verify_filters(composite_filter.filters)
 
 
 def _get_filter_column_metadata(
@@ -393,7 +403,7 @@ def _get_filter_column_metadata(
     filter_col_ids = [
         cast(UUID, child_filter.key)
         for child_filter in filters
-        if not isinstance(child_filter, NoFilter)
+        if not isinstance(child_filter, (NoFilter, CompositeFilter))
     ]
     unique_filter_col_ids = list(dict.fromkeys(filter_col_ids))
     filter_cols: list[model.Col] = self.repository.crud(
@@ -416,7 +426,7 @@ def _get_filter_column_metadata(
     return [
         (
             (None, None)
-            if isinstance(child_filter, NoFilter)
+            if isinstance(child_filter, (NoFilter, CompositeFilter))
             else (
                 filter_cols_map[cast(UUID, child_filter.key)],
                 ref_cols_map[filter_cols_map[cast(UUID, child_filter.key)].ref_col_id],
@@ -525,17 +535,28 @@ def _get_valid_concepts(
 def _get_map_functions_for_filters(
     ref_cols: Iterable[model.RefCol | None],
     filters: Iterable[Filter],
-) -> list[Callable[[Any], Any]]:
-    """Build value-normalization functions in the same order as leaf filters."""
-    # Check validity of filter and generate map_fns
-    map_fns: list[Callable[[Any], Any]] = []
-    for ref_col, child_filter in zip(ref_cols, filters):
-        if isinstance(child_filter, NoFilter):
-            map_fns.append(lambda value: value)
-        else:
+) -> list[Any]:
+    """Build a nested value-normalization map aligned with the filter tree."""
+    ref_col_iter = iter(ref_cols)
+
+    def _build_map_functions(filters: Iterable[Filter]) -> list[Any]:
+        """Build mappings recursively, consuming metadata in leaf order."""
+        map_fns: list[Any] = []
+        for child_filter in filters:
+            if isinstance(child_filter, CompositeFilter):
+                map_fns.append(_build_map_functions(child_filter.filters))
+                continue
+            ref_col = next(ref_col_iter)
+            if isinstance(child_filter, NoFilter):
+                map_fns.append(lambda value: value)
+                continue
             assert ref_col is not None
-            _get_map_function_for_col(map_fns, ref_col, child_filter)
-    return map_fns
+            child_map_fns: list[Callable[[Any], Any]] = []
+            _get_map_function_for_col(child_map_fns, ref_col, child_filter)
+            map_fns.append(child_map_fns[0])
+        return map_fns
+
+    return _build_map_functions(filters)
 
 
 def _get_map_function_for_col(
