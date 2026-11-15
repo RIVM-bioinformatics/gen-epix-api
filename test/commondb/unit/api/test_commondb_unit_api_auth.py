@@ -3,7 +3,7 @@
 from test.util.mock_compat import Mock, patch
 
 import pytest
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.routing import APIRoute
 
 from gen_epix.commondb.api.auth import create_auth_endpoints
@@ -81,6 +81,29 @@ async def test_identity_provider_route_delegates_dispatch_errors() -> None:
     assert handle_exception.call_args.args[0] == "3ddf8ebb"
     assert handle_exception.call_args.args[1] is None
     assert isinstance(handle_exception.call_args.args[2], ValueError)
+
+
+@pytest.mark.asyncio
+async def test_identity_provider_route_uses_default_exception_adapter() -> None:
+    router = APIRouter()
+    app = Mock()
+    app.impl.registered_user_dependency = _registered_user_dependency
+    app.handle.side_effect = ValueError("dispatch failed")
+
+    with (
+        patch.object(
+            CrudEndpointGenerator,
+            "create_crud_endpoint_set_for_domain",
+            return_value=[],
+        ),
+        patch.object(CrudEndpointGenerator, "generate_endpoints"),
+    ):
+        create_auth_endpoints(router, app)
+
+    with pytest.raises(HTTPException) as error:
+        await _get_identity_providers_route(router).endpoint()
+
+    assert error.value.status_code == 500
 
 
 @pytest.mark.parametrize(

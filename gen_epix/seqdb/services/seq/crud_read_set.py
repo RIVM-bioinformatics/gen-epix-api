@@ -37,10 +37,11 @@ def seq_service_crud_read_set(
         # TODO: Specific logic for delete operation to be added, e.g. check for foreign key constraints before deletion
         pass
 
+    elif cmd.is_write():
+        # TODO: Specific logic for upsert operation to be added
+        pass
+
     else:
-        # TODO: LSP-3893 CrudCommand accepts UPSERT_ONE and UPSERT_SOME and both
-        # repository backends implement them, but this handler rejects them; confirm
-        # whether ReadSet upserts are intentionally unsupported before delegating.
         raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 
     return self.crud(cmd)  # type: ignore[return-value]

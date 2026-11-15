@@ -25,18 +25,20 @@ class HandleAuthExceptionMiddleware(BaseHTTPMiddleware):
         """Initialize a HandleAuthExceptionMiddleware instance."""
         super().__init__(app)
         self._fast_app = fast_app
-        self._logger = logger or fast_app.logger
+        self._logger = logger or (fast_app.logger if fast_app is not None else None)
 
     def _log_exception(self, exception: Exception) -> None:
         """Log an authentication exception through the configured application logger."""
         if self._logger:
-            self._logger.warning(
-                # TODO: LSP-3893 With logger set and fast_app omitted, auth errors
-                # should be logged, but _log_exception dereferences None; clarify
-                # whether logger-only construction is supported.
+            message = (
                 self._fast_app.create_log_message(
                     "e4cf7b23", None, exception=exception  # type: ignore[arg-type]
-                ),
+                )
+                if self._fast_app is not None
+                else str(exception)
+            )
+            self._logger.warning(
+                message,
             )
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:

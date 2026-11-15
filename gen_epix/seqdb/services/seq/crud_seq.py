@@ -37,10 +37,10 @@ def seq_service_crud_seq(
         # TODO: Specific logic for delete operation to be added, e.g. check for foreign key constraints before deletion
         pass
 
+    elif cmd.is_write():
+        pass
+
     else:
-        # TODO: LSP-3893 SeqCrudCommand accepts UPSERT_ONE and UPSERT_SOME, but this
-        # dispatcher rejects them before generic CRUD handles them as writes; confirm
-        # whether SeqDB intentionally narrows the shared CRUD operation contract.
         raise AssertionError(f"Unsupported operation type: {cmd.operation.value}")
 
     return self.crud(cmd)  # type: ignore[return-value]

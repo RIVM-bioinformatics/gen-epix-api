@@ -360,7 +360,9 @@ class SARepository(BaseRepository):
         # Create a session maker per isolation level
         self._default_isolation_level: IsolationLevel = IsolationLevel.SERIALIZABLE
         self._session_maker_by_isolation_level: dict[IsolationLevel, sessionmaker] = {
-            x: sessionmaker(engine.execution_options(isolation_level=x.value))
+            x: sessionmaker(
+                engine.execution_options(isolation_level=x.sqlalchemy_value)
+            )
             for x in IsolationLevel
         }
 
