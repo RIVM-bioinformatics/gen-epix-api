@@ -292,6 +292,27 @@ def test_read_some_raises_invalid_ids(repo: SARepository) -> None:
         repo.read_some(RepoModel, ["missing-id"])
 
 
+def test_in_session_read_some_optimized_sqlite_path(repo: SARepository) -> None:
+    repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2)])
+    mapper = repo.get_mapper(RepoModel)
+
+    with repo.get_session() as session:
+        rows, row_ids = SARepository._in_session_read_some(
+            mapper, session, ["id-2", "id-1"], optimize_parameter_handling=True
+        )
+
+    assert row_ids == ["id-1", "id-2"]
+    assert {row.id for row in rows} == {"id-1", "id-2"}
+
+
+def test_exists_some_accepts_generator_ids_in_input_order(repo: SARepository) -> None:
+    repo.create_one(RepoModel, "user", _make_obj(1))
+
+    result = repo.exists_some(RepoModel, (obj_id for obj_id in ["id-1", "missing-id"]))
+
+    assert result == [True, False]
+
+
 def test_delete_some_uses_supplied_session_for_uncommitted_rows(
     repo: SARepository,
 ) -> None:
@@ -606,6 +627,47 @@ def test_split_filter_handles_empty_and_and_composites(repo: SARepository) -> No
     ) == (None, only_python_filter)
 
 
+@pytest.mark.parametrize("operator", [LogicalOperator.AND, LogicalOperator.OR])
+def test_split_filter_preserves_inversion_for_sql_composites(
+    repo: SARepository, operator: LogicalOperator
+) -> None:
+    filter_ = CompositeFilter(
+        operator=operator,
+        filters=[
+            EqualsNumberFilter(key="value", value=1),
+            EqualsNumberFilter(key="value", value=2),
+        ],
+        invert=True,
+    )
+
+    where_filter, remainder_filter = repo.split_filter(RepoModel, filter_)
+
+    assert where_filter == CompositeFilter(
+        operator=operator,
+        filters=[
+            EqualsNumberFilter(key="value", value=1),
+            EqualsNumberFilter(key="value", value=2),
+        ],
+        invert=True,
+    )
+    assert remainder_filter is None
+
+
+def test_split_filter_keeps_inverted_mixed_and_in_python(
+    repo: SARepository,
+) -> None:
+    filter_ = CompositeFilter(
+        operator=LogicalOperator.AND,
+        filters=[
+            EqualsNumberFilter(key="value", value=1),
+            EqualsStringFilter(key="unknown", value="x"),
+        ],
+        invert=True,
+    )
+
+    assert repo.split_filter(RepoModel, filter_) == (None, filter_)
+
+
 def test_print_db_content(
     repo: SARepository, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -628,6 +690,39 @@ def test_verify_valid_ids(repo: SARepository) -> None:
 
         with pytest.raises(exc.InvalidIdsError, match="e1eb6e15"):
             repo.verify_valid_ids(uow, "user", RepoModel, ["id-1", "missing"])
+
+
+@pytest.mark.parametrize(
+    "obj_ids, row_ids, code, message",
+    [
+        (["missing"], [], "3132db4e", "custom_table"),
+        (["id-1", "missing"], ["id-1"], "35de72de", "custom_table"),
+    ],
+)
+def test_in_session_verify_retrieved_ids_reports_missing_ids(
+    repo: SARepository,
+    obj_ids: list[str],
+    row_ids: list[str],
+    code: str,
+    message: str,
+) -> None:
+    with pytest.raises(exc.InvalidIdsError, match=code) as error:
+        SARepository._in_session_verify_retrieved_ids(
+            repo.get_mapper(RepoModel), obj_ids, row_ids, table_name=message
+        )
+
+    assert message in str(error.value)
+
+
+def test_verify_duplicate_ids_accepts_unique_iterable() -> None:
+    SARepository._verify_duplicate_ids(RepoModel, (obj_id for obj_id in ["a", "b"]))
+
+
+def test_verify_duplicate_ids_reports_all_repeated_values() -> None:
+    with pytest.raises(exc.DuplicateIdsError, match="bba17339") as error:
+        SARepository._verify_duplicate_ids(RepoModel, ["a", "b", "a", "b"])
+
+    assert error.value.ids == ["a", "b"]
 
 
 def test_create_repository_delegates(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1003,6 +1098,49 @@ def test_check_schema_matches_reports_missing_table(tmp_path: Path) -> None:
 def test_check_schema_matches_requires_connection_string() -> None:
     with pytest.raises(ValueError, match="connection_string is required"):
         SARepository.check_schema_matches(entities=[])
+
+
+def test_check_schema_matches_disposes_engine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = sa.create_engine("sqlite:///:memory:")
+    dispose = Mock(wraps=engine.dispose)
+    monkeypatch.setattr(engine, "dispose", dispose)
+    monkeypatch.setattr(
+        repository_module.EngineFactory,
+        "create_engine",
+        lambda *args, **kwargs: engine,
+    )
+
+    assert (
+        SARepository.check_schema_matches(
+            entities=[], connection_string="sqlite:///:memory:"
+        )
+        == []
+    )
+
+    dispose.assert_called_once_with()
+
+
+def test_check_schema_matches_disposes_engine_when_inspection_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    monkeypatch.setattr(
+        repository_module.EngineFactory,
+        "create_engine",
+        lambda *args, **kwargs: engine,
+    )
+    monkeypatch.setattr(
+        repository_module, "inspect", Mock(side_effect=RuntimeError("inspect failed"))
+    )
+
+    with pytest.raises(RuntimeError, match="inspect failed"):
+        SARepository.check_schema_matches(
+            entities=[], connection_string="sqlite:///:memory:"
+        )
+
+    engine.dispose.assert_called_once_with()
 
 
 def test_create_sa_repository_rejects_nonexistent_sqlite_file(tmp_path: Path) -> None:

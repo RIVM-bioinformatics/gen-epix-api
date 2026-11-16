@@ -190,6 +190,7 @@ class Run:
             + [
                 "test/filter/unit",
                 "test/transform/unit",
+                "test/etl/unit",
                 "test/fastapp/unit",
                 "test/fastapp/integration",
                 "test/commondb/unit",
@@ -286,6 +287,7 @@ class Run:
                 "test/general/unit/startup_benchmark",
                 "test/filter/unit",
                 "test/transform/unit",
+                "test/etl/unit",
                 "test/fastapp/unit",
                 "test/seqdb/unit",
                 "test/commondb/unit",

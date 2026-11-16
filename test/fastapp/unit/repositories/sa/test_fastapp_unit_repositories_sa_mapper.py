@@ -6,12 +6,18 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
+from pydantic import computed_field
 
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import FieldType, FieldTypeSet
 from gen_epix.fastapp.exc import RepositoryServiceError
 from gen_epix.fastapp.model import Model
-from gen_epix.fastapp.repositories.sa.mapper import BaseSAMapper, SAMapper
+from gen_epix.fastapp.repositories.sa.mapper import (
+    BaseSAMapper,
+    BaseSAMapperFactory,
+    SAMapper,
+    SAMapperFactory,
+)
 
 
 class _RowBase:
@@ -239,10 +245,116 @@ class TestBaseSAMapper(BaseMapperTestCase):
         # 4. Verify
         assert mapper_with.schema_name == "myschema"
         assert mapper_without.schema_name is None
+        assert mapper_with.table_name == "test_table"
+        assert mapper_with.model_class is self.model_class
+        assert mapper_with.row_class is row_with_schema
+
+    def test_schema_name_from_direct_table_args_dict(self) -> None:
+        row_class = self.create_row(
+            ["id", "link", "value"],
+            class_attrs={"__table_args__": {"schema": "myschema"}},
+        )
+
+        mapper = _DummyMapper(self.model_class, row_class)
+
+        assert mapper.schema_name == "myschema"
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
 class TestSAMapper(BaseMapperTestCase):
+    def test_factory_and_field_name_accessors(self) -> None:
+        row_class = self.create_row(["id", "link", "value"])
+        mapper = SAMapperFactory().create_mapper(self.model_class, row_class)
+
+        assert isinstance(mapper, SAMapper)
+        assert mapper.get_field_names_by_type(FieldType.VALUE) == ("value",)
+        assert mapper.get_field_names_by_set(FieldTypeSet.MODEL_DB_COMMON) == (
+            "id",
+            "link",
+            "value",
+        )
+        assert mapper.get_row_field_names_by_type(FieldType.VALUE) == ("value",)
+        assert mapper.get_row_field_names_by_set(FieldTypeSet.MODEL_DB_COMMON) == (
+            "id",
+            "link",
+            "value",
+        )
+        assert mapper.get_mapped_field_name("link", reverse=True) == "link"
+        assert mapper.get_row_id_column() is row_class.id
+
+    def test_retrieve_and_validate_row_only_fields(self) -> None:
+        mapper, row_class = _make_mapper(
+            row_columns=["id", "link", "value", "created_at", "updated_at"]
+        )
+
+        assert mapper._retrieve_field_names(
+            row_class, ("created_at",), ["updated_at"]
+        ) == (
+            ("created_at",),
+            ("updated_at",),
+            ["created_at", "updated_at"],
+            {"created_at", "updated_at"},
+        )
+        assert mapper._retrieve_field_names(row_class) == (
+            None,
+            None,
+            ["created_at", "updated_at"],
+            {"created_at", "updated_at"},
+        )
+
+        with pytest.raises(RepositoryServiceError):
+            mapper._retrieve_field_names(
+                row_class, service_metadata_field_names=("missing",)
+            )
+        with pytest.raises(RepositoryServiceError):
+            mapper._check_field_names(
+                row_class, 1, "field_names", {"created_at"}  # type: ignore[arg-type]
+            )
+
+    def test_relationship_fields_map_only_when_row_attribute_exists(self) -> None:
+        entity = _make_entity()
+        model_class = type("RelationshipModel", (_Model,), {"ENTITY": entity})
+        row_class = _make_row_class(
+            columns=["id", "link", "value"],
+            class_attrs={"relationship_row": object()},
+        )
+
+        mapper = SAMapper(
+            model_class,
+            row_class,
+            field_name_map={"relation": "relationship_row"},
+        )
+
+        assert mapper._relationship_field_name_map == {"relation": "relationship_row"}
+        assert mapper._relationship_field_name_reverse_map == {
+            "relationship_row": "relation"
+        }
+
+    def test_mapper_requires_one_id_field(self) -> None:
+        entity = _make_entity(persistable=False)
+        model_class = type("NonPersistableModel", (_Model,), {"ENTITY": entity})
+        row_class = _make_row_class(columns=["id", "link", "value"])
+
+        with pytest.raises(NotImplementedError):
+            SAMapper(model_class, row_class)
+
+    def test_update_reports_changed_and_unchanged_rows(self) -> None:
+        mapper, row_class = _make_mapper(
+            row_columns=["id_col", "link_col", "value_col"],
+            field_name_map={
+                "id": "id_col",
+                "link": "link_col",
+                "value": "value_col",
+            },
+        )
+        model_obj = mapper.model_class(id=1, link=None, value="new")
+        row_obj = row_class(id_col=1, link_col=2, value_col="old")
+
+        assert mapper.update(None, model_obj, row_obj) is True
+        assert row_obj.link_col is None
+        assert row_obj.value_col == "new"
+        assert mapper.update(None, model_obj, row_obj) is False
+
     def test_identical_common_field_names_dump_load_and_maps(self) -> None:
         # 1. Input
         columns: list[str] = ["id", "link", "value", "svc_a", "db_a"]
@@ -272,6 +384,7 @@ class TestSAMapper(BaseMapperTestCase):
             "value": "value",
         }
         assert mapper.get_mapped_field_name("value") == "value"
+        assert mapper.get_mapped_field_name("missing") is None
         assert mapper.get_row_field_names_by_set(FieldTypeSet.DB_MODEL)[:3] == (
             "id",
             "link",
@@ -280,9 +393,65 @@ class TestSAMapper(BaseMapperTestCase):
         assert getattr(row_obj, "id") == 1
         assert getattr(row_obj, "link") == 2
         assert getattr(row_obj, "value") == "v"
+        assert "relation" not in row_obj.__dict__
         assert getattr(row_obj, "extra") == 3
         assert isinstance(loaded_obj, _Model)
         assert loaded_obj.id == 1 and loaded_obj.link == 2 and loaded_obj.value == "v"
+
+    def test_dump_includes_computed_fields_with_matching_row_columns(self) -> None:
+        entity = Entity(
+            persistable=True,
+            id_field_name="id",
+            links={1: ("link", _Model, "relation")},  # type: ignore[dict-item]
+        )
+
+        class ComputedModel(_Model):
+            @computed_field
+            @property
+            def computed_value(self) -> str:
+                return "computed"
+
+        entity.set_model_class(ComputedModel)
+        ComputedModel.ENTITY = entity
+        row_class = _make_row_class(columns=["id", "link", "value", "computed_value"])
+        mapper = SAMapper(ComputedModel, row_class)
+
+        row_obj = mapper.dump(
+            user_id=None,
+            obj=ComputedModel(id=1, link=2, value="value", relation=["related"]),
+        )
+
+        assert row_obj.computed_value == "computed"
+        assert "relation" not in row_obj.__dict__
+
+    def test_base_contract_methods_raise_not_implemented(self) -> None:
+        row_class = self.create_row(["id_col", "link_col", "value_col"])
+        mapper = _DummyMapper(self.model_class, row_class)
+        model_obj = self.model_class(id=1, link=2, value="v")
+        row_obj = row_class(id_col=1, link_col=2, value_col="v")
+
+        with pytest.raises(NotImplementedError):
+            BaseSAMapper.get_field_names_by_type(mapper, FieldType.ID)
+        with pytest.raises(NotImplementedError):
+            BaseSAMapper.get_field_names_by_set(mapper, FieldTypeSet.ID)
+        with pytest.raises(NotImplementedError):
+            BaseSAMapper.get_row_field_names_by_type(mapper, FieldType.ID)
+        with pytest.raises(NotImplementedError):
+            BaseSAMapper.get_row_field_names_by_set(mapper, FieldTypeSet.ID)
+        with pytest.raises(NotImplementedError):
+            BaseSAMapper.get_row_id(mapper, row_obj)
+        with pytest.raises(NotImplementedError):
+            BaseSAMapper.get_row_id_column(mapper)
+        with pytest.raises(NotImplementedError):
+            BaseSAMapper.dump(mapper, None, model_obj)
+        with pytest.raises(NotImplementedError):
+            BaseSAMapper.update(mapper, None, model_obj, row_obj)
+        with pytest.raises(NotImplementedError):
+            BaseSAMapper.load(mapper, row_obj)
+        with pytest.raises(NotImplementedError):
+            BaseSAMapperFactory.create_mapper(object(), self.model_class, row_class)
+
+        assert BaseSAMapper.get_id(mapper, model_obj) == 1
 
     def test_nonidentical_field_names_mapping_dump_load(self) -> None:
         # 1. Input

@@ -14,6 +14,7 @@ Fix index:
 import json
 import logging
 import uuid
+from datetime import datetime
 from test.util.mock_compat import Mock
 from typing import ClassVar, List
 from uuid import UUID
@@ -23,6 +24,7 @@ import pytest
 from gen_epix.commondb.domain.enum import FeatureFlag
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
+from gen_epix.fastapp.enum import EventTiming
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command, User
 
@@ -42,6 +44,14 @@ class _CacheCommand(Command):
 
 class _OtherCacheCommand(Command):
     NAME: ClassVar[str] = "other_cache_command"
+
+
+class _ParentCommand(Command):
+    NAME: ClassVar[str] = "parent_command"
+
+
+class _ChildCommand(_ParentCommand):
+    NAME: ClassVar[str] = "child_command"
 
 
 def _make_user() -> User:
@@ -454,3 +464,423 @@ def test_destructor_handles_partial_initialization() -> None:
     app = object.__new__(App)
 
     app.__del__()
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (True, True),
+        (False, False),
+        ("  YES ", True),
+        ("On", True),
+        ("true", True),
+        ("1", True),
+        ("NO", False),
+        ("off", False),
+        ("false", False),
+        ("0", False),
+    ],
+)
+def test_get_bool_from_cfg_value_accepts_supported_forms(
+    value: object, expected: bool
+) -> None:
+    assert App._get_bool_from_cfg_value(value) is expected
+
+
+@pytest.mark.parametrize("value", [None, 1, "maybe", ""])
+def test_get_bool_from_cfg_value_rejects_unsupported_forms(value: object) -> None:
+    with pytest.raises(exc.InitializationServiceError, match="Invalid boolean config"):
+        App._get_bool_from_cfg_value(value)
+
+
+@pytest.mark.parametrize(("value", "expected"), [(4, 4), ("12", 12), (False, 0)])
+def test_get_int_from_cfg_value_converts_supported_values(
+    value: object, expected: int
+) -> None:
+    assert App._get_int_from_cfg_value(value) == expected
+
+
+@pytest.mark.parametrize("value", [None, "not-an-int"])
+def test_get_int_from_cfg_value_rejects_unconvertible_values(value: object) -> None:
+    with pytest.raises(exc.InitializationServiceError, match="Invalid integer config"):
+        App._get_int_from_cfg_value(value)
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("Feature_Name", True),
+        (FeatureFlag.ALLOW_DELETE_ALL_OPERATIONAL_DATA, False),
+    ],
+)
+def test_set_feature_flag_normalizes_string_keys_and_preserves_enum_keys(
+    key: object, value: bool
+) -> None:
+    app = App(logger=None)
+
+    app.set_feature_flag(key, value)
+
+    expected_key = key.upper() if isinstance(key, str) else key
+    assert app.get_feature_flag(expected_key) is value
+
+
+def test_feature_flags_property_returns_a_copy() -> None:
+    app = App(logger=None, feature_flags={"enabled": True})
+
+    flags = app.feature_flags
+    flags["enabled"] = False
+
+    assert app.feature_flags == {"enabled": True}
+
+
+def test_set_feature_flag_rejects_non_boolean_values() -> None:
+    with pytest.raises(ValueError, match="must be a boolean"):
+        App(logger=None).set_feature_flag("enabled", 1)
+
+
+def test_optional_dependency_properties_raise_when_unconfigured() -> None:
+    app = App(logger=None)
+
+    with pytest.raises(exc.InitializationServiceError, match="Policy decision"):
+        app.pdp = None
+        app.pdp
+    with pytest.raises(exc.InitializationServiceError, match="User manager"):
+        app.user_manager
+    with pytest.raises(exc.InitializationServiceError, match="Configuration data"):
+        app.cfg
+    with pytest.raises(exc.InitializationServiceError, match="Implementation details"):
+        app.impl
+
+    user_manager = object()
+    config = {"test": True}
+    implementation = object()
+    logger = Mock()
+    app.user_manager = user_manager
+    app.logger = logger
+    app._cfg = config
+    app._impl = implementation
+
+    assert app.user_manager is user_manager
+    assert app.logger is logger
+    assert app.cfg is config
+    assert app.impl is implementation
+    assert app.log_item_class is LogItem
+    assert app.id
+
+
+def test_generate_id_and_timestamp_use_injected_factories() -> None:
+    generated_id = uuid.uuid4()
+    generated_timestamp = datetime(2024, 1, 1)
+    app = App(
+        logger=None,
+        id_factory=lambda: generated_id,
+        timestamp_factory=lambda: generated_timestamp,
+    )
+
+    assert app.generate_id() == generated_id
+    assert app.generate_timestamp() == generated_timestamp
+
+
+def test_register_command_and_policy_forward_to_domain_and_pdp() -> None:
+    app = App(logger=None)
+    policy = Mock()
+
+    app.register_command(_CacheCommand)
+    app.register_policy(_CacheCommand, policy, EventTiming.AFTER)
+    app.unregister_policy(_CacheCommand, policy, EventTiming.AFTER)
+
+    assert _CacheCommand in app.domain.commands
+    assert app.pdp.get_policies(_CacheCommand, EventTiming.AFTER) == []
+
+
+def test_listener_registration_unregistration_and_errors() -> None:
+    app = App(logger=None)
+    first = Mock()
+    second = Mock()
+
+    app.register_listener(_CacheCommand, first, EventTiming.BEFORE)
+    app.register_listener(_CacheCommand, second, EventTiming.BEFORE)
+    app.unregister_listener(_CacheCommand, first, EventTiming.BEFORE)
+
+    assert app._command_listeners[EventTiming.BEFORE][_CacheCommand] == [second]
+    with pytest.raises(exc.InitializationServiceError, match="already registered"):
+        app.register_listener(_CacheCommand, second, EventTiming.BEFORE)
+    with pytest.raises(exc.InitializationServiceError, match="not registered"):
+        app.unregister_listener(_CacheCommand, first, EventTiming.BEFORE)
+
+
+def test_handler_registration_replacement_and_parent_lookup() -> None:
+    app = App(logger=None)
+    parent_handler = Mock(return_value="parent")
+    child_handler = Mock(return_value="child")
+
+    app.register_handler(_ParentCommand, parent_handler)
+    assert app.get_handler(_ChildCommand) is parent_handler
+    app.register_handler(_ChildCommand, child_handler)
+    app.register_handler(_ChildCommand, parent_handler)
+
+    assert app.get_handler(_ChildCommand) is parent_handler
+    with pytest.raises(exc.InitializationServiceError, match="already added"):
+        app.register_handler(_ChildCommand, child_handler, replace=False)
+    with pytest.raises(exc.InitializationServiceError, match="No handler set"):
+        app.get_handler(_OtherCacheCommand)
+
+
+def test_handle_runs_policy_phases_and_lifecycle_listeners() -> None:
+    pdp = Mock()
+    app = App(logger=None, pdp=pdp)
+    phases = []
+    events = []
+
+    def apply_policy(_cmd, timing, retval=None):
+        phases.append(timing)
+        return "filtered" if timing is EventTiming.AFTER else retval
+
+    pdp.apply.side_effect = apply_policy
+    app.register_handler(_CacheCommand, lambda _cmd: "handled")
+    app.register_listener(
+        _CacheCommand,
+        lambda _cmd, retval: events.append((EventTiming.BEFORE, retval)),
+        EventTiming.BEFORE,
+    )
+    app.register_listener(
+        _CacheCommand,
+        lambda _cmd, retval: events.append((EventTiming.AFTER, retval)),
+        EventTiming.AFTER,
+    )
+
+    assert app.handle(_CacheCommand()) == "filtered"
+    assert phases == [EventTiming.BEFORE, EventTiming.DURING, EventTiming.AFTER]
+    assert events == [(EventTiming.BEFORE, None), (EventTiming.AFTER, "filtered")]
+    assert app._command_stack == []
+
+
+def test_handle_unwinds_stack_after_policy_handler_and_resolution_errors() -> None:
+    pdp = Mock()
+    app = App(logger=None, pdp=pdp)
+    pdp.apply.side_effect = RuntimeError("policy failed")
+    with pytest.raises(RuntimeError, match="policy failed"):
+        app.handle(_CacheCommand())
+    assert app._command_stack == []
+
+    pdp.apply.side_effect = None
+    pdp.apply.return_value = None
+    app.register_handler(
+        _CacheCommand,
+        lambda _cmd: (_ for _ in ()).throw(RuntimeError("handler failed")),
+    )
+    with pytest.raises(RuntimeError, match="handler failed"):
+        app.handle(_CacheCommand())
+    assert app._command_stack == []
+
+    with pytest.raises(exc.InitializationServiceError, match="No handler set"):
+        app.handle(_OtherCacheCommand())
+    assert app._command_stack == []
+
+
+def test_create_minimal_and_static_log_messages_include_command_identity() -> None:
+    app = App(logger=None, log_item_class=LogItem)
+    cmd = _CacheCommand(user=_make_user())
+
+    minimal = json.loads(
+        app.create_log_message("code", "message", add_debug_info=False, cmd=cmd)
+    )
+    static = json.loads(App.create_static_log_message("code", "message", cmd=cmd))
+
+    for payload in (minimal, static):
+        assert payload["command"]["class"] == "_CacheCommand"
+        assert payload["command"]["id"] == str(cmd.id)
+        assert payload["command"]["user_id"] == str(cmd.user.id)
+
+
+@pytest.mark.parametrize(
+    ("text", "max_length", "expected"),
+    [
+        ("short", 5, "short"),
+        ("abcdef", 4, "ab…[2 chars omitted]…ef"),
+        ("abc", 0, "…[3 chars omitted]…"),
+        ("abc", -1, "…[3 chars omitted]…"),
+        ("abcdefg", 5, "ab…[2 chars omitted]…efg"),
+    ],
+)
+def test_truncate_middle_handles_length_boundaries(
+    text: str, max_length: int, expected: str
+) -> None:
+    assert App._truncate_middle(text, max_length) == expected
+
+
+def test_stack_trace_exemption_matches_exception_causes_and_avoids_cycles() -> None:
+    app = App(logger=None)
+    app.register_stack_trace_exemption(ValueError)
+    root = RuntimeError("outer")
+    cause = ValueError("inner")
+    root.__cause__ = cause
+
+    assert app._is_exempted_from_stack_trace(root)
+    assert not app._is_exempted_from_stack_trace(RuntimeError("unrelated"))
+
+    first = RuntimeError("first")
+    second = RuntimeError("second")
+    first.__cause__ = second
+    second.__cause__ = first
+    assert not app._is_exempted_from_stack_trace(first)
+
+
+def test_registration_methods_log_at_debug_level() -> None:
+    logger = Mock()
+    logger.level = logging.DEBUG
+    app = App(logger=logger)
+    policy = Mock()
+    invalidator = Mock()
+    handler = Mock()
+
+    def listener(_cmd: Command, _retval: object) -> None:
+        return None
+
+    app.register_command(_CacheCommand)
+    app.register_policy(_CacheCommand, policy, EventTiming.BEFORE)
+    app.unregister_policy(_CacheCommand, policy, EventTiming.BEFORE)
+    app.register_listener(_CacheCommand, listener, EventTiming.BEFORE)
+    app.unregister_listener(_CacheCommand, listener, EventTiming.BEFORE)
+    app.register_handler(_CacheCommand, handler)
+    app.register_cache_invalidator(_CacheCommand, invalidator)
+
+    assert logger.debug.call_count == 7
+
+
+@pytest.mark.parametrize(
+    ("level", "debug_calls", "info_calls"),
+    [
+        (logging.DEBUG, 4, 0),
+        (logging.INFO, 0, 2),
+    ],
+)
+def test_handle_logs_outer_and_nested_command_at_configured_level(
+    level: int, debug_calls: int, info_calls: int
+) -> None:
+    logger = Mock()
+    logger.level = level
+    pdp = Mock()
+    pdp.apply.side_effect = lambda _cmd, _timing, retval=None: retval
+    app = App(logger=logger, pdp=pdp)
+
+    def handle_child(_cmd: Command) -> str:
+        return "child result"
+
+    def handle_parent(_cmd: Command) -> str:
+        return app.handle(_ChildCommand())
+
+    app.register_handler(_ParentCommand, handle_parent)
+    app.register_handler(_ChildCommand, handle_child)
+    logger.reset_mock()
+
+    assert app.handle(_ParentCommand()) == "child result"
+    assert logger.debug.call_count == debug_calls
+    assert logger.info.call_count == info_calls
+    assert app._command_stack == []
+
+
+def test_register_handler_rejects_non_command_model() -> None:
+    with pytest.raises(exc.InitializationServiceError, match="Handler can only"):
+        App(logger=None).register_handler(User, Mock())
+
+
+@pytest.mark.parametrize(
+    ("failure", "log_method", "has_stack_trace"),
+    [
+        (exc.ServiceException("service", "failed"), "error", True),
+        (exc.DomainException("domain", "failed"), "warning", None),
+        (RuntimeError("unexpected"), "error", True),
+    ],
+)
+def test_handle_logs_and_unwinds_categorized_failures(
+    failure: Exception, log_method: str, has_stack_trace: bool | None
+) -> None:
+    logger = Mock()
+    logger.level = logging.INFO
+    app = App(logger=logger)
+    app.register_handler(_CacheCommand, lambda _cmd: (_ for _ in ()).throw(failure))
+    logger.reset_mock()
+
+    with pytest.raises(type(failure)):
+        app.handle(_CacheCommand())
+
+    log_method_mock = getattr(logger, log_method)
+    log_method_mock.assert_called_once()
+    if has_stack_trace is not None:
+        assert log_method_mock.call_args.kwargs["exc_info"] is has_stack_trace
+    assert app._command_stack == []
+
+
+def test_handle_logs_exempt_service_exception_without_stack_trace() -> None:
+    logger = Mock()
+    logger.level = logging.INFO
+    app = App(logger=logger)
+    app.register_stack_trace_exemption(ValueError)
+    app.register_handler(
+        _CacheCommand,
+        lambda _cmd: (_ for _ in ()).throw(ValueError("remote failure")),
+    )
+    logger.reset_mock()
+
+    with pytest.raises(ValueError, match="remote failure"):
+        app.handle(_CacheCommand())
+
+    assert logger.error.call_args.kwargs["exc_info"] is False
+    assert logger.error.call_args.kwargs["stack_info"] is False
+
+
+def test_handle_cleans_stack_when_before_policy_rejects_command() -> None:
+    logger = Mock()
+    logger.level = logging.INFO
+    pdp = Mock()
+    pdp.apply.side_effect = exc.UnauthorizedAuthError("denied")
+    app = App(logger=logger, pdp=pdp)
+    app.register_handler(_CacheCommand, lambda _cmd: None)
+    logger.reset_mock()
+
+    with pytest.raises(exc.UnauthorizedAuthError):
+        app.handle(_CacheCommand())
+
+    assert logger.info.call_count == 2
+    assert "NOT_AUTHORIZED" in logger.info.call_args_list[-1].args[0]
+    assert app._command_stack == []
+
+
+def test_handle_logs_unexpected_before_policy_failure_and_cleans_stack() -> None:
+    logger = Mock()
+    logger.level = logging.INFO
+    pdp = Mock()
+    pdp.apply.side_effect = RuntimeError("policy failure")
+    app = App(logger=logger, pdp=pdp)
+    logger.reset_mock()
+
+    with pytest.raises(RuntimeError, match="policy failure"):
+        app.handle(_CacheCommand())
+
+    logger.error.assert_called_once()
+    assert logger.error.call_args.kwargs["exc_info"] is True
+    assert app._command_stack == []
+
+
+def test_handle_logs_missing_handler_and_cleans_stack() -> None:
+    logger = Mock()
+    logger.level = logging.INFO
+    app = App(logger=logger)
+    logger.reset_mock()
+
+    with pytest.raises(exc.InitializationServiceError, match="No handler set"):
+        app.handle(_OtherCacheCommand())
+
+    logger.error.assert_called_once()
+    assert app._command_stack == []
+
+
+def test_destructor_logs_when_logger_is_configured() -> None:
+    logger = Mock()
+    app = App(logger=logger)
+    logger.reset_mock()
+
+    app.__del__()
+
+    logger.info.assert_called_once()

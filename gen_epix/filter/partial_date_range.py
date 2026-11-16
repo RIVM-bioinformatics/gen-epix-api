@@ -95,7 +95,7 @@ class PartialDateRangeFilter(RangeFilter):
         return datetime_, datetime_ + datetime.timedelta(seconds=1)
 
     @model_validator(mode="after")
-    def _validate_state(self) -> Self:
+    def _validate_partial_date_state(self) -> Self:
         """Derive bound intervals and build the partial-date matching function."""
         self._derive_bound_intervals()
         self._match = self._build_matcher()  # type: ignore
