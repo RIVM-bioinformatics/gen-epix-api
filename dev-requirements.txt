@@ -5,7 +5,7 @@ polars==2.1.0
 xlsxwriter==3.3.1
 pytest
 pytest-asyncio
-pytest-gremlins==1.12.2
+pytest-gremlins==1.13.2
 pytest-xdist
 pytest-mock==3.17.*
 pytest-dependency==0.6.*
@@ -14,7 +14,7 @@ black==26.10.*
 ruff==0.17.*
 pylint==4.1.*
 mypy==2.4.*
-coverage==7.17.2
+coverage==7.17.3
 # profiling, used by gen_epix.util.profile_method
 pyinstrument==5.1.*
 
@@ -24,11 +24,11 @@ plotly>=6,<8
 
 
 # stubs
-pandas-stubs==3.0.*
+pandas-stubs==3.1.*
 openpyxl==3.1.*
 types-cachetools==7.0.*
 types-PyYAML==6.0.*
-types-setuptools==84.0.*
+types-setuptools==84.2.*
 types-python-dateutil==2.9.*
 
 # TODO: remove if run.py no longer uses it

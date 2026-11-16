@@ -1205,7 +1205,7 @@ class TestStackTraceExemption:
         first, second = RuntimeError("first"), RuntimeError("second")
         first.__cause__, second.__cause__ = second, first
 
-        assert not app._is_stack_trace_exempt(first)
+        assert not app._is_exempted_from_stack_trace(first)
 
     def test_an_unexpected_error_with_a_registered_cause_has_no_trace(
         self, caplog: pytest.LogCaptureFixture

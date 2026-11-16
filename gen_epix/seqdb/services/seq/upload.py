@@ -80,6 +80,8 @@ class SampleBatchUploader(BatchUploader):
         success &= _verify_sample_children(self, cmd, batch_result, uow)
         # Verify reference data
         success &= _verify_sample_refdata(self, cmd, batch_result, uow)
+        # Verify immutable fields last: it needs the final status per item
+        success &= self.verify_immutable_fields(cmd, batch_result, uow)
 
         return success
 

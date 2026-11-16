@@ -25,7 +25,7 @@ def create_ref_data(env: Env) -> SeqUploadRefData:
     return SeqUploadRefData(data_collection.id, assembly.id, sequencing.id)
 
 
-def sample_for_upload(
+def create_sample_for_upload(
     ref_data: SeqUploadRefData,
     code: str | None = None,
     seq_protocol: dict[str, Any] | None = None,

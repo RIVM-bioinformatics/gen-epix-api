@@ -3,7 +3,7 @@
 import json
 from test.seqdb.integration.upload_samples.ref_data import (
     SeqUploadRefData,
-    sample_for_upload,
+    create_sample_for_upload,
 )
 from test.seqdb.seqdb_test_client import SeqdbTestClient
 from typing import Any
@@ -51,7 +51,7 @@ def test_empty_batch(env: SeqdbTestClient) -> None:
 def test_new_sample_with_read_set_and_seq(
     env: SeqdbTestClient, ref_data: SeqUploadRefData
 ) -> None:
-    sample = sample_for_upload(ref_data)
+    sample = create_sample_for_upload(ref_data)
     sample.read_sets = [
         model.ReadSetForUpload(protocol_id=ref_data.sequencing_protocol_id)
     ]
@@ -78,7 +78,7 @@ def test_new_sample_with_read_set_and_seq(
 def test_upload_actions_and_verify_only(
     env: SeqdbTestClient, ref_data: SeqUploadRefData
 ) -> None:
-    sample = sample_for_upload(ref_data)
+    sample = create_sample_for_upload(ref_data)
     created = _upload(env, [sample])
     assert created.status == EtlStatus.CREATED
     sample.id = created.samples[0].id
@@ -95,7 +95,7 @@ def test_upload_actions_and_verify_only(
         _upload(env, [sample], on_exists=UploadAction.ERROR).status == EtlStatus.FAILED
     )
 
-    new_sample = sample_for_upload(ref_data)
+    new_sample = create_sample_for_upload(ref_data)
     assert (
         _upload(env, [new_sample], on_new=UploadAction.SKIP).status == EtlStatus.SKIPPED
     )
@@ -120,7 +120,7 @@ def test_allele_profile_uses_reference_data(
         seq="ACGTACGT", seq_format=enum.SeqFormat.STR_DNA, locus_id=locus_id
     )
     assert allele.id is not None
-    sample = sample_for_upload(ref_data)
+    sample = create_sample_for_upload(ref_data)
     sample.seq_profiles = [
         model.SeqProfileForUpload(  # type: ignore[call-arg]
             protocol_id=protocol_id,
@@ -167,7 +167,7 @@ def test_conflicting_child_identifier_is_in_http_response(
         if child_field == "read_sets"
         else ref_data.assembly_protocol_id
     )
-    sample = sample_for_upload(ref_data)
+    sample = create_sample_for_upload(ref_data)
     setattr(
         sample,
         child_field,
