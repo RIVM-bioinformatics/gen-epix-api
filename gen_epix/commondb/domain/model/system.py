@@ -81,7 +81,7 @@ class DeleteAllOperationalDataResult(ModelNoId):
     )
     details: dict[str, str] = Field(
         default_factory=dict,
-        description="Detailed information about the result of the deletion operation.",
+        description="Per model name, the number of deleted records as a string, or the error message when the deletion of that model failed.",
     )
 
 
