@@ -839,8 +839,7 @@ class SARepository(BaseRepository):
 
         With a Python-side filter, entire rows are selected even when only ids are
         returned, so that the filter is applied to the rows of the same query. A
-        second query on the selected ids would bind one parameter per id, which
-        SQL Server refuses beyond 2100 parameters.
+        second query on the selected ids would bind one parameter per id.
         """
         row_class = mapper.row_class
         ids_only = return_id and not obj_filter
