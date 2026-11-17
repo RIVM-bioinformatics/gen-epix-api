@@ -246,6 +246,9 @@ jobs:
           path: test/output/
       - name: SonarCloud Scan
         if: always()
+        # The scanner exits with an error while Automatic Analysis is enabled for
+        # the project in SonarCloud. Remove this once that has been switched off.
+        continue-on-error: true
         uses: sonarsource/sonarcloud-github-action@ba3875ecf642b2129de2b589510c81a8b53dbf4e # master
         env:
           SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
