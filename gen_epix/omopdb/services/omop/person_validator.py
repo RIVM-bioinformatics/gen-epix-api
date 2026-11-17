@@ -60,9 +60,6 @@ class PersonValidator:
         data_issues_list: list[list[model.PersonDataIssue] | None],
     ) -> None:
         """Validate and transform individual values."""
-        # TODO: LSP-3893 A person upload containing a configured synonymous individual value
-        # is returned unchanged instead of being normalized; the supported metadata and
-        # validation contract for this transformation is not yet established.
         pass
 
     def transform_value_pairs(

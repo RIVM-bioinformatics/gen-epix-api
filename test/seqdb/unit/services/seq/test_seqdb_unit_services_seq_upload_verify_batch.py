@@ -460,6 +460,20 @@ class BaseUploadTestCase:
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
+class TestSampleBatchUploadAuthorization(BaseUploadTestCase):
+    """Test sample upload authorization before collection-level ABAC exists."""
+
+    def test_non_admin_user_is_not_rejected_by_upload_hook(self) -> None:
+        """Leave non-admin authorization to App policies until collection ABAC exists."""
+        self.user.roles = {Role.ORG_USER.value}
+        cmd = command.UploadSamplesCommand(
+            user=self.user,
+            sample_batch=model.SampleBatchForUpload(samples=[]),
+        )
+
+        self.batch_uploader.verify_user_rights(cmd)
+
+
 class TestVerifyProtocol(BaseUploadTestCase):
     """Test the _verify_protocol helper."""
 

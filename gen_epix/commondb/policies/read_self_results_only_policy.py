@@ -6,7 +6,7 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, exc
 from gen_epix.commondb.domain.policy import BaseReadSelfResultsOnlyPolicy
 from gen_epix.commondb.domain.service.abac import BaseAbacService
-from gen_epix.fastapp import Command, CrudOperation
+from gen_epix.fastapp import Command
 
 
 class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
@@ -45,7 +45,7 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
         Raises:
             ServiceException: If the command has no authenticated user.
             UnauthorizedAuthError: If a targeted result is not owned by the user.
-            NotImplementedError: If the command type has no ownership attribute mapping.
+            NotImplementedError: If the command type is unsupported or has no ownership mapping.
         """
         if not cmd.user or not cmd.user.id:
             raise exc.ServiceException("84aa512b", "Command has no user")
@@ -53,8 +53,12 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
         if not isinstance(cmd, command.CrudCommand):
             raise NotImplementedError
         if not cmd.is_read():
-            # Policy only applies to read or exists operations
+            # Policy only applies to read operations.
             return retval
+        if cmd.is_exists():
+            raise NotImplementedError(
+                "Exists operations are not supported by this policy"
+            )
 
         # Roles exempt from this policy
         is_exempt = (
@@ -69,8 +73,8 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
             return retval
 
         # Filter results based on own user
-        is_read_all = cmd.operation == CrudOperation.READ_ALL
-        is_read_one = cmd.operation == CrudOperation.READ_ONE
+        is_read_all = cmd.is_read_all()
+        is_read_one = cmd.is_read_one()
         msg = "No data for user"
         user_id = cmd.user.id
         id_attr: str | None = self.id_attr_by_command_class.get(type(cmd))
@@ -80,9 +84,6 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
             retval = [x for x in retval if getattr(x, id_attr) == user_id]
         if is_read_one and getattr(retval, id_attr) != user_id:
             raise exc.UnauthorizedAuthError("bcba2f7d", msg)
-        # TODO: LSP-3893 EXISTS_ONE/EXISTS_SOME return bool values, so ownership
-        # attribute access here can raise TypeError/AttributeError; clarify whether
-        # unauthorized existence should be hidden as False or rejected.
         if not is_read_one and any(getattr(x, id_attr) != user_id for x in retval):
             raise exc.UnauthorizedAuthError("49f667f6", msg)
         return retval

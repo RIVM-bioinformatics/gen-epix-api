@@ -12,36 +12,19 @@ class BaseRemoteService(BaseService):
     through a client for that application.
     """
 
-    def __init__(self, app: App, client: App, use_endpoints: bool = True) -> None:
+    def __init__(self, app: App, client: App) -> None:
         """Initialize a BaseRemoteService instance."""
         super().__init__(app)
         self._client = client
-        self._use_endpoints = use_endpoints
 
     @property
     def client(self) -> App:
         """Remote app."""
         return self._client
 
-    @property
-    def use_endpoints(self) -> bool:
-        """Use endpoints."""
-        return self._use_endpoints
-
-    @use_endpoints.setter
-    def use_endpoints(self, value: bool) -> None:
-        """Use endpoints."""
-        self._use_endpoints = value
-
     def handle(
         self,
         cmd: Command,
     ) -> Any:
         """Handle the requested value."""
-        # TODO: LSP-3893 With default use_endpoints=True, handling any command raises
-        # NotImplementedError instead of forwarding it to the remote client; confirm
-        # whether endpoint transport is intentionally unsupported or should work here.
-        if self.use_endpoints:
-            raise NotImplementedError()
-        else:
-            return self.client.handle(cmd)
+        return self.client.handle(cmd)
