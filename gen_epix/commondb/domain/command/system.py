@@ -25,6 +25,22 @@ class DeleteAllOperationalDataCommand(Command):
     SORTED_OPERATIONAL_DATA_MODEL_CLASSES: ClassVar[list[type[model.ModelNoId]]] = (
         []
     )  # Persistable domain models for operational data, in deletion order so that foreign-key constraints do not fail (i.e. reverse DAG order on links)
+    BATCH_SIZE: ClassVar[int] = 1000  # Rows deleted per batch, one commit per batch
+    BATCH_SIZE_BY_MODEL: ClassVar[dict[type[model.ModelNoId], int]] = (
+        {}
+    )  # Per-model override of BATCH_SIZE, e.g. for large or heavily indexed tables
+
+    @classmethod
+    def get_batch_size(cls, model_class: type[model.ModelNoId]) -> int:
+        """Return the number of rows to delete per batch for a model.
+
+        Args:
+            model_class: Operational model to delete.
+
+        Returns:
+            The per-model override when configured, otherwise BATCH_SIZE.
+        """
+        return cls.BATCH_SIZE_BY_MODEL.get(model_class, cls.BATCH_SIZE)
 
 
 class DeleteAllRefDataCommand(Command):
