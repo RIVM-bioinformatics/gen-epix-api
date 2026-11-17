@@ -39,6 +39,7 @@ from gen_epix.filter import (
     ExistsFilter,
     Filter,
     LogicalOperator,
+    NoFilter,
     NumberRangeFilter,
     NumberSetFilter,
     RangeFilter,
@@ -834,10 +835,15 @@ class SARepository(BaseRepository):
         limit: int,
         offset: int,
     ) -> list[Model] | list[Hashable]:
-        """Execute a read_all query and apply any Python-side filter."""
+        """Execute a read_all query and apply any Python-side filter.
+
+        With a Python-side filter, entire rows are selected even when only ids are
+        returned, so that the filter is applied to the rows of the same query. A
+        second query on the selected ids would bind one parameter per id.
+        """
         row_class = mapper.row_class
-        selected_column = mapper.get_row_id_column() if return_id else row_class
-        stmt = select(selected_column)
+        ids_only = return_id and not obj_filter
+        stmt = select(mapper.get_row_id_column() if ids_only else row_class)
         if not obj_filter:
             # Apply SQL pagination only when Python-side filtering is not needed.
             stmt = self._add_read_all_sql_pagination(stmt, limit, offset)
@@ -845,41 +851,16 @@ class SARepository(BaseRepository):
             stmt = stmt.where(
                 self.get_where_clause_from_filter(row_class, mapper, filter)
             )
-        if return_id:
-            return self._read_all_ids(
-                session, model_class, mapper, stmt, obj_filter, limit, offset
-            )
+        if ids_only:
+            return [row[0] for row in session.execute(stmt).all()]
         rows = [row[0] for row in session.execute(stmt).all()]
         objs = cast(list[Model], self.from_sql(model_class, rows))
         if obj_filter:
             objs = cast(list[Model], list(obj_filter.filter_rows(objs, is_model=True)))
             objs = self._apply_read_all_obj_pagination(objs, limit, offset)
-        return objs
-
-    def _read_all_ids(
-        self,
-        session: Session,
-        model_class: type[Model],
-        mapper: BaseSAMapper,
-        stmt: sa.Select,
-        obj_filter: Filter | None,
-        limit: int,
-        offset: int,
-    ) -> list[Hashable]:
-        """Return IDs, applying object filters through the corresponding domain rows."""
-        row_ids: list[Hashable] = [row[0] for row in session.execute(stmt).all()]
-        if not obj_filter:
-            return row_ids
-        # Retrieve entire rows and filter them with obj_filter, then get remaining IDs.
-        row_class = mapper.row_class
-        stmt = select(row_class).where(mapper.get_row_id_column().in_(row_ids))
-        rows = [row[0] for row in session.execute(stmt).all()]
-        objs = cast(list[Model], self.from_sql(model_class, rows))
-        objs = cast(list[Model], list(obj_filter.filter_rows(objs, is_model=True)))
-        objs = self._apply_read_all_obj_pagination(objs, limit, offset)
-        if len(objs) < len(row_ids):
+        if return_id:
             return [mapper.get_id(obj) for obj in objs]
-        return row_ids
+        return objs
 
     def update_one(
         self, model_class: type[Model], user_id: Hashable, obj: Model, **kwargs: Any
@@ -1434,6 +1415,9 @@ class SARepository(BaseRepository):
             DatetimeRangeFilter,
             NumberRangeFilter,
         )
+        if isinstance(filter, NoFilter) and not filter.invert:
+            # Selects every row: neither a where-clause nor a Python filter
+            return None, None
         mapped_key = field_name_map.get(str(filter.get_key()))
         if not mapped_key:
             # Field name cannot be mapped
