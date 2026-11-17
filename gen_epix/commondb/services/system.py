@@ -120,31 +120,37 @@ class SystemService(BaseSystemService):
     ) -> model.DeleteAllOperationalDataResult:
         """Delete all operational data from the system.
 
+        Each model is deleted in batches of the size the command prescribes, one
+        commit per batch, so that memory use, transaction size and lock footprint stay
+        bounded and an interrupted reset can be resumed by running it again.
+
         Args:
             cmd: Command requesting deletion of all operational data.
 
         Returns:
             DeleteAllOperationalDataResult. The `success` attribute indicates overall
-            success, and `details` provides the IDs of deleted records per-model-class
-            as a JSON-encoded list of IDs. If an error occurred during deletion,
-            the `details` entry for the model class will contain the error message.
-
-        Raises:
-            NotImplementedError: Always; concrete services implement deletion.
+            success, and `details` provides the number of deleted records per model
+            class as a string. If an error occurred during deletion, the `details`
+            entry for the model class contains the error message instead.
         """
         retval = model.DeleteAllOperationalDataResult(success=True)
         for model_class in cmd.SORTED_OPERATIONAL_DATA_MODEL_CLASSES:
             crud_command_class = self.app.domain.get_crud_command_for_model(model_class)
+            batch_size = cmd.get_batch_size(model_class)
+            n_deleted = 0
             try:
-
-                deleted_ids = self.app.handle(
-                    crud_command_class(
-                        operation=CrudOperation.DELETE_ALL, return_id=True
+                while True:
+                    n_batch = self.app.handle(
+                        crud_command_class(
+                            operation=CrudOperation.DELETE_ALL,
+                            return_count=True,
+                            limit=batch_size,
+                        )
                     )
-                )
-                retval.details[model_class.ENTITY.name] = json.dumps(
-                    [str(x) for x in deleted_ids]
-                )
+                    n_deleted += n_batch
+                    if n_batch < batch_size:
+                        break
+                retval.details[model_class.ENTITY.name] = str(n_deleted)
             except Exception as e:
                 retval.success = False
                 retval.details[model_class.ENTITY.name] = f"{type(e).__name__}: {e}"

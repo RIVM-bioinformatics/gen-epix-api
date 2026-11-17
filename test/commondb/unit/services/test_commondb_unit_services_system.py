@@ -10,27 +10,37 @@ from gen_epix.commondb.services.system import SystemService
 from gen_epix.fastapp import CrudOperation
 
 
+def _make_operational_data_service(
+    app_name: str, handle
+) -> tuple[Mock, type, SystemService]:
+    """Create a system service whose app dispatches commands to ``handle``."""
+    domain_module = import_module(f"gen_epix.{app_name}.domain")
+    command_module = import_module(f"gen_epix.{app_name}.domain.command")
+    app = Mock()
+    app.domain = domain_module.DOMAIN
+    app.handle.side_effect = handle
+    service = object.__new__(SystemService)
+    service._app = app
+    return app, command_module.DeleteAllOperationalDataCommand, service
+
+
 @pytest.mark.parametrize("app_name", ["casedb", "seqdb", "omopdb"])
 def test_delete_all_operational_data_dispatches_each_model_in_order(
     app_name: str,
 ) -> None:
     """Delete every declared operational model and report individual failures."""
-    domain_module = import_module(f"gen_epix.{app_name}.domain")
-    command_module = import_module(f"gen_epix.{app_name}.domain.command")
-    command_class = command_module.DeleteAllOperationalDataCommand
-    app = Mock()
-    app.domain = domain_module.DOMAIN
-    failed_model = command_class.SORTED_OPERATIONAL_DATA_MODEL_CLASSES[1]
-    deleted_ids = ["deleted-id-1", "deleted-id-2"]
+    failed_index = 1
+    failed_models: list = []
 
     def handle(crud_command):
-        if crud_command.MODEL_CLASS is failed_model:
+        if crud_command.MODEL_CLASS is failed_models[0]:
             raise RuntimeError("delete failed")
-        return deleted_ids
+        return 7
 
-    app.handle.side_effect = handle
-    service = object.__new__(SystemService)
-    service._app = app
+    app, command_class, service = _make_operational_data_service(app_name, handle)
+    failed_models.append(
+        command_class.SORTED_OPERATIONAL_DATA_MODEL_CLASSES[failed_index]
+    )
 
     result = service.delete_all_operational_data(command_class(user=None))
 
@@ -41,17 +51,83 @@ def test_delete_all_operational_data_dispatches_each_model_in_order(
     ] == expected_models
     assert all(
         crud_command.operation == CrudOperation.DELETE_ALL
+        and crud_command.return_count
+        and not crud_command.return_id
         for crud_command in dispatched_commands
     )
     assert result.success is False
     assert result.details == {
         model_class.ENTITY.name: (
-            "RuntimeError: delete failed"
-            if model_class is failed_model
-            else json.dumps(deleted_ids)
+            "RuntimeError: delete failed" if model_class is failed_models[0] else "7"
         )
         for model_class in expected_models
     }
+
+
+@pytest.mark.parametrize("app_name", ["casedb", "seqdb", "omopdb"])
+def test_delete_all_operational_data_deletes_in_batches_until_a_short_batch(
+    app_name: str,
+) -> None:
+    """Repeat the delete per model until a batch is smaller than the batch size."""
+    remaining: dict = {}
+
+    def handle(crud_command):
+        n_remaining = remaining.setdefault(crud_command.MODEL_CLASS, 2500)
+        n_deleted = min(n_remaining, crud_command.limit)
+        remaining[crud_command.MODEL_CLASS] = n_remaining - n_deleted
+        return n_deleted
+
+    app, command_class, service = _make_operational_data_service(app_name, handle)
+
+    result = service.delete_all_operational_data(command_class(user=None))
+
+    assert result.success is True
+    assert set(result.details.values()) == {"2500"}
+    for model_class in command_class.SORTED_OPERATIONAL_DATA_MODEL_CLASSES:
+        batch_size = command_class.get_batch_size(model_class)
+        calls = [
+            call.args[0]
+            for call in app.handle.call_args_list
+            if call.args[0].MODEL_CLASS is model_class
+        ]
+        assert all(crud_command.limit == batch_size for crud_command in calls)
+        assert len(calls) == 2500 // batch_size + 1
+
+
+def test_delete_all_operational_data_one_more_call_when_the_last_batch_is_full() -> (
+    None
+):
+    """A table with exactly a batch of rows needs a second call to see it is empty."""
+    remaining: dict = {}
+
+    def handle(crud_command):
+        n_remaining = remaining.setdefault(crud_command.MODEL_CLASS, crud_command.limit)
+        n_deleted = min(n_remaining, crud_command.limit)
+        remaining[crud_command.MODEL_CLASS] = n_remaining - n_deleted
+        return n_deleted
+
+    app, command_class, service = _make_operational_data_service("casedb", handle)
+
+    result = service.delete_all_operational_data(command_class(user=None))
+
+    assert result.success is True
+    n_models = len(command_class.SORTED_OPERATIONAL_DATA_MODEL_CLASSES)
+    assert app.handle.call_count == 2 * n_models
+    assert set(result.details.values()) == {str(command_class.BATCH_SIZE)}
+
+
+def test_seqdb_seq_distance_uses_a_smaller_batch_size() -> None:
+    """Delete the largest SEQDB table in smaller batches than the default."""
+    from gen_epix.seqdb.domain import model as seqdb_model
+    from gen_epix.seqdb.domain.command import DeleteAllOperationalDataCommand
+
+    assert (
+        DeleteAllOperationalDataCommand.get_batch_size(seqdb_model.SeqDistance) == 500
+    )
+    assert (
+        DeleteAllOperationalDataCommand.get_batch_size(seqdb_model.Sample)
+        == DeleteAllOperationalDataCommand.BATCH_SIZE
+    )
 
 
 @pytest.mark.parametrize("app_name", ["casedb", "seqdb", "omopdb"])
