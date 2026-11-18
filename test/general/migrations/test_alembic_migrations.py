@@ -13,6 +13,7 @@ import pytest
 import sqlalchemy as sa
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
+from sqlalchemy.dialects import postgresql
 
 from gen_epix.casedb.repositories.sa_alembic.metadata import (
     target_metadata as casedb_metadata,
@@ -255,6 +256,25 @@ def test_seqdb_qc_migration_backfills_legacy_results(
         ("PASS", "PENDING"),
         ("PENDING", "PENDING"),
     ]
+
+
+def test_seqdb_qc_migration_uses_enum_typed_backfill_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cast the fallback value to the PostgreSQL QC enum."""
+    migration = importlib.import_module(
+        "gen_epix.seqdb.repositories.sa_alembic.versions."
+        "274cb3c5bedf_split_qc_result_into_machine_and_human_"
+    )
+    statements = []
+    monkeypatch.setattr(migration, "op", SimpleNamespace(execute=statements.append))
+
+    migration._backfill_qc_results("qc_result")
+
+    compiled = str(statements[0].compile(dialect=postgresql.dialect()))
+    assert "coalesce(" in compiled.lower()
+    assert "CAST(" in compiled
+    assert "AS qualitycontrolresult)" in compiled
 
 
 def test_commondb_initial_migration_supports_sqlite(

@@ -28,7 +28,19 @@ def _backfill_qc_results(table_name: str) -> None:
     )
     op.execute(
         table.update().values(
-            qc_result_machine=sa.func.coalesce(table.c.qc_result, "PENDING"),
+            qc_result_machine=sa.func.coalesce(
+                table.c.qc_result,
+                sa.cast(
+                    "PENDING",
+                    sa.Enum(
+                        "PENDING",
+                        "FAIL",
+                        "WARN",
+                        "PASS",
+                        name="qualitycontrolresult",
+                    ),
+                ),
+            ),
             qc_result_human="PENDING",
         )
     )
