@@ -3,6 +3,7 @@
 import importlib
 import importlib.metadata
 import json
+import logging
 import re
 import string
 import tomllib
@@ -137,7 +138,9 @@ class SystemService(BaseSystemService):
         for model_class in cmd.SORTED_OPERATIONAL_DATA_MODEL_CLASSES:
             crud_command_class = self.app.domain.get_crud_command_for_model(model_class)
             batch_size = cmd.get_batch_size(model_class)
+            model_name = model_class.ENTITY.name
             n_deleted = 0
+            n_batches = 0
             try:
                 while True:
                     n_batch = self.app.handle(
@@ -147,14 +150,87 @@ class SystemService(BaseSystemService):
                             limit=batch_size,
                         )
                     )
+                    n_batches += 1
                     n_deleted += n_batch
+                    self._log_delete_all_progress(
+                        "d898a64f",
+                        f"Deleted batch {n_batches} of {model_name}: "
+                        f"{n_batch} records, {n_deleted} in total",
+                        model_name,
+                        batch_size,
+                        n_batches,
+                        n_batch,
+                        n_deleted,
+                    )
                     if n_batch < batch_size:
                         break
-                retval.details[model_class.ENTITY.name] = str(n_deleted)
+                retval.details[model_name] = str(n_deleted)
+                self._log_delete_all_progress(
+                    "b7e26ffc",
+                    f"Deleted all {n_deleted} records of {model_name} "
+                    f"in {n_batches} batches",
+                    model_name,
+                    batch_size,
+                    n_batches,
+                    0,
+                    n_deleted,
+                )
             except Exception as e:
                 retval.success = False
-                retval.details[model_class.ENTITY.name] = f"{type(e).__name__}: {e}"
+                retval.details[model_name] = f"{type(e).__name__}: {e}"
+                self._log_delete_all_progress(
+                    "bfe88bc3",
+                    f"Deleting {model_name} failed after {n_deleted} records "
+                    f"in {n_batches} batches: {type(e).__name__}: {e}",
+                    model_name,
+                    batch_size,
+                    n_batches,
+                    0,
+                    n_deleted,
+                    level=logging.ERROR,
+                )
         return retval
+
+    def _log_delete_all_progress(
+        self,
+        code: str,
+        msg: str,
+        model_name: str,
+        batch_size: int,
+        n_batches: int,
+        n_batch: int,
+        n_deleted: int,
+        level: int = logging.INFO,
+    ) -> None:
+        """Log the progress of deleting all records of a model, if logging is set up.
+
+        Args:
+            code: Log message code.
+            msg: Human-readable message.
+            model_name: Name of the model being deleted.
+            batch_size: Number of records per batch for the model.
+            n_batches: Number of batches executed so far.
+            n_batch: Number of records deleted by the last batch.
+            n_deleted: Number of records deleted so far for the model.
+            level: Logging level.
+        """
+        if not self._logger:
+            return
+        self._logger.log(
+            level,
+            self.create_log_message(
+                code,
+                msg,
+                add_debug_info=False,
+                props={
+                    "model": model_name,
+                    "batch_size": batch_size,
+                    "n_batches": n_batches,
+                    "n_batch": n_batch,
+                    "n_deleted": n_deleted,
+                },
+            ),
+        )
 
     def delete_all_ref_data(
         self, cmd: command.DeleteAllRefDataCommand

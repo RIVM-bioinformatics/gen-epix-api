@@ -30,9 +30,8 @@ class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
         model.Sample,
         model.File,
     ]
-    # SeqDistance is by far the largest and most indexed table: keep batches small
-    # so a batch stays below SQL Server's lock escalation threshold
-    BATCH_SIZE_BY_MODEL = {model.SeqDistance: 500}
+    # Seq rows are large (the sequence itself), so a batch of them is kept small
+    BATCH_SIZE_BY_MODEL = {model.Seq: 100}
 
 
 class DeleteAllRefDataCommand(CommonDeleteAllRefDataCommand):
