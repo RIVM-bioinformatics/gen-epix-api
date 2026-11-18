@@ -1,6 +1,7 @@
 """Test shared system service operations."""
 
 import json
+import logging
 from importlib import import_module
 from test.util.mock_compat import Mock, patch
 
@@ -21,6 +22,7 @@ def _make_operational_data_service(
     app.handle.side_effect = handle
     service = object.__new__(SystemService)
     service._app = app
+    service._logger = Mock()
     return app, command_module.DeleteAllOperationalDataCommand, service
 
 
@@ -116,14 +118,43 @@ def test_delete_all_operational_data_one_more_call_when_the_last_batch_is_full()
     assert set(result.details.values()) == {str(command_class.BATCH_SIZE)}
 
 
-def test_seqdb_seq_distance_uses_a_smaller_batch_size() -> None:
-    """Delete the largest SEQDB table in smaller batches than the default."""
+def test_delete_all_operational_data_logs_every_batch_and_each_model() -> None:
+    """Log one line per batch, one per finished model and one per failed model."""
+    failed_models: list = []
+    remaining: dict = {}
+
+    def handle(crud_command):
+        if crud_command.MODEL_CLASS is failed_models[0]:
+            raise RuntimeError("delete failed")
+        n_remaining = remaining.setdefault(crud_command.MODEL_CLASS, 1)
+        n_deleted = min(n_remaining, crud_command.limit)
+        remaining[crud_command.MODEL_CLASS] = n_remaining - n_deleted
+        return n_deleted
+
+    app, command_class, service = _make_operational_data_service("casedb", handle)
+    app.create_log_message.side_effect = lambda code, msg, **kwargs: f"{code} {msg}"
+    failed_models.append(command_class.SORTED_OPERATIONAL_DATA_MODEL_CLASSES[0])
+
+    service.delete_all_operational_data(command_class(user=None))
+
+    messages = [call.args[1] for call in service._logger.log.call_args_list]
+    levels = [call.args[0] for call in service._logger.log.call_args_list]
+    n_models = len(command_class.SORTED_OPERATIONAL_DATA_MODEL_CLASSES)
+    # Failed model: one error line. Other models: one short batch and one summary
+    # line each.
+    assert len(messages) == 1 + (n_models - 1) * 2
+    assert levels[0] == logging.ERROR
+    assert "failed after 0 records" in messages[0]
+    assert sum("Deleted batch 1 of" in m for m in messages) == n_models - 1
+    assert sum("Deleted all 1 records" in m for m in messages) == n_models - 1
+
+
+def test_seqdb_seq_uses_a_smaller_batch_size() -> None:
+    """Delete the large SEQDB sequence rows in smaller batches than the default."""
     from gen_epix.seqdb.domain import model as seqdb_model
     from gen_epix.seqdb.domain.command import DeleteAllOperationalDataCommand
 
-    assert (
-        DeleteAllOperationalDataCommand.get_batch_size(seqdb_model.SeqDistance) == 500
-    )
+    assert DeleteAllOperationalDataCommand.get_batch_size(seqdb_model.Seq) == 100
     assert (
         DeleteAllOperationalDataCommand.get_batch_size(seqdb_model.Sample)
         == DeleteAllOperationalDataCommand.BATCH_SIZE
