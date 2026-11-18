@@ -30,6 +30,7 @@ from gen_epix.filter import (
     ExistsFilter,
     Filter,
     LogicalOperator,
+    NoFilter,
     NumberRangeFilter,
     NumberSetFilter,
     StringSetFilter,
@@ -83,9 +84,14 @@ def _make_obj(idx: int, *, value: int | None = None) -> RepoModel:
 
 
 @pytest.fixture
-def repo() -> Iterator[SARepository]:
+def engine() -> sa.Engine:
     engine = sa.create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
+    return engine
+
+
+@pytest.fixture
+def repo(engine: sa.Engine) -> Iterator[SARepository]:
     repository = SARepository(
         engine,
         id="repo-id",
@@ -677,6 +683,81 @@ def test_split_filter_keeps_inverted_mixed_and_in_python(
     )
 
     assert repo.split_filter(RepoModel, filter_) == (None, filter_)
+
+
+def test_split_filter_drops_no_filter(repo: SARepository) -> None:
+    only_sql_filter = EqualsNumberFilter(key="value", value=1)
+
+    assert repo.split_filter(RepoModel, NoFilter()) == (None, None)
+    assert repo.split_filter(
+        RepoModel,
+        CompositeFilter(
+            operator=LogicalOperator.AND, filters=[NoFilter(), only_sql_filter]
+        ),
+    ) == (only_sql_filter, None)
+
+
+def test_split_filter_keeps_inverted_no_filter_in_python(repo: SARepository) -> None:
+    inverted_no_filter = NoFilter(invert=True)
+
+    assert repo.split_filter(RepoModel, inverted_no_filter) == (
+        None,
+        inverted_no_filter,
+    )
+
+
+@pytest.mark.parametrize(
+    ("obj_filter", "limit", "offset", "expected_ids"),
+    [
+        pytest.param(
+            NumberSetFilter(key="value", members=frozenset({1, 3})),
+            0,
+            0,
+            ["id-1", "id-3"],
+            id="filter",
+        ),
+        pytest.param(
+            NumberSetFilter(key="value", members=frozenset({1, 2, 3})),
+            1,
+            1,
+            ["id-2"],
+            id="filter-and-page",
+        ),
+        pytest.param(NoFilter(invert=True), 0, 0, [], id="inverted-no-filter"),
+    ],
+)
+def test_read_all_ids_with_obj_filter_selects_rows_once(
+    repo: SARepository,
+    engine: sa.Engine,
+    obj_filter: Any,
+    limit: int,
+    offset: int,
+    expected_ids: list[str],
+) -> None:
+    # One parameter per id in a second query fails on SQL Server beyond 2100 ids
+    repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2), _make_obj(3)])
+    statements: list[str] = []
+
+    def _record(*args: Any) -> None:
+        statements.append(args[2])
+
+    sa.event.listen(engine, "before_cursor_execute", _record)
+    try:
+        ids = repo.read_all(
+            RepoModel,
+            None,
+            return_id=True,
+            obj_filter=obj_filter,
+            limit=limit,
+            offset=offset,
+        )
+    finally:
+        sa.event.remove(engine, "before_cursor_execute", _record)
+
+    assert ids == expected_ids
+    selects = [x for x in statements if x.lstrip().upper().startswith("SELECT")]
+    assert len(selects) == 1
+    assert " IN " not in selects[0].upper()
 
 
 def test_print_db_content(
