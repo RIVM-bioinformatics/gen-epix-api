@@ -1,8 +1,9 @@
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.casedb.domain.enum import CaseRight
+from gen_epix.casedb.domain.enum import CaseRight, CaseRightSet
 from gen_epix.casedb.domain.model.abac.rights import (
     CaseAbac,
     CaseTypeAccessAbac,
@@ -98,6 +99,57 @@ class TestCaseTypeAccessAbac(BaseCaseAbacTestCase):
         access: CaseTypeAccessAbac = self.make_access(self.dc1, read_cols={self.col1})
         assert access.has_any_rights()
 
+    @pytest.mark.parametrize(
+        ("right", "expected"),
+        [
+            (CaseRight.ADD_CASE, True),
+            (CaseRight.REMOVE_CASE, True),
+            (CaseRight.ADD_CASE_SET, True),
+            (CaseRight.REMOVE_CASE_SET, True),
+            (CaseRight.READ_CASE, True),
+            (CaseRight.WRITE_CASE, True),
+            (CaseRight.READ_CASE_SET, True),
+            (CaseRight.WRITE_CASE_SET, True),
+        ],
+    )
+    def test_is_allowed_maps_each_right(self, right: CaseRight, expected: bool) -> None:
+        access = self.make_access(
+            self.dc1,
+            add_case=True,
+            remove_case=True,
+            add_case_set=True,
+            remove_case_set=True,
+            read_cols={self.col1},
+            write_cols={self.col2},
+            read_case_set=True,
+            write_case_set=True,
+        )
+
+        assert access.is_allowed(right) is expected
+
+    @pytest.mark.parametrize(
+        ("right", "col_ids", "expected"),
+        [
+            (CaseRight.READ_CASE, frozenset({uuid4()}), False),
+            (CaseRight.READ_CASE, frozenset({uuid4()}), False),
+            (CaseRight.WRITE_CASE, frozenset({uuid4()}), False),
+        ],
+    )
+    def test_is_allowed_requires_requested_columns(
+        self, right: CaseRight, col_ids: frozenset[UUID], expected: bool
+    ) -> None:
+        access = self.make_access(
+            self.dc1, read_cols={self.col1}, write_cols={self.col2}
+        )
+
+        assert access.is_allowed(right, col_ids) is expected
+
+    def test_is_allowed_rejects_unknown_right(self) -> None:
+        access = self.make_access(self.dc1)
+
+        with pytest.raises(ValueError, match="Unknown case right"):
+            access.is_allowed("unknown")  # type: ignore[arg-type]
+
 
 @pytest.mark.scenario_ids("TC-SEC-29-01")
 class TestCaseTypeShareAbac(BaseCaseAbacTestCase):
@@ -111,6 +163,20 @@ class TestCaseTypeShareAbac(BaseCaseAbacTestCase):
 
     def test_has_any_rights_true_by_remove_set(self) -> None:
         share: CaseTypeShareAbac = self.make_share(self.dc3, remove_set_from={self.dc1})
+        assert share.has_any_rights()
+
+    @pytest.mark.parametrize(
+        "right_field",
+        [
+            "add_case_from_data_collection_ids",
+            "remove_case_from_data_collection_ids",
+            "add_case_set_from_data_collection_ids",
+        ],
+    )
+    def test_has_any_rights_true_for_each_share_field(self, right_field: str) -> None:
+        share = self.make_share(self.dc3)
+        getattr(share, right_field).add(self.dc1)
+
         assert share.has_any_rights()
 
 
@@ -644,6 +710,78 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         assert not allowed
 
+    def test_is_allowed_rejects_unknown_right(self) -> None:
+        abac = CaseAbac(
+            is_full_access=False, case_type_access_abacs={}, case_type_share_abacs={}
+        )
+
+        with pytest.raises(exc.InvalidArgumentsError):
+            abac.is_allowed(
+                case_type_id=self.case_type_id_1,
+                created_in_data_collection_id=self.dc1,
+                right=CaseRightSet.ADD,  # type: ignore[arg-type]
+            )
+
+    def test_is_content_allowed_rejects_invalid_operation_arguments(self) -> None:
+        abac = CaseAbac(
+            is_full_access=False, case_type_access_abacs={}, case_type_share_abacs={}
+        )
+
+        with pytest.raises(exc.InvalidArgumentsError):
+            abac.is_content_allowed(CaseRight.READ_CASE, {}, True, set(), set())
+        with pytest.raises(exc.InvalidArgumentsError):
+            abac.is_content_allowed(CaseRight.READ_CASE, {}, False, set(), {self.dc1})
+
+    def test_validate_private_creation_requires_creation_collection(self) -> None:
+        abac = CaseAbac(
+            is_full_access=False, case_type_access_abacs={}, case_type_share_abacs={}
+        )
+
+        with pytest.raises(exc.InvalidArgumentsError):
+            abac._validate_private_creation_or_deletion(
+                CaseRight.ADD_CASE, None, {}  # type: ignore[arg-type]
+            )
+
+    def test_remove_returns_false_without_access_or_share_right(self) -> None:
+        abac = CaseAbac(
+            is_full_access=False,
+            case_type_access_abacs={
+                self.case_type_id_1: {
+                    self.dc1: self.make_access(self.dc1, is_private=True),
+                    self.dc2: self.make_access(self.dc2),
+                }
+            },
+            case_type_share_abacs={},
+        )
+
+        assert not abac.is_allowed(
+            case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
+            right=CaseRight.REMOVE_CASE,
+            current_data_collection_ids={self.dc1, self.dc2},
+            tgt_data_collection_ids={self.dc2},
+        )
+
+    def test_remove_delete_uses_current_collections_and_succeeds(self) -> None:
+        abac = CaseAbac(
+            is_full_access=False,
+            case_type_access_abacs={
+                self.case_type_id_1: {
+                    self.dc1: self.make_access(self.dc1, is_private=True),
+                    self.dc2: self.make_access(self.dc2, remove_case=True),
+                }
+            },
+            case_type_share_abacs={},
+        )
+
+        assert abac.is_allowed(
+            case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
+            right=CaseRight.REMOVE_CASE,
+            is_create_or_delete=True,
+            current_data_collection_ids={self.dc1, self.dc2},
+        )
+
     def test_get_case_rights_non_full_access(self) -> None:
         # Access: created_in is private; remove rights on dc1, dc2; add rights on dc3; share add to dc4 from dc2
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -778,6 +916,17 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         combos = abac.get_combinations_with_any_rights()
         assert combos == {self.case_type_id_1: {self.dc3}}
 
+    def test_get_combinations_with_any_rights_skips_empty_share_entries(self) -> None:
+        abac = CaseAbac(
+            is_full_access=False,
+            case_type_access_abacs={},
+            case_type_share_abacs={
+                self.case_type_id_1: {self.dc3: self.make_share(self.dc3)}
+            },
+        )
+
+        assert abac.get_combinations_with_any_rights() == {}
+
     def test_get_case_types_with_any_rights_share_only(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {}
         share_map: dict[UUID, dict[UUID, CaseTypeShareAbac]] = {
@@ -825,6 +974,22 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         with pytest.raises(exc.InvalidArgumentsError):
             abac.get_cols_with_access_rights(CaseRight.ADD_CASE)
+
+    def test_get_cols_with_access_rights_missing_case_type_returns_empty(self) -> None:
+        abac = CaseAbac(
+            is_full_access=False,
+            case_type_access_abacs={
+                self.case_type_id_1: {
+                    self.dc1: self.make_access(self.dc1, read_cols={self.col1})
+                }
+            },
+            case_type_share_abacs={},
+        )
+
+        assert (
+            abac.get_cols_with_access_rights(CaseRight.READ_CASE, self.case_type_id_2)
+            == set()
+        )
 
     def test_get_cols_with_access_rights_unfiltered(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -1061,3 +1226,15 @@ class TestHelperFunctions(BaseCaseAbacTestCase):
         assert CaseAbac._get_from_data_collections_for_right_function(
             CaseRight.REMOVE_CASE_SET
         )(share) == {self.dc4}
+
+    def test_share_helper_functions_reject_content_rights(self) -> None:
+        with pytest.raises(NotImplementedError):
+            CaseAbac._get_get_share_from_data_collections_function(CaseRight.READ_CASE)
+        with pytest.raises(NotImplementedError):
+            CaseAbac._get_from_data_collections_for_right_function(CaseRight.READ_CASE)
+
+    def test_access_helper_rejects_unknown_right(self) -> None:
+        with pytest.raises(NotImplementedError):
+            CaseAbac._get_has_right_function(
+                SimpleNamespace(value="unknown")  # type: ignore[arg-type]
+            )
