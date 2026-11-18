@@ -147,6 +147,23 @@ def test_update_user_command_defaults_omitted_updates_to_none() -> None:
     assert command.organization_id is None
 
 
+@pytest.mark.parametrize(
+    ("key", "expected_key"),
+    [("", None), (None, None), ("User@example.org", "User@example.org")],
+    ids=["empty", "omitted", "provided"],
+)
+def test_invite_user_command_normalizes_empty_key(
+    key: str | None, expected_key: str | None
+) -> None:
+    command = organization.InviteUserCommand(
+        key=key,
+        roles={"COMMONDB_USER"},
+        organization_id=UUID("492e1138-1fa7-4708-a0f8-02bf78e9f902"),
+    )
+
+    assert command.key == expected_key
+
+
 def test_update_user_own_organization_defaults_to_regular_update() -> None:
     command = organization.UpdateUserOwnOrganizationCommand(
         organization_id=UUID("492e1138-1fa7-4708-a0f8-02bf78e9f902")

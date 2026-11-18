@@ -9,6 +9,7 @@ from typing import Any, Self, cast
 
 import sqlalchemy as sa
 from sqlalchemy import Engine, delete, event, inspect, select
+from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -1803,9 +1804,10 @@ class SARepository(BaseRepository):
         recreate_sqlite_file = kwargs.pop("recreate_sqlite_file", False)
 
         # Handle sqlite separately
-        is_sqlite = connection_string is None or str(
-            connection_string
-        ).lower().startswith("sqlite:///")
+        is_sqlite = (
+            connection_string is None
+            or make_url(connection_string).get_backend_name() == "sqlite"
+        )
         create_database_objects = kwargs.pop("create_database_objects", is_sqlite)
         schema_names = {x.schema_name for x in entities if x.persistable}
         if is_sqlite:
@@ -1826,17 +1828,21 @@ class SARepository(BaseRepository):
                 connect_args,
             )
 
-        metadata_set = cls._get_repository_metadata(entities)
+        try:
+            metadata_set = cls._get_repository_metadata(entities)
 
-        # Create any non-existing database objects except schemas (done earlier), if allowed
-        if create_database_objects:
-            for metadata in metadata_set:
-                metadata.create_all(engine, checkfirst=True)
+            # Create any non-existing database objects except schemas (done earlier), if allowed
+            if create_database_objects:
+                for metadata in metadata_set:
+                    metadata.create_all(engine, checkfirst=True)
 
-        # Create repository
-        repository = cls(
-            engine, entities=entities, register_mappers=register_mappers, **kwargs
-        )
+            # Create repository
+            repository = cls(
+                engine, entities=entities, register_mappers=register_mappers, **kwargs
+            )
+        except Exception:
+            engine.dispose()
+            raise
 
         return repository
 
@@ -1848,9 +1854,12 @@ class SARepository(BaseRepository):
         recreate_sqlite_file: bool,
     ) -> Engine:
         """Create a SQLite engine and attach its configured schemas."""
+        sqlite_url = (
+            make_url(connection_string) if connection_string is not None else None
+        )
         sqlite_target = (
             None
-            if connection_string is None
+            if sqlite_url is None or not sqlite_url.database
             else re.sub(".*sqlite:///", "", connection_string, flags=re.IGNORECASE)
         )
         if sqlite_target:

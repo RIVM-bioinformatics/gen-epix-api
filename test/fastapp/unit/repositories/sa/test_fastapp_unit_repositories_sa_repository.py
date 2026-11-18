@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import uuid
 from collections.abc import Iterable, Iterator
+from contextlib import nullcontext
+from enum import Enum
 from pathlib import Path
 from test.util.mock_compat import Mock
 from typing import Any, ClassVar, cast
 
 import pytest
 import sqlalchemy as sa
+from sqlalchemy.dialects.mssql import dialect as MSSQLDialect
 from sqlalchemy.orm import Session, declarative_base
 
 import gen_epix.fastapp.exc as exc
@@ -20,9 +24,11 @@ from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.filter import (
     ComparisonOperator,
     CompositeFilter,
+    ContainsStringFilter,
     EqualsNumberFilter,
     EqualsStringFilter,
     ExistsFilter,
+    Filter,
     LogicalOperator,
     NumberRangeFilter,
     NumberSetFilter,
@@ -63,6 +69,11 @@ class OtherModel(Model):
     )
     id: str | None = None
     value: int
+
+
+class UnsupportedFilter(Filter):
+    def _match(self, value: Any) -> bool:
+        return True
 
 
 def _make_obj(idx: int, *, value: int | None = None) -> RepoModel:
@@ -809,6 +820,40 @@ def test_clear_repository_content_drops_default_schema_tables(tmp_path: Path) ->
         engine.dispose()
 
 
+def test_create_sa_repository_with_sqlite_scheme() -> None:
+    repo = SARepository.create_sa_repository(
+        entities=[RepoModel.ENTITY],
+        connection_string="sqlite://",
+        register_mappers=False,
+    )
+    try:
+        assert "repo_model" in sa.inspect(repo._engine).get_table_names()
+    finally:
+        repo._engine.dispose()
+
+
+def test_create_sa_repository_disposes_engine_when_entity_metadata_is_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    monkeypatch.setattr(
+        SARepository,
+        "_create_sqlite_engine",
+        lambda *args, **kwargs: engine,
+    )
+    entity = Entity(persistable=True, table_name="missing_model", id_field_name="id")
+    entity.set_model_class(RepoModel)
+
+    with pytest.raises(ValueError, match="does not have a db_model_class"):
+        SARepository.create_sa_repository(
+            entities=[entity],
+            connection_string="sqlite:///:memory:",
+            register_mappers=False,
+        )
+
+    engine.dispose.assert_called_once_with()
+
+
 def test_create_sa_repository(tmp_path: Path) -> None:
     sqlite_file = tmp_path / "repo.sqlite"
     repo = SARepository.create_sa_repository(
@@ -1189,3 +1234,643 @@ def test_check_schema_matches_reports_missing_column(tmp_path: Path) -> None:
     )
 
     assert problems == ["table repo_model is missing column(s): label, value"]
+
+
+def test_create_unique_values_temp_table_batches_values() -> None:
+    session = Mock()
+    bind = Mock()
+    bind.dialect = MSSQLDialect()
+    session.get_bind.return_value = bind
+    metadata = sa.MetaData()
+    values = [uuid.UUID(int=1), uuid.UUID(int=2)]
+
+    table = SARepository.create_unique_values_temp_table(
+        session,
+        metadata,
+        "value",
+        sa.Uuid(),
+        values,
+        max_insert_batch_size=1,
+        table_name="values",
+    )
+
+    assert table.name == "#values"
+    assert session.execute.call_count == 3
+    assert session.flush.call_count == 2
+    with pytest.raises(ValueError, match="must not contain a '#' prefix"):
+        SARepository.create_unique_values_temp_table(
+            session, metadata, "value", sa.Uuid(), values, table_name="#values"
+        )
+
+
+def test_select_with_id_join_uses_sql_server_temp_table() -> None:
+    model_base = declarative_base()
+
+    class TempJoinRow(model_base):
+        __tablename__ = "temp_join_row"
+        id = sa.Column(sa.String, primary_key=True)
+
+    mapper = Mock()
+    mapper.row_class = TempJoinRow
+    mapper.get_row_id_column.return_value = TempJoinRow.id
+    session = Mock()
+    bind = Mock()
+    bind.dialect = MSSQLDialect()
+    session.get_bind.return_value = bind
+
+    statement = SARepository._select_with_id_join(
+        mapper, session, ["id-1", "id-2"], max_ids_in_clause=1
+    )
+
+    assert "JOIN [#temp_" in str(statement.compile(dialect=bind.dialect))
+    assert session.execute.call_count == 3
+    assert session.flush.call_count == 2
+
+
+def test_create_repository_accepts_sqlite_file(tmp_path: Path) -> None:
+    database_file = tmp_path / "repository.sqlite"
+    database_file.touch()
+
+    repository = SARepository.create_repository(
+        entities=[RepoModel.ENTITY], file=database_file
+    )
+
+    try:
+        assert isinstance(repository, SARepository)
+        assert "repo_model" in sa.inspect(repository._engine).get_table_names()
+    finally:
+        repository._engine.dispose()
+
+
+def test_clear_repository_content_requires_connection_string() -> None:
+    with pytest.raises(ValueError, match="connection_string is required"):
+        SARepository.clear_repository_content(entities=[RepoModel.ENTITY])
+
+
+def test_clear_repository_content_handles_named_foreign_keys(tmp_path: Path) -> None:
+    engine = sa.create_engine(f"sqlite:///{tmp_path / 'foreign_keys.sqlite'}")
+    metadata = sa.MetaData()
+    sa.Table("parent", metadata, sa.Column("id", sa.Integer, primary_key=True))
+    sa.Table(
+        "child",
+        metadata,
+        sa.Column("parent_id", sa.Integer),
+        sa.ForeignKeyConstraint(["parent_id"], ["parent.id"], name="fk_child_parent"),
+    )
+    metadata.create_all(engine)
+
+    try:
+        SARepository._clear_repository_content(engine, [RepoModel.ENTITY], None)
+        assert sa.inspect(engine).get_table_names() == []
+    finally:
+        engine.dispose()
+
+
+def test_repository_initializes_mappers_with_factory(repo: SARepository) -> None:
+    mapper_factory = Mock()
+    mapper = SAMapper(RepoModel, SARepoModel)
+    mapper_factory.create_mapper.return_value = mapper
+
+    repository = SARepository(
+        repo._engine,
+        entities=[RepoModel.ENTITY],
+        sa_mapper_factory=mapper_factory,
+    )
+
+    assert repository.get_mapper(RepoModel) is mapper
+    mapper_factory.create_mapper.assert_called_once_with(
+        RepoModel, SARepoModel, field_name_map=None
+    )
+
+
+@pytest.mark.parametrize(
+    ("dialect_name", "ddl_fragment"),
+    [
+        ("mssql", "DROP CONSTRAINT"),
+        ("postgresql", "DROP CONSTRAINT"),
+        ("mysql", "DROP FOREIGN KEY"),
+        ("sqlite", "DROP CONSTRAINT"),
+    ],
+)
+def test_clear_repository_content_uses_dialect_specific_constraint_ddl(
+    monkeypatch: pytest.MonkeyPatch, dialect_name: str, ddl_fragment: str
+) -> None:
+    inspector = Mock()
+    inspector.get_table_names.return_value = ["child"]
+    inspector.get_foreign_keys.return_value = [{"name": "fk_child_parent"}]
+    monkeypatch.setattr(repository_module, "inspect", lambda engine: inspector)
+    engine = Mock()
+    connection = Mock()
+    connection.dialect.name = dialect_name
+    connection.dialect.identifier_preparer.quote.side_effect = (
+        lambda value: f"`{value}`"
+    )
+    engine.connect.side_effect = lambda: nullcontext(connection)
+
+    SARepository._clear_repository_content(engine, [RepoModel.ENTITY], None)
+
+    statements = [str(call.args[0]) for call in connection.execute.call_args_list]
+    assert any(ddl_fragment in statement for statement in statements)
+    connection.begin.return_value.commit.assert_called_once_with()
+
+
+def test_clear_repository_content_continues_when_schema_inspection_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inspector = Mock()
+    inspector.get_table_names.side_effect = RuntimeError("schema unavailable")
+    monkeypatch.setattr(repository_module, "inspect", lambda engine: inspector)
+    engine = Mock()
+    connection = Mock()
+    engine.connect.side_effect = lambda: nullcontext(connection)
+
+    SARepository._clear_repository_content(engine, [RepoModel.ENTITY], None)
+
+    connection.commit.assert_called_once_with()
+
+
+def test_in_session_read_some_optimized_path_accepts_empty_ids(
+    repo: SARepository,
+) -> None:
+    with repo.get_session() as session:
+        rows, row_ids = SARepository._in_session_read_some(
+            repo.get_mapper(RepoModel),
+            session,
+            [],
+            optimize_parameter_handling=True,
+        )
+
+    assert rows == []
+    assert row_ids == []
+
+
+def test_filter_where_clause_supports_column_functions_and_full_ranges(
+    repo: SARepository,
+) -> None:
+    row_class = repo.get_mapper(RepoModel).row_class
+    contains_clause = repo.get_where_clause_from_filter(
+        row_class,
+        None,
+        ContainsStringFilter(key="label", value="L", invert=True),
+        column_function_map={"label": sa.func.lower},
+    )
+    range_clause = repo.get_where_clause_from_filter(
+        row_class,
+        None,
+        NumberRangeFilter(
+            key="value",
+            lower_bound=1,
+            lower_bound_censor=ComparisonOperator.GT,
+            upper_bound=3,
+            upper_bound_censor=ComparisonOperator.ST,
+            invert=True,
+        ),
+    )
+
+    assert "lower(repo_model.label)" in str(contains_clause)
+    assert "NOT" in str(contains_clause).upper()
+    assert "NOT" in str(range_clause).upper()
+
+
+def test_create_sqlite_engine_attaches_memory_schema() -> None:
+    engine = SARepository._create_sqlite_engine(
+        None, {"attached"}, echo=False, recreate_sqlite_file=False
+    )
+
+    try:
+        with engine.connect() as connection:
+            assert "attached" in sa.inspect(connection).get_schema_names()
+    finally:
+        engine.dispose()
+
+
+def test_create_sqlite_repository_recreates_existing_file(tmp_path: Path) -> None:
+    sqlite_file = tmp_path / "recreated.sqlite"
+    connection_string = f"sqlite:///{sqlite_file.as_posix()}"
+    old_engine = sa.create_engine(connection_string)
+    with old_engine.begin() as connection:
+        connection.execute(sa.text("CREATE TABLE stale (id INTEGER PRIMARY KEY)"))
+    old_engine.dispose()
+
+    repository = SARepository.create_sa_repository(
+        entities=[],
+        connection_string=connection_string,
+        recreate_sqlite_file=True,
+        register_mappers=False,
+    )
+
+    try:
+        assert sa.inspect(repository._engine).get_table_names() == []
+    finally:
+        repository._engine.dispose()
+
+
+def test_create_non_sqlite_engine_creates_requested_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    connection = Mock()
+    connection.dialect.has_schema.return_value = False
+    engine.connect.side_effect = lambda: nullcontext(connection)
+    create_engine = Mock(return_value=engine)
+    monkeypatch.setattr(repository_module.EngineFactory, "create_engine", create_engine)
+
+    result = SARepository._create_non_sqlite_engine(
+        "postgresql://db",
+        {"app_schema"},
+        echo=True,
+        create_database_objects=True,
+        connect_args={"timeout": 5},
+    )
+
+    assert result is engine
+    create_engine.assert_called_once_with(
+        "postgresql://db", True, connect_args={"timeout": 5}
+    )
+    assert isinstance(connection.execute.call_args.args[0], sa.schema.CreateSchema)
+    connection.commit.assert_called_once_with()
+
+
+def test_get_repository_metadata_rejects_missing_db_model() -> None:
+    entity = Entity(persistable=True, table_name="missing_model", id_field_name="id")
+    entity.set_model_class(RepoModel)
+
+    with pytest.raises(ValueError, match="does not have a db_model_class"):
+        SARepository._get_repository_metadata([entity])
+
+
+def test_check_schema_matches_reports_schema_inspection_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    inspector = Mock()
+    inspector.get_table_names.side_effect = RuntimeError("schema unavailable")
+    monkeypatch.setattr(repository_module, "inspect", lambda _: inspector)
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+
+    problems = SARepository.check_schema_matches(
+        entities=[RepoModel.ENTITY], connection_string="sqlite:///:memory:"
+    )
+
+    assert problems == ["schema None could not be inspected: schema unavailable"]
+    engine.dispose.assert_called_once_with()
+
+
+def test_clear_repository_content_skips_uninspectable_foreign_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inspector = Mock()
+    inspector.get_table_names.return_value = ["child"]
+    inspector.get_foreign_keys.side_effect = RuntimeError("cannot inspect table")
+    monkeypatch.setattr(repository_module, "inspect", lambda _: inspector)
+    engine = sa.create_engine("sqlite:///:memory:")
+
+    try:
+        SARepository._clear_repository_content(engine, [RepoModel.ENTITY], None)
+    finally:
+        engine.dispose()
+
+
+def test_clear_repository_content_ignores_alembic_cleanup_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inspector = Mock()
+    inspector.get_table_names.return_value = []
+    monkeypatch.setattr(repository_module, "inspect", lambda _: inspector)
+    table = Mock()
+    table.drop.side_effect = RuntimeError("drop denied")
+    monkeypatch.setattr(repository_module.sa, "Table", lambda *args, **kwargs: table)
+    connection = Mock()
+    connection.dialect.has_schema.side_effect = RuntimeError("schema unavailable")
+    engine = Mock()
+    engine.connect.side_effect = lambda: nullcontext(connection)
+
+    SARepository._clear_repository_content(engine, [], "alembic")
+
+    table.drop.assert_called_once_with(connection, checkfirst=True)
+
+
+def test_create_some_returns_ids_and_read_some_reports_missing_id(
+    repo: SARepository,
+) -> None:
+    assert repo.create_some(RepoModel, "user", [_make_obj(1)], return_id=True) == [
+        "id-1"
+    ]
+
+    with pytest.raises(exc.InvalidIdsError, match="35de72de") as error:
+        repo.read_some(RepoModel, ["id-1", "missing"])
+
+    assert error.value.ids is None
+    assert "missing" in str(error.value)
+
+
+def test_read_fields_rejects_non_sqlalchemy_unit_of_work(repo: SARepository) -> None:
+    with pytest.raises(exc.RepositoryServiceError, match="4afb32de"):
+        repo.read_fields(cast(Any, object()), "user", RepoModel, ["value"])
+
+
+def test_get_where_clause_rejects_unmapped_filter_key(repo: SARepository) -> None:
+    mapper = repo.get_mapper(RepoModel)
+
+    with pytest.raises(exc.InvalidArgumentsError, match="320f2bf7"):
+        repo.get_where_clause_from_filter(
+            mapper.row_class,
+            mapper,
+            EqualsNumberFilter(key="unknown", value=1),
+        )
+
+
+def test_get_where_clause_converts_enum_set_members() -> None:
+    class Status(Enum):
+        ACTIVE = "active"
+        INACTIVE = "inactive"
+
+    model_base = declarative_base()
+
+    class EnumRow(model_base):
+        __tablename__ = "enum_row"
+        id = sa.Column(sa.Integer, primary_key=True)
+        status = sa.Column(sa.Enum(Status))
+
+    where_clause = SARepository._get_set_where_clause(
+        StringSetFilter(key="status", members=frozenset({"active"})),
+        EnumRow.status,
+        invert=False,
+    )
+
+    assert "enum_row.status IN" in str(where_clause)
+
+
+def test_verify_valid_ids_can_skip_both_checks(repo: SARepository) -> None:
+    with repo.uow() as uow:
+        repo.verify_valid_ids(
+            uow,
+            "user",
+            RepoModel,
+            ["duplicate", "duplicate"],
+            verify_exists=False,
+            verify_duplicate=False,
+        )
+
+
+def test_create_sqlite_engine_rejects_multiple_file_schemas(tmp_path: Path) -> None:
+    sqlite_file = tmp_path / "multiple_schemas.sqlite"
+    sqlite_file.touch()
+
+    with pytest.raises(NotImplementedError, match="Multiple schemas"):
+        SARepository._create_sqlite_engine(
+            f"sqlite:///{sqlite_file.as_posix()}",
+            {"first", "second"},
+            echo=False,
+            recreate_sqlite_file=False,
+        )
+
+
+def test_create_some_returns_empty_for_empty_iterable(repo: SARepository) -> None:
+    assert repo.create_some(RepoModel, "user", iter(())) == []
+
+
+def test_read_all_object_filter_preserves_ids_when_all_rows_match(
+    repo: SARepository,
+) -> None:
+    repo.create_some(RepoModel, "user", [_make_obj(1), _make_obj(2)])
+
+    ids = repo.read_all(
+        RepoModel,
+        filter=None,
+        return_id=True,
+        obj_filter=NumberRangeFilter(key="value", lower_bound=0),
+    )
+
+    assert ids == ["id-1", "id-2"]
+
+
+@pytest.mark.parametrize("operator", [LogicalOperator.AND, LogicalOperator.OR])
+def test_composite_where_clause_supports_both_operators(
+    repo: SARepository, operator: LogicalOperator
+) -> None:
+    mapper = repo.get_mapper(RepoModel)
+    filter_ = CompositeFilter(
+        operator=operator,
+        filters=[
+            EqualsNumberFilter(key="value", value=1),
+            EqualsNumberFilter(key="value", value=2),
+        ],
+        invert=True,
+    )
+
+    clause = repo.get_where_clause_from_filter(mapper.row_class, mapper, filter_)
+
+    assert "NOT" in str(clause).upper()
+
+
+def test_composite_where_clause_rejects_unknown_operator(repo: SARepository) -> None:
+    mapper = repo.get_mapper(RepoModel)
+    filter_ = CompositeFilter.model_construct(
+        operator=Mock(value="UNKNOWN"), filters=[], invert=False
+    )
+
+    with pytest.raises(exc.InvalidArgumentsError, match="8f411a53"):
+        repo.get_where_clause_from_filter(mapper.row_class, mapper, filter_)
+
+
+def test_split_filter_leaves_unknown_composite_operator_in_python(
+    repo: SARepository,
+) -> None:
+    filter_ = CompositeFilter.model_construct(
+        operator=Mock(value="UNKNOWN"), filters=[], invert=False
+    )
+
+    assert repo.split_filter(RepoModel, filter_) == (None, filter_)
+
+
+def test_register_mapper_rejects_duplicate_table_name(repo: SARepository) -> None:
+    another_base: Any = declarative_base()
+
+    class DuplicateTableRow(another_base):
+        __tablename__ = "repo_model"
+        __table_args__: ClassVar[tuple[Any, ...]] = tuple()
+        id = sa.Column(sa.String, primary_key=True)
+        value = sa.Column(sa.Integer, nullable=False)
+        label = sa.Column(sa.String, nullable=True)
+
+    with pytest.raises(exc.RepositoryInitializationServiceError, match="90c9edd0"):
+        repo.register_mapper(SAMapper(RepoModel, DuplicateTableRow))
+
+
+def test_create_unique_values_temp_table_generates_name() -> None:
+    session = Mock()
+    session.get_bind.return_value.dialect = MSSQLDialect()
+
+    table = SARepository.create_unique_values_temp_table(
+        session, sa.MetaData(), "value", sa.Uuid(), []
+    )
+
+    assert table.name.startswith("#")
+    assert len(table.name) == 33
+    session.execute.assert_called_once()
+    session.flush.assert_not_called()
+
+
+def test_clear_repository_content_rolls_back_failed_constraint_transaction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inspector = Mock()
+    inspector.get_table_names.return_value = ["child"]
+    inspector.get_foreign_keys.return_value = [{"name": "fk_child_parent"}]
+    monkeypatch.setattr(repository_module, "inspect", lambda _: inspector)
+    connection = Mock()
+    connection.dialect.name = "mssql"
+    connection.begin.return_value.commit.side_effect = RuntimeError("commit failed")
+    engine = Mock()
+    engine.connect.side_effect = lambda: nullcontext(connection)
+
+    with pytest.raises(RuntimeError, match="commit failed"):
+        SARepository._clear_repository_content(engine, [RepoModel.ENTITY], None)
+
+    connection.begin.return_value.rollback.assert_called_once_with()
+
+
+def test_clear_repository_content_handles_schema_drop_error() -> None:
+    inspector = Mock()
+    inspector.get_table_names.return_value = []
+    connection = Mock()
+    connection.dialect.has_schema.side_effect = RuntimeError("schema unavailable")
+    engine = Mock()
+    engine.connect.side_effect = lambda: nullcontext(connection)
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(repository_module, "inspect", lambda _: inspector)
+    try:
+        SARepository._clear_repository_content(
+            engine, [Entity(persistable=True, schema_name="app")], None
+        )
+    finally:
+        monkeypatch.undo()
+
+
+def test_check_schema_matches_skips_non_persistable_entity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    monkeypatch.setattr(repository_module, "inspect", lambda _: Mock())
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+
+    problems = SARepository.check_schema_matches(
+        entities=[Entity(persistable=False)], connection_string="sqlite:///:memory:"
+    )
+
+    assert problems == []
+    engine.dispose.assert_called_once_with()
+
+
+def test_create_non_sqlite_engine_skips_existing_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = Mock()
+    connection = Mock()
+    connection.dialect.has_schema.return_value = True
+    engine.connect.side_effect = lambda: nullcontext(connection)
+    monkeypatch.setattr(
+        repository_module.EngineFactory, "create_engine", lambda *args, **kwargs: engine
+    )
+
+    assert (
+        SARepository._create_non_sqlite_engine(
+            "postgresql://db", {"app"}, False, True, None
+        )
+        is engine
+    )
+    connection.execute.assert_not_called()
+
+
+def test_get_where_clause_rejects_unsupported_filter(repo: SARepository) -> None:
+    mapper = repo.get_mapper(RepoModel)
+    filter_ = UnsupportedFilter(key="value")
+
+    with pytest.raises(exc.InvalidArgumentsError, match="880a6446"):
+        repo.get_where_clause_from_filter(mapper.row_class, mapper, filter_)
+
+
+def test_split_filter_leaves_unsupported_mapped_filter_in_python(
+    repo: SARepository,
+) -> None:
+    filter_ = UnsupportedFilter(key="value")
+
+    assert repo.split_filter(RepoModel, filter_) == (None, filter_)
+
+
+def test_crud_rejects_unsupported_operation(repo: SARepository) -> None:
+    with repo.uow() as uow:
+        with pytest.raises(NotImplementedError, match="not implemented"):
+            repo.crud(
+                uow,
+                "user",
+                RepoModel,
+                cast(CrudOperation, object()),
+            )
+
+
+def test_read_some_rejects_partial_result_from_reader(
+    repo: SARepository, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        SARepository,
+        "_in_session_read_some",
+        lambda *args, **kwargs: ([object()], ["id-1"]),
+    )
+    monkeypatch.setattr(repo, "from_sql", lambda *args, **kwargs: [_make_obj(1), None])
+
+    with pytest.raises(exc.InvalidIdsError, match="b7efa0d3") as error:
+        repo.read_some(RepoModel, ["id-1", "missing"])
+
+    assert error.value.ids == ["id-1", "missing"]
+
+
+def test_init_mappers_rejects_entity_without_db_model(repo: SARepository) -> None:
+    entity = Entity(persistable=True, table_name="missing_model", id_field_name="id")
+    entity.set_model_class(RepoModel)
+
+    with pytest.raises(exc.RepositoryInitializationServiceError, match="d135c11c"):
+        repo._init_mappers([entity], {}, Mock())
+
+
+def test_register_mappers_rejects_entity_without_db_model(repo: SARepository) -> None:
+    entity = Entity(persistable=True, table_name="missing_model", id_field_name="id")
+    entity.set_model_class(RepoModel)
+
+    with pytest.raises(exc.RepositoryInitializationServiceError, match="5f725f7a"):
+        repo.register_mappers([entity])
+
+
+def test_clear_repository_content_drops_named_schema_and_alembic_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inspector = Mock()
+    inspector.get_table_names.return_value = []
+    monkeypatch.setattr(repository_module, "inspect", lambda _: inspector)
+    table = Mock()
+    monkeypatch.setattr(repository_module.sa, "Table", lambda *args, **kwargs: table)
+    connection = Mock()
+    connection.dialect.has_schema.return_value = True
+    engine = Mock()
+    engine.connect.side_effect = lambda: nullcontext(connection)
+
+    SARepository._clear_repository_content(
+        engine, [Entity(persistable=True, schema_name="app")], "alembic"
+    )
+
+    assert connection.execute.call_count == 2
+    assert connection.commit.call_count >= 2
+    table.drop.assert_called_once_with(connection, checkfirst=True)
+
+
+def test_verify_valid_ids_accepts_generator(repo: SARepository) -> None:
+    repo.create_one(RepoModel, "user", _make_obj(1))
+
+    with repo.uow() as uow:
+        repo.verify_valid_ids(uow, "user", RepoModel, (obj_id for obj_id in ["id-1"]))

@@ -183,8 +183,6 @@ class Run:
 
     ## test
     def test_all(self, include_e2e: bool = True) -> None:
-        import subprocess
-
         pytest_args = (
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -223,6 +221,11 @@ class Run:
                 # "test/general/code",
             ]
         )
+
+        self._test_with_coverage(pytest_args)
+
+    def _test_with_coverage(self, pytest_args: list[str]) -> None:
+        import subprocess
 
         test_run = subprocess.run(
             [
@@ -279,9 +282,7 @@ class Run:
         pytest.main(Run.DEFAULT_PYTEST_ARGS + ["."])
 
     def test_all_unit(self) -> None:
-        import pytest
-
-        pytest.main(
+        self._test_with_coverage(
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/general/unit/startup_benchmark",
