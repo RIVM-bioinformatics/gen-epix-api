@@ -1195,10 +1195,7 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [self.identifier_issuer],
             [existing_identifier],
         ]
-        self.service.repository.crud.side_effect = [
-            [True],  # Person exists
-            [existing_specimen],  # Existing specimen
-        ]
+        self.service.repository.crud.return_value = []  # Nothing stored to compare
         self.service.repository.read_fields.side_effect = [
             [(existing_specimen_id, existing_person_id)],
         ]
@@ -1426,10 +1423,7 @@ class Test8SpecimenIdentifiers(BasePersonUploadTestCase):
             [existing_identifier],  # Existing Identifiers
             [created_identifier_id],  # Created Identifier IDs
         ]
-        self.service.repository.crud.side_effect = [
-            [True],  # Person exists
-            [existing_specimen],  # Existing specimen
-        ]
+        self.service.repository.crud.return_value = []  # Nothing stored to compare
         self.service.repository.read_fields.side_effect = [
             [(existing_specimen_id, existing_person_id)],
         ]

@@ -175,6 +175,18 @@ class ServiceException(DomainException):
         )
 
 
+class RemoteServiceError(ServiceException):
+    """A remote app answered a command with an HTTP error status.
+
+    The HTTP status is the one the remote app answered with, so a direct caller of the
+    remote client can act on it. An API that makes remote calls must not pass it on to
+    its own caller: commondb's handle_exception turns any RemoteServiceError into an
+    opaque 500.
+    """
+
+    pass
+
+
 class InitializationServiceError(ServiceException):
     """Error while initializing an application service."""
 

@@ -487,6 +487,7 @@ class AppComposer(BaseAppComposer):
             ("feature_flags", None, bool),  # All feature flags
             ("service", "auth", "props", "auto_create_new_users", bool),
             ("service", "auth", "props", "root_token_time_to_live", int),
+            ("service", "auth", "props", "jwt_leeway_seconds", int),
         ]
         cfg = cast(dict[str, Any], self._app_cfg.cfg)
         # Convert boolean values

@@ -322,6 +322,9 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
         )
 
         # Call repository CRUD operation
+        extra_kwargs: dict[str, Any] = {}
+        if cmd.return_count:
+            extra_kwargs["return_count"] = True
         retval = self.repository.crud(
             uow,
             cmd.user.id if cmd.user else None,
@@ -335,6 +338,7 @@ class BaseService[Repository: BaseRepository = BaseRepository](abc.ABC):
             offset=cmd.offset,
             obj_filter=service_query_filter,
             links=links,
+            **extra_kwargs,
         )
         return self._apply_exists_access_filter(uow, cmd, retval, access_filter)
 

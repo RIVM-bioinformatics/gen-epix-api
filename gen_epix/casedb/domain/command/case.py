@@ -468,7 +468,12 @@ class CaseSetDataCollectionLinkCrudCommand(CrudCommand):
 
 
 class CaseSetMemberCrudCommand(CrudCommand):
-    """Represents a request to execute a CRUD operation on CaseSetMembers."""
+    """Represents a request to execute a CRUD operation on CaseSetMembers.
+
+    When ABAC is applied, and a READ_ALL operation is requested, a query_filter must be
+    provided. The query_filter must filter at least either case_id or case_set_id on
+    a restricted set of IDs and may not contain other filters.
+    """
 
     MODEL_CLASS: ClassVar = model.CaseSetMember
 

@@ -16,7 +16,7 @@ ssl_context = false
 [service.auth.props.idps_cfg.claim_map]
 __key__ = "sub"
 
-# The client_credentials grant sets sub=client_id, so the lsp-data "mock"
+# The client_credentials grant sets sub=client_id, so the registered "mock"
 # client's JWT carries sub="mock". Overriding root.user.key to "mock" here
 # (a settings file always outranks AppCfg's own hardcoded default, which is
 # "root@dummy.org") makes is_root_user_claims() match on the first request

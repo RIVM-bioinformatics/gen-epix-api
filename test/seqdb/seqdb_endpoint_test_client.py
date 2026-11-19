@@ -22,6 +22,7 @@ class SeqdbEndpointTestClient(EndpointTestClient):
             command.UpdateUserOwnOrganizationCommand,
             self.handle_update_user_own_organization,
         )
+        self.register_handler(command.UploadSamplesCommand, self.handle_upload_samples)
         self.register_handler(
             command.RetrieveSamplesByIdCommand, self.handle_retrieve_samples_by_id
         )
@@ -68,6 +69,19 @@ class SeqdbEndpointTestClient(EndpointTestClient):
         )
         retval = self._content_to_obj(response, model.FullSample, is_list=True)
         return retval, response
+
+    def handle_upload_samples(
+        self,
+        cmd: command.UploadSamplesCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.post(
+            route_prefix + "/upload/samples",
+            headers=headers,
+            json=json.loads(cmd.model_dump_json(exclude={"user"})),
+        )
+        return self._content_to_obj(response, model.SampleBatchUploadResult), response
 
     def handle_retrieve_sample_identifiers_by_id(
         self,

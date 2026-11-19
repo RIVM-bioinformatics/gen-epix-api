@@ -180,3 +180,60 @@ def test_repository_lifecycle(
             engine.dispose()
     else:
         repository_class.clear_repository_content(entities=entities)
+
+
+@pytest.mark.parametrize("repository_class", [DictRepository, SARepository])
+def test_delete_all_in_batches_returns_counts(
+    repository_class: type[BaseRepository], tmp_path: Path
+) -> None:
+    """Delete in limited batches with the same counts and results in all backends."""
+    entities = [LifecycleModel.ENTITY]
+    if repository_class is SARepository:
+        sqlite_file = tmp_path / "repository_delete_all_batches.sqlite"
+        repository = repository_class.create_repository(
+            entities=entities,
+            connection_string=f"sqlite:///{sqlite_file.as_posix()}",
+            recreate_sqlite_file=True,
+        )
+    else:
+        repository = repository_class.create_repository(entities=entities)
+
+    def delete_all(**kwargs: Any) -> Any:
+        with repository.uow() as uow:
+            return repository.crud(
+                uow, "user", LifecycleModel, CrudOperation.DELETE_ALL, **kwargs
+            )
+
+    def read_ids() -> set[str]:
+        with repository.uow() as uow:
+            return {
+                obj.id
+                for obj in repository.crud(
+                    uow, "user", LifecycleModel, CrudOperation.READ_ALL
+                )
+            }
+
+    with repository.uow() as uow:
+        repository.crud(
+            uow,
+            "user",
+            LifecycleModel,
+            CrudOperation.CREATE_SOME,
+            objs=[LifecycleModel(id=f"id{i}", value=i) for i in range(5)],
+        )
+
+    # A limited batch deletes at most limit rows and reports their number
+    assert delete_all(limit=2, return_count=True) == 2
+    assert len(read_ids()) == 3
+    # Ids of a limited batch are those that were deleted
+    batch_ids = delete_all(limit=1, return_id=True)
+    assert len(batch_ids) == 1
+    assert len(read_ids()) == 2
+    assert not read_ids() & set(batch_ids)
+    # Without limit everything left is deleted and counted
+    assert delete_all(return_count=True) == 2
+    assert read_ids() == set()
+    # Nothing left
+    assert delete_all(limit=3, return_count=True) == 0
+    # Without return flags nothing is returned
+    assert delete_all(limit=3) is None

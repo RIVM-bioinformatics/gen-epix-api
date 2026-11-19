@@ -1387,6 +1387,21 @@ class TestTokenProviderHandle:
             client.handle(ProviderCommand())
         assert provider.calls == 1
 
+    def test_local_401_does_not_refresh(self) -> None:
+        provider = TokenProvider(_provider_token(3600))
+        client = _make_token_provider_client(provider)
+
+        def handler(cmd: Command) -> str:
+            client.get_headers(cmd)
+            raise exc.ServiceException(
+                "11111111", "HTTP status 401 in a local error", {"status_code": 401}
+            )
+
+        self._register(client, handler)
+        with pytest.raises(exc.ServiceException):
+            client.handle(ProviderCommand())
+        assert provider.calls == 1
+
     def test_provider_failure_is_auth_error_and_not_transient_retried(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

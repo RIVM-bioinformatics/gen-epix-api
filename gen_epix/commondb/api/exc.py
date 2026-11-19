@@ -90,6 +90,8 @@ def handle_exception(
         log_message_id, None, user_id=user.id if user else None, exception=exception
     )
     # Raise HTTP exception
+    if _is_caused_by_remote_service_error(exception):
+        _handle_remote_service_error(logger, exception, log_message)
     if isinstance(exception, exc.DomainException):
         if isinstance(exception, exc.IdsError):
             _handle_invalid_ids_exception(logger, exception, request_ids, log_message)
@@ -107,6 +109,48 @@ def handle_exception(
         if logger:
             logger.error(log_message)
         raise http_exception_fmap[500]() from exception
+
+
+def _is_caused_by_remote_service_error(exception: BaseException) -> bool:
+    """Return whether the exception or any exception in its cause chain is a RemoteServiceError.
+
+    Args:
+        exception: Exception to inspect.
+
+    Returns:
+        True if a remote app's HTTP error is the exception or one of its causes.
+    """
+    seen: set[int] = set()
+    current: BaseException | None = exception
+    while current is not None and id(current) not in seen:
+        if isinstance(current, exc.RemoteServiceError):
+            return True
+        seen.add(id(current))
+        current = current.__cause__
+    return False
+
+
+def _handle_remote_service_error(
+    logger: logging.Logger | None,
+    exception: BaseException,
+    log_message: str,
+) -> NoReturn:
+    """Log a failed remote call and raise an opaque internal-server error.
+
+    The remote app's status and message describe another service; they are logged
+    here but never passed on to this API's caller.
+
+    Args:
+        logger: Optional logger that receives the error message.
+        exception: Exception caused by a remote app's HTTP error.
+        log_message: Structured message describing the exception.
+
+    Raises:
+        HTTPException: 500 with a fixed detail and no other properties.
+    """
+    if logger:
+        logger.error(log_message)
+    raise http_exception_fmap[500](detail="System unavailable") from exception
 
 
 def _handle_service_exception(

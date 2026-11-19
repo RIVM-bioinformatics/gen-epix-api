@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -19,7 +20,9 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
 )
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.filter import CompositeFilter
+from gen_epix.filter.date_range import DateRangeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
+from gen_epix.filter.exists import ExistsFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
 
 NOW = datetime(2024, 5, 1, 12, 0, 0)
@@ -129,6 +132,24 @@ class TestCaseStats:
                 "must be before or equal",
                 id="dates-reversed",
             ),
+            pytest.param(
+                {
+                    "n_cases": 1,
+                    "first_case_date": NOW,
+                    "last_case_date": NOW.replace(tzinfo=timezone.utc),
+                },
+                "matching timezone awareness",
+                id="naive-first-aware-last",
+            ),
+            pytest.param(
+                {
+                    "n_cases": 1,
+                    "first_case_date": NOW.replace(tzinfo=timezone.utc),
+                    "last_case_date": NOW,
+                },
+                "matching timezone awareness",
+                id="aware-first-naive-last",
+            ),
             pytest.param({"n_cases": -1}, "greater than or equal", id="negative-total"),
             pytest.param(
                 {"n_own_cases": -1}, "greater than or equal", id="negative-own"
@@ -170,6 +191,95 @@ class TestCaseQuery:
         assert query.datetime_range_filter == range_filter
         assert query.filter == composite
 
+    def test_accepts_nested_composite_filter_payload(self) -> None:
+        query = CaseQuery.model_validate(
+            {
+                "case_type_id": uuid4(),
+                "filter": {
+                    "filters": [
+                        {
+                            "filters": [
+                                {
+                                    "key": "date",
+                                    "lower_bound": "2005-07-01",
+                                    "lower_bound_censor": ">=",
+                                    "type": "DATE_RANGE",
+                                },
+                                {
+                                    "invert": True,
+                                    "key": "date",
+                                    "type": "EXISTS",
+                                },
+                            ],
+                            "operator": "OR",
+                            "type": "COMPOSITE",
+                        },
+                    ],
+                    "operator": "AND",
+                    "type": "COMPOSITE",
+                },
+            }
+        )
+
+        assert query.filter is not None
+        nested_filter = query.filter.filters[0]
+        assert isinstance(nested_filter, CompositeFilter)
+        assert nested_filter.operator.value == "OR"
+        assert isinstance(nested_filter.filters[0], DateRangeFilter)
+        assert isinstance(nested_filter.filters[1], ExistsFilter)
+
+        def map_date(value: Any) -> Any:
+            return (
+                datetime.fromisoformat(value).date()
+                if isinstance(value, str)
+                else value
+            )
+
+        assert list(
+            query.filter.match_rows(
+                [
+                    {"date": "2005-07-01"},
+                    {"date": None},
+                    {"date": "2005-06-30"},
+                ],
+                map_fn={"date": map_date},
+            )
+        ) == [True, True, False]
+
+    def test_rejects_case_query_filter_beyond_maximum_composite_depth(self) -> None:
+        leaf_filter = {
+            "key": "date",
+            "type": "EXISTS",
+        }
+        too_deep_filter = {
+            "filters": [
+                {
+                    "filters": [
+                        {
+                            "filters": [leaf_filter],
+                            "operator": "OR",
+                            "type": "COMPOSITE",
+                        }
+                    ],
+                    "operator": "AND",
+                    "type": "COMPOSITE",
+                }
+            ],
+            "operator": "AND",
+            "type": "COMPOSITE",
+        }
+
+        with pytest.raises(
+            ValidationError,
+            match="Case query composite filters may be nested at most 2 levels deep",
+        ):
+            CaseQuery.model_validate(
+                {
+                    "case_type_id": uuid4(),
+                    "filter": too_deep_filter,
+                }
+            )
+
     def test_requires_case_type_id(self) -> None:
         with pytest.raises(ValidationError):
             CaseQuery()  # type: ignore[call-arg]
@@ -181,6 +291,15 @@ class TestCaseSetQuery:
         query = CaseSetQuery(label="x", filter=composite)
         assert query.label == "x"
         assert query.filter == composite
+
+    def test_rejects_filter_beyond_maximum_composite_depth(self) -> None:
+        nested_filter = CompositeFilter(filters=[_uuid_filter()])
+
+        with pytest.raises(
+            ValidationError,
+            match="Case set query composite filters may be nested at most 1 levels deep",
+        ):
+            CaseSetQuery(label="x", filter=nested_filter)
 
     @pytest.mark.parametrize(
         "label, with_filter",

@@ -32,3 +32,18 @@ ssl_context = false
 
 [service.auth.props.idps_cfg.claim_map]
 __key__ = "sub"
+
+# Local development only: keycloak-local publishes this port on loopback.
+[[service.auth.props.idps_cfg]]
+name = "keycloak_local"
+label = "Local Keycloak"
+protocol = "OIDC"
+discovery_url = "http://127.0.0.1:8080/realms/labsentinel/.well-known/openid-configuration"
+client_id = "LabSentiNL-dev"
+audience = "LabSentiNL-dev"
+scope = "openid profile email"
+public = true
+enable_introspection = false
+
+[service.auth.props.idps_cfg.claim_map]
+__key__ = "preferred_username email"

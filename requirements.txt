@@ -2,21 +2,22 @@
 
 # application server
 # For compatibility with apache-airflow-core 3.3.0, fastapi must be pinned to <0.137.0
-fastapi[standard]>=0.159.1,<0.160.0 
+fastapi[standard]>=0.162.2,<0.163.0 
 # fastapi[standard]==0.141.1
-gunicorn==26.2.*
-starlette==1.9.*
+gunicorn==27.0.*
+starlette==1.10.*
 httpx==0.28.1
+httpx2==2.16.0
 urllib3==2.8.0
 pyjwt==2.15.1
 
 #database handling
 sqlalchemy==2.0.54
 sqlalchemy_utils==0.43.0
-alembic==1.20.0
+alembic==1.20.1
 
 # Data models/handling
-pydantic==2.14.1
+pydantic==2.14.3
 ulid-py==1.1.0
 
 # configuration handling
@@ -24,7 +25,7 @@ fire==0.7.1
 dynaconf==3.3.3
 tomli-w==1.2.0
 PyYAML==6.0.3
-python-multipart==0.0.32
+python-multipart==0.0.33
 
 # calculation
 scipy==1.18.1
@@ -32,13 +33,13 @@ numpy==2.5.4
 biopython==1.88
 
 # other
-cachetools==7.2.4
+cachetools==8.0.0
 slowapi==0.1.10
-python-dateutil==2.9.0.post0
+python-dateutil==4.0.0
 
 # mock OIDC server (test/test_client/oauth) — needed in Docker for the IDP compose stack
 cryptography==50.0.2
-oauthlib==4.0.0
+oauthlib==4.0.1
 
 # remote client retry and settings
 tenacity==9.2.*
