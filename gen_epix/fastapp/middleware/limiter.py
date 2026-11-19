@@ -14,3 +14,4 @@ def limiter_key_func(request: Request) -> str:
 
 
 LIMITER = Limiter(key_func=limiter_key_func, default_limits=["10/second"])
+limiter = LIMITER

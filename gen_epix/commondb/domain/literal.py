@@ -47,6 +47,5 @@ ISODATE_PATTERN = re.compile(
     r"\d{4}-Q[1-4]"  # YYYY-QN (quarter)
     r"|"
     r"\d{4}-W(0[1-9]|[1-4]\d|5[0-3])"  # YYYY-WNN (week)
-    r")"
-    r"$"
+r")\Z"
 )

@@ -150,7 +150,7 @@ class PolarsAdapter:
         """Set value by key."""
         import polars as pl
 
-        self._obj = self._obj.with_columns(pl.Series(str(key), value))
+        self._obj = self._obj.with_columns({str(key): value})
 
     def has_key(self, key: Hashable) -> bool:
         """Check if key exists."""
