@@ -374,7 +374,11 @@ class DictRepository(BaseRepository):
                 return self.delete_some(model_class, obj_ids, **kwargs)  # type: ignore[arg-type]
             case CrudOperation.DELETE_ALL:
                 return self.delete_all(
-                    model_class, return_id=return_id, filter=filter, **kwargs
+                    model_class,
+                    return_id=return_id,
+                    filter=filter,
+                    limit=limit,
+                    **kwargs,
                 )
             case CrudOperation.EXISTS_ONE:
                 return self.exists_one(model_class, obj_ids)  # type: ignore[arg-type]
@@ -821,9 +825,15 @@ class DictRepository(BaseRepository):
         model_class: type[Model],
         return_id: bool = False,
         filter: Filter | None = None,
+        limit: int = 0,
         **kwargs: Any,
-    ) -> list[Hashable] | None:
-        """Delete all (or filtered) objects; optionally return the deleted ids."""
+    ) -> list[Hashable] | int | None:
+        """Delete all (or filtered) objects, at most ``limit`` when it is positive.
+
+        Returns the deleted ids with ``return_id``, their number with the
+        ``return_count`` keyword, otherwise None.
+        """
+        return_count: bool = kwargs.pop("return_count", False)
         df = self._db[model_class]
         # Get any query filter
         query_filter: Filter | None = None
@@ -849,7 +859,11 @@ class DictRepository(BaseRepository):
             ]
         else:
             obj_ids = list(df)
+        if limit > 0:
+            obj_ids = obj_ids[:limit]
         self.delete_some(model_class, obj_ids)
+        if return_count:
+            return len(obj_ids)
         return obj_ids if return_id else None
 
     def exists_one(self, model_class: type[Model], obj_id: Hashable) -> bool:
