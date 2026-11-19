@@ -141,7 +141,10 @@ class BaseSAMapper(abc.ABC):
     @staticmethod
     def _get_schema_name(row: Row | type[Row]) -> str | None:
         """Get the schema name from the row class __table_args__."""
-        for arg in row.__table_args__:  # type: ignore[union-attr]
+        table_args = row.__table_args__  # type: ignore[union-attr]
+        if isinstance(table_args, dict):
+            return table_args.get("schema")
+        for arg in table_args:
             if isinstance(arg, dict) and "schema" in arg:
                 return arg["schema"]  # type: ignore[no-any-return]
         return None
@@ -213,6 +216,7 @@ class SAMapper(BaseSAMapper):
         self._row_field_names_by_set: dict[FieldTypeSet, tuple] = {}
         self._relationship_field_name_map: dict[str, str] = {}
         self._relationship_field_name_reverse_map: dict[str, str] = {}
+        self._computed_field_name_map: dict[str, str] = {}
         self._init_field_names(model_class, row_class, self.field_name_map)
         self._init_relationship_field_names(model_class, row_class, self.field_name_map)
         self._init_extract_primary_key(model_class)
@@ -267,7 +271,7 @@ class SAMapper(BaseSAMapper):
 
         """
         if self._is_identical_common_field_names:
-            return field_name
+            return field_name if field_name in self.field_name_map else None
         if reverse:
             return self.rev_field_name_map.get(field_name)
         return self.field_name_map.get(field_name)
@@ -311,7 +315,19 @@ class SAMapper(BaseSAMapper):
 
         """
         if self._is_identical_common_field_names:
-            mapped_dict = obj.model_dump(exclude_none=True)
+            obj_dict = obj.model_dump(exclude_none=True)
+            mapped_dict = {
+                field_name: obj_dict[field_name]
+                for field_name in self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
+                if field_name in obj_dict
+            }
+            mapped_dict.update(
+                {
+                    row_field_name: obj_dict[field_name]
+                    for field_name, row_field_name in self._computed_field_name_map.items()
+                    if field_name in obj_dict and obj_dict[field_name] is not None
+                }
+            )
         else:
             obj_dict = obj.model_dump(exclude_none=False)
             mapped_dict = {
@@ -399,6 +415,12 @@ class SAMapper(BaseSAMapper):
                 for x in FieldTypeSet.MODEL_DB_COMMON.value
             ],
         )
+        self._computed_field_name_map = {
+            field_name: row_field_name
+            for field_name in entity.get_field_names(field_type=FieldType.COMPUTED)
+            if (row_field_name := field_name_map.get(field_name, field_name))
+            in valid_row_field_names
+        }
         for field_type in FieldType:
             field_names = entity.get_field_names(field_type=field_type)
             row_field_names = [

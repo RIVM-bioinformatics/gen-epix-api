@@ -53,13 +53,14 @@ class Taxon(Model):
 
     @field_validator("ncbi_taxid", mode="before")
     @classmethod
-    def _validate_ncbi_taxid(cls, value: int | float | str) -> int:
+    def _validate_ncbi_taxid(cls, value: int | float | str | None) -> int | None:
         """Normalize an NCBI taxon identifier, accepting its standard prefix."""
+        if value is None:
+            return None
         if isinstance(value, str):
             return int(value.replace(cls.NCBI_TAXON_PREFIX, ""))
-        # TODO: LSP-3893 Explicit None fails despite the optional field, while 1.9 is
-        # silently truncated to 1; confirm accepted numeric inputs before preserving None
-        # and rejecting non-integral identifiers.
+        if isinstance(value, float) and not value.is_integer():
+            raise ValueError("NCBI taxon identifier must be an integer")
         return int(value)
 
     @field_validator("ncbi_ancestor_taxids", mode="before")

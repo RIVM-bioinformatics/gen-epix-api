@@ -12,9 +12,16 @@ from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.domain.link import Link
 from gen_epix.fastapp.domain.util import create_keys
 from gen_epix.fastapp.enum import CrudOperation, EventTiming, OnException
-from gen_epix.fastapp.model import CrudCommand, Model, UpdateAssociationCommand, User
+from gen_epix.fastapp.model import (
+    Command,
+    CrudCommand,
+    Model,
+    UpdateAssociationCommand,
+    User,
+)
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.service import BaseService
+from gen_epix.fastapp.services.remote.service import BaseRemoteService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import EqualsUuidFilter
 from gen_epix.filter.enum import FilterType
@@ -539,6 +546,24 @@ def test_base_service_abstract_handler_and_repository_property() -> None:
     service._repository = None
     with pytest.raises(exc.ServiceException, match="Repository not set"):
         _ = service.repository
+
+
+def test_base_remote_service_forwards_commands_to_client() -> None:
+    """Always delegate remote-service commands to its configured client."""
+
+    class RemoteService(BaseRemoteService):
+        def register_handlers(self) -> None:
+            pass
+
+    command = MagicMock(spec=Command)
+    expected_result = object()
+    client = MagicMock()
+    client.handle.return_value = expected_result
+    service = object.__new__(RemoteService)
+    service._client = client
+
+    assert service.handle(command) is expected_result
+    client.handle.assert_called_once_with(command)
 
 
 def test_logger_setter_and_log_message_debug_modes() -> None:

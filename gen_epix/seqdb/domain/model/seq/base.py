@@ -7,6 +7,7 @@ import hashlib
 import json
 import typing
 import uuid
+import zlib
 from enum import IntEnum
 from typing import Annotated, Any, ClassVar, Self
 from uuid import UUID
@@ -51,6 +52,7 @@ def decode_ascii_from_gzip_base64(value: str) -> str:
         EOFError,
         OSError,
         UnicodeDecodeError,
+        zlib.error,
     ) as error:
         raise ValueError("Value is not a valid base64-encoded gzip archive") from error
 

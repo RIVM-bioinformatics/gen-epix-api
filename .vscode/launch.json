@@ -1422,6 +1422,18 @@
         "justMyCode": true
 },
 {
+        "name": "test.fastapp.unit.middleware",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "run.py",
+        "args": [
+                "run_test",
+                "test/fastapp/unit/middleware"
+        ],
+        "console": "integratedTerminal",
+        "justMyCode": true
+},
+{
         "name": "test.fastapp.unit.repositories",
         "type": "debugpy",
         "request": "launch",

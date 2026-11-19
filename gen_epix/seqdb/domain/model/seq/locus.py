@@ -75,12 +75,11 @@ class Locus(Model):
     @model_validator(mode="after")
     def _validate_locus(self) -> Self:
         """Restrict gene-product codes to loci typed as genes."""
-        if self.locus_type != enum.LocusType.GENE and self.gene_product_code:
-            # TODO: LSP-3893 Trigger: a non-GENE locus has a non-empty gene_product_code.
-            # The validator rejects it, but this message says the code "must be provided
-            # for locus_type GENE", opposite to the violated constraint. Should the
-            # message say it is only allowed for GENE, or is another contract intended?
-            raise ValueError("gene_product_code must be provided for locus_type GENE.")
+        if (
+            self.locus_type != enum.LocusType.GENE
+            and self.gene_product_code is not None
+        ):
+            raise ValueError("gene_product_code is only allowed for locus_type GENE.")
         return self
 
     @field_serializer("locus_type", mode="plain")

@@ -1,10 +1,8 @@
 """Implement seqdb sequence service behavior for services.seq.upload."""
 
-from gen_epix.commondb.domain.enum import RoleSet
-from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.seqdb.domain import command, exc, model
+from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 from gen_epix.seqdb.services.seq.upload_upsert_batch import (
     _create_sample_refdata,
@@ -29,40 +27,6 @@ class SampleBatchUploader(BatchUploader):
             model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
             service,
         )
-
-    def verify_user_rights(
-        self,
-        cmd: command.UploadSamplesCommand,
-    ) -> None:
-        """Verify that the command user may upload the supplied sample batch.
-
-        Args:
-            cmd: Upload command whose user authorization is checked.
-
-        Raises:
-            UnauthorizedAuthError: The user lacks required data-collection write access.
-        """
-        user_roles = cmd.user.roles if cmd.user else set()
-
-        # If user has any of the roles in the GE_APP_ADMIN role set, they are authorized
-        if user_roles & RoleSet.GE_APP_ADMIN.value:
-            return  # User is authorized
-
-        # If user does not have any of the roles in the GE_APP_ADMIN role set, ABAC must be applied
-        # TODO: Implement ABAC rights retrieval when policies are available
-
-        # TODO: Check if user has WRITE access to all created in data collections
-        # TODO: For each sample in the batch, verify user has WRITE access to sample.created_in_data_collection_id
-        # TODO: LSP-3893 A non-admin without WRITE access to a sample's data collection
-        # is still authorized; should upload reject when ABAC rights are unavailable?
-        is_authorized = True
-        if not is_authorized:
-            data_collection_id = NULL_ID
-            sample_id = NULL_ID
-            raise exc.UnauthorizedAuthError(
-                "708b3613",
-                f"User {cmd.user.email if cmd.user else 'anonymous'} lacks WRITE access to data collection {data_collection_id} for sample {sample_id if sample_id else 'new sample'}",
-            )
 
     def verify_batch(
         self,

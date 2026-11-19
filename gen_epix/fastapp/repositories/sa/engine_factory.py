@@ -1,6 +1,7 @@
 """Thread-safe SQLAlchemy engine factory."""
 
 import threading
+from collections.abc import Mapping
 
 import sqlalchemy as sa
 from sqlalchemy import Engine
@@ -71,9 +72,19 @@ class EngineFactory:
         connect_args: dict | None = None,
     ) -> tuple:
         """Compose key."""
-        # TODO: LSP-3893 A valid nested connect argument such as pyodbc
-        # attrs_before contains a dict that is unhashable here; expected: accept
-        # and forward valid DBAPI connect_args, actual: fail while looking up
-        # the engine cache key. Confirm the intended cache-key contract.
-        frozen = tuple(sorted(connect_args.items())) if connect_args else ()
+        frozen = cls._freeze_cache_value(connect_args) if connect_args else ()
         return (connection_string, echo, pool_recycle, frozen)
+
+    @classmethod
+    def _freeze_cache_value(cls, value: object) -> object:
+        """Convert nested mapping and collection values into hashable cache keys."""
+        if isinstance(value, Mapping):
+            return frozenset(
+                (key, cls._freeze_cache_value(item)) for key, item in value.items()
+            )
+        if isinstance(value, (list, tuple)):
+            return tuple(cls._freeze_cache_value(item) for item in value)
+        if isinstance(value, (set, frozenset)):
+            return frozenset(cls._freeze_cache_value(item) for item in value)
+        hash(value)
+        return value

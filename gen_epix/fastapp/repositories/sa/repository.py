@@ -9,6 +9,7 @@ from typing import Any, Self, cast
 
 import sqlalchemy as sa
 from sqlalchemy import Engine, delete, event, inspect, select
+from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -258,34 +259,40 @@ class SARepository(BaseRepository):
                 "connection_string is required to check an SARepository schema"
             )
         engine = EngineFactory.create_engine(connection_string, echo=False)
-        inspector = inspect(engine)
-        problems: list[str] = []
-        for entity in entities:
-            if not entity.persistable or not entity.db_model_class:
-                continue
-            table = entity.db_model_class.__table__
-            schema_name = entity.schema_name
-            qualified_name = (
-                f"{schema_name}.{table.name}" if schema_name else table.name
-            )
-            try:
-                actual_tables = set(inspector.get_table_names(schema=schema_name))
-            except Exception as e:  # pylint: disable=broad-except
-                problems.append(f"schema {schema_name!r} could not be inspected: {e}")
-                continue
-            if table.name not in actual_tables:
-                problems.append(f"table {qualified_name} does not exist")
-                continue
-            actual_columns = {
-                c["name"] for c in inspector.get_columns(table.name, schema=schema_name)
-            }
-            missing_columns = {c.name for c in table.columns} - actual_columns
-            if missing_columns:
-                problems.append(
-                    f"table {qualified_name} is missing column(s): "
-                    f"{', '.join(sorted(missing_columns))}"
+        try:
+            inspector = inspect(engine)
+            problems: list[str] = []
+            for entity in entities:
+                if not entity.persistable or not entity.db_model_class:
+                    continue
+                table = entity.db_model_class.__table__
+                schema_name = entity.schema_name
+                qualified_name = (
+                    f"{schema_name}.{table.name}" if schema_name else table.name
                 )
-        return problems
+                try:
+                    actual_tables = set(inspector.get_table_names(schema=schema_name))
+                except Exception as e:  # pylint: disable=broad-except
+                    problems.append(
+                        f"schema {schema_name!r} could not be inspected: {e}"
+                    )
+                    continue
+                if table.name not in actual_tables:
+                    problems.append(f"table {qualified_name} does not exist")
+                    continue
+                actual_columns = {
+                    c["name"]
+                    for c in inspector.get_columns(table.name, schema=schema_name)
+                }
+                missing_columns = {c.name for c in table.columns} - actual_columns
+                if missing_columns:
+                    problems.append(
+                        f"table {qualified_name} is missing column(s): "
+                        f"{', '.join(sorted(missing_columns))}"
+                    )
+            return problems
+        finally:
+            engine.dispose()
 
     @classmethod
     def find_remaining_content(cls, **kwargs: Any) -> list[str]:
@@ -361,7 +368,9 @@ class SARepository(BaseRepository):
         # Create a session maker per isolation level
         self._default_isolation_level: IsolationLevel = IsolationLevel.SERIALIZABLE
         self._session_maker_by_isolation_level: dict[IsolationLevel, sessionmaker] = {
-            x: sessionmaker(engine.execution_options(isolation_level=x.value))
+            x: sessionmaker(
+                engine.execution_options(isolation_level=x.sqlalchemy_value)
+            )
             for x in IsolationLevel
         }
 
@@ -1204,6 +1213,7 @@ class SARepository(BaseRepository):
 
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
+        obj_ids = obj_ids if isinstance(obj_ids, list) else list(obj_ids)
         SARepository._verify_duplicate_ids(model_class, obj_ids)
 
         def _execute(session: Session) -> list[bool]:
@@ -1443,7 +1453,11 @@ class SARepository(BaseRepository):
                 return None, filter
             where_clause_filters.append(where_clause_filter)
         return (
-            CompositeFilter(filters=where_clause_filters, operator=LogicalOperator.OR),
+            CompositeFilter(
+                filters=where_clause_filters,
+                operator=LogicalOperator.OR,
+                invert=filter.invert,
+            ),
             None,
         )
 
@@ -1461,19 +1475,31 @@ class SARepository(BaseRepository):
                 where_clause_filters.append(where_clause_filter)
             if remainder_filter:
                 remainder_filters.append(remainder_filter)
+        if filter.invert and remainder_filters:
+            return None, filter
         return (
-            self._combine_and_filters(where_clause_filters),
+            self._combine_and_filters(where_clause_filters, invert=filter.invert),
             self._combine_and_filters(remainder_filters),
         )
 
     @staticmethod
-    def _combine_and_filters(filters: list[Filter]) -> Filter | None:
+    def _combine_and_filters(
+        filters: list[Filter], invert: bool = False
+    ) -> Filter | None:
         """Return no filter, the sole filter, or an AND composite as appropriate."""
         if not filters:
             return None
         if len(filters) == 1:
-            return filters[0]
-        return CompositeFilter(filters=filters, operator=LogicalOperator.AND)
+            return (
+                filters[0]
+                if not invert
+                else CompositeFilter(
+                    filters=filters, operator=LogicalOperator.AND, invert=True
+                )
+            )
+        return CompositeFilter(
+            filters=filters, operator=LogicalOperator.AND, invert=invert
+        )
 
     def print_db_content(self, model_class: type[Model], **kwargs: Any) -> None:
         """Helper method for debugging."""
@@ -1762,9 +1788,10 @@ class SARepository(BaseRepository):
         recreate_sqlite_file = kwargs.pop("recreate_sqlite_file", False)
 
         # Handle sqlite separately
-        is_sqlite = connection_string is None or str(
-            connection_string
-        ).lower().startswith("sqlite:///")
+        is_sqlite = (
+            connection_string is None
+            or make_url(connection_string).get_backend_name() == "sqlite"
+        )
         create_database_objects = kwargs.pop("create_database_objects", is_sqlite)
         schema_names = {x.schema_name for x in entities if x.persistable}
         if is_sqlite:
@@ -1785,17 +1812,21 @@ class SARepository(BaseRepository):
                 connect_args,
             )
 
-        metadata_set = cls._get_repository_metadata(entities)
+        try:
+            metadata_set = cls._get_repository_metadata(entities)
 
-        # Create any non-existing database objects except schemas (done earlier), if allowed
-        if create_database_objects:
-            for metadata in metadata_set:
-                metadata.create_all(engine, checkfirst=True)
+            # Create any non-existing database objects except schemas (done earlier), if allowed
+            if create_database_objects:
+                for metadata in metadata_set:
+                    metadata.create_all(engine, checkfirst=True)
 
-        # Create repository
-        repository = cls(
-            engine, entities=entities, register_mappers=register_mappers, **kwargs
-        )
+            # Create repository
+            repository = cls(
+                engine, entities=entities, register_mappers=register_mappers, **kwargs
+            )
+        except Exception:
+            engine.dispose()
+            raise
 
         return repository
 
@@ -1807,9 +1838,12 @@ class SARepository(BaseRepository):
         recreate_sqlite_file: bool,
     ) -> Engine:
         """Create a SQLite engine and attach its configured schemas."""
+        sqlite_url = (
+            make_url(connection_string) if connection_string is not None else None
+        )
         sqlite_target = (
             None
-            if connection_string is None
+            if sqlite_url is None or not sqlite_url.database
             else re.sub(".*sqlite:///", "", connection_string, flags=re.IGNORECASE)
         )
         if sqlite_target:

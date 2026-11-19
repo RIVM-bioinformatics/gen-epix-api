@@ -494,10 +494,12 @@ class CacheRegion:
                 value = await creator()
             except self.config.cache_exceptions as exception:
                 self._stats.record("load_failures")
+                self._stats.record("load_seconds", time.monotonic() - started)
                 self._store(composed, CachedError(exception), ttl, tag_set, True)
                 raise
             except Exception:
                 self._stats.record("load_failures")
+                self._stats.record("load_seconds", time.monotonic() - started)
                 raise
             self._stats.record("loads")
             self._stats.record("load_seconds", time.monotonic() - started)
@@ -951,10 +953,12 @@ class CacheRegion:
             value = creator()
         except self.config.cache_exceptions as exception:
             self._stats.record("load_failures")
+            self._stats.record("load_seconds", time.monotonic() - started)
             self._store(composed, CachedError(exception), ttl, tags, True)
             raise
         except Exception:
             self._stats.record("load_failures")
+            self._stats.record("load_seconds", time.monotonic() - started)
             raise
         self._stats.record("loads")
         self._stats.record("load_seconds", time.monotonic() - started)

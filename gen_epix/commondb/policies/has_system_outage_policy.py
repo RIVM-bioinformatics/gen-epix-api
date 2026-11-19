@@ -75,16 +75,14 @@ class HasSystemOutagePolicy(BaseHasSystemOutagePolicy):
         )
         now = time.time()
 
-        # TODO: LSP-3893 With active_from > now and active_to > now, expected
-        # inactive until active_from, but this predicate treats it as active.
-        # Confirm whether omitted bounds are open-ended before changing the rule.
         has_outage = any(
-            x.is_active
-            or (
-                (x.active_from or x.active_to)
-                and (
-                    (x.active_from and x.active_from.timestamp() <= now)
-                    or (x.active_to and x.active_to.timestamp() > now)
+            (
+                x.is_active
+                if x.is_active is not None
+                else (
+                    (x.active_from is not None or x.active_to is not None)
+                    and (x.active_from is None or x.active_from.timestamp() <= now)
+                    and (x.active_to is None or x.active_to.timestamp() > now)
                 )
             )
             for x in outages

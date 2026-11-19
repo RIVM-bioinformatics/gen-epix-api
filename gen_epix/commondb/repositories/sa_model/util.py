@@ -177,17 +177,13 @@ def create_composite_primary_key_mapper_args(
     assert model_class.ENTITY is not None
     entity: Entity = model_class.ENTITY
     field_name_map = field_name_map or {}
-    mapper_args = mapper_args if mapper_args is not None else {}
     if model_class not in field_name_map:
         sa_field_names = entity.get_field_names()
     else:
         sa_field_names = [
             field_name_map[model_class].get(x, x) for x in entity.get_field_names()
         ]
-    # TODO: LSP-3893 With `mapper_args={"eager_defaults": True}`, retain that option
-    # alongside the derived `primary_key`; this return currently drops it. Clarify
-    # whether a caller-provided `primary_key` should override the derived fields.
-    return {"primary_key": sa_field_names}
+    return {**(mapper_args or {}), "primary_key": sa_field_names}
 
 
 def set_entity_repository_model_classes(

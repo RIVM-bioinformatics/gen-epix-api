@@ -886,7 +886,7 @@ class CaseBatchUploader(BatchUploader):
         )
         # Create command if any samples for upload were found
         if not samples_for_upload:
-            return True, None, child_index_map
+            return success, None, child_index_map
         batch_id = UUID(sha256(cmd.id.bytes).digest()[:16].hex())
         upload_samples_cmd = seqdb_command.UploadSamplesCommand(
             user=cmd.user,
@@ -989,6 +989,13 @@ class CaseBatchUploader(BatchUploader):
             )
             return None
         if sample_index_by_id is not None:
+            if has_external_id and sample_index_by_external_id is None:
+                assert external_sample_id is not None
+                existing_sample = samples_for_upload[sample_index_by_id]
+                if existing_sample.identifiers is None:
+                    existing_sample.identifiers = []
+                existing_sample.identifiers.append(external_sample_id)
+                sample_external_id_to_index_map[external_sample_id] = sample_index_by_id
             return sample_index_by_id
         if sample_index_by_external_id is not None:
             assert external_sample_id is not None

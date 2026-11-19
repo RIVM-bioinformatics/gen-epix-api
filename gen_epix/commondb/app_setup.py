@@ -97,14 +97,14 @@ def create_fast_api(
 
     # Add middleware
     # TODO: make this a feature flag rather than environment variable
-    ratelimit_enabled = os.environ.get("RATELIMIT_ENABLED", "1") not in (
+    ratelimit_enabled = os.environ.get("RATELIMIT_ENABLED", "1").upper() not in (
         "0",
-        "false",
-        "False",
+        "FALSE",
     )
     if not debug and ratelimit_enabled:
         # Rate limiting
-        fast_api.state.limiter = limiter.limiter
+        # TODO: the rate limiter is currently taken from the limiter package, where it is constructed with a default limit. Instead, it should be constructed here and with a default limit that can be overriden through an env variable.
+        fast_api.state.limiter = limiter.LIMITER
         fast_api.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
         # The SlowAPIMiddleware is added to fast_api globally to limit the number of requests
         # The limiter can be applied to specific routes by adding the decorator @limiter.limit
@@ -162,12 +162,8 @@ def create_fast_api(
 
     # Update OpenAPI schema generator function
     if kwargs.pop("update_openapi_schema", False):
-        update_openapi_kwargs = kwargs.pop("update_openapi_kwargs", {})
-        # TODO: LSP-3893 Reusing caller-owned OpenAPI kwargs removes
-        # `get_openapi_kwargs` and adds `routes` to its nested mapping. Expected:
-        # inputs remain unchanged; actual: both mappings are mutated. Confirm
-        # whether this mutation is part of the OpenAPI setup contract.
-        get_open_api_kwargs = update_openapi_kwargs.pop("get_openapi_kwargs", {})
+        update_openapi_kwargs = dict(kwargs.pop("update_openapi_kwargs", {}))
+        get_open_api_kwargs = dict(update_openapi_kwargs.pop("get_openapi_kwargs", {}))
         get_open_api_kwargs.update({"routes": fast_api.routes})
         custom_openapi_fn = create_custom_openapi_function(
             get_open_api_kwargs,
