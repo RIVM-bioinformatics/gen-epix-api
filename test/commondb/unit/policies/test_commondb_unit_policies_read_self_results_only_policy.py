@@ -12,6 +12,7 @@ from gen_epix.commondb.policies.read_self_results_only_policy import (
     ReadSelfResultsOnlyPolicy as CommonReadSelfResultsOnlyPolicy,
 )
 from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.exc import AuthException
 from gen_epix.omopdb.policies.read_self_results_only_policy import (
     ReadSelfResultsOnlyPolicy as OmopReadSelfResultsOnlyPolicy,
 )
@@ -41,7 +42,5 @@ def test_exists_operations_are_unsupported(
         obj_ids=obj_ids,
     )
 
-    with pytest.raises(
-        NotImplementedError, match="Exists operations are not supported"
-    ):
+    with pytest.raises(AuthException):
         policy.filter(cmd, retval)

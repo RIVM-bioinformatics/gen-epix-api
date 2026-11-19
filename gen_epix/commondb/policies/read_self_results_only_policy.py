@@ -56,9 +56,7 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
             # Policy only applies to read operations.
             return retval
         if cmd.is_exists():
-            raise NotImplementedError(
-                "Exists operations are not supported by this policy"
-            )
+            raise exc.AuthException("84aa512b", "Exists operations are not allowed")
 
         # Roles exempt from this policy
         is_exempt = (
