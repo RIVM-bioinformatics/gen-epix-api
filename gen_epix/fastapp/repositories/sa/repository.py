@@ -9,7 +9,7 @@ from typing import Any, Self, cast
 
 import sqlalchemy as sa
 from sqlalchemy import Engine, delete, event, inspect, select
-from sqlalchemy.exc import SAWarning
+from sqlalchemy.exc import ArgumentError, SAWarning
 from sqlalchemy.orm import Session, sessionmaker
 
 import gen_epix.fastapp.exc as exc
@@ -334,11 +334,13 @@ class SARepository(BaseRepository):
             engine.dispose()
 
     def __init__(self, engine: Engine, **kwargs: Any):
-        """
-        Initialise the repository with the provided SQLAlchemy engine.
+        """Initialise the repository with the provided SQLAlchemy engine.
 
         Registers mappers for each persistable entity and creates per-
         isolation-level session factories.
+
+        Raises:
+            ArgumentError: A required isolation level is unsupported by the dialect.
         """
         # TODO: 2953 remove register_mappers argument
         register_mappers: bool = kwargs.pop("register_mappers", True)
@@ -358,12 +360,30 @@ class SARepository(BaseRepository):
             )
         )
 
-        # Create a session maker per isolation level
+        # These dialects report their supported levels without opening a connection.
+        dialect = engine.dialect
+        supported_levels = dialect.get_isolation_level_values(None)  # type: ignore[arg-type]
         self._default_isolation_level: IsolationLevel = IsolationLevel.SERIALIZABLE
-        self._session_maker_by_isolation_level: dict[IsolationLevel, sessionmaker] = {
-            x: sessionmaker(engine.execution_options(isolation_level=x.value))
-            for x in IsolationLevel
-        }
+        self._session_maker_by_isolation_level: dict[IsolationLevel, sessionmaker] = {}
+        for level in IsolationLevel:
+            value = level.value
+            if dialect.name == "sqlite" and level in (
+                IsolationLevel.READ_COMMITTED,
+                IsolationLevel.REPEATABLE_READ,
+                IsolationLevel.SNAPSHOT,
+            ):
+                value = IsolationLevel.SERIALIZABLE.value
+            if value not in supported_levels:
+                if level is IsolationLevel.SNAPSHOT and dialect.name != "mssql":
+                    continue
+                raise ArgumentError(
+                    f"{dialect.name} does not support isolation level {value!r} "
+                    f"mapped from {level.name}. Supported levels: "
+                    f"{', '.join(sorted(supported_levels))}."
+                )
+            self._session_maker_by_isolation_level[level] = sessionmaker(
+                engine.execution_options(isolation_level=value)
+            )
 
         # Initialize remaining properties
         self._mapper_by_model: dict[type[Any], BaseSAMapper] = {}
@@ -441,11 +461,19 @@ class SARepository(BaseRepository):
         expire_on_commit: bool = False,
         **kwargs: Any,
     ) -> Session:
-        """Create and return a new SA session at the given isolation level."""
+        """Create and return a new SA session at the given isolation level.
+
+        Raises:
+            ArgumentError: The requested isolation level is unavailable for this dialect.
+        """
         isolation_level = isolation_level or self._default_isolation_level
-        session: Session = self._session_maker_by_isolation_level[isolation_level](
-            expire_on_commit=expire_on_commit
-        )
+        session_factory = self._session_maker_by_isolation_level.get(isolation_level)
+        if session_factory is None:
+            raise ArgumentError(
+                f"{self._engine.dialect.name} does not support isolation level "
+                f"{isolation_level.value!r}."
+            )
+        session: Session = session_factory(expire_on_commit=expire_on_commit)
         return session
 
     def _init_mappers(

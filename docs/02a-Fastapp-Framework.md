@@ -467,9 +467,15 @@ The generated endpoints:
 | `CrudOperation` | 17 variants: CREATE_ONE, READ_ALL, UPSERT_SOME, DELETE_ALL, EXISTS_ONE … |
 | `CrudEndpointType` | 14 HTTP endpoint shapes (POST_ONE, GET_ALL, POST_QUERY, GET_EXISTS_ONE, GET_EXISTS_SOME …) |
 | `FieldType` / `FieldTypeSet` | ID, LINK, VALUE, COMPUTED, RELATIONSHIP … |
-| `IsolationLevel` | Maps to SQL isolation levels for SAUnitOfWork |
+| `IsolationLevel` | `READ_UNCOMMITTED`, `READ_COMMITTED`, `REPEATABLE_READ`, `SERIALIZABLE`, `SNAPSHOT` |
 | `AuthProtocol` | NONE, OAUTH2, OIDC |
 | `HttpProtocol` | HTTP, HTTPS — used by Client |
+
+SQLAlchemy sessions default to `SERIALIZABLE`. SQL Server uses each level
+as requested. `SNAPSHOT` requires `ALLOW_SNAPSHOT_ISOLATION` on the database.
+SQLite uses `READ_UNCOMMITTED` directly and maps `READ_COMMITTED`,
+`REPEATABLE_READ`, and `SNAPSHOT` to `SERIALIZABLE`.
+The original `READ_UNCOMMITED` and `READ_COMMITED` names are deprecated aliases.
 
 ### Exception hierarchy (`exc.py`)
 

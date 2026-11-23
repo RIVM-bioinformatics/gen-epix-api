@@ -269,13 +269,15 @@ class CrudEndpointType(Enum):
 class IsolationLevel(Enum):
     """Encapsulates specifying the transaction isolation level for a database session."""
 
-    # TODO: LSP-3893 Passing either READ_* value to SQLAlchemy supplies a
-    # nonstandard isolation-level name instead of READ UNCOMMITTED/COMMITTED;
-    # confirm whether compatibility requires retaining these enum names/values.
-    READ_UNCOMMITED = "READ_UNCOMMITED"
-    READ_COMMITED = "READ_COMMITED"
-    REPEATABLE_READ = "REPEATABLE_READ"
+    READ_UNCOMMITTED = "READ UNCOMMITTED"
+    READ_COMMITTED = "READ COMMITTED"
+    REPEATABLE_READ = "REPEATABLE READ"
     SERIALIZABLE = "SERIALIZABLE"
+    SNAPSHOT = "SNAPSHOT"
+
+    # Deprecated aliases for the original spellings.
+    READ_UNCOMMITED = READ_UNCOMMITTED
+    READ_COMMITED = READ_COMMITTED
 
 
 class LogLevel(Enum):

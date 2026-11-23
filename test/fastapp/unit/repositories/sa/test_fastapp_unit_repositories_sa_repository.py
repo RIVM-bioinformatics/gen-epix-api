@@ -7,6 +7,7 @@ from typing import Any, ClassVar, cast
 
 import pytest
 import sqlalchemy as sa
+from sqlalchemy.dialects.mssql.pyodbc import MSDialect_pyodbc
 from sqlalchemy.orm import Session, declarative_base
 
 import gen_epix.fastapp.exc as exc
@@ -79,8 +80,9 @@ def engine() -> sa.Engine:
     return engine
 
 
-@pytest.fixture
-def repo(engine: sa.Engine) -> Iterator[SARepository]:
+@pytest.fixture(name="repo")
+def repository_fixture(engine: sa.Engine) -> Iterator[SARepository]:
+    """Provide a SQLite repository with a registered test model."""
     repository = SARepository(
         engine,
         id="repo-id",
@@ -99,12 +101,61 @@ def test_repository_properties_and_session(repo: SARepository) -> None:
     assert repo.name == "repo-name"
     assert repo.default_isolation_level == IsolationLevel.SERIALIZABLE
 
-    repo.default_isolation_level = IsolationLevel.READ_COMMITED
-    assert repo.default_isolation_level == IsolationLevel.READ_COMMITED
+    repo.default_isolation_level = IsolationLevel.READ_COMMITTED
+    assert repo.default_isolation_level == IsolationLevel.READ_COMMITTED
 
     session = repo.get_session(expire_on_commit=True)
     assert isinstance(session, Session)
     session.close()
+
+
+def test_legacy_isolation_level_aliases() -> None:
+    """Keep the original enum names usable as aliases."""
+    assert IsolationLevel["READ_COMMITED"] is IsolationLevel.READ_COMMITTED
+    assert IsolationLevel["READ_UNCOMMITED"] is IsolationLevel.READ_UNCOMMITTED
+
+
+@pytest.mark.parametrize("level", list(IsolationLevel))
+def test_sqlite_session_isolation_level(
+    repo: SARepository, level: IsolationLevel
+) -> None:
+    """Check the effective isolation level on a real SQLite connection."""
+    expected = (
+        "READ UNCOMMITTED"
+        if level is IsolationLevel.READ_UNCOMMITTED
+        else "SERIALIZABLE"
+    )
+    with repo.get_session(isolation_level=level) as session:
+        assert session.scalar(sa.text("SELECT 1")) == 1
+        assert session.connection().get_isolation_level() == expected
+
+
+@pytest.mark.parametrize("level", list(IsolationLevel))
+def test_mssql_session_isolation_level(level: IsolationLevel) -> None:
+    """Check the SQL Server session configuration without connecting."""
+
+    def unexpected_connect() -> Any:
+        pytest.fail("Isolation level validation must not open a database connection")
+
+    mssql_engine = sa.create_engine("mssql+pyodbc://", creator=unexpected_connect)
+    repository = SARepository(mssql_engine, register_mappers=False)
+    with repository.get_session(isolation_level=level) as session:
+        value = session.get_bind().get_execution_options()["isolation_level"]
+    assert value == level.name.replace("_", " ")
+    supported_levels = MSDialect_pyodbc().get_isolation_level_values(None)  # type: ignore[arg-type]
+    assert value in supported_levels
+
+
+def test_invalid_isolation_mapping_fails_during_repository_creation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject an invalid mapping before the repository can open a session."""
+    sqlite_engine = sa.create_engine("sqlite://")
+    monkeypatch.setattr(
+        sqlite_engine.dialect, "get_isolation_level_values", lambda _: ["SERIALIZABLE"]
+    )
+    with pytest.raises(sa.exc.ArgumentError, match="sqlite.*READ UNCOMMITTED"):
+        SARepository(sqlite_engine, register_mappers=False)
 
 
 def test_uow_nested_and_invalid_nested_kwargs(repo: SARepository) -> None:
