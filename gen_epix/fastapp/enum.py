@@ -275,10 +275,6 @@ class IsolationLevel(Enum):
     SERIALIZABLE = "SERIALIZABLE"
     SNAPSHOT = "SNAPSHOT"
 
-    # Deprecated aliases for the original spellings.
-    READ_UNCOMMITED = READ_UNCOMMITTED
-    READ_COMMITED = READ_COMMITTED
-
 
 class LogLevel(Enum):
     """Encapsulates specifying a supported logging severity."""

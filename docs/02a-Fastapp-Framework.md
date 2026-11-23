@@ -475,7 +475,6 @@ SQLAlchemy sessions default to `SERIALIZABLE`. SQL Server uses each level
 as requested. `SNAPSHOT` requires `ALLOW_SNAPSHOT_ISOLATION` on the database.
 SQLite uses `READ_UNCOMMITTED` directly and maps `READ_COMMITTED`,
 `REPEATABLE_READ`, and `SNAPSHOT` to `SERIALIZABLE`.
-The original `READ_UNCOMMITED` and `READ_COMMITED` names are deprecated aliases.
 
 ### Exception hierarchy (`exc.py`)
 

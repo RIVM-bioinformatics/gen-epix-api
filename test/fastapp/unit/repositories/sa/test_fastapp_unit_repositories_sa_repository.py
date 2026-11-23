@@ -109,12 +109,6 @@ def test_repository_properties_and_session(repo: SARepository) -> None:
     session.close()
 
 
-def test_legacy_isolation_level_aliases() -> None:
-    """Keep the original enum names usable as aliases."""
-    assert IsolationLevel["READ_COMMITED"] is IsolationLevel.READ_COMMITTED
-    assert IsolationLevel["READ_UNCOMMITED"] is IsolationLevel.READ_UNCOMMITTED
-
-
 @pytest.mark.parametrize("level", list(IsolationLevel))
 def test_sqlite_session_isolation_level(
     repo: SARepository, level: IsolationLevel
