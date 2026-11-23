@@ -23,21 +23,26 @@ class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
 
 
 class DeleteAllRefDataCommand(CommonDeleteAllRefDataCommand):
-    """Request deletion of all persisted casedb reference data."""
+    """Request deletion of all persisted casedb reference data.
+
+    `UserAccessCasePolicy` and `UserShareCasePolicy` are not reference data: admins
+    create them, and the reference dataset contains no rows for them, so a refdata
+    apply cannot restore them. They are therefore kept, together with the models
+    they link to within casedb (`CaseTypeSet`, `CaseTypeSetCategory`, `ColSet`), as
+    deleting those would violate the policies' foreign keys. The refdata apply
+    syncs rows by ID, so it updates the kept sets in place. Their members
+    (`CaseTypeSetMember`, `ColSetMember`) are deleted and recreated. A set that a
+    later dataset no longer contains is not removed by a reset.
+    """
 
     SORTED_REF_DATA_MODEL_CLASSES = [
-        model.UserAccessCasePolicy,
-        model.UserShareCasePolicy,
         model.OrganizationAccessCasePolicy,
         model.OrganizationShareCasePolicy,
         model.ColSetMember,
-        model.ColSet,
         model.Col,
         model.Dim,
         model.CaseTypeSetMember,
-        model.CaseTypeSet,
         model.CaseType,
-        model.CaseTypeSetCategory,
         model.CaseSetStatus,
         model.CaseSetCategory,
         model.RefCol,

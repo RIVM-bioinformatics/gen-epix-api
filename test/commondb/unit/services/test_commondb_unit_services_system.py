@@ -216,8 +216,8 @@ def test_delete_all_ref_data_requires_empty_operational_models(app_name: str) ->
     assert all(call.args[0].return_id for call in app.handle.call_args_list)
 
 
-def test_delete_all_ref_data_deletes_casedb_policy_models_before_references() -> None:
-    """Delete casedb policy rows before their CaseTypeSet and ColSet references."""
+def test_delete_all_ref_data_keeps_casedb_user_policies_and_their_targets() -> None:
+    """Delete organization policies but keep user policies and the sets they use."""
     from gen_epix.casedb.domain import DOMAIN, command, model
 
     app = Mock()
@@ -235,15 +235,24 @@ def test_delete_all_ref_data_deletes_casedb_policy_models_before_references() ->
         if call.args[0].operation is CrudOperation.DELETE_ALL
     ]
     deleted_models = [crud_command.MODEL_CLASS for crud_command in delete_commands]
-    policy_models = {
+    assert {
         model.OrganizationAccessCasePolicy,
         model.OrganizationShareCasePolicy,
+        model.CaseTypeSetMember,
+        model.ColSetMember,
+    } <= set(deleted_models)
+    assert not {
         model.UserAccessCasePolicy,
         model.UserShareCasePolicy,
-    }
-    assert policy_models <= set(deleted_models)
-    assert max(deleted_models.index(policy) for policy in policy_models) < min(
-        deleted_models.index(model.CaseTypeSet), deleted_models.index(model.ColSet)
+        model.CaseTypeSet,
+        model.CaseTypeSetCategory,
+        model.ColSet,
+    } & set(deleted_models)
+    assert result.details.keys().isdisjoint(
+        {
+            model.UserAccessCasePolicy.ENTITY.name,
+            model.UserShareCasePolicy.ENTITY.name,
+        }
     )
 
 
