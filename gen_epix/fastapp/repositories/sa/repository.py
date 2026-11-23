@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 import gen_epix.fastapp.exc as exc
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
+from gen_epix.fastapp.enum import CrudOperation, IsolationLevel, IsolationLevelSet
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.sa.engine_factory import EngineFactory
 from gen_epix.fastapp.repositories.sa.mapper import (
@@ -367,10 +367,9 @@ class SARepository(BaseRepository):
         self._session_maker_by_isolation_level: dict[IsolationLevel, sessionmaker] = {}
         for level in IsolationLevel:
             value = level.value
-            if dialect.name == "sqlite" and level in (
-                IsolationLevel.READ_COMMITTED,
-                IsolationLevel.REPEATABLE_READ,
-                IsolationLevel.SNAPSHOT,
+            if (
+                dialect.name == "sqlite"
+                and level in IsolationLevelSet.SQLITE_SERIALIZABLE_FALLBACK.value
             ):
                 value = IsolationLevel.SERIALIZABLE.value
             if value not in supported_levels:
