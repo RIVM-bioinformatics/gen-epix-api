@@ -468,6 +468,7 @@ The generated endpoints:
 | `CrudEndpointType` | 14 HTTP endpoint shapes (POST_ONE, GET_ALL, POST_QUERY, GET_EXISTS_ONE, GET_EXISTS_SOME …) |
 | `FieldType` / `FieldTypeSet` | ID, LINK, VALUE, COMPUTED, RELATIONSHIP … |
 | `IsolationLevel` | `READ_UNCOMMITTED`, `READ_COMMITTED`, `REPEATABLE_READ`, `SERIALIZABLE`, `SNAPSHOT` |
+| `IsolationLevelSet` | `SQLITE_NATIVE` and `SQLITE_SERIALIZABLE_FALLBACK` |
 | `AuthProtocol` | NONE, OAUTH2, OIDC |
 | `HttpProtocol` | HTTP, HTTPS — used by Client |
 

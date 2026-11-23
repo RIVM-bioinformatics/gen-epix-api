@@ -280,6 +280,21 @@ class IsolationLevel(Enum):
     READ_COMMITED = READ_COMMITTED
 
 
+class IsolationLevelSet(Enum):
+    """Encapsulates named groups of transaction isolation levels."""
+
+    SQLITE_NATIVE = frozenset(
+        {IsolationLevel.READ_UNCOMMITTED, IsolationLevel.SERIALIZABLE}
+    )
+    SQLITE_SERIALIZABLE_FALLBACK = frozenset(
+        {
+            IsolationLevel.READ_COMMITTED,
+            IsolationLevel.REPEATABLE_READ,
+            IsolationLevel.SNAPSHOT,
+        }
+    )
+
+
 class LogLevel(Enum):
     """Encapsulates specifying a supported logging severity."""
 
