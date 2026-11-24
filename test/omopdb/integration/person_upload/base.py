@@ -10,7 +10,7 @@ SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = False
 DEV_REPOSITORY_CONFIG = enum.DevRepositoryConfig.DICT_EMPTY
-# DEV_REPOSITORY_CONFIG = enum.DevRepositoryConfig.SA_SQLITE_EMPTY
+# SQLite runs directly; HTTP endpoint use is not supported because of threading.
 
 ALL_USERS = [
     "root1_1",

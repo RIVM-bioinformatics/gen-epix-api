@@ -17,6 +17,15 @@ class NoFilter(Filter):
 
     def _match(self, value: Any) -> bool:
         """Return the non-inverted pass-through result."""
+        return True
+
+    def match_value(
+        self,
+        value: Any | None,
+        na_values: set[Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
+    ) -> bool:
+        """Match every scalar value unless the filter is inverted."""
         return not self.invert
 
     def match_column(
@@ -26,7 +35,7 @@ class NoFilter(Filter):
         map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterator[bool]:
         """Yield a pass-through match for every column value."""
-        for value in values:
+        for _ in values:
             yield not self.invert
 
     def filter_column(
@@ -50,8 +59,6 @@ class NoFilter(Filter):
         """Return the pass-through result for a row."""
         return not self.invert
 
-    # TODO: LSP-3893 With invert=True and non-empty rows, should this yield one False per
-    # row like match_column and Filter.match_rows, rather than yielding no results?
     def match_rows(
         self,
         rows: Iterable[dict[Hashable, Any | None] | BaseModel],
@@ -59,10 +66,9 @@ class NoFilter(Filter):
         map_fn: Callable[[Any], Any] | None = None,
         is_model: bool = False,
     ) -> Iterator[bool]:
-        """Yield pass-through matches for rows when not inverted."""
-        for row in rows:
-            if not self.invert:
-                yield True
+        """Yield a pass-through match for every row unless inverted."""
+        for _ in rows:
+            yield not self.invert
 
     def filter_rows(
         self,
@@ -70,7 +76,7 @@ class NoFilter(Filter):
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
         is_model: bool = False,
-    ) -> Iterator[dict[Hashable, Any | None]]:
+    ) -> Iterator[dict[Hashable, Any | None] | BaseModel]:
         """Yield every row when the filter is not inverted."""
         for row in rows:
             if not self.invert:

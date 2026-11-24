@@ -39,6 +39,7 @@ from gen_epix.filter import (
     ExistsFilter,
     Filter,
     LogicalOperator,
+    NoFilter,
     NumberRangeFilter,
     NumberSetFilter,
     RangeFilter,
@@ -633,6 +634,7 @@ class SARepository(BaseRepository):
                     filter,
                     session=session,
                     return_id=return_id,
+                    limit=limit,
                     **kwargs,
                 )
             case CrudOperation.EXISTS_ONE:
@@ -834,10 +836,15 @@ class SARepository(BaseRepository):
         limit: int,
         offset: int,
     ) -> list[Model] | list[Hashable]:
-        """Execute a read_all query and apply any Python-side filter."""
+        """Execute a read_all query and apply any Python-side filter.
+
+        With a Python-side filter, entire rows are selected even when only ids are
+        returned, so that the filter is applied to the rows of the same query. A
+        second query on the selected ids would bind one parameter per id.
+        """
         row_class = mapper.row_class
-        selected_column = mapper.get_row_id_column() if return_id else row_class
-        stmt = select(selected_column)
+        ids_only = return_id and not obj_filter
+        stmt = select(mapper.get_row_id_column() if ids_only else row_class)
         if not obj_filter:
             # Apply SQL pagination only when Python-side filtering is not needed.
             stmt = self._add_read_all_sql_pagination(stmt, limit, offset)
@@ -845,41 +852,16 @@ class SARepository(BaseRepository):
             stmt = stmt.where(
                 self.get_where_clause_from_filter(row_class, mapper, filter)
             )
-        if return_id:
-            return self._read_all_ids(
-                session, model_class, mapper, stmt, obj_filter, limit, offset
-            )
+        if ids_only:
+            return [row[0] for row in session.execute(stmt).all()]
         rows = [row[0] for row in session.execute(stmt).all()]
         objs = cast(list[Model], self.from_sql(model_class, rows))
         if obj_filter:
             objs = cast(list[Model], list(obj_filter.filter_rows(objs, is_model=True)))
             objs = self._apply_read_all_obj_pagination(objs, limit, offset)
-        return objs
-
-    def _read_all_ids(
-        self,
-        session: Session,
-        model_class: type[Model],
-        mapper: BaseSAMapper,
-        stmt: sa.Select,
-        obj_filter: Filter | None,
-        limit: int,
-        offset: int,
-    ) -> list[Hashable]:
-        """Return IDs, applying object filters through the corresponding domain rows."""
-        row_ids: list[Hashable] = [row[0] for row in session.execute(stmt).all()]
-        if not obj_filter:
-            return row_ids
-        # Retrieve entire rows and filter them with obj_filter, then get remaining IDs.
-        row_class = mapper.row_class
-        stmt = select(row_class).where(mapper.get_row_id_column().in_(row_ids))
-        rows = [row[0] for row in session.execute(stmt).all()]
-        objs = cast(list[Model], self.from_sql(model_class, rows))
-        objs = cast(list[Model], list(obj_filter.filter_rows(objs, is_model=True)))
-        objs = self._apply_read_all_obj_pagination(objs, limit, offset)
-        if len(objs) < len(row_ids):
+        if return_id:
             return [mapper.get_id(obj) for obj in objs]
-        return row_ids
+        return objs
 
     def update_one(
         self, model_class: type[Model], user_id: Hashable, obj: Model, **kwargs: Any
@@ -1137,77 +1119,77 @@ class SARepository(BaseRepository):
         user_id: Hashable,
         filter: Filter | None,
         return_id: bool = False,
+        limit: int = 0,
         **kwargs: Any,
-    ) -> list[Hashable] | None:
-        """Delete all rows, optionally filtered, returning ids when requested."""
-        # Check arguments
+    ) -> list[Hashable] | int | None:
+        """Delete all rows, optionally filtered and limited.
+
+        Args:
+            model_class: Model whose rows are deleted.
+            user_id: Executing user.
+            filter: Optional repository-side filter.
+            return_id: Return the ids of the deleted rows.
+            limit: Delete at most this many rows when greater than zero. Repeating
+                the call until fewer than ``limit`` rows are deleted removes all
+                matching rows in bounded batches.
+            **kwargs: ``session``, ``obj_filter`` and ``return_count``. With
+                ``return_count`` the number of deleted rows is returned and the ids
+                are not read when no filter applies.
+
+        Returns:
+            The deleted ids with ``return_id``, the number of deleted rows with
+            ``return_count``, otherwise None.
+        """
         session: Session = kwargs.get("session")  # type: ignore[assignment]
-        # Delete rows
+        return_count: bool = kwargs.pop("return_count", False)
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
+        id_column = mapper.get_row_id_column()
         obj_filter: Filter | None = kwargs.get("obj_filter", None)
 
-        def _execute(session: Session) -> list[Hashable] | None:
+        def _execute(session: Session) -> list[Hashable] | int | None:
             """Execute the requested value."""
-            row_ids: list[Hashable] | None = None
-
             # filter and/or obj_filter provided
             if filter or obj_filter:
-                # Read all row ids matching filter and obj_filter, then delete those
+                # Read the row ids matching filter and obj_filter, then delete those
                 row_ids = self.read_all(  # type: ignore[assignment]
                     model_class,
                     filter,
                     session=session,
                     return_id=True,
+                    limit=limit,
                     obj_filter=obj_filter,
                 )
                 assert row_ids is not None
-                stmt = delete(row_class).where(mapper.get_row_id_column().in_(row_ids))
-                session.execute(stmt)
+                if row_ids:
+                    session.execute(delete(row_class).where(id_column.in_(row_ids)))
+                if return_count:
+                    return len(row_ids)
                 return row_ids if return_id else None
 
-            # Delete all rows
+            # No filter
             if return_id:
-                # Get ids
-                row_ids = [
-                    x[0]
-                    for x in session.execute(select(mapper.get_row_id_column())).all()
-                ]
+                stmt = select(id_column)
+                if limit > 0:
+                    stmt = stmt.limit(limit)
+                row_ids = [x[0] for x in session.execute(stmt).all()]
+                if limit <= 0:
+                    session.execute(delete(row_class))
+                elif row_ids:
+                    session.execute(delete(row_class).where(id_column.in_(row_ids)))
+                return row_ids
+            if limit > 0:
+                # Delete a batch without reading its ids into Python
+                result = session.execute(
+                    delete(row_class).where(
+                        id_column.in_(select(id_column).limit(limit))
+                    )
+                )
+            else:
+                result = session.execute(delete(row_class))
+            return result.rowcount if return_count else None  # type: ignore[attr-defined]
 
-            # # TODO: workaround for SQLite foreign key constraint issues. Remove ASAP.
-            # # Check if this is SQLite and if we need to handle foreign key constraints
-            # is_sqlite = "sqlite" in str(session.get_bind().url).lower()
-            # needs_fk_workaround = False
-            # # For SQLite with schemas (using ATTACH DATABASE), foreign key constraints
-            # # can cause issues when referencing tables across schemas. Check if this table
-            # # has foreign keys that might need special handling.
-            # if is_sqlite and hasattr(row_class, "__table__"):
-            #     table = row_class.__table__
-            #     for fk in table.foreign_keys:
-            #         # If foreign key references a table in the same schema, it should work
-            #         # If it references a different schema or has schema prefix issues, we might need workaround
-            #         referenced_table = fk.column.table
-            #         if referenced_table.schema != table.schema or table.name in [
-            #             "measurement_relation"
-            #         ]:  # Known problematic tables
-            #             needs_fk_workaround = True
-            #             break
-            # # Temporarily disable foreign key constraints if needed
-            # if needs_fk_workaround:
-            #     session.execute(sa.text("PRAGMA foreign_keys=OFF"))
-            #     session.flush()
-            # Delete rows
-            session.execute(delete(row_class))
-            # # Re-enable foreign keys if we disabled them
-            # if needs_fk_workaround:
-            #     session.execute(sa.text("PRAGMA foreign_keys=ON"))
-            #     session.flush()
-            # # TODO: end of workaround for SQLite foreign key constraint issues. Remove ASAP.
-
-            return row_ids
-
-        deleted_row_ids = self._execute_sa(session, _execute, kwargs)
-        return deleted_row_ids if return_id else None
+        return self._execute_sa(session, _execute, kwargs)
 
     def exists_one(
         self, model_class: type[Model], obj_id: Hashable, **kwargs: Any
@@ -1434,6 +1416,9 @@ class SARepository(BaseRepository):
             DatetimeRangeFilter,
             NumberRangeFilter,
         )
+        if isinstance(filter, NoFilter) and not filter.invert:
+            # Selects every row: neither a where-clause nor a Python filter
+            return None, None
         mapped_key = field_name_map.get(str(filter.get_key()))
         if not mapped_key:
             # Field name cannot be mapped

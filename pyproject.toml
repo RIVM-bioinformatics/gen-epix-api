@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Gen-EpiX"
-version = "11.0.0"
+version = "11.1.0"
 authors = [
     { name="RIVM-bioinformatics", email="ids-bioinformatics@rivm.nl" },
 ]
@@ -26,13 +26,14 @@ requires-python = ">=3.14"
 # Running an application additionally needs the `server` extra below.
 dependencies = [
     "httpx==0.28.1",
+    "httpx2==2.16.2",
     "pyjwt==2.15.1",
     "urllib3==2.8.0",
-    "pydantic==2.14.1",
+    "pydantic==2.14.4",
     "ulid-py==1.1.0",
     "dynaconf==3.3.3",
-    "PyYAML==6.0.3",
-    "python-dateutil==2.9.0.post0",
+    "PyYAML==6.0.4",
+    "python-dateutil==4.0.0",
     "tenacity==9.2.*",
     "pydantic-settings==2.*",
 ]
@@ -45,20 +46,20 @@ dependencies = [
 server = [
     # For compatibility with apache-airflow-core 3.3.0 used in other repositories, fastapi must be pinned to <0.137.0
     # "fastapi[standard]==0.141.1",
-    "fastapi[standard]>=0.159.1,<0.160.0",
-    "gunicorn==26.2.*",
-    "starlette==1.9.*",
+    "fastapi[standard]==0.165.0",
+    "gunicorn==27.0.*",
+    "starlette==1.10.*",
     "sqlalchemy==2.0.54",
     "sqlalchemy_utils==0.43.0",
-    "alembic==1.20.0",
+    "alembic==1.20.1",
     "slowapi==0.1.10",
     "cryptography==50.0.2",
-    "oauthlib==4.0.0",
-    "python-multipart==0.0.32",
+    "oauthlib==4.0.1",
+    "python-multipart==0.0.34",
     "scipy==1.18.1",
-    "numpy==2.5.4",
+    "numpy==2.5.5",
     "biopython==1.88",
-    "cachetools==7.2.4",
+    "cachetools==8.0.2",
     "tomli-w==1.2.0",
     "fire==0.7.1",
 ]
@@ -95,6 +96,17 @@ target-version = ['py313']
 profile = "black"
 float_to_top = true
 line_length = 88
+
+[tool.pylint.messages_control]
+# Match lsp-data's message policy; retain Pylint's default design limits.
+disable = [
+    # Explicit same-name aliases document public re-exports.
+    "useless-import-alias",
+    # Black owns formatting; URLs and field descriptions can exceed the line limit.
+    "line-too-long",
+    # A TODO marks work that is deliberately outside the current change.
+    "fixme",
+]
 
 [tool.ruff]
 line-length = 88

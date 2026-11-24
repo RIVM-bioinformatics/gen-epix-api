@@ -41,11 +41,8 @@ CASEDB_APP_CFGS = get_app_cfgs(
 # independently. Each results in a separate isolated database environment (Env):
 #   1. skip_endpoints__SA_SQLITE_EMPTY  — SQLAlchemy/SQLite, bypassing HTTP endpoints
 #   2. skip_endpoints__DICT_EMPTY       — In-memory dict repo, bypassing HTTP endpoints
-#   3. with_endpoints__DICT_EMPTY       — In-memory dict repo, exercising HTTP endpoints
 #
-# Note: SA_SQLITE_EMPTY is excluded because casedb requires a running seqdb (embedded
-# via LOCAL mode). SA_SQLITE + endpoints introduces a multi-threading issue on that
-# shared SQLite connection.
+# SQLite runs without endpoints; endpoint threads cause issues with its connections.
 #
 # Note: with_endpoints + DICT_EMPTY would share the same underlying cfg dict as
 # skip_endpoints + DICT_EMPTY (copy.copy is shallow). CommondbClient._create_local_client

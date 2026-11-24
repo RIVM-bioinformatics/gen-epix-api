@@ -14,7 +14,6 @@ from typing import Any, ClassVar, Literal
 
 import jwt
 
-from gen_epix import fastapp
 from gen_epix.commondb import api
 from gen_epix.commondb.domain import command, enum, model, util
 from gen_epix.fastapp import Client, HttpProtocol, exc
@@ -380,7 +379,10 @@ class CommondbClient(Client):
         try:
             return super()._handle_once(cmd)
         except exc.ServiceException as e:
-            if fastapp.RetryPolicy.get_remote_http_status(e) != 401:
+            if not (
+                isinstance(e, exc.RemoteServiceError)
+                and e.get_http_status_code() == 401
+            ):
                 raise
         self._oauth_header_cache = None
         return super()._handle_once(cmd)

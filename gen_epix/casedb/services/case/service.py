@@ -1305,7 +1305,7 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_ids: Iterable[UUID] | None = None,
         case_set_ids: Iterable[UUID] | None = None,
-    ) -> dict[UUID, set[UUID]]:
+    ) -> dict[UUID, Set[UUID]]:
         """Retrieve case-set IDs grouped by case ID.
 
         Args:
@@ -1433,7 +1433,7 @@ class CaseService(BaseCaseService):
         return seq_col, ref_seq_col
 
     def _verify_case_set_member_case_type(
-        self, user: model.User, case_set_members: list[model.CaseSetMember]
+        self, user: model.User | None, case_set_members: list[model.CaseSetMember]
     ) -> None:
         """Verify that each case-set member links matching case types.
 
@@ -1453,7 +1453,7 @@ class CaseService(BaseCaseService):
             case_ids = {x.case_id for x in case_set_members}
             case_sets_: list[model.CaseSet] = self.repository.crud(
                 uow,
-                user.id if user else None,
+                None if user is None else user.id,
                 model.CaseSet,
                 CrudOperation.READ_SOME,
                 obj_ids=list(case_set_ids),
@@ -1461,7 +1461,7 @@ class CaseService(BaseCaseService):
             case_sets = {x.id: x for x in case_sets_}
             cases_: list[model.Case] = self.repository.crud(
                 uow,
-                user.id if user else None,
+                None if user is None else user.id,
                 model.Case,
                 CrudOperation.READ_SOME,
                 obj_ids=list(case_ids),
