@@ -366,12 +366,12 @@ class SARepository(BaseRepository):
         self._default_isolation_level: IsolationLevel = IsolationLevel.SERIALIZABLE
         self._session_maker_by_isolation_level: dict[IsolationLevel, sessionmaker] = {}
         for level in IsolationLevel:
-            value = level.value
+            value = level.get_sqlalchemy_value()
             if (
                 dialect.name == "sqlite"
                 and level in IsolationLevelSet.SQLITE_SERIALIZABLE_FALLBACK.value
             ):
-                value = IsolationLevel.SERIALIZABLE.value
+                value = IsolationLevel.SERIALIZABLE.get_sqlalchemy_value()
             if value not in supported_levels:
                 if level is IsolationLevel.SNAPSHOT and dialect.name != "mssql":
                     continue

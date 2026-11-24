@@ -269,11 +269,23 @@ class CrudEndpointType(Enum):
 class IsolationLevel(Enum):
     """Encapsulates specifying the transaction isolation level for a database session."""
 
-    READ_UNCOMMITTED = "READ UNCOMMITTED"
-    READ_COMMITTED = "READ COMMITTED"
-    REPEATABLE_READ = "REPEATABLE READ"
+    READ_UNCOMMITTED = "READ_UNCOMMITTED"
+    READ_COMMITTED = "READ_COMMITTED"
+    REPEATABLE_READ = "REPEATABLE_READ"
     SERIALIZABLE = "SERIALIZABLE"
     SNAPSHOT = "SNAPSHOT"
+
+    # TODO: ideally this is moved to SA Repository or similar, since IsolationLevel should not have knowledge of SQLAlchemy specifics.
+    def get_sqlalchemy_value(self) -> str:
+        """Returns the corresponding SQLAlchemy isolation level value."""
+        mapping = {
+            IsolationLevel.READ_UNCOMMITTED: "READ UNCOMMITTED",
+            IsolationLevel.READ_COMMITTED: "READ COMMITTED",
+            IsolationLevel.REPEATABLE_READ: "REPEATABLE READ",
+            IsolationLevel.SERIALIZABLE: "SERIALIZABLE",
+            IsolationLevel.SNAPSHOT: "SNAPSHOT",
+        }
+        return mapping[self]
 
 
 class IsolationLevelSet(Enum):
