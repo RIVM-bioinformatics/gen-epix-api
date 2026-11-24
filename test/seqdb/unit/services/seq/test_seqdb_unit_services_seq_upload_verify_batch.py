@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import UploadAction
+from gen_epix.commondb.domain.enum import RoleSet, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import UploadResult, User
 from gen_epix.commondb.domain.model.upload import ParentUploadResult
@@ -95,6 +95,11 @@ class BaseUploadTestCase:
         self.service = Mock(spec=BaseSeqService)
         self.service.generate_id = Mock(side_effect=uuid4)
         self.service.repository = Mock()
+        self.service.role_set_map = {
+            RoleSet.GE_ORG_USER: frozenset(
+                Role[role.name].value for role in RoleSet.GE_ORG_USER.value
+            )
+        }
 
         # Mock UOW context manager
         self.uow = Mock(spec=BaseUnitOfWork)

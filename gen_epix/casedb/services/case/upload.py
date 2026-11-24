@@ -63,33 +63,33 @@ class CaseBatchUploader(BatchUploader):
             raise exc.InvalidArgumentsError("915489e8", "Invalid service type")
         self.service: BaseCaseService = service
 
-    def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
-        """Verify command type and RBAC rights for uploading cases.
+    # def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
+    #     """Verify command type and RBAC rights for uploading cases.
 
-        ABAC rights are not verified here since this requires knowing per case whether
-        it already exists in the database and what data collection(s) it belongs to,
-        which is only determined during batch verification. ABAC rights are therefore
-        verified during batch verification.
+    #     ABAC rights are not verified here since this requires knowing per case whether
+    #     it already exists in the database and what data collection(s) it belongs to,
+    #     which is only determined during batch verification. ABAC rights are therefore
+    #     verified during batch verification.
 
-        Args:
-            cmd: Batch command to authorize.
+    #     Args:
+    #         cmd: Batch command to authorize.
 
-        Raises:
-            InvalidArgumentsError: If ``cmd`` is not an upload-cases command.
-            UnauthorizedAuthError: If the user lacks a case-data role.
-        """
-        # Verify command type
-        if not isinstance(cmd, command.UploadCasesCommand):
-            raise exc.InvalidArgumentsError("510ea98a", _INVALID_COMMAND_TYPE)
+    #     Raises:
+    #         InvalidArgumentsError: If ``cmd`` is not an upload-cases command.
+    #         UnauthorizedAuthError: If the user lacks a case-data role.
+    #     """
+    #     # Verify command type
+    #     if not isinstance(cmd, command.UploadCasesCommand):
+    #         raise exc.InvalidArgumentsError("510ea98a", _INVALID_COMMAND_TYPE)
 
-        # Verify user has at least one role that may manipulate case data
-        if cmd.user is not None and not cmd.user.roles.intersection(
-            self.service.role_set_map[RoleSet.GE_ORG_USER]
-        ):
-            raise exc.UnauthorizedAuthError(
-                "d8c05dc7",
-                f"User {None if cmd.user is None else cmd.user.id} is not allowed to manipulate case data",
-            )
+    #     # Verify user has at least one role that may manipulate case data
+    #     if cmd.user is not None and not cmd.user.roles.intersection(
+    #         self.service.role_set_map[RoleSet.GE_ORG_USER]
+    #     ):
+    #         raise exc.UnauthorizedAuthError(
+    #             "d8c05dc7",
+    #             f"User {None if cmd.user is None else cmd.user.id} is not allowed to manipulate case data",
+    #         )
 
     def verify_batch(
         self,

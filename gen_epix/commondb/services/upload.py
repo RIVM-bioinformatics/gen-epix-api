@@ -6,7 +6,7 @@ from uuid import UUID
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command, exc, model
-from gen_epix.commondb.domain.enum import UploadAction
+from gen_epix.commondb.domain.enum import RoleSet, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import BaseIdentifier
 from gen_epix.commondb.domain.model.upload import (
@@ -318,12 +318,35 @@ class BatchUploader:
                     if identifier_result.status == EtlStatus.PENDING:
                         identifier_result.status = EtlStatus.SKIPPED
 
-    def verify_user_rights(self, cmd: command.UploadBatchCommandMixin) -> None:
-        """Verify that the user has rights to perform the upload.
+    def verify_user_rights(self, cmd: command.Command) -> None:
+        """Verify command type and RBAC rights for uploading.
 
-        This base implementation performs no verification. Override as needed.
+        ABAC rights are not verified here since this requires knowing per batch 
+        element whether it already exists in the database and what data collection(s)
+        it belongs to, which is only determined during batch verification. ABAC rights
+        are therefore verified during batch verification.
+
+        Args:
+            cmd: Batch command to authorize.
+
+        Raises:
+            InvalidArgumentsError: If ``cmd`` is not an upload-cases command.
+            UnauthorizedAuthError: If the user lacks a case-data role.
         """
-        pass
+        # Verify command type
+        if not isinstance(cmd, command.UploadBatchCommandMixin):
+            raise exc.InvalidArgumentsError("510ea98a", "Invalid command type")
+
+        # Verify user has at least one role that may manipulate case data
+        role_set_map: dict[RoleSet, set[str]] = getattr(self.service, "role_set_map")
+        if cmd.user is not None and not cmd.user.roles.intersection(
+            role_set_map[RoleSet.GE_ORG_USER]
+        ):
+            raise exc.UnauthorizedAuthError(
+                "d8c05dc7",
+                f"User {None if cmd.user is None else cmd.user.id} does not have a role that allows to upload",
+            )
+
 
     def init_batch_upload_result(
         self, cmd: command.UploadBatchCommandMixin

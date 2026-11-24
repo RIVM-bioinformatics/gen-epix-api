@@ -2,7 +2,7 @@
 
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.seqdb.domain import command, model
+from gen_epix.seqdb.domain import command, exc, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 from gen_epix.seqdb.services.seq.upload_upsert_batch import (
     _create_sample_refdata,
@@ -27,6 +27,9 @@ class SampleBatchUploader(BatchUploader):
             model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
             service,
         )
+        if not isinstance(service, BaseSeqService):
+            raise exc.InvalidArgumentsError("93d4de44", "Invalid service type")
+        self.service: BaseSeqService = service
 
     def verify_batch(
         self,

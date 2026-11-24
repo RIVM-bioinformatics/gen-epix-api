@@ -34,10 +34,10 @@ def seq_service_crud_seq_profile(
         AssertionError: The command operation is unsupported.
     """
     user_id = cmd.user.id if cmd.user else None
-    seq_profiles: list[model.SeqProfile] = cmd.get_objs()  # type: ignore[assignment]
+    seq_profiles: list[model.SeqProfile] = []
     if cmd.is_create():
         # Calculate all distances for these seq profiles between themselves and with all stored seq profiles
-        seq_profiles: list[model.SeqProfile] = cmd.get_objs()
+        seq_profiles: list[model.SeqProfile] = cmd.get_objs()  # type: ignore[assignment]
         # TODO: 3034 Check if seq_profile.seq_profile_type and seq_profile.protocol.protocol_type are consistent with each other.
 
     elif cmd.is_read():
