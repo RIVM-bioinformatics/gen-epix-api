@@ -1,5 +1,6 @@
+import os
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 import pytest
 import sqlalchemy as sa
@@ -7,10 +8,11 @@ from sqlalchemy.orm import declarative_base
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.fastapp.repositories.sa.repository import SARepository
+from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
 
 pytestmark = pytest.mark.integration
@@ -39,6 +41,28 @@ class LifecycleModel(Model):
 
 LifecycleModel.ENTITY.set_model_class(LifecycleModel)
 LifecycleModel.ENTITY.set_db_model_class(LifecycleRow)
+
+
+def test_mssql_read_committed_uow() -> None:
+    """Check the SQL Server isolation level on the active transaction."""
+    url = os.environ.get("FASTAPP_MSSQL_TEST_URL")
+    if not url:
+        pytest.skip("Set FASTAPP_MSSQL_TEST_URL to run against SQL Server")
+
+    engine = sa.create_engine(url)
+    try:
+        repository = SARepository(engine, register_mappers=False)
+        with repository.uow(isolation_level=IsolationLevel.READ_COMMITTED) as uow:
+            session = cast(SAUnitOfWork, uow).session
+            actual_level = session.scalar(
+                sa.text(
+                    "SELECT transaction_isolation_level FROM sys.dm_exec_sessions "
+                    "WHERE session_id = @@SPID"
+                )
+            )
+            assert actual_level == 2
+    finally:
+        engine.dispose()
 
 
 @pytest.mark.parametrize("repository_class", [DictRepository, SARepository])
