@@ -22,8 +22,8 @@ class CommondbSAMapper(SAMapper):
                       on RowMetadataMixin handles it automatically.
     - `modified_by` — always set to the `user_id` passed in, regardless of the value
                       carried on the incoming domain object.
-    - All other fields — standard behaviour: skip if the new value is None (keep the
-                         existing DB value), otherwise write the new value.
+    - All other fields — omitted None values leave existing DB values unchanged;
+                         explicitly supplied None values clear them.
 
     This class intentionally knows nothing about process-specific fields in casedb,
     seqdb, etc.  Those dbs create their own subclass of CommondbSAMapper (or of this
@@ -61,9 +61,8 @@ class CommondbSAMapper(SAMapper):
                 continue
             curr_value = getattr(row, row_field_name)
             new_value = obj_dict[field_name]
-            # TODO: LSP-3893 A non-metadata input field of None with a populated row
-            # value is assigned as None, despite the documented preserve-value rule.
-            # Confirm whether None means omitted or an explicit clear before changing it.
+            if new_value is None and field_name not in obj.model_fields_set:
+                continue
             if curr_value != new_value:
                 setattr(row, row_field_name, new_value)
                 is_updated = True

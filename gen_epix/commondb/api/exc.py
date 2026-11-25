@@ -270,11 +270,7 @@ async def handle_command(
     exception_code: str,
     input_command: command.Command,
     input_handle_exception: (
-        Callable[
-            [str, model.User | None, Exception, Hashable | list[Hashable] | None],
-            NoReturn,
-        ]
-        | None
+        Callable[[str, model.User | None, Exception], NoReturn] | None
     ),
 ) -> Any:
     """Dispatch a command and translate any exception through an API error handler.
@@ -297,14 +293,10 @@ async def handle_command(
     try:
         return await run_in_threadpool(app.handle, input_command)
     except Exception as exception:
-        # TODO: LSP-3893 When no callback is supplied, this fallback receives three
-        # arguments, but handle_exception requires app/logger context and five
-        # required arguments; confirm the intended default logger/context.
         if input_handle_exception is None:
-            input_handle_exception = generate_handle_exception_function(
-                app, logger=None
-            )
-        input_handle_exception(exception_code, user, exception, None)
+            handle_exception(app, None, exception_code, user, exception)
+        else:
+            input_handle_exception(exception_code, user, exception)
         raise
 
 

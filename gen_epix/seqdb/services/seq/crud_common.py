@@ -12,14 +12,10 @@ from gen_epix.filter.uuid_set import UuidSetFilter
 def _get_not_implemented_message(cmd: CrudCommand) -> str:
     """Format an unsupported CRUD-operation message including the caller's roles."""
     user = cmd.user
-    # TODO: LSP-3893 An unsupported CRUD command with user=None currently raises
-    # AssertionError here instead of the caller's intended NotImplementedError; confirm
-    # whether userless internal commands may reach this helper and what message to use.
-    assert user is not None
-    return (
-        f"Command {cmd.__class__.__name__} operation {cmd.operation.value} not implemented for user with role(s) "
-        + ", ".join([str(x) for x in user.roles])
-    )
+    message = f"Command {cmd.__class__.__name__} operation {cmd.operation.value} not implemented"
+    if user is None:
+        return message
+    return message + " for user with role(s) " + ", ".join(map(str, user.roles))
 
 
 def _compose_id_filter(*key_and_ids: tuple[str, set[UUID]]) -> Filter:

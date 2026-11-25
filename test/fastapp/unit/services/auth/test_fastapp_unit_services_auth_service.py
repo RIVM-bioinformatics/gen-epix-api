@@ -276,6 +276,50 @@ class TestCreateUserDependenciesNoIdp(BaseAuthServiceTestCase):
 class TestCreateUserDependenciesWithIdps(BaseAuthServiceTestCase):
     """Test create_user_dependencies with IDP clients configured."""
 
+    @pytest.mark.parametrize("n_idps", [1, 2, 3, 4, 5])
+    def test_all_dependency_resolvers_select_the_last_provider(
+        self, n_idps: int
+    ) -> None:
+        provider_ids = [uuid4() for _ in range(n_idps)]
+        self.service._idp_clients = [
+            self.make_idp_client(provider_id) for provider_id in provider_ids
+        ]
+        claims = self.create_claims(provider_ids[-1])
+        claim_args = {
+            f"claims_{index}": claims if index == n_idps - 1 else None
+            for index in range(n_idps)
+        }
+        idp_user = IDPUser(issuer="issuer", sub="subject")
+        self.service.get_existing_user_from_claims = AsyncMock(  # type: ignore[method-assign]
+            return_value=self.user
+        )
+        self.service.get_new_user_from_claims = AsyncMock(  # type: ignore[method-assign]
+            return_value=self.other_user
+        )
+        self.service.get_idp_user_from_claims = AsyncMock(  # type: ignore[method-assign]
+            return_value=idp_user
+        )
+
+        registered_dep, new_dep, idp_user_dep = self.service.create_user_dependencies()
+        request = Mock()
+        scopes = Mock()
+
+        registered_user = self.run_async(
+            self.extract_security_callable(registered_dep)(
+                request, scopes, **claim_args
+            )
+        )
+        new_user = self.run_async(
+            self.extract_security_callable(new_dep)(request, scopes, **claim_args)
+        )
+        resolved_idp_user = self.run_async(
+            self.extract_security_callable(idp_user_dep)(request, scopes, **claim_args)
+        )
+
+        assert registered_user is self.user
+        assert new_user is self.other_user
+        assert resolved_idp_user is idp_user
+
     def test_dependencies_multiple_idps_resolution(self) -> None:
         """Resolve current user via first and second IDPs, and IDP user from claims."""
         # Create input
@@ -716,6 +760,119 @@ class TestRetryPendingIdpClients(BaseAuthServiceTestCase):
         initialize.assert_not_called()
         assert self.service._idp_clients == [existing_client]
         assert self.service._pending_idp_client_cfgs == []
+
+
+class TestAuthServiceCoverageEdges(BaseAuthServiceTestCase):
+    def test_provider_dependency_limit_is_enforced(self) -> None:
+        self.service._idp_clients = [
+            self.make_idp_client(uuid4())
+            for _ in range(self.service._MAX_N_IDP_CLIENTS + 1)
+        ]
+
+        with pytest.raises(exc.InitializationServiceError, match="maximum supported"):
+            self.service.create_user_dependencies()
+
+    def test_no_auth_dependencies_require_a_user_manager(self) -> None:
+        self.app.user_manager = None
+
+        with pytest.raises(exc.InitializationServiceError, match="no user generator"):
+            self.service.create_user_dependencies()
+
+    def test_dependency_callable_limit_is_enforced(self) -> None:
+        resolvers = [lambda: None] * self.service._MAX_N_IDP_CLIENTS
+
+        with pytest.raises(exc.InitializationServiceError, match="not implemented"):
+            self.service._create_user_dependencies_from_callables(
+                self.service._MAX_N_IDP_CLIENTS + 1,
+                resolvers,
+                resolvers,
+                resolvers,
+            )
+
+    @pytest.mark.parametrize("failure_mode", ["returns_none", "raises"])
+    def test_auto_create_failure_is_normalized_to_unauthorized(
+        self, failure_mode: str
+    ) -> None:
+        claims = self.create_claims(self.idp1_id)
+        if failure_mode == "returns_none":
+            self.user_manager.auto_create_new_user.return_value = None
+        else:
+            self.user_manager.auto_create_new_user.side_effect = RuntimeError("failed")
+
+        with pytest.raises(exc.UnauthorizedAuthError, match="Failed to auto-create"):
+            self.service._auto_create_new_user(
+                claims,
+                "issuer",
+                "subject",
+                self.user_manager,
+                "user-key",
+            )
+
+    def test_missing_user_key_without_userinfo_is_rejected(self) -> None:
+        claims = self.create_claims(self.idp1_id)
+        self.user_manager.get_user_key_from_claims.return_value = None
+
+        with pytest.raises(exc.UnauthorizedAuthError):
+            self.service._generate_user_key_from_claims(
+                claims,
+                request_userinfo=False,
+                sub="subject",
+                user_manager=self.user_manager,
+            )
+
+    def test_unsupported_provider_protocol_raises(self) -> None:
+        with pytest.raises(NotImplementedError):
+            self.service._init_idp_client({"name": "provider", "protocol": "NONE"})
+
+    def test_provider_client_initialization_failure_is_deferred(self) -> None:
+        with patch(
+            "gen_epix.fastapp.services.auth.service.OauthIdpClient",
+            side_effect=RuntimeError("temporarily unavailable"),
+        ):
+            client = self.service._init_idp_client(
+                {"name": "provider", "protocol": "OIDC"}
+            )
+
+        assert client is None
+
+    def test_exposed_provider_is_registered_as_public(self) -> None:
+        provider_client = self.make_idp_client(uuid4())
+        idps_cfg: list[dict[str, Any]] = [
+            {
+                "name": "public-provider",
+                "label": "Public Provider",
+                "protocol": "OIDC",
+                "is_exposed": True,
+            }
+        ]
+        with patch(
+            "gen_epix.fastapp.services.auth.service.OauthIdpClient",
+            return_value=provider_client,
+        ):
+            service = AuthService(
+                app=self.app,
+                logger=self.logger,
+                idps_cfg=idps_cfg,
+                ssl_context=False,
+            )
+
+        assert service._exposed_idp_clients == [provider_client]
+
+    def test_retry_without_pending_providers_is_a_noop(self) -> None:
+        self.service._retry_pending_idp_clients()
+
+        assert self.service._pending_idp_client_cfgs == []
+
+    def test_retry_keeps_provider_pending_after_initialization_failure(self) -> None:
+        pending_cfg: dict[str, Any] = {
+            "name": "late-provider",
+            "protocol": "OIDC",
+        }
+        self.service._pending_idp_client_cfgs = [pending_cfg]
+        with patch.object(self.service, "_init_idp_client", return_value=None):
+            self.service._retry_pending_idp_clients()
+
+        assert self.service._pending_idp_client_cfgs == [pending_cfg]
 
 
 @pytest.fixture

@@ -8,7 +8,6 @@ from typing import Any, NoReturn
 
 from fastapi import APIRouter, FastAPI
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import exc
 
@@ -29,7 +28,7 @@ from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.command.base import Command
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
-from gen_epix.fastapp.middleware.limiter import limiter
+from gen_epix.fastapp.middleware.limiter import LIMITER
 
 external_logger_fmap = exc.get_logger_fmap(logging.getLogger("commondb.external"))
 
@@ -98,7 +97,7 @@ def create_system_endpoints(
         operation_id="health",
         name="Health",
     )
-    @limiter.exempt  # type: ignore[misc]
+    @LIMITER.exempt  # type: ignore[misc]
     async def get__health() -> HealthResponseBody:
         """Return the service health status.
 
@@ -204,7 +203,7 @@ def create_system_endpoints(
             user: registered_user_dependency,  # type: ignore[valid-type]
         ) -> model.DeleteAllOperationalDataResult:
             """Delete operational data using the authenticated command lifecycle."""
-            retval: model.DeleteAllOperationalDataResult = exc.handle_command(
+            retval: model.DeleteAllOperationalDataResult = await exc.handle_command(
                 app=app,
                 user=user,
                 exception_code="12b97ab6",
@@ -229,7 +228,7 @@ def create_system_endpoints(
             user: registered_user_dependency,  # type: ignore[valid-type]
         ) -> model.DeleteAllRefDataResult:
             """Delete application reference data after operational data is reset."""
-            retval: model.DeleteAllRefDataResult = exc.handle_command(
+            retval: model.DeleteAllRefDataResult = await exc.handle_command(
                 app=app,
                 user=user,
                 exception_code="f852ea1d",

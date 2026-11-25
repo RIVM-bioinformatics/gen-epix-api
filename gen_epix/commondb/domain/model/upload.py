@@ -465,7 +465,8 @@ class ParentForUpload(Model, IdentifiersMixin):
         parent_id_field_name = self.CHILD_PARENT_ID_FIELD_NAME_MAP[child_model_class]
         seen_child_ids: set[UUID] = set()
         seen_child_identifiers: set[IdentifierForUpload] = set()
-        has_identifiers = issubclass(child_model_class, IdentifiersMixin)
+        child_for_upload_class = self.CHILD_FOR_UPLOAD_CLASS_MAP[child_model_class]
+        has_identifiers = issubclass(child_for_upload_class, IdentifiersMixin)
         for child_index, child in enumerate(children):
             # Check for duplicate child IDs
             self._validate_child_id(
@@ -864,7 +865,10 @@ class BaseBatchForUpload(Model):
             children_field_name,
             seen_child_ids,
         )
-        if issubclass(child_model_class, IdentifiersMixin):
+        child_for_upload_class = (
+            self.PARENT_FOR_UPLOAD_CLASS.CHILD_FOR_UPLOAD_CLASS_MAP[child_model_class]
+        )
+        if issubclass(child_for_upload_class, IdentifiersMixin):
             self._validate_unique_child_identifiers(
                 children_for_upload, children_field_name
             )

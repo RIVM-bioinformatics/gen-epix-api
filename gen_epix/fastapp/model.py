@@ -312,6 +312,10 @@ class CrudCommand(Command):
         default=False,
         description="Whether to return only the ID(s) of the affected object(s). Only used for create, update, read all and delete all operations.",
     )
+    return_count: bool = Field(
+        default=False,
+        description="Whether to return only the number of deleted objects, as an integer. Only used for delete all operations and mutually exclusive with return_id. Unlike return_id, it does not require reading the IDs of the deleted objects.",
+    )
     query_filter: Filter | None = Field(
         default=None,
         description="Optional filter to apply to the results of a read or delete all operation, thereby effectively applying a query instead of reading or deleting all. Must be None for all other operations.",
@@ -322,7 +326,7 @@ class CrudCommand(Command):
     )
     limit: int = Field(
         default=0,
-        description="Limit to the number of objects to return for a read all operation. Ignored for other operations. Not applied when equal to zero.",
+        description="Limit to the number of objects to return for a read all operation or to delete for a delete all operation. Must be zero for other operations. Not applied when equal to zero.",
         ge=0,
     )
     offset: int = Field(
@@ -394,7 +398,17 @@ class CrudCommand(Command):
             and operation not in CrudOperationSet.WRITE_OR_READ_ALL_OR_DELETE_ALL.value
         ):
             raise ValueError(f"Invalid operation for return_id=True: {operation.value}")
-        if self.limit and operation != CrudOperation.READ_ALL:
+        if self.return_count:
+            if operation != CrudOperation.DELETE_ALL:
+                raise ValueError(
+                    f"Invalid operation for return_count=True: {operation.value}"
+                )
+            if self.return_id:
+                raise ValueError("return_count and return_id cannot both be True")
+        if self.limit and operation not in (
+            CrudOperation.READ_ALL,
+            CrudOperation.DELETE_ALL,
+        ):
             raise ValueError(f"Invalid operation for limit: {operation.value}")
         return self
 

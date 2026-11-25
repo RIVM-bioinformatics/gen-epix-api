@@ -1,5 +1,6 @@
+import os
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 import pytest
 import sqlalchemy as sa
@@ -7,10 +8,11 @@ from sqlalchemy.orm import declarative_base
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.fastapp.repositories.sa.repository import SARepository
+from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
 
 pytestmark = pytest.mark.integration
@@ -39,6 +41,28 @@ class LifecycleModel(Model):
 
 LifecycleModel.ENTITY.set_model_class(LifecycleModel)
 LifecycleModel.ENTITY.set_db_model_class(LifecycleRow)
+
+
+def test_mssql_read_committed_uow() -> None:
+    """Check the SQL Server isolation level on the active transaction."""
+    url = os.environ.get("FASTAPP_MSSQL_TEST_URL")
+    if not url:
+        pytest.skip("Set FASTAPP_MSSQL_TEST_URL to run against SQL Server")
+
+    engine = sa.create_engine(url)
+    try:
+        repository = SARepository(engine, register_mappers=False)
+        with repository.uow(isolation_level=IsolationLevel.READ_COMMITTED) as uow:
+            session = cast(SAUnitOfWork, uow).session
+            actual_level = session.scalar(
+                sa.text(
+                    "SELECT transaction_isolation_level FROM sys.dm_exec_sessions "
+                    "WHERE session_id = @@SPID"
+                )
+            )
+            assert actual_level == 2
+    finally:
+        engine.dispose()
 
 
 @pytest.mark.parametrize("repository_class", [DictRepository, SARepository])
@@ -180,3 +204,60 @@ def test_repository_lifecycle(
             engine.dispose()
     else:
         repository_class.clear_repository_content(entities=entities)
+
+
+@pytest.mark.parametrize("repository_class", [DictRepository, SARepository])
+def test_delete_all_in_batches_returns_counts(
+    repository_class: type[BaseRepository], tmp_path: Path
+) -> None:
+    """Delete in limited batches with the same counts and results in all backends."""
+    entities = [LifecycleModel.ENTITY]
+    if repository_class is SARepository:
+        sqlite_file = tmp_path / "repository_delete_all_batches.sqlite"
+        repository = repository_class.create_repository(
+            entities=entities,
+            connection_string=f"sqlite:///{sqlite_file.as_posix()}",
+            recreate_sqlite_file=True,
+        )
+    else:
+        repository = repository_class.create_repository(entities=entities)
+
+    def delete_all(**kwargs: Any) -> Any:
+        with repository.uow() as uow:
+            return repository.crud(
+                uow, "user", LifecycleModel, CrudOperation.DELETE_ALL, **kwargs
+            )
+
+    def read_ids() -> set[str]:
+        with repository.uow() as uow:
+            return {
+                obj.id
+                for obj in repository.crud(
+                    uow, "user", LifecycleModel, CrudOperation.READ_ALL
+                )
+            }
+
+    with repository.uow() as uow:
+        repository.crud(
+            uow,
+            "user",
+            LifecycleModel,
+            CrudOperation.CREATE_SOME,
+            objs=[LifecycleModel(id=f"id{i}", value=i) for i in range(5)],
+        )
+
+    # A limited batch deletes at most limit rows and reports their number
+    assert delete_all(limit=2, return_count=True) == 2
+    assert len(read_ids()) == 3
+    # Ids of a limited batch are those that were deleted
+    batch_ids = delete_all(limit=1, return_id=True)
+    assert len(batch_ids) == 1
+    assert len(read_ids()) == 2
+    assert not read_ids() & set(batch_ids)
+    # Without limit everything left is deleted and counted
+    assert delete_all(return_count=True) == 2
+    assert read_ids() == set()
+    # Nothing left
+    assert delete_all(limit=3, return_count=True) == 0
+    # Without return flags nothing is returned
+    assert delete_all(limit=3) is None

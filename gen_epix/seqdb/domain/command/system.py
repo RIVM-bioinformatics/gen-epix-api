@@ -30,6 +30,8 @@ class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
         model.Sample,
         model.File,
     ]
+    # Seq rows are large (the sequence itself), so a batch of them is kept small
+    BATCH_SIZE_BY_MODEL = {model.Seq: 100}
 
 
 class DeleteAllRefDataCommand(CommonDeleteAllRefDataCommand):

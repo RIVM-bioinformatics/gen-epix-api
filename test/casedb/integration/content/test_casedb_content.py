@@ -1007,6 +1007,31 @@ class TestContent:
             == []
         )
 
+        kept_crud_commands = [
+            command.UserAccessCasePolicyCrudCommand,
+            command.UserShareCasePolicyCrudCommand,
+            command.CaseTypeSetCrudCommand,
+            command.CaseTypeSetCategoryCrudCommand,
+            command.ColSetCrudCommand,
+        ]
+
+        def read_kept_ids() -> list[set[UUID]]:
+            return [
+                {
+                    x.id
+                    for x in env.handle(
+                        crud_command_class(
+                            user=root_user, operation=CrudOperation.READ_ALL
+                        ),
+                        use_endpoint=False,
+                    )
+                }
+                for crud_command_class in kept_crud_commands
+            ]
+
+        kept_ids_before = read_kept_ids()
+        assert all(kept_ids_before)
+
         ref_result = env.handle(
             command.DeleteAllRefDataCommand(user=root_user),
             use_endpoint=False,
@@ -1030,3 +1055,5 @@ class TestContent:
             )
             == []
         )
+        # User policies and the sets they point at survive a reference data reset
+        assert read_kept_ids() == kept_ids_before

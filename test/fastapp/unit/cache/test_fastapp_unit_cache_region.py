@@ -752,6 +752,12 @@ def test_async_cached_and_uncached_loader_failures() -> None:
         with pytest.raises(RuntimeError, match="transient"):
             await region.aget_or_create("transient", transient_failure)
 
+        statistics = region.statistics()
+        assert statistics.loads == 0
+        assert statistics.load_failures == 2
+        assert statistics.load_seconds > 0
+        assert statistics.average_load_seconds > 0
+
     asyncio.run(exercise())
 
 
@@ -836,6 +842,8 @@ def test_refresh_failure_keeps_serving_the_stale_value() -> None:
 
     assert region.get_or_create("key", fail) == "stale"
     assert region.statistics().load_failures == 1
+    assert region.statistics().load_seconds > 0
+    assert region.statistics().average_load_seconds > 0
 
 
 def test_layered_region_reads_through_to_its_remote_backend() -> None:

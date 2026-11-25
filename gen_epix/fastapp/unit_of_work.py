@@ -48,13 +48,10 @@ class BaseUnitOfWork(abc.ABC):
         self._is_managing_context = True
         return self
 
-    # TODO: LSP-3893 `KeyboardInterrupt` is passed as `BaseException`, but this
-    # signature only accepts `Exception`; confirm the intended context-manager
-    # exception contract before changing annotations or adding tests.
     def __exit__(
         self,
-        exception_class: type[Exception] | None,
-        exception_value: Exception | None,
+        exception_class: type[BaseException] | None,
+        exception_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
         """Finish the managed transaction context.
@@ -68,7 +65,7 @@ class BaseUnitOfWork(abc.ABC):
             traceback: Traceback associated with ``exception_value``.
 
         Raises:
-            Exception: Re-raises the exception from the managed block after rollback.
+            BaseException: Re-raises the exception from the managed block after rollback.
         """
         self._is_managing_context = False
         if exception_class is None:

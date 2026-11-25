@@ -25,16 +25,19 @@ class HandleNoResponseMiddleware(BaseHTTPMiddleware):
         # BaseHTTPMiddleware
         self,
         app: FastAPI,
-        fast_app: App = None,  # type: ignore[assignment]
+        fast_app: App | None = None,
         logger: logging.Logger | None = None,
     ):
         """Initialize a HandleNoResponseMiddleware instance."""
         super().__init__(app)
         self._fast_app = fast_app
-        # TODO: LSP-3893 With `fast_app=None` and `logger=None`, initialization
-        # raises `AttributeError` instead of accepting the declared default;
-        # clarify whether either value is required or a missing logger is valid.
-        self._logger = logger or fast_app.logger
+        self._logger = (
+            logger
+            if logger is not None
+            else (
+                fast_app.logger if fast_app is not None else logging.getLogger(__name__)
+            )
+        )
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Return HTTP 204 when a disconnected request has no response."""

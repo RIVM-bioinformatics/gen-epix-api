@@ -189,18 +189,22 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
     @model_validator(mode="after")
     def _validate_case_for_upload(self) -> Self:
         """Validate column uniqueness and alternate sample identifier mappings."""
-        self._validate_read_sets_or_seqs(self.read_sets)
-        self._validate_read_sets_or_seqs(self.seqs)
+        sample_id_map: dict[IdentifierForUpload, UUID] = {}
+        self._validate_read_sets_or_seqs(self.read_sets, sample_id_map)
+        self._validate_read_sets_or_seqs(self.seqs, sample_id_map)
         self._validate_no_col_id_overlap()
         return self
 
     def _validate_read_sets_or_seqs(
-        self, values: list[ReadSetForUpload] | list[SeqForUpload] | None
+        self,
+        values: list[ReadSetForUpload] | list[SeqForUpload] | None,
+        sample_id_map: dict[IdentifierForUpload, UUID],
     ) -> None:
         """Validate one group of read sets or sequences.
 
         Args:
             values: Upload children to validate, or ``None`` when omitted.
+            sample_id_map: maps IdentifiersForUpload found in the case to sample ID
 
         Raises:
             ValueError: If column IDs repeat or one alternate sample identifier maps
@@ -214,7 +218,6 @@ class CaseForUpload(ParentForUpload, IdentifiersMixin):
                 "read_sets" if isinstance(values[0], ReadSetForUpload) else "seqs"
             )
             raise ValueError(f"{field_name} must not contain duplicate col_id.")
-        sample_id_map: dict[IdentifierForUpload, UUID] = {}
         field_name = "read_sets" if isinstance(values[0], ReadSetForUpload) else "seqs"
         for value in values:
             other_sample_identifier: IdentifierForUpload | None = (

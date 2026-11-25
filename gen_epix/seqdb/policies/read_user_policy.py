@@ -4,10 +4,7 @@ from typing import Any
 
 from gen_epix.commondb.policies import ReadUserPolicy as CommonReadUserPolicy
 from gen_epix.seqdb.domain import command
-
-# TODO: LSP-3893 Importing this module fails because COMMON_ROLE_MAP is not exported
-# by the policy package; determine whether the map moved or should be re-exported.
-from gen_epix.seqdb.domain.policy import COMMON_ROLE_MAP
+from gen_epix.seqdb.domain.policy import RoleGenerator
 from gen_epix.seqdb.domain.service import BaseAbacService
 
 
@@ -22,7 +19,7 @@ class ReadUserPolicy(CommonReadUserPolicy):
         """Configure the shared policy with seqdb authorization dependencies."""
         super().__init__(
             abac_service,
-            role_map=COMMON_ROLE_MAP,  # type: ignore[arg-type]
+            role_map=RoleGenerator.get_role_map(),
             organization_admin_policy_crud_command_class=command.OrganizationAdminPolicyCrudCommand,
             **kwargs,
         )

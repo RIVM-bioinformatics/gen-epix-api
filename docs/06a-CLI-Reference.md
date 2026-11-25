@@ -77,7 +77,7 @@ Aggregate commands that span multiple apps:
 |------------|-------------|
 | `test_all` | Full suite with coverage HTML/XML reports. CI entry point. Performance and code tests excluded. |
 | `test_all_incl_performance` | Full suite including performance tests. |
-| `test_all_unit` | All unit tests across every app. |
+| `test_all_unit` | All unit tests across every app; writes HTML/XML coverage reports to `test/output/`. |
 | `test_all_integration` | All integration tests across every app. |
 | `test_all_performance` | All performance tests. |
 | `test_end_to_end` | All end-to-end tests. |

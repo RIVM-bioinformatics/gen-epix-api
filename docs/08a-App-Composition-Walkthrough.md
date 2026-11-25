@@ -281,9 +281,9 @@ python run.py api COMMONDB <idp_config> <repository_config>
 
 Before uvicorn starts, `Run.api()` calls `set_env_variables()`. That helper assembles the ordered list of TOML settings files for the chosen combination and writes them into the `COMMONDB_SETTINGS_FILES` env var. Uvicorn is then called with `reload=True` (hot-reload on file changes) and optional TLS. The app string is `"gen_epix.commondb.app:FAST_API"`. See [06a-CLI-Reference](./06a-CLI-Reference.md) for full CLI detail.
 
-### Container / production — Dockerfile + gunicorn
+### Container — gunicorn
 
-The intended production `CMD` is:
+The root `Dockerfile` sets no `CMD`; the compose files start each app with `run.py`. A multi-worker container would run:
 
 ```
 gunicorn --preload -k uvicorn.workers.UvicornWorker gen_epix.casedb.app:FAST_API

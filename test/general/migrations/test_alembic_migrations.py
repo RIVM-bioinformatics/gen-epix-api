@@ -10,6 +10,10 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+import sqlalchemy as sa
+from alembic.migration import MigrationContext
+from alembic.operations import Operations
+from sqlalchemy.dialects import postgresql
 
 from gen_epix.casedb.repositories.sa_alembic.metadata import (
     target_metadata as casedb_metadata,
@@ -203,3 +207,102 @@ def test_drop_legacy_seq_code_constraints() -> None:
     assert operations.dropped_indexes == [
         ("uq_read_set_code", "read_set", "seq"),
     ]
+
+
+def test_seqdb_qc_migration_backfills_legacy_results(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Preserve legacy results as machine QC and map NULL to PENDING."""
+    migration = importlib.import_module(
+        "gen_epix.seqdb.repositories.sa_alembic.versions."
+        "274cb3c5bedf_split_qc_result_into_machine_and_human_"
+    )
+    engine = sa.create_engine("sqlite://")
+    with engine.connect() as connection:
+        connection.exec_driver_sql("ATTACH DATABASE ':memory:' AS seq")
+        connection.exec_driver_sql(
+            "CREATE TABLE seq.qc_result ("
+            "id INTEGER PRIMARY KEY, qc_result VARCHAR, "
+            "qc_result_machine VARCHAR, qc_result_human VARCHAR)"
+        )
+        connection.execute(
+            sa.text(
+                "INSERT INTO seq.qc_result (id, qc_result) " "VALUES (:id, :qc_result)"
+            ),
+            [
+                {"id": 1, "qc_result": "FAIL"},
+                {"id": 2, "qc_result": "PASS"},
+                {"id": 3, "qc_result": None},
+            ],
+        )
+        monkeypatch.setattr(
+            migration,
+            "op",
+            Operations(MigrationContext.configure(connection)),
+        )
+
+        migration._backfill_qc_results("qc_result")
+
+        rows = connection.execute(
+            sa.text(
+                "SELECT qc_result_machine, qc_result_human "
+                "FROM seq.qc_result ORDER BY id"
+            )
+        ).all()
+
+    engine.dispose()
+    assert rows == [
+        ("FAIL", "PENDING"),
+        ("PASS", "PENDING"),
+        ("PENDING", "PENDING"),
+    ]
+
+
+def test_seqdb_qc_migration_uses_enum_typed_backfill_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cast the fallback value to the PostgreSQL QC enum."""
+    migration = importlib.import_module(
+        "gen_epix.seqdb.repositories.sa_alembic.versions."
+        "274cb3c5bedf_split_qc_result_into_machine_and_human_"
+    )
+    statements = []
+    monkeypatch.setattr(migration, "op", SimpleNamespace(execute=statements.append))
+
+    migration._backfill_qc_results("qc_result")
+
+    compiled = str(statements[0].compile(dialect=postgresql.dialect()))
+    assert "coalesce(" in compiled.lower()
+    assert "CAST(" in compiled
+    assert "AS qualitycontrolresult)" in compiled
+
+
+def test_commondb_initial_migration_supports_sqlite(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Create and drop the CommonDB schema through SQLite migrations."""
+    migration = importlib.import_module(
+        "gen_epix.commondb.repositories.sa_alembic.versions."
+        "b9c5e10bf42c_initial_schema"
+    )
+    engine = sa.create_engine("sqlite://")
+    schema_map = {"abac": None, "organization": None, "system": None}
+    with engine.connect() as connection:
+        connection = connection.execution_options(schema_translate_map=schema_map)
+        monkeypatch.setattr(
+            migration,
+            "op",
+            Operations(MigrationContext.configure(connection)),
+        )
+
+        migration.upgrade()
+
+        table_names = set(sa.inspect(connection).get_table_names())
+        assert {"organization_admin_policy", "organization", "user", "outage"} <= (
+            table_names
+        )
+
+        migration.downgrade()
+
+        assert sa.inspect(connection).get_table_names() == []
+    engine.dispose()

@@ -1,11 +1,13 @@
 """Create transport-only API endpoints for commondb authentication commands."""
 
 from collections.abc import Callable
+from functools import partial
 from typing import Any, NoReturn
 
 from fastapi import APIRouter, FastAPI
 from fastapi.concurrency import run_in_threadpool
 
+from gen_epix.commondb.api import exc as api_exc
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.fastapp import App
@@ -28,9 +30,8 @@ def create_auth_endpoints(
         handle_exception: Exception adapter used by endpoint handlers.
         **kwargs: Unused router composition options.
     """
-    # TODO: LSP-3893 Calling with the default handle_exception=None raises here;
-    # clarify whether omission should register endpoints or be rejected by the signature.
-    assert handle_exception
+    if handle_exception is None:
+        handle_exception = partial(api_exc.handle_exception, app, None)
     app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
 

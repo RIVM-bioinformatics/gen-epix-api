@@ -49,9 +49,7 @@ class AstMeasurement(
     Model,
     HasSampleMixin,
     HasProtocolMixin,
-    # TODO: LSP-3893 AST format=1 resolves to PcrResultFormat, unlike the SQL model's
-    # AstResultFormat; confirm whether the domain model should use the AST enum.
-    ContentMixin[enum.PcrResultFormat],
+    ContentMixin[enum.AstResultFormat],
     QualityMixin,
 ):
     """Represents an antimicrobial-susceptibility measurement from a sample.

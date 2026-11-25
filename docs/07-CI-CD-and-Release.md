@@ -98,22 +98,23 @@ Security Note: Publishing is configured with `id-token: write` and a named `PyPI
 
 ## 6. Container Model
 
-The root `Dockerfile` is written for CASEDB (port 8000) but the pattern is identical for every app; only the module path and port change.
+The root `Dockerfile` builds the image for the local and public compose stacks (`docker-compose.yml`, `docker-compose.sql.yml`, `docker-compose.sql.idp.yml`). It has no `CMD`: each compose service sets its own command, such as `python run.py api SEQDB MOCK SA_SQL --noreload`, an Alembic migration or the mock OIDC server. No CI workflow builds it. The deployed image is built from `lsp-api/Dockerfile` in the lsp-api repository, and the root `Dockerfile` mirrors it apart from the hardened base image, the Kubernetes entrypoint, the Azure libraries and the OCI labels (see the header of the `Dockerfile`).
 
 Key steps in the image:
-1. Installs `msodbcsql18` — required for the `SA_SQL` repository backend (SQL Server via pyodbc).
-2. Creates a non-root `appuser` (UID 10001) for security.
+1. Starts from `python:3.14.x-slim` on Debian 13, the Debian release of the deployed image.
+2. Installs `msodbcsql18` from Microsoft's Debian 13 feed, which the `SA_SQL` repository backend needs (SQL Server via pyodbc), and sets `SECLEVEL=0` for the ODBC driver.
 3. Installs Python dependencies from `requirements.txt` with layer caching.
-4. Copies the full source tree into `/app`.
-5. Adds a health-check (`curl /v1/health`).
+4. Copies the source tree into `/app`, without `cert/` (excluded by `.dockerignore`), so `run.py` serves plain HTTP.
+5. Runs as the non-root user `1001:1001`, which owns `/app` and the writable `/app/tmp`, `/app/cache` and `/app/logs`.
+6. Adds a health check (`curl /v1/health` on port 8000); the compose files set one per service.
 
-The intended production `CMD` (commented out in the current Dockerfile) is:
+A multi-worker container would run:
 
 ```
 gunicorn --preload -k uvicorn.workers.UvicornWorker gen_epix.casedb.app:FAST_API
 ```
 
-`--preload` runs the app module once in the master process before forking workers, so `AppCfg` + `AppComposer` execute only once and the resulting `FAST_API` object is shared across all workers via copy-on-write. (Source: `Dockerfile`)
+`--preload` runs the app module once in the master process before forking workers, so `AppCfg` + `AppComposer` execute only once and the resulting `FAST_API` object is shared across all workers via copy-on-write.
 
 ---
 
