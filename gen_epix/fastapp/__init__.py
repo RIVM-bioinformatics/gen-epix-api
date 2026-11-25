@@ -30,6 +30,7 @@ from gen_epix.fastapp.enum import FieldTypeSet as FieldTypeSet
 from gen_epix.fastapp.enum import HttpMethod as HttpMethod
 from gen_epix.fastapp.enum import HttpProtocol as HttpProtocol
 from gen_epix.fastapp.enum import IsolationLevel as IsolationLevel
+from gen_epix.fastapp.enum import IsolationLevelSet as IsolationLevelSet
 from gen_epix.fastapp.enum import LogLevel as LogLevel
 from gen_epix.fastapp.enum import OAuthFlow as OAuthFlow
 from gen_epix.fastapp.enum import OnException as OnException

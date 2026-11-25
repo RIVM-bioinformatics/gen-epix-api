@@ -1,5 +1,51 @@
 # CHANGELOG
 
+## [11.1.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v11.0.0...v11.1.0) (2026-11-19)
+
+
+### Features
+
+* **auth:** add local Keycloak IDP and smoke test ([#801](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/801)) ([16d181d](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/16d181ddd591068ec11b097724a32a00fd8ca83a))
+* **fastapp:** let an app log no stack trace for registered exception types ([#856](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/856)) ([1777ade](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/1777adec336bdb91019001de5ace13effc65aa52))
+* LSP-3717 updated validation retrieval of cases with a query ([#861](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/861)) ([ee9ced0](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/ee9ced087fc46970a140c5fdc96ca0a718b66674))
+* release 6 ([#882](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/882)) ([6a3c291](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/6a3c2911e25d47910f5e301a16ab7e5354ff064e))
+* **startup-benchmark:** add startup measurement framework ([#798](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/798)) ([2e516f6](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/2e516f64b67cf2d15da4be184a9b238b7ac5783f))
+* upload integration tests to run on both DICT and SQLite modes ([#844](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/844)) ([d73773a](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/d73773a7ab0f9b76bc6ba530168d9b3ebe10490b))
+
+
+### Bug Fixes
+
+* **auth:** route JWTs to the matching identity provider before loadin… ([#816](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/816)) ([29e0074](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/29e00740fe64f0541714ce156bbd58fc4007b446))
+* **casedb:** composite filter processing for retrieving cases by query ([#870](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/870)) ([9ecee86](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/9ecee86323eb902272037a7f305483e4d83f6924))
+* **client:** LSP-4129 keep the remote HTTP status on client errors ([f2039fe](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/f2039fe965da34020df54f21b0df9c681d6ee560))
+* **client:** LSP-4129 keep the remote HTTP status on client errors ([#850](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/850)) ([a6df256](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/a6df25604c9d5083d3c9238ee0ce63d77ec6b861))
+* **deps:** update dependency alembic to v1.20.1 ([#830](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/830)) ([6c2b5c0](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/6c2b5c09e5a82ada82c49a731174ab738d765f9a))
+* **deps:** update dependency cachetools to v7.3.0 ([#836](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/836)) ([a807069](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/a807069591fba8dae21eaff2e57862cdc5a10f5c))
+* **deps:** update dependency cachetools to v7.3.1 ([#868](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/868)) ([559d7bf](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/559d7bf53d2ddf0e2265f15c3bdf5bd9075e9daa))
+* **deps:** update dependency cachetools to v8 ([#875](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/875)) ([b9a369f](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/b9a369f84a31c1d04f4f8b06797b2095dfa42789))
+* **deps:** update dependency fastapi to &gt;=0.162.2,&lt;0.163.0 ([#839](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/839)) ([18b3901](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/18b39015497c8cd3cab397e30217a76f08fc6003))
+* **deps:** update dependency gunicorn to v27 ([#876](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/876)) ([37aee30](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/37aee305e01c763307ba4afc1e84fae61c8d3707))
+* **deps:** update dependency httpx2 to v2.16.0 ([#873](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/873)) ([879d8af](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/879d8af9b6c9e7bea0a5cbb6b80320856a0aa4b3))
+* **deps:** update dependency oauthlib to v4.0.1 [security] ([#855](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/855)) ([0996037](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/0996037f8aa175f983dec6e1a257ba9570c5cfc2))
+* **deps:** update dependency pydantic to v2.14.3 ([#860](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/860)) ([f63446c](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/f63446ca5ec357f44f23e3dc6498064379a4f0b5))
+* **deps:** update dependency python-dateutil to v4 ([#877](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/877)) ([83c9fa7](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/83c9fa76b82ac5bbc660c3193f3f78946a7e5247))
+* **deps:** update dependency python-multipart to v0.0.33 ([#865](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/865)) ([2ac18da](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/2ac18da506110766b0fde800b18b8d54c18c0c37))
+* **deps:** update dependency starlette to ==1.10.* ([#874](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/874)) ([9a88262](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/9a88262547489f9b3496271fb7dbf684f8ed43f8))
+* **fastapp:** bound discovery in services.auth.oauth_token_client ([#824](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/824)) ([093fb82](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/093fb82537e284acf9ea0a9c08ecb7d60fcfa0ad))
+* **filter:** LSP-4237 make CompositeFilter annotation valid on Python 3.13 ([#862](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/862)) ([75bae9e](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/75bae9e228dd59f2e53005cfe26c0bdf7204d4fb))
+* **repository:** read all ids without an IN list of every id on SQL Server ([#886](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/886)) ([98bebe1](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/98bebe1af5bd7d89fa73b94b3a1dce8f76e789db))
+* **system:** delete operational data in bounded batches (LSP-4289) ([78e71d3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/78e71d3fe5bb19b2e0a71ea2f2b3df303b14ff0d))
+* **system:** delete operational data in bounded batches (LSP-4289) ([#888](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/888)) ([c332a11](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c332a119f092d392a0e814013696cc6c6744d0e5))
+* **system:** log each delete-all batch, smaller batches for Seq (LSP-4289) ([b999533](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/b9995336741e1551c1bc272754de55061ebe851d))
+* **system:** log each delete-all batch, smaller batches for Seq (LSP-4289) ([#890](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/890)) ([a8ee1ac](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/a8ee1ace91569618ba0745a5f3a1298f75ae22a8))
+* **upload:** LSP-4178 check unchangeable fields during verification ([#863](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/863)) ([34a119e](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/34a119e1e3df59dc6714e0ecae804b2f54f07c66))
+
+
+### Documentation
+
+* remove link to former gen-epix overview repository ([db5e03e](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/db5e03e968985d6d88a10dcf1f9c8abe4e1aaa2c))
+* remove link to former gen-epix overview repository ([#852](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/852)) ([7db62c0](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/7db62c0f383bbe8afc5230e75d4d80780b9b14c2))
+
 ## [11.0.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v10.0.0...v11.0.0) (2026-10-29)
 
 

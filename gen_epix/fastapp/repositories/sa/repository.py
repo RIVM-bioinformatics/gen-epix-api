@@ -10,12 +10,12 @@ from typing import Any, Self, cast
 import sqlalchemy as sa
 from sqlalchemy import Engine, delete, event, inspect, select
 from sqlalchemy.engine import make_url
-from sqlalchemy.exc import SAWarning
+from sqlalchemy.exc import ArgumentError, SAWarning
 from sqlalchemy.orm import Session, sessionmaker
 
 import gen_epix.fastapp.exc as exc
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import CrudOperation, IsolationLevel
+from gen_epix.fastapp.enum import CrudOperation, IsolationLevel, IsolationLevelSet
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.sa.engine_factory import EngineFactory
 from gen_epix.fastapp.repositories.sa.mapper import (
@@ -341,11 +341,13 @@ class SARepository(BaseRepository):
             engine.dispose()
 
     def __init__(self, engine: Engine, **kwargs: Any):
-        """
-        Initialise the repository with the provided SQLAlchemy engine.
+        """Initialise the repository with the provided SQLAlchemy engine.
 
         Registers mappers for each persistable entity and creates per-
         isolation-level session factories.
+
+        Raises:
+            ArgumentError: A required isolation level is unsupported by the dialect.
         """
         # TODO: 2953 remove register_mappers argument
         register_mappers: bool = kwargs.pop("register_mappers", True)
@@ -365,14 +367,33 @@ class SARepository(BaseRepository):
             )
         )
 
-        # Create a session maker per isolation level
+        # These dialects report their supported levels without opening a connection.
+        dialect = engine.dialect
+        supported_levels = dialect.get_isolation_level_values(None)  # type: ignore[arg-type]
         self._default_isolation_level: IsolationLevel = IsolationLevel.SERIALIZABLE
-        self._session_maker_by_isolation_level: dict[IsolationLevel, sessionmaker] = {
-            x: sessionmaker(
-                engine.execution_options(isolation_level=x.sqlalchemy_value)
+        self._session_maker_by_isolation_level: dict[IsolationLevel, sessionmaker] = {}
+        for isolation_level in IsolationLevel:
+            sa_isolation_level = isolation_level.get_sqlalchemy_value()
+            if (
+                dialect.name == "sqlite"
+                and isolation_level
+                in IsolationLevelSet.SQLITE_SERIALIZABLE_FALLBACK.value
+            ):
+                sa_isolation_level = IsolationLevel.SERIALIZABLE.get_sqlalchemy_value()
+            if sa_isolation_level not in supported_levels:
+                if (
+                    isolation_level is IsolationLevel.SNAPSHOT
+                    and dialect.name != "mssql"
+                ):
+                    continue
+                raise ArgumentError(
+                    f"{dialect.name} does not support isolation level {sa_isolation_level!r} "
+                    f"mapped from {isolation_level.name}. Supported levels: "
+                    f"{', '.join(sorted(supported_levels))}."
+                )
+            self._session_maker_by_isolation_level[isolation_level] = sessionmaker(
+                engine.execution_options(isolation_level=sa_isolation_level)
             )
-            for x in IsolationLevel
-        }
 
         # Initialize remaining properties
         self._mapper_by_model: dict[type[Any], BaseSAMapper] = {}
@@ -450,11 +471,19 @@ class SARepository(BaseRepository):
         expire_on_commit: bool = False,
         **kwargs: Any,
     ) -> Session:
-        """Create and return a new SA session at the given isolation level."""
+        """Create and return a new SA session at the given isolation level.
+
+        Raises:
+            ArgumentError: The requested isolation level is unavailable for this dialect.
+        """
         isolation_level = isolation_level or self._default_isolation_level
-        session: Session = self._session_maker_by_isolation_level[isolation_level](
-            expire_on_commit=expire_on_commit
-        )
+        session_factory = self._session_maker_by_isolation_level.get(isolation_level)
+        if session_factory is None:
+            raise ArgumentError(
+                f"{self._engine.dialect.name} does not support isolation level "
+                f"{isolation_level.value!r}."
+            )
+        session: Session = session_factory(expire_on_commit=expire_on_commit)
         return session
 
     def _init_mappers(
@@ -643,6 +672,7 @@ class SARepository(BaseRepository):
                     filter,
                     session=session,
                     return_id=return_id,
+                    limit=limit,
                     **kwargs,
                 )
             case CrudOperation.EXISTS_ONE:
@@ -1127,77 +1157,77 @@ class SARepository(BaseRepository):
         user_id: Hashable,
         filter: Filter | None,
         return_id: bool = False,
+        limit: int = 0,
         **kwargs: Any,
-    ) -> list[Hashable] | None:
-        """Delete all rows, optionally filtered, returning ids when requested."""
-        # Check arguments
+    ) -> list[Hashable] | int | None:
+        """Delete all rows, optionally filtered and limited.
+
+        Args:
+            model_class: Model whose rows are deleted.
+            user_id: Executing user.
+            filter: Optional repository-side filter.
+            return_id: Return the ids of the deleted rows.
+            limit: Delete at most this many rows when greater than zero. Repeating
+                the call until fewer than ``limit`` rows are deleted removes all
+                matching rows in bounded batches.
+            **kwargs: ``session``, ``obj_filter`` and ``return_count``. With
+                ``return_count`` the number of deleted rows is returned and the ids
+                are not read when no filter applies.
+
+        Returns:
+            The deleted ids with ``return_id``, the number of deleted rows with
+            ``return_count``, otherwise None.
+        """
         session: Session = kwargs.get("session")  # type: ignore[assignment]
-        # Delete rows
+        return_count: bool = kwargs.pop("return_count", False)
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
+        id_column = mapper.get_row_id_column()
         obj_filter: Filter | None = kwargs.get("obj_filter", None)
 
-        def _execute(session: Session) -> list[Hashable] | None:
+        def _execute(session: Session) -> list[Hashable] | int | None:
             """Execute the requested value."""
-            row_ids: list[Hashable] | None = None
-
             # filter and/or obj_filter provided
             if filter or obj_filter:
-                # Read all row ids matching filter and obj_filter, then delete those
+                # Read the row ids matching filter and obj_filter, then delete those
                 row_ids = self.read_all(  # type: ignore[assignment]
                     model_class,
                     filter,
                     session=session,
                     return_id=True,
+                    limit=limit,
                     obj_filter=obj_filter,
                 )
                 assert row_ids is not None
-                stmt = delete(row_class).where(mapper.get_row_id_column().in_(row_ids))
-                session.execute(stmt)
+                if row_ids:
+                    session.execute(delete(row_class).where(id_column.in_(row_ids)))
+                if return_count:
+                    return len(row_ids)
                 return row_ids if return_id else None
 
-            # Delete all rows
+            # No filter
             if return_id:
-                # Get ids
-                row_ids = [
-                    x[0]
-                    for x in session.execute(select(mapper.get_row_id_column())).all()
-                ]
+                stmt = select(id_column)
+                if limit > 0:
+                    stmt = stmt.limit(limit)
+                row_ids = [x[0] for x in session.execute(stmt).all()]
+                if limit <= 0:
+                    session.execute(delete(row_class))
+                elif row_ids:
+                    session.execute(delete(row_class).where(id_column.in_(row_ids)))
+                return row_ids
+            if limit > 0:
+                # Delete a batch without reading its ids into Python
+                result = session.execute(
+                    delete(row_class).where(
+                        id_column.in_(select(id_column).limit(limit))
+                    )
+                )
+            else:
+                result = session.execute(delete(row_class))
+            return result.rowcount if return_count else None  # type: ignore[attr-defined]
 
-            # # TODO: workaround for SQLite foreign key constraint issues. Remove ASAP.
-            # # Check if this is SQLite and if we need to handle foreign key constraints
-            # is_sqlite = "sqlite" in str(session.get_bind().url).lower()
-            # needs_fk_workaround = False
-            # # For SQLite with schemas (using ATTACH DATABASE), foreign key constraints
-            # # can cause issues when referencing tables across schemas. Check if this table
-            # # has foreign keys that might need special handling.
-            # if is_sqlite and hasattr(row_class, "__table__"):
-            #     table = row_class.__table__
-            #     for fk in table.foreign_keys:
-            #         # If foreign key references a table in the same schema, it should work
-            #         # If it references a different schema or has schema prefix issues, we might need workaround
-            #         referenced_table = fk.column.table
-            #         if referenced_table.schema != table.schema or table.name in [
-            #             "measurement_relation"
-            #         ]:  # Known problematic tables
-            #             needs_fk_workaround = True
-            #             break
-            # # Temporarily disable foreign key constraints if needed
-            # if needs_fk_workaround:
-            #     session.execute(sa.text("PRAGMA foreign_keys=OFF"))
-            #     session.flush()
-            # Delete rows
-            session.execute(delete(row_class))
-            # # Re-enable foreign keys if we disabled them
-            # if needs_fk_workaround:
-            #     session.execute(sa.text("PRAGMA foreign_keys=ON"))
-            #     session.flush()
-            # # TODO: end of workaround for SQLite foreign key constraint issues. Remove ASAP.
-
-            return row_ids
-
-        deleted_row_ids = self._execute_sa(session, _execute, kwargs)
-        return deleted_row_ids if return_id else None
+        return self._execute_sa(session, _execute, kwargs)
 
     def exists_one(
         self, model_class: type[Model], obj_id: Hashable, **kwargs: Any
