@@ -321,7 +321,7 @@ class BatchUploader:
     def verify_user_rights(self, cmd: command.Command) -> None:
         """Verify command type and RBAC rights for uploading.
 
-        ABAC rights are not verified here since this requires knowing per batch 
+        ABAC rights are not verified here since this requires knowing per batch
         element whether it already exists in the database and what data collection(s)
         it belongs to, which is only determined during batch verification. ABAC rights
         are therefore verified during batch verification.
@@ -346,7 +346,6 @@ class BatchUploader:
                 "d8c05dc7",
                 f"User {None if cmd.user is None else cmd.user.id} does not have a role that allows to upload",
             )
-
 
     def init_batch_upload_result(
         self, cmd: command.UploadBatchCommandMixin
