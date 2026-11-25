@@ -54,6 +54,7 @@ class SARepository(BaseRepository):
 
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
     DEFAULT_MAX_PARAMETERS_IN_CLAUSE = 1000
+    DEFAULT_ISOLATION_LEVEL = IsolationLevel.SERIALIZABLE
 
     @classmethod
     def _process_repository_params(
@@ -370,7 +371,7 @@ class SARepository(BaseRepository):
         # These dialects report their supported levels without opening a connection.
         dialect = engine.dialect
         supported_levels = dialect.get_isolation_level_values(None)  # type: ignore[arg-type]
-        self._default_isolation_level: IsolationLevel = IsolationLevel.SERIALIZABLE
+        self._default_isolation_level = self.DEFAULT_ISOLATION_LEVEL
         self._session_maker_by_isolation_level: dict[IsolationLevel, sessionmaker] = {}
         for isolation_level in IsolationLevel:
             sa_isolation_level = isolation_level.get_sqlalchemy_value()

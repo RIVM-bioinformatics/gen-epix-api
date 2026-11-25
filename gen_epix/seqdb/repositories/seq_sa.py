@@ -9,7 +9,7 @@ from uuid import UUID
 import sqlalchemy as sa
 
 import gen_epix.seqdb.repositories.sa_model as sa_model
-from gen_epix.fastapp import BaseUnitOfWork
+from gen_epix.fastapp import BaseUnitOfWork, IsolationLevel
 from gen_epix.fastapp.repositories import SARepository, SAUnitOfWork
 from gen_epix.fastapp.repositories.sa import ServerUtcCurrentTime
 from gen_epix.seqdb.domain import enum, exc, model
@@ -18,6 +18,8 @@ from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
 class SeqSARepository(SARepository, BaseSeqRepository):
     """Encapsulates seqdb persistence behavior for sequence repositories using SQLAlchemy backends."""
+
+    DEFAULT_ISOLATION_LEVEL = IsolationLevel.REPEATABLE_READ
 
     def get_sample_ids_modified_in_range(
         self,

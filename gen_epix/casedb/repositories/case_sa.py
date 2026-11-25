@@ -10,6 +10,7 @@ from sqlalchemy.sql import Select
 from gen_epix.casedb.domain import enum, model
 from gen_epix.casedb.domain.repository import BaseCaseRepository
 from gen_epix.casedb.repositories import sa_model as sa_model
+from gen_epix.fastapp import IsolationLevel
 from gen_epix.fastapp.repositories import SARepository
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -18,6 +19,8 @@ from gen_epix.filter.datetime_range import DatetimeRangeFilter
 
 class CaseSARepository(SARepository, BaseCaseRepository):
     """Encapsulates SQLAlchemy-backed persistence for casedb case data."""
+
+    DEFAULT_ISOLATION_LEVEL = IsolationLevel.REPEATABLE_READ
 
     def retrieve_case_stats(
         self,
