@@ -39,19 +39,19 @@ class PersonBatchUploader(BatchUploader):
             raise exc.InvalidArgumentsError("38bd57d4", "Invalid service type")
         self.service: BaseOmopService = service
 
-    def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
-        """Verify rights for a person-upload command.
+    # def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
+    #     """Verify rights for a person-upload command.
 
-        Args:
-            cmd: Batch command whose user permissions are being checked.
+    #     Args:
+    #         cmd: Batch command whose user permissions are being checked.
 
-        Raises:
-            InvalidArgumentsError: If `cmd` is not an upload-persons command.
-        """
-        # Verify command type
-        if not isinstance(cmd, command.UploadPersonsCommand):
-            raise exc.InvalidArgumentsError("f8dbeb8d", _INVALID_COMMAND_TYPE)
-        # TODO: implement additional user rights verifications as necessary
+    #     Raises:
+    #         InvalidArgumentsError: If `cmd` is not an upload-persons command.
+    #     """
+    #     # Verify command type
+    #     if not isinstance(cmd, command.UploadPersonsCommand):
+    #         raise exc.InvalidArgumentsError("f8dbeb8d", _INVALID_COMMAND_TYPE)
+    #     # TODO: implement additional user rights verifications as necessary
 
     def verify_batch(
         self,

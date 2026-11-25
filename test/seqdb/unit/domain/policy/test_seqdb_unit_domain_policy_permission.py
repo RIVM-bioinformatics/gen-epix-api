@@ -71,3 +71,21 @@ def test_hierarchy_inherits_descendant_permissions_without_sibling_leakage() -> 
     assert sample_read in RoleGenerator.ROLE_PERMISSIONS[Role.ORG_ADMIN]
     assert sample_read not in RoleGenerator.ROLE_PERMISSIONS[Role.REFDATA_ADMIN]
     assert Role.ORG_USER in RoleGenerator.ROLE_HIERARCHY[Role.ORG_ADMIN]
+
+
+def test_only_root_can_update_or_delete_ref_sequences() -> None:
+    """Keep RefSeq update and delete grants exclusive to the ROOT role."""
+    protected_permissions = {
+        (command.RefSeqCrudCommand, PermissionType.UPDATE),
+        (command.RefSeqCrudCommand, PermissionType.DELETE),
+    }
+
+    assert protected_permissions <= RoleGenerator.ROLE_PERMISSIONS[Role.ROOT]
+    for role in (
+        Role.APP_ADMIN,
+        Role.ORG_ADMIN,
+        Role.REFDATA_ADMIN,
+        Role.ORG_USER,
+        Role.GUEST,
+    ):
+        assert not protected_permissions & RoleGenerator.ROLE_PERMISSIONS[role]

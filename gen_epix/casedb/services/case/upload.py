@@ -63,33 +63,33 @@ class CaseBatchUploader(BatchUploader):
             raise exc.InvalidArgumentsError("915489e8", "Invalid service type")
         self.service: BaseCaseService = service
 
-    def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
-        """Verify command type and RBAC rights for uploading cases.
+    # def verify_user_rights(self, cmd: UploadBatchCommandMixin) -> None:
+    #     """Verify command type and RBAC rights for uploading cases.
 
-        ABAC rights are not verified here since this requires knowing per case whether
-        it already exists in the database and what data collection(s) it belongs to,
-        which is only determined during batch verification. ABAC rights are therefore
-        verified during batch verification.
+    #     ABAC rights are not verified here since this requires knowing per case whether
+    #     it already exists in the database and what data collection(s) it belongs to,
+    #     which is only determined during batch verification. ABAC rights are therefore
+    #     verified during batch verification.
 
-        Args:
-            cmd: Batch command to authorize.
+    #     Args:
+    #         cmd: Batch command to authorize.
 
-        Raises:
-            InvalidArgumentsError: If ``cmd`` is not an upload-cases command.
-            UnauthorizedAuthError: If the user lacks a case-data role.
-        """
-        # Verify command type
-        if not isinstance(cmd, command.UploadCasesCommand):
-            raise exc.InvalidArgumentsError("510ea98a", _INVALID_COMMAND_TYPE)
+    #     Raises:
+    #         InvalidArgumentsError: If ``cmd`` is not an upload-cases command.
+    #         UnauthorizedAuthError: If the user lacks a case-data role.
+    #     """
+    #     # Verify command type
+    #     if not isinstance(cmd, command.UploadCasesCommand):
+    #         raise exc.InvalidArgumentsError("510ea98a", _INVALID_COMMAND_TYPE)
 
-        # Verify user has at least one role that may manipulate case data
-        if cmd.user is not None and not cmd.user.roles.intersection(
-            self.service.role_set_map[RoleSet.GE_ORG_USER]
-        ):
-            raise exc.UnauthorizedAuthError(
-                "d8c05dc7",
-                f"User {None if cmd.user is None else cmd.user.id} is not allowed to manipulate case data",
-            )
+    #     # Verify user has at least one role that may manipulate case data
+    #     if cmd.user is not None and not cmd.user.roles.intersection(
+    #         self.service.role_set_map[RoleSet.GE_ORG_USER]
+    #     ):
+    #         raise exc.UnauthorizedAuthError(
+    #             "d8c05dc7",
+    #             f"User {None if cmd.user is None else cmd.user.id} is not allowed to manipulate case data",
+    #         )
 
     def verify_batch(
         self,
@@ -886,7 +886,7 @@ class CaseBatchUploader(BatchUploader):
         )
         # Create command if any samples for upload were found
         if not samples_for_upload:
-            return True, None, child_index_map
+            return success, None, child_index_map
         batch_id = UUID(sha256(cmd.id.bytes).digest()[:16].hex())
         upload_samples_cmd = seqdb_command.UploadSamplesCommand(
             user=cmd.user,
@@ -989,6 +989,13 @@ class CaseBatchUploader(BatchUploader):
             )
             return None
         if sample_index_by_id is not None:
+            if has_external_id and sample_index_by_external_id is None:
+                assert external_sample_id is not None
+                existing_sample = samples_for_upload[sample_index_by_id]
+                if existing_sample.identifiers is None:
+                    existing_sample.identifiers = []
+                existing_sample.identifiers.append(external_sample_id)
+                sample_external_id_to_index_map[external_sample_id] = sample_index_by_id
             return sample_index_by_id
         if sample_index_by_external_id is not None:
             assert external_sample_id is not None

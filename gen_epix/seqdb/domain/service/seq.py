@@ -3,8 +3,10 @@
 import abc
 import datetime
 from collections.abc import Iterable
+from typing import Any
 from uuid import UUID
 
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.domain.enum import ServiceType
@@ -14,6 +16,12 @@ class BaseSeqService(BaseService):
     """Encapsulates seqdb handlers implemented by concrete sequence services."""
 
     SERVICE_TYPE = ServiceType.SEQ
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize shared sequence-service metadata from the app implementation."""
+        super().__init__(*args, **kwargs)
+        app_impl: AppImplDetails = self.app.impl
+        self.role_set_map = app_impl.role_set_map
 
     def register_handlers(self) -> None:
         """Register default CRUD and seqdb-specific sequence command handlers."""

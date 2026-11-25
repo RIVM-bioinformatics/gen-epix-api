@@ -3,6 +3,8 @@
 import inspect
 from test.util.mock_compat import MagicMock, call
 
+import pytest
+
 from gen_epix.seqdb.domain import command
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 
@@ -95,3 +97,13 @@ def test_register_handlers_binds_sequence_commands_to_service_methods():
 def test_base_seq_service_remains_abstract():
     """Keep sequence operations abstract on the shared base service."""
     assert inspect.isabstract(BaseSeqService)
+
+
+@pytest.mark.parametrize("method_name", sorted(BaseSeqService.__abstractmethods__))
+def test_abstract_handlers_raise_not_implemented(method_name: str) -> None:
+    """Keep each abstract sequence handler's base implementation explicit."""
+    service = MagicMock(spec=BaseSeqService)
+    handler = getattr(BaseSeqService, method_name)
+
+    with pytest.raises(NotImplementedError):
+        handler(service, None)

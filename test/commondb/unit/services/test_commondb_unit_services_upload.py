@@ -106,7 +106,11 @@ from test.commondb.unit.upload.model import (
 from test.commondb.unit.upload.model import (
     ParentUploadResult as FixtureParentUploadResult,
 )
-from test.commondb.unit.upload.model import Ref1, Ref2, UploadParentsCommand
+from test.commondb.unit.upload.model import (
+    Ref1,
+    Ref2,
+    UploadParentsCommand,
+)
 from test.util.mock_compat import Mock
 from typing import Any
 from uuid import UUID, uuid4
@@ -114,7 +118,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from gen_epix.commondb.domain import command, exc
-from gen_epix.commondb.domain.enum import Role, UploadAction
+from gen_epix.commondb.domain.enum import Role, RoleSet, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import (
     IdentifierForUpload,
@@ -192,6 +196,11 @@ class BaseUploadTestCase:
         self.service = Mock(spec=BaseService)
         self.service.generate_id = Mock(side_effect=uuid4)
         self.service.repository = Mock()
+        self.service.role_set_map = {
+            RoleSet.GE_ORG_USER: frozenset(
+                role.value for role in RoleSet.GE_ORG_USER.value
+            )
+        }
 
         # Mock UOW context manager
         self.uow = Mock(spec=BaseUnitOfWork)

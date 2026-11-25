@@ -7,7 +7,7 @@ models and declare service-handler inputs; they do not perform persistence.
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 import gen_epix.commondb.domain.model.organization as model
 from gen_epix.commondb.domain.command.base import (
@@ -69,16 +69,25 @@ class DataCollectionSetDataCollectionUpdateAssociationCommand(UpdateAssociationC
 class InviteUserCommand(Command):
     """Represents a request to create and return a {user_invitation} for a new user.
 
-    The invitation records a particular user key claim (e.g. email address),
-    organization and initial role(s).
-
-    A random unique token is added to the invitation, and to be provided to the
-    new user for consuming the invitation.
+        The invitation records a particular user key claim (e.g. email address),
+        organization and initial role(s).
+    #
+        A random unique token is added to the invitation, and to be provided to the
+        new user for consuming the invitation.
     """
 
     __doc__ = str(__doc__).format(user_invitation=model.UserInvitation.__name__)
 
     key: str | None = copy_model_field(model.UserInvitation, "key")
+
+    @field_validator("key", mode="before")
+    @classmethod
+    def _validate_key(cls, value: str | None) -> str | None:
+        """Normalize an empty invitation key to an omitted key."""
+        if value == "":
+            return None
+        return value
+
     email: str | None = copy_model_field(model.UserInvitation, "email")
     name: str | None = copy_model_field(model.UserInvitation, "name")
     description: str | None = copy_model_field(model.UserInvitation, "description")

@@ -2,7 +2,7 @@ import json
 from collections.abc import Callable, Iterator
 from datetime import datetime, timezone
 from test.util.mock_compat import Mock, patch
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -20,13 +20,21 @@ from gen_epix.seqdb.services.seq.calculate_seq_distance import (
     _NULL_ALLELE,
     _calculate_and_store_distances,
     _calculate_distance_for_decoded_profile_pair,
+    _calculate_nextclade_snp_hamming_distance,
     _calculate_pairwise_profile_distances,
+    _calculate_profile_distance,
     _decode_profile,
     _encode_to_int32,
+    _group_profiles_and_distance_protocols_by_subset,
     _hamming_allele_int32_batch,
     _hamming_allele_numpy,
     _hamming_allele_numpy_batch,
+    _nextclade_position_state,
+    _parse_nextclade_profile,
+    _parse_nextclade_profile_content,
+    _process_existing_profile_chunk,
     seq_service_calculate_seq_distances_for_new_profiles,
+    seq_service_retrieve_seq_distance_last_modified,
     seq_service_update_seq_distances,
 )
 
@@ -2263,3 +2271,288 @@ class TestNumpyAlleleIntegration:
         # Locus-swap: distance must be 2, not 0.
         assert py_maps[n3_id][str(e1_id)] == 2.0
         assert py_maps[n3_id][str(e2_id)] == 1.0  # locus 1 differs (a1 vs a2)
+
+
+class TestSequenceDistanceCoverageEdges(BaseCalculateSeqDistanceTestCase):
+    def test_retrieve_last_modified_for_distance_protocol(self) -> None:
+        modified_at = datetime.now(timezone.utc)
+        protocol = _make_seq_distance_protocol_for_snp(
+            protocol_id=self.protocol_id,
+            ref_seq_id=self.ref_seq_id,
+        )
+        self.service.repository.uow.return_value = _mock_uow()
+        self.service.repository.crud.return_value = protocol
+        self.service.repository.get_max_seq_distance_modified_at.return_value = (
+            modified_at
+        )
+        cmd = command.RetrieveSeqDistanceLastModifiedCommand(
+            user=self.user,
+            protocol_id=self.protocol_id,
+        )
+
+        assert seq_service_retrieve_seq_distance_last_modified(self.service, cmd) == (
+            modified_at
+        )
+        self.service.repository.get_max_seq_distance_modified_at.assert_called_once()
+
+    def test_retrieve_last_modified_rejects_non_distance_protocol(self) -> None:
+        protocol = model.Protocol.model_construct(
+            protocol_type=enum.ProtocolType.SEQ_PROFILE,
+        )
+        self.service.repository.uow.return_value = _mock_uow()
+        self.service.repository.crud.return_value = protocol
+        cmd = command.RetrieveSeqDistanceLastModifiedCommand(
+            user=self.user,
+            protocol_id=self.protocol_id,
+        )
+
+        with pytest.raises(InvalidArgumentsError):
+            seq_service_retrieve_seq_distance_last_modified(self.service, cmd)
+
+        self.service.repository.get_max_seq_distance_modified_at.assert_not_called()
+
+    def test_update_returns_empty_when_no_profile_protocol_matches(self) -> None:
+        distance_protocol = _make_seq_distance_protocol_for_snp(
+            protocol_id=self.protocol_id,
+            ref_seq_id=self.ref_seq_id,
+        )
+
+        def _crud(
+            uow: Any,
+            user_id: Any,
+            model_class: type,
+            operation: CrudOperation,
+            **kwargs: Any,
+        ) -> Any:
+            if model_class is model.Protocol and operation == CrudOperation.READ_ONE:
+                return distance_protocol
+            if model_class is model.Protocol and operation == CrudOperation.READ_ALL:
+                return []
+            return []
+
+        self.service.repository.crud.side_effect = _crud
+        cmd = command.UpdateSeqDistancesCommand(
+            user=self.user,
+            protocol_id=self.protocol_id,
+        )
+
+        assert seq_service_update_seq_distances(self.service, cmd) == []
+        self.service.repository.get_profiles_without_seq_distance.assert_not_called()
+
+    def test_deleted_profile_between_reads_is_ignored(self) -> None:
+        repository = Mock()
+        repository.uow.return_value = _mock_uow()
+        repository.crud.return_value = []
+        repository.iter_seq_distances.return_value = iter(
+            [
+                _make_seq_distance(
+                    seq_distance_id=uuid4(),
+                    protocol_id=self.protocol_id,
+                    profile_id=self.existing_profile_id,
+                    sample_id=self.sample_id,
+                )
+            ]
+        )
+        protocol = _make_seq_distance_protocol_for_locus_set(
+            protocol_id=self.protocol_id,
+            locus_set_id=self.locus_set_id,
+            seq_distance_protocol_type=enum.SeqDistanceType.ALLELE_HAMMING,
+        )
+
+        assert (
+            _process_existing_profile_chunk(
+                repository,
+                self.user.id,
+                protocol,
+                [self.existing_profile_id],
+                1,
+                1,
+                enum.SeqProfileType.ALLELE,
+                [],
+                [],
+                None,
+                None,
+                False,
+                100.0,
+                {},
+                None,
+                0.0,
+            )
+            == []
+        )
+
+    def test_unsupported_profile_type_fallbacks_raise(self) -> None:
+        unknown_type = cast(enum.SeqProfileType, 99)
+        with pytest.raises(NotImplementedError, match="Unsupported seq profile type"):
+            _group_profiles_and_distance_protocols_by_subset(
+                unknown_type,
+                [],
+                {},
+                [],
+            )
+        with pytest.raises(NotImplementedError, match="Distance calculation"):
+            _decode_profile(
+                enum.SeqProfileType.KMER,
+                model.SeqProfile.model_construct(),
+            )
+        with pytest.raises(NotImplementedError, match="Distance calculation"):
+            _calculate_distance_for_decoded_profile_pair(
+                enum.SeqProfileType.KMER,
+                [],
+                [],
+            )
+
+    @pytest.mark.parametrize(
+        "content, message",
+        [
+            ("[]", "JSON object"),
+            ("{}", "substitutions"),
+            ('{"substitutions":"invalid"}', "substitution token"),
+            ('{"substitutions":"", "deletions":"4-2"}', "position range"),
+            ('{"substitutions":"", "non_acgtns":"?1"}', "non_acgtns token"),
+            (
+                '{"substitutions":"", "alignment_start":5,"alignment_end":4}',
+                "alignment range",
+            ),
+        ],
+    )
+    def test_invalid_nextclade_content_is_rejected(
+        self, content: str, message: str
+    ) -> None:
+        with pytest.raises(ValueError, match=message):
+            _parse_nextclade_profile_content(content)
+
+    def test_non_nextclade_profile_is_not_parsed_as_nextclade(self) -> None:
+        profile = model.SeqProfile.model_construct(
+            format=enum.SeqProfileFormat.ORDERED_REPEAT_NUMBERS,
+        )
+        with pytest.raises(NotImplementedError, match="only Nextclade"):
+            _parse_nextclade_profile(profile)
+
+    def test_nextclade_position_state_handles_outside_and_reference(self) -> None:
+        profile = _make_snp_profile_for_upload(
+            profile_id=uuid4(),
+            sample_id=self.sample_id,
+            ref_seq_id=self.ref_seq_id,
+            protocol_id=self.protocol_id,
+            nextclade_content=_make_nextclade_content(
+                substitutions="A2T",
+                alignment_start=2,
+                alignment_end=3,
+            ),
+        )
+        parsed = _parse_nextclade_profile(profile)
+
+        assert _nextclade_position_state(parsed, 1) == ("outside", None)
+        assert _nextclade_position_state(parsed, 2) == ("base", "t")
+        assert _nextclade_position_state(parsed, 3) == ("reference", None)
+
+    def test_nextclade_hamming_handles_disjoint_and_overlapping_alignments(
+        self,
+    ) -> None:
+        first = _make_snp_profile_for_upload(
+            profile_id=uuid4(),
+            sample_id=self.sample_id,
+            ref_seq_id=self.ref_seq_id,
+            protocol_id=self.protocol_id,
+            nextclade_content=_make_nextclade_content(
+                substitutions="A2T",
+                alignment_start=1,
+                alignment_end=2,
+            ),
+        )
+        overlapping = _make_snp_profile_for_upload(
+            profile_id=uuid4(),
+            sample_id=self.sample_id2,
+            ref_seq_id=self.ref_seq_id,
+            protocol_id=self.protocol_id,
+            nextclade_content=_make_nextclade_content(
+                alignment_start=2,
+                alignment_end=3,
+            ),
+        )
+        disjoint = _make_snp_profile_for_upload(
+            profile_id=uuid4(),
+            sample_id=self.sample_id2,
+            ref_seq_id=self.ref_seq_id,
+            protocol_id=self.protocol_id,
+            nextclade_content=_make_nextclade_content(
+                alignment_start=4,
+                alignment_end=5,
+            ),
+        )
+
+        assert _calculate_nextclade_snp_hamming_distance(first, overlapping) == 3.0
+        assert _calculate_nextclade_snp_hamming_distance(first, disjoint) == 4.0
+
+    def test_profile_distance_supports_legacy_snp_allele_and_mlva(self) -> None:
+        snp1 = model.SeqProfile.model_construct(
+            seq_profile_type=enum.SeqProfileType.SNP,
+            format=enum.SeqProfileFormat.LOCUS_PROFILE_FORMAT1,
+            content="acnt",
+        )
+        snp2 = model.SeqProfile.model_construct(
+            seq_profile_type=enum.SeqProfileType.SNP,
+            format=enum.SeqProfileFormat.LOCUS_PROFILE_FORMAT1,
+            content="ag-a",
+        )
+        ref_seq = Mock()
+        ref_seq.get_nucleotide_seq.return_value = "acgt"
+        assert (
+            _calculate_profile_distance(
+                enum.SeqProfileType.SNP,
+                snp1,
+                snp2,
+                ref_seq=ref_seq,
+            )
+            == 2.0
+        )
+
+        allele_id1, allele_id2 = uuid4(), uuid4()
+        allele1 = _make_allele_profile(
+            profile_id=uuid4(),
+            sample_id=self.sample_id,
+            locus_set_id=self.locus_set_id,
+            protocol_id=self.locus_detection_protocol_id,
+            allele_ids=[allele_id1, None, allele_id2],
+        )
+        allele2 = _make_allele_profile(
+            profile_id=uuid4(),
+            sample_id=self.sample_id2,
+            locus_set_id=self.locus_set_id,
+            protocol_id=self.locus_detection_protocol_id,
+            allele_ids=[allele_id2, allele_id1, allele_id2],
+        )
+        assert (
+            _calculate_profile_distance(enum.SeqProfileType.ALLELE, allele1, allele2)
+            == 1.0
+        )
+
+        mlva1 = _make_mlva_profile(
+            profile_id=uuid4(),
+            sample_id=self.sample_id,
+            locus_set_id=self.locus_set_id,
+            protocol_id=self.locus_detection_protocol_id,
+            repeat_numbers=[1, 2, 3],
+        )
+        mlva2 = _make_mlva_profile(
+            profile_id=uuid4(),
+            sample_id=self.sample_id2,
+            locus_set_id=self.locus_set_id,
+            protocol_id=self.locus_detection_protocol_id,
+            repeat_numbers=[2, 2, 4],
+        )
+        assert (
+            _calculate_profile_distance(
+                enum.SeqProfileType.MLVA,
+                mlva1,
+                mlva2,
+                locus_set=Mock(),
+            )
+            == 2.0
+        )
+
+    def test_profile_distance_rejects_unimplemented_type(self) -> None:
+        profile = model.SeqProfile.model_construct()
+        with pytest.raises(NotImplementedError, match="Distance calculation"):
+            _calculate_profile_distance(enum.SeqProfileType.LOCUS, profile, profile)

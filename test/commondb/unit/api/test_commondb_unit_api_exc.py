@@ -5,7 +5,7 @@ from test.util.mock_compat import Mock
 import pytest
 from fastapi import HTTPException
 
-from gen_epix.commondb.api.exc import handle_exception
+from gen_epix.commondb.api.exc import handle_command, handle_exception
 from gen_epix.fastapp.exc import RemoteServiceError, ServiceException
 
 _REMOTE_MESSAGE = (
@@ -55,3 +55,14 @@ def test_plain_service_exception_keeps_its_own_status() -> None:
         handle_exception(_app(), None, "id", None, error)
 
     assert e.value.status_code == 409
+
+
+def test_handle_command_uses_builtin_handler_when_callback_is_omitted() -> None:
+    app = _app()
+    app.handle.side_effect = ValueError("command failed")
+
+    with pytest.raises(HTTPException) as error:
+        handle_command(app, None, "log-id", object(), None)
+
+    assert error.value.status_code == 500
+    app.create_log_message.assert_called_once()

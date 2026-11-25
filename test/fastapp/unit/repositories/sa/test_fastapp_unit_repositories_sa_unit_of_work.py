@@ -37,3 +37,19 @@ def test_unique_constraint_error_still_becomes_domain_exception():
 
     session.rollback.assert_called_once_with()
     session.close.assert_called_once_with()
+
+
+def test_foreign_key_error_is_not_misclassified_from_sql_text():
+    session = Mock()
+    original = IntegrityError(
+        "INSERT INTO table_with_unique_name VALUES (?)",
+        ("UNIQUE",),
+        Exception("FOREIGN KEY constraint failed"),
+    )
+
+    with pytest.raises(exc.LinkConstraintViolationError):
+        with SAUnitOfWork(session):
+            raise original
+
+    session.rollback.assert_called_once_with()
+    session.close.assert_called_once_with()

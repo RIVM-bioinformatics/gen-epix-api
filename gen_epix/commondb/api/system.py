@@ -7,7 +7,6 @@ from enum import Enum
 from typing import Any, NoReturn
 
 from fastapi import APIRouter, FastAPI
-from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import exc
 
@@ -28,7 +27,7 @@ from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.command.base import Command
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
-from gen_epix.fastapp.middleware.limiter import limiter
+from gen_epix.fastapp.middleware.limiter import LIMITER
 
 external_logger_fmap = exc.get_logger_fmap(logging.getLogger("commondb.external"))
 
@@ -97,7 +96,7 @@ def create_system_endpoints(
         operation_id="health",
         name="Health",
     )
-    @limiter.exempt  # type: ignore[misc]
+    @LIMITER.exempt  # type: ignore[misc]
     async def get__health() -> HealthResponseBody:
         """Return the service health status.
 

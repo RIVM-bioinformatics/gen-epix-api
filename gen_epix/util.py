@@ -341,10 +341,14 @@ def chunk_list(values: list, chunk_size: int | None) -> list[list]:
     Returns:
         The input values divided into consecutive chunks.
     """
+    if chunk_size is None:
+        if not values:
+            return []
+        return [values]
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
     if not values:
         return []
-    if chunk_size is None:
-        return [values]
     n = len(values)
     return [values[i : i + chunk_size] for i in range(0, n, chunk_size)]
 

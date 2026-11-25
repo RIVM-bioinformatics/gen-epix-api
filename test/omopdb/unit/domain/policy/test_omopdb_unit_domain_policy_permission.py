@@ -2,7 +2,7 @@ import pytest
 
 from gen_epix.fastapp.enum import PermissionType, PermissionTypeSet
 from gen_epix.omopdb.domain import command
-from gen_epix.omopdb.domain.enum import Role
+from gen_epix.omopdb.domain.enum import Role, ServiceType
 from gen_epix.omopdb.domain.policy.permission import RoleGenerator
 
 
@@ -70,6 +70,16 @@ def test_common_role_permissions_are_mapped_to_omop_commands() -> None:
         command.OrganizationCrudCommand,
         PermissionTypeSet.R,
     ) in RoleGenerator.ROLE_PERMISSION_SETS[Role.ORG_USER]
+
+
+def test_all_omop_service_commands_have_role_permissions() -> None:
+    mapped_commands = {
+        command_class
+        for role_permissions in RoleGenerator.ROLE_PERMISSION_SETS.values()
+        for command_class, _ in role_permissions
+    }
+
+    assert command.COMMANDS_BY_SERVICE_TYPE[ServiceType.OMOP] <= mapped_commands
 
 
 def test_hierarchical_roles_include_permissions_of_subroles() -> None:

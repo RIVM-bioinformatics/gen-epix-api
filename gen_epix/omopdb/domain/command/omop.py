@@ -66,9 +66,15 @@ class RetrieveSpecimenIdsByCohortIdsCommand(Command):
     """
 
     cohort_definition_id: UUID = Field(description="The cohort definition ID.")
-    # TODO: LSP-3893 Duplicate cohort IDs pass command validation despite the UNIQUE
-    # contract; repositories treat them as a set. Confirm whether to reject or normalize.
     cohort_ids: list[UUID] = Field(description="The cohort IDs to look up. UNIQUE")
+
+    @field_validator("cohort_ids", mode="after")
+    @classmethod
+    def _validate_cohort_ids(cls, cohort_ids: list[UUID]) -> list[UUID]:
+        """Validate that requested cohort identifiers are unique."""
+        if len(set(cohort_ids)) != len(cohort_ids):
+            raise ValueError("cohort_ids must be unique")
+        return cohort_ids
 
 
 # CRUD commands

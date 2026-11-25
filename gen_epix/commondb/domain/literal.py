@@ -36,11 +36,8 @@ TIME_WEEK_PATTERN = re.compile(r"^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$")
 TIME_DAY_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
 
 # TODO: consider full and partial ISO 8601 pattern
-# TODO: LSP-3893 `ISODATE_PATTERN.match("2024-06junk")` can accept the valid
-# `YYYY-MM` prefix; full-value validation may be expected, but callers might use
-# `fullmatch` and their matching contract has not been confirmed.
 ISODATE_PATTERN = re.compile(
-    r"^"
+    r"^(?:"
     r"\d{4}"  # YYYY (year only)
     r"|"
     r"\d{4}-(0[1-9]|1[0-2])"  # YYYY-MM (year + month only)
@@ -50,5 +47,5 @@ ISODATE_PATTERN = re.compile(
     r"\d{4}-Q[1-4]"  # YYYY-QN (quarter)
     r"|"
     r"\d{4}-W(0[1-9]|[1-4]\d|5[0-3])"  # YYYY-WNN (week)
-    r"$"
+    r")\Z"
 )

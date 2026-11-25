@@ -9,9 +9,7 @@ LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0"}
 
 def serialize_id(value: Hashable) -> str | None:
     """Serialize id."""
-    # TODO: LSP-3893 For a valid ID of 0, callers may expect "0", but this returns
-    # None; confirm whether falsey IDs are invalid or should be serialized.
-    return str(value) if value else None
+    return str(value) if value is not None else None
 
 
 def create_ssl_context(

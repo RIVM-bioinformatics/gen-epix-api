@@ -211,6 +211,8 @@ class OrganizationService(BaseOrganizationService):
             user_invitation = self.user_invitation_class(
                 id=self.generate_id(),  # type: ignore[arg-type]
                 key=key,
+                email=cmd.email,
+                name=cmd.name,
                 description=description,
                 roles=initial_roles,
                 organization_id=organization_id,

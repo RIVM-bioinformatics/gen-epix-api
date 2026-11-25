@@ -143,30 +143,32 @@ class FileService(BaseFileService):
             ) from e
 
         found_records: bool = False
-        # TODO: LSP-3893 A truncated FASTQ record (for example, missing quality
-        # data) raises ValueError during lazy iteration outside the parser try block,
-        # rather than InvalidArgumentsError; confirm parser errors should be normalized.
-        for seq_record in seq_records:
-            found_records = True
-            phred_quality_scores: list[int] | None = seq_record.letter_annotations.get(
-                "phred_quality"
-            )
-            if phred_quality_scores is None or len(phred_quality_scores) != len(
-                seq_record.seq
-            ):
-                raise exc.InvalidArgumentsError(
-                    "12a07187",
-                    "Invalid FASTQ: quality scores missing or length mismatch with sequence",
+        try:
+            for seq_record in seq_records:
+                found_records = True
+                phred_quality_scores: list[int] | None = (
+                    seq_record.letter_annotations.get("phred_quality")
                 )
-            seq = str(seq_record.seq)
-            invalid_chars = (
-                set(seq.lower()) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP.value
-            )
-            if invalid_chars:
-                raise exc.InvalidArgumentsError(
-                    "1018ec3c",
-                    f"Invalid FASTQ: sequence contains at least the following invalid characters: {', '.join(sorted(invalid_chars))}",
+                if phred_quality_scores is None or len(phred_quality_scores) != len(
+                    seq_record.seq
+                ):
+                    raise exc.InvalidArgumentsError(
+                        "12a07187",
+                        "Invalid FASTQ: quality scores missing or length mismatch with sequence",
+                    )
+                seq = str(seq_record.seq)
+                invalid_chars = (
+                    set(seq.lower()) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP.value
                 )
+                if invalid_chars:
+                    raise exc.InvalidArgumentsError(
+                        "1018ec3c",
+                        f"Invalid FASTQ: sequence contains at least the following invalid characters: {', '.join(sorted(invalid_chars))}",
+                    )
+        except ValueError as error:
+            raise exc.InvalidArgumentsError(
+                "aba687d6", f"Invalid FASTQ content: {error}"
+            ) from error
         if not found_records:
             raise exc.InvalidArgumentsError(
                 "d2110d13", "No sequence records found in FASTQ file"
