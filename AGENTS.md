@@ -86,7 +86,7 @@ Useful verified commands:
 | Autoformat | `isort --profile black .` and `black .` |
 | Pylint | `pylint ./gen_epix --disable=C0301` |
 | Type checking | `mypy --config-file mypy.ini ./` |
-| One test file or test | `pytest test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_set.py` (add `::test_name` or `-k EXPR`) |
+| One test file or test | `pytest -W ignore::DeprecationWarning -W ignore::pytest.PytestAssertRewriteWarning -W ignore::sqlalchemy.exc.SAWarning test/casedb/unit/services/case/test_casedb_unit_services_case_crud_case_set.py` (add `::test_name` or `-k EXPR`; the `-W` filters are the ones `run.py` uses) |
 | Docstring lint (blocking in CI) | `ruff check --select D --ignore D212,D417 <paths>` |
 
 Before calling work done, run `python run.py test_all --include_e2e=False`.
