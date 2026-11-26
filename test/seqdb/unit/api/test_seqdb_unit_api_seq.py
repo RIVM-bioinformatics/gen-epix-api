@@ -1,6 +1,5 @@
 """Verify command dispatch and exception forwarding for sequence API adapters."""
 
-import asyncio
 from test.util.mock_compat import Mock
 from typing import Annotated, Any
 from uuid import UUID, uuid4
@@ -81,7 +80,7 @@ def test_retrieve_seq_fasta_route_forwards_wrap() -> None:
         seq_ids=[uuid4()], wrap=0, file_name="sequences.fasta"
     )
 
-    asyncio.run(route.endpoint(None, request))
+    route.endpoint(None, request)
 
     command = app.handle.call_args.args[0]
     assert command.wrap == 0
@@ -119,3 +118,79 @@ def test_handle_seq_command_forwards_failures(
     handle_exception.assert_called_once_with(
         "error-code", "user", dispatch_error, **expected_kwargs
     )
+
+
+def _create_upload_job_routes(handle_result: Any) -> tuple[Mock, dict[str, APIRoute]]:
+    def get_user() -> None:
+        """Supply an unauthenticated user value for direct endpoint invocation."""
+        return None
+
+    router = APIRouter()
+    app = Mock()
+    app.impl.registered_user_dependency = Annotated[Any, Depends(get_user)]
+    app.domain.get_dag_sorted_entities.return_value = []
+    app.handle.return_value = handle_result
+    create_seq_endpoints(router, app, Mock())
+    routes = {
+        route.path: route
+        for route in router.routes
+        if isinstance(route, APIRoute) and "/jobs" in route.path
+    }
+    return app, routes
+
+
+def _sample_upload_job(**fields: Any) -> Any:
+    from datetime import UTC, datetime
+
+    from gen_epix.commondb.domain import enum
+    from gen_epix.seqdb.domain import model
+
+    return model.UploadJob(
+        id=uuid4(),
+        user_id=uuid4(),
+        job_type="UploadSamplesCommand",
+        submitted_at=datetime.now(UTC),
+        **({"status": enum.UploadJobStatus.QUEUED} | fields),
+    )
+
+
+def test_upload_samples_job_submits_the_upload_command_in_the_background() -> None:
+    """Wrap the sample upload in a job submission and answer 202."""
+    from gen_epix.seqdb.api.seq import UploadSamplesRequestBody
+    from gen_epix.seqdb.domain import command, model
+
+    job = _sample_upload_job()
+    app, routes = _create_upload_job_routes(job)
+    route = routes["/upload/samples/jobs"]
+    user = model.User.model_construct(id=uuid4())
+    request_body = UploadSamplesRequestBody.model_construct(
+        sample_batch=model.SampleBatchForUpload(samples=[])
+    )
+
+    response = route.endpoint(user, request_body)
+
+    assert route.status_code == 202
+    submitted = app.handle.call_args.args[0]
+    assert isinstance(submitted, command.SubmitUploadJobCommand)
+    assert isinstance(submitted.upload_command, command.UploadSamplesCommand)
+    assert submitted.upload_command.user is user
+    assert response.id == job.id
+
+
+def test_retrieve_upload_samples_job_returns_the_parsed_result() -> None:
+    """Return the stored result as a sample batch upload result."""
+    from gen_epix.commondb.domain import enum
+    from gen_epix.seqdb.domain import command, model
+
+    result = model.SampleBatchUploadResult(samples=[])
+    job = _sample_upload_job(
+        status=enum.UploadJobStatus.SUCCEEDED, result_json=result.model_dump_json()
+    )
+    app, routes = _create_upload_job_routes(job)
+
+    response = routes["/upload/samples/jobs/{job_id}"].endpoint(None, job.id)
+
+    retrieved = app.handle.call_args.args[0]
+    assert isinstance(retrieved, command.RetrieveUploadJobCommand)
+    assert retrieved.job_type == "UploadSamplesCommand"
+    assert response.result == result

@@ -12,7 +12,7 @@ from gen_epix.commondb.domain.service import (
     BaseRbacService,
     BaseUserManager,
 )
-from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, Permission
+from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, IsolationLevel, Permission
 from gen_epix.fastapp.services.auth import get_email_from_claims
 from gen_epix.fastapp.services.auth.util import get_name_from_claims
 from gen_epix.util import str_to_uuid
@@ -473,7 +473,13 @@ class UserManager(BaseUserManager):
         if user.is_active is False:
             return None
         user.name = new_name
-        with self._organization_service.repository.uow() as uow:
+        # READ COMMITTED instead of the repository default SERIALIZABLE: the
+        # read-before-update would otherwise hold a shared lock on the user row,
+        # and parallel first requests of the same user deadlock converting it to
+        # an exclusive lock (SQL Server 1205).
+        with self._organization_service.repository.uow(
+            isolation_level=IsolationLevel.READ_COMMITTED
+        ) as uow:
             updated_user: model.User = self._organization_service.repository.crud(
                 uow,
                 user.id,

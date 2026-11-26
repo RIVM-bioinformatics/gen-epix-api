@@ -1,12 +1,15 @@
 # omopdb / SYSTEM — Simplified ERD
 
-Auto-generated.  Service type **SYSTEM** — 1 entities, relationships only.
+Auto-generated.  Service type **SYSTEM** — 2 entities, relationships only.
 
 ```mermaid
 erDiagram
     %% omopdb / SYSTEM (simplified)
 
     Outage {
+    }
+
+    UploadJob {
     }
 
 ```

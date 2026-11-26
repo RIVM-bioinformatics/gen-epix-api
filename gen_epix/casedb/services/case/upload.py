@@ -140,6 +140,15 @@ class CaseBatchUploader(BatchUploader):
 
         return success
 
+    def can_retry_batch(self, cmd: UploadBatchCommandMixin) -> bool:
+        """Do not retry batches with samples.
+
+        Samples are committed in seqdb during the case transaction, so a retry
+        would upload them a second time.
+        """
+        assert isinstance(cmd, command.UploadCasesCommand)
+        return not cmd.case_batch.has_samples()
+
     def upsert_batch(
         self,
         cmd: UploadBatchCommandMixin,

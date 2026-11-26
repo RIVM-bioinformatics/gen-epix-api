@@ -47,6 +47,24 @@ class SAUnitOfWork(BaseUnitOfWork):
         """Flush the requested value."""
         self._session.flush()
 
+    # SQLSTATE and SQL Server error number of a transaction chosen as deadlock
+    # victim. The transaction was rolled back and can safely be retried.
+    _DEADLOCK_SQLSTATE = "40001"
+    _DEADLOCK_SQL_SERVER_ERROR = "(1205)"
+
+    @staticmethod
+    def is_deadlock(exception: BaseException) -> bool:
+        """Return whether a DBAPI error reports a transaction deadlock victim."""
+        if not isinstance(exception, sa_exc.DBAPIError):
+            return False
+        orig = getattr(exception, "orig", None)
+        args = getattr(orig, "args", ())
+        sqlstate = str(args[0]) if args else ""
+        return (
+            sqlstate == SAUnitOfWork._DEADLOCK_SQLSTATE
+            or SAUnitOfWork._DEADLOCK_SQL_SERVER_ERROR in str(orig)
+        )
+
     @staticmethod
     def _handle_exception(
         exception_class: type[Exception],
@@ -95,6 +113,12 @@ class SAUnitOfWork(BaseUnitOfWork):
                 ) from None
             else:
                 raise NotImplementedError() from None
+        if SAUnitOfWork.is_deadlock(exception_value):
+            orig_msg = str(getattr(exception_value, "orig", exception_value))
+            raise exc.ConcurrentModificationError(
+                "bf4d1a93",
+                f"Transaction deadlock, safe to retry: {orig_msg}",
+            ) from None
         if issubclass(exception_class, sa_exc.StatementError):
             orig_msg = str(getattr(exception_value, "orig", exception_value))
             # Suppress context — the original SA exception includes [SQL:] and

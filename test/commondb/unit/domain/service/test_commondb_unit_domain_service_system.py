@@ -16,6 +16,8 @@ from gen_epix.commondb.domain.service.system import BaseSystemService
         "retrieve_feature_flags",
         "delete_all_operational_data",
         "delete_all_ref_data",
+        "submit_upload_job",
+        "retrieve_upload_job",
     ],
 )
 def test_abstract_methods_raise_not_implemented_error(method_name: str) -> None:
@@ -39,6 +41,8 @@ def test_register_handlers_registers_expected_handlers() -> None:
     outages_handler = object()
     licenses_handler = object()
     feature_flags_handler = object()
+    submit_upload_job_handler = object()
+    retrieve_upload_job_handler = object()
 
     def register_handler(command_class: type, handler: object) -> None:
         handlers[command_class] = handler
@@ -55,6 +59,8 @@ def test_register_handlers_registers_expected_handlers() -> None:
             retrieve_outages=outages_handler,
             retrieve_licenses=licenses_handler,
             retrieve_feature_flags=feature_flags_handler,
+            submit_upload_job=submit_upload_job_handler,
+            retrieve_upload_job=retrieve_upload_job_handler,
         ),
     )
 
@@ -67,4 +73,6 @@ def test_register_handlers_registers_expected_handlers() -> None:
         command.RetrieveOutagesCommand: outages_handler,
         command.RetrieveLicensesCommand: licenses_handler,
         command.RetrieveFeatureFlagsCommand: feature_flags_handler,
+        command.SubmitUploadJobCommand: submit_upload_job_handler,
+        command.RetrieveUploadJobCommand: retrieve_upload_job_handler,
     }

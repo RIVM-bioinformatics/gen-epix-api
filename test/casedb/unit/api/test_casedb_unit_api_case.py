@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import inspect
 from collections.abc import Callable
 from test.util.mock_compat import Mock
 from typing import Any
@@ -60,6 +61,26 @@ def _get_input_command(handle_command: Mock) -> Any:
     return handle_command.call_args.kwargs["input_command"]
 
 
+def test_case_endpoints_are_sync_except_token_authenticated_fasta(
+    registered_case_endpoints: tuple[APIRouter, Mock],
+) -> None:
+    """Keep blocking `app.handle` calls off the event loop.
+
+    `app.handle` is synchronous (SQLAlchemy). An `async def` handler would run it
+    on the event loop and block every other request, including `/v1/health`.
+    The FASTA route stays async because it awaits token authentication and
+    offloads `app.handle` with `run_in_threadpool`.
+    """
+    router, _ = registered_case_endpoints
+    async_paths = {
+        route.path
+        for route in router.routes
+        if isinstance(route, APIRoute) and inspect.iscoroutinefunction(route.endpoint)
+    }
+
+    assert async_paths == {"/retrieve/genetic_sequence/fasta"}
+
+
 def test_retrieve_case_cohort_links_forwards_include_missing(
     registered_case_endpoints: tuple[APIRouter, Mock],
 ) -> None:
@@ -69,7 +90,7 @@ def test_retrieve_case_cohort_links_forwards_include_missing(
         case_type_id=uuid4(), include_missing=True
     )
 
-    asyncio.run(endpoint(user=None, request_body=request_body))
+    endpoint(user=None, request_body=request_body)
 
     input_command = _get_input_command(handle_command)
     assert isinstance(input_command, command.RetrieveCaseCohortLinksByCaseTypeCommand)
@@ -91,13 +112,11 @@ def test_create_file_for_read_set_forwards_format_and_compression(
         file_compression=seqdb_enum.FileCompression.GZIP,
     )
 
-    asyncio.run(
-        endpoint(
-            user=None,
-            case_id=case_id,
-            col_id=col_id,
-            request_body=request_body,
-        )
+    endpoint(
+        user=None,
+        case_id=case_id,
+        col_id=col_id,
+        request_body=request_body,
     )
 
     input_command = _get_input_command(handle_command)
@@ -122,13 +141,11 @@ def test_create_file_for_seq_forwards_format_and_compression(
         file_compression=seqdb_enum.FileCompression.GZIP,
     )
 
-    asyncio.run(
-        endpoint(
-            user=None,
-            case_id=case_id,
-            col_id=col_id,
-            request_body=request_body,
-        )
+    endpoint(
+        user=None,
+        case_id=case_id,
+        col_id=col_id,
+        request_body=request_body,
     )
 
     input_command = _get_input_command(handle_command)
@@ -148,12 +165,10 @@ def test_case_type_set_case_type_association_forwards_members(
         case_type_set_members=members
     )
 
-    asyncio.run(
-        _get_endpoint(router, "/case_type_sets/{case_type_set_id}/case_types")(
-            user=None,
-            case_type_set_id=case_type_set_id,
-            request_body=request_body,
-        )
+    _get_endpoint(router, "/case_type_sets/{case_type_set_id}/case_types")(
+        user=None,
+        case_type_set_id=case_type_set_id,
+        request_body=request_body,
     )
 
     input_command = _get_input_command(handle_command)
@@ -174,10 +189,8 @@ def test_col_set_col_association_forwards_members(
         col_set_members=members
     )
 
-    asyncio.run(
-        _get_endpoint(router, "/col_sets/{col_set_id}/cols")(
-            user=None, col_set_id=col_set_id, request_body=request_body
-        )
+    _get_endpoint(router, "/col_sets/{col_set_id}/cols")(
+        user=None, col_set_id=col_set_id, request_body=request_body
     )
 
     input_command = _get_input_command(handle_command)
@@ -192,11 +205,7 @@ def test_complete_case_type_forwards_case_type_id(
     router, handle_command = registered_case_endpoints
     case_type_id = uuid4()
 
-    asyncio.run(
-        _get_endpoint(router, "/complete_case_types")(
-            user=None, case_type_id=case_type_id
-        )
-    )
+    _get_endpoint(router, "/complete_case_types")(user=None, case_type_id=case_type_id)
 
     input_command = _get_input_command(handle_command)
     assert isinstance(input_command, command.RetrieveCompleteCaseTypeCommand)
@@ -214,10 +223,8 @@ def test_update_case_created_in_data_collection_forwards_fields(
         target_created_in_data_collection_id=target_id,
     )
 
-    asyncio.run(
-        _get_endpoint(router, "/update_case_created_in_data_collection")(
-            user=None, request_body=request_body
-        )
+    _get_endpoint(router, "/update_case_created_in_data_collection")(
+        user=None, request_body=request_body
     )
 
     input_command = _get_input_command(handle_command)
@@ -233,7 +240,7 @@ def test_upload_cases_sets_authenticated_user_on_command(
     user = object()
     upload_command = command.UploadCasesCommand.model_construct()
 
-    asyncio.run(_get_endpoint(router, "/upload/cases")(user=user, cmd=upload_command))
+    _get_endpoint(router, "/upload/cases")(user=user, cmd=upload_command)
 
     assert upload_command.user is user
     assert _get_input_command(handle_command) is upload_command
@@ -254,9 +261,7 @@ def test_create_case_set_forwards_request_fields(
         case_ids=case_ids,
     )
 
-    asyncio.run(
-        _get_endpoint(router, "/create/case_set")(user=None, request_body=request_body)
-    )
+    _get_endpoint(router, "/create/case_set")(user=None, request_body=request_body)
 
     input_command = _get_input_command(handle_command)
     assert isinstance(input_command, command.CreateCaseSetCommand)
@@ -295,7 +300,7 @@ def test_retrieve_stats_forwards_request_fields(
 ) -> None:
     router, handle_command = registered_case_endpoints
 
-    asyncio.run(_get_endpoint(router, path)(user=None, request_body=request_body))
+    _get_endpoint(router, path)(user=None, request_body=request_body)
 
     input_command = _get_input_command(handle_command)
     assert isinstance(input_command, command_type)
@@ -309,10 +314,8 @@ def test_retrieve_cases_by_query_forwards_query(
     router, handle_command = registered_case_endpoints
     case_query = casedb_api_case.model.CaseQuery.model_construct()
 
-    asyncio.run(
-        _get_endpoint(router, "/retrieve/case_ids_by_query")(
-            user=None, request_body=case_query
-        )
+    _get_endpoint(router, "/retrieve/case_ids_by_query")(
+        user=None, request_body=case_query
     )
 
     input_command = _get_input_command(handle_command)
@@ -339,7 +342,7 @@ def test_retrieve_cases_or_rights_forwards_ids(
         case_type_id=case_type_id, case_ids=case_ids
     )
 
-    asyncio.run(_get_endpoint(router, path)(user=None, request_body=request_body))
+    _get_endpoint(router, path)(user=None, request_body=request_body)
 
     input_command = _get_input_command(handle_command)
     assert isinstance(input_command, command_type)
@@ -353,10 +356,8 @@ def test_retrieve_case_set_rights_forwards_ids(
     router, handle_command = registered_case_endpoints
     case_set_ids = [uuid4()]
 
-    asyncio.run(
-        _get_endpoint(router, "/retrieve/case_set_rights")(
-            user=None, request_body=case_set_ids
-        )
+    _get_endpoint(router, "/retrieve/case_set_rights")(
+        user=None, request_body=case_set_ids
     )
 
     input_command = _get_input_command(handle_command)
@@ -379,10 +380,8 @@ def test_retrieve_phylogenetic_tree_forwards_parameters(
         case_ids=case_ids,
     )
 
-    asyncio.run(
-        _get_endpoint(router, "/calculate/phylogenetic_tree")(
-            user=None, request_body=request_body
-        )
+    _get_endpoint(router, "/calculate/phylogenetic_tree")(
+        user=None, request_body=request_body
     )
 
     input_command = _get_input_command(handle_command)
@@ -407,10 +406,8 @@ def test_retrieve_sequence_distances_forwards_parameters(
         filter_other_cases=False,
     )
 
-    asyncio.run(
-        _get_endpoint(router, "/retrieve/seq_distances_by_cases")(
-            user=None, request_body=request_body
-        )
+    _get_endpoint(router, "/retrieve/seq_distances_by_cases")(
+        user=None, request_body=request_body
     )
 
     input_command = _get_input_command(handle_command)
@@ -435,10 +432,8 @@ def test_retrieve_similar_cases_forwards_parameters(
         max_distance=2.5,
     )
 
-    asyncio.run(
-        _get_endpoint(router, "/retrieve/similar_cases")(
-            user=None, request_body=request_body
-        )
+    _get_endpoint(router, "/retrieve/similar_cases")(
+        user=None, request_body=request_body
     )
 
     input_command = _get_input_command(handle_command)
@@ -530,7 +525,7 @@ def test_retrieve_protocols_forwards_protocol_type(
 ) -> None:
     router, handle_command = registered_case_endpoints
 
-    asyncio.run(_get_endpoint(router, path)(user=None))
+    _get_endpoint(router, path)(user=None)
 
     input_command = _get_input_command(handle_command)
     assert isinstance(input_command, command.RetrieveProtocolsCommand)
@@ -547,10 +542,8 @@ def test_retrieve_is_own_cases_forwards_ids(
         case_type_id=case_type_id, case_ids=case_ids
     )
 
-    asyncio.run(
-        _get_endpoint(router, "/retrieve/is_own_cases")(
-            user=None, request_body=request_body
-        )
+    _get_endpoint(router, "/retrieve/is_own_cases")(
+        user=None, request_body=request_body
     )
 
     input_command = _get_input_command(handle_command)
@@ -564,9 +557,7 @@ def test_ref_col_validation_rules_returns_schema(
 ) -> None:
     router, _ = registered_case_endpoints
 
-    response = asyncio.run(
-        _get_endpoint(router, "/ref_cols/validation_rules")(user=None)
-    )
+    response = _get_endpoint(router, "/ref_cols/validation_rules")(user=None)
 
     assert isinstance(response, casedb_api_case.RefColValidationRulesResponseBody)
     assert response.valid_col_types_by_dim_type
@@ -585,7 +576,86 @@ def test_ref_col_validation_rules_delegates_construction_error(
     )
 
     with pytest.raises(RuntimeError, match="handled"):
-        asyncio.run(_get_endpoint(router, "/ref_cols/validation_rules")(user=None))
+        _get_endpoint(router, "/ref_cols/validation_rules")(user=None)
 
     handle_exception.assert_called_once()
     assert handle_exception.call_args.args[0] == "f2a4b8c6"
+
+
+def _route(router: APIRouter, path: str, method: str) -> APIRoute:
+    return next(
+        route
+        for route in router.routes
+        if isinstance(route, APIRoute)
+        and route.path == path
+        and method in route.methods
+    )
+
+
+def _upload_job(**fields: Any) -> Any:
+    from datetime import UTC, datetime
+
+    from gen_epix.casedb.domain import model as casedb_model
+    from gen_epix.commondb.domain import enum as casedb_enum
+
+    return casedb_model.UploadJob(
+        id=uuid4(),
+        user_id=uuid4(),
+        job_type="UploadCasesCommand",
+        submitted_at=datetime.now(UTC),
+        **({"status": casedb_enum.UploadJobStatus.QUEUED} | fields),
+    )
+
+
+def test_upload_cases_job_submits_the_upload_command_in_the_background(
+    registered_case_endpoints: tuple[APIRouter, Mock],
+) -> None:
+    """Wrap the upload in a job submission and answer 202 with the queued job."""
+    from gen_epix.casedb.domain import model as casedb_model
+
+    router, handle_command = registered_case_endpoints
+    user = casedb_model.User.model_construct(id=uuid4())
+    upload_command = command.UploadCasesCommand.model_construct()
+    job = _upload_job()
+    handle_command.return_value = job
+    route = _route(router, "/upload/cases/jobs", "POST")
+
+    response = route.endpoint(user=user, cmd=upload_command)
+
+    assert route.status_code == 202
+    input_command = _get_input_command(handle_command)
+    assert isinstance(input_command, command.SubmitUploadJobCommand)
+    assert input_command.user is user
+    assert input_command.upload_command is upload_command
+    assert upload_command.user is user
+    assert response.id == job.id
+    assert response.status == job.status
+    assert response.result is None
+
+
+def test_retrieve_upload_cases_job_returns_the_parsed_result(
+    registered_case_endpoints: tuple[APIRouter, Mock],
+) -> None:
+    """Return the stored result as the same model the synchronous upload returns."""
+    from gen_epix.casedb.domain import model as casedb_model
+    from gen_epix.commondb.domain import enum as casedb_enum
+
+    router, handle_command = registered_case_endpoints
+    user = casedb_model.User.model_construct(id=uuid4())
+    result = casedb_model.CaseBatchUploadResult(cases=[])
+    job = _upload_job(
+        status=casedb_enum.UploadJobStatus.SUCCEEDED,
+        result_json=result.model_dump_json(),
+    )
+    handle_command.return_value = job
+
+    response = _route(router, "/upload/cases/jobs/{job_id}", "GET").endpoint(
+        user=user, job_id=job.id
+    )
+
+    input_command = _get_input_command(handle_command)
+    assert isinstance(input_command, command.RetrieveUploadJobCommand)
+    assert input_command.job_id == job.id
+    assert input_command.job_type == "UploadCasesCommand"
+    assert response.status == casedb_enum.UploadJobStatus.SUCCEEDED
+    assert response.result == result

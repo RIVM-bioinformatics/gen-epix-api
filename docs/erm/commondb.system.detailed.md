@@ -1,6 +1,6 @@
 # commondb / SYSTEM — Detailed ERD
 
-Auto-generated.  Service type **SYSTEM** — 1 entities.
+Auto-generated.  Service type **SYSTEM** — 2 entities.
 
 ```mermaid
 erDiagram
@@ -19,6 +19,24 @@ erDiagram
         timestamp visible_to
         bool is_active
         bool is_visible
+    }
+
+    UploadJob {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID user_id
+        string job_type
+        enum status
+        timestamp submitted_at
+        timestamp started_at
+        timestamp finished_at
+        timestamp heartbeat_at
+        string worker_id
+        string result_json
+        int error_status_code
+        string error_detail
     }
 
 ```

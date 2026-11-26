@@ -1,6 +1,6 @@
 # seqdb — Simplified Entity-Relationship Diagram
 
-Auto-generated from domain model definitions.  Contains **46** persistable entities — relationships only, no field details.
+Auto-generated from domain model definitions.  Contains **47** persistable entities — relationships only, no field details.
 
 ```mermaid
 erDiagram
@@ -75,6 +75,9 @@ erDiagram
     SeqDistance }o--|| SeqProfile : "seq_profile_id"
 
     Outage {
+    }
+
+    UploadJob {
     }
 
     LocusCodeMap {

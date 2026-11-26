@@ -6,6 +6,7 @@ import json
 import logging
 import re
 import string
+import threading
 import tomllib
 from enum import Enum
 from typing import Any, ClassVar, cast
@@ -18,7 +19,8 @@ from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.policy import BaseHasSystemOutagePolicy
 from gen_epix.commondb.domain.service import BaseSystemService
 from gen_epix.commondb.policies.model_metadata_policy import ModelMetadataPolicy
-from gen_epix.fastapp import CrudOperation, EventTiming
+from gen_epix.commondb.services.upload_job import UploadJobRunner
+from gen_epix.fastapp import CrudOperation, EventTiming, exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain import Domain, Link
 from gen_epix.util import get_package_root
@@ -31,6 +33,7 @@ class SystemService(BaseSystemService):
     _PARSE_AND_GET_PACKAGE_METADATA_CACHE: ClassVar[TTLCache] = TTLCache(
         maxsize=1000, ttl=60
     )
+    _UPLOAD_JOB_RUNNER_LOCK: ClassVar[threading.Lock] = threading.Lock()
 
     def __init__(self, app: App, **kwargs: Any) -> None:
         """Initialize configured concrete policy classes.
@@ -47,6 +50,32 @@ class SystemService(BaseSystemService):
         self.model_metadata_policy_class: type[ModelMetadataPolicy] = (
             app_impl.get_mapped_class(policies.ModelMetadataPolicy)
         )
+        self._upload_job_runner: UploadJobRunner | None = None
+
+    @property
+    def upload_job_runner(self) -> UploadJobRunner:
+        """Return the background runner for upload jobs, creating it on first use.
+
+        Created lazily since the repository is not necessarily set when the
+        service is initialized.
+        """
+        with SystemService._UPLOAD_JOB_RUNNER_LOCK:
+            runner: UploadJobRunner | None = getattr(self, "_upload_job_runner", None)
+            if runner is None:
+                runner = UploadJobRunner(
+                    app=self.app,
+                    repository=self.repository,
+                    generate_id=self.generate_id,
+                    generate_timestamp=self.generate_timestamp,
+                    logger=self.app.logger,
+                )
+                self._upload_job_runner = runner
+            return runner
+
+    @upload_job_runner.setter
+    def upload_job_runner(self, runner: UploadJobRunner) -> None:
+        """Replace the background runner for upload jobs."""
+        self._upload_job_runner = runner
 
     def register_policies(self) -> None:
         """Register global outage and audit-metadata policies.
@@ -88,6 +117,77 @@ class SystemService(BaseSystemService):
                 CrudOperation.READ_ALL,
             )
         return outages
+
+    def submit_upload_job(self, cmd: command.SubmitUploadJobCommand) -> model.UploadJob:
+        """Authorize an upload command and queue it for background processing.
+
+        The upload command's BEFORE policies are applied now, so that an upload
+        the user is not allowed to execute is rejected immediately. The worker
+        dispatches the upload command again as an initial command, applying all
+        its policies.
+
+        Args:
+            cmd: Command wrapping the upload command.
+
+        Returns:
+            The accepted job, with status QUEUED.
+
+        Raises:
+            UnauthorizedAuthError: If there is no user, the upload command is
+                issued by another user, or its BEFORE policies deny it.
+            InitializationServiceError: If no handler is registered for the upload
+                command.
+            ServiceUnavailableError: If too many jobs are active in this process.
+        """
+        user = cmd.user
+        if user is None or user.id is None:
+            raise exc.UnauthorizedAuthError("d2a6f4c8", "Upload jobs require a user")
+        upload_command = cmd.upload_command
+        if upload_command.user is None:
+            upload_command.user = user
+        elif upload_command.user.id != user.id:
+            raise exc.UnauthorizedAuthError(
+                "e5c9b3a7", "The upload command must be issued by the submitting user"
+            )
+        self.app.get_handler(type(upload_command))
+        self.app.pdp.apply(upload_command, EventTiming.BEFORE)
+        return self.upload_job_runner.submit(user.id, upload_command)
+
+    def retrieve_upload_job(
+        self, cmd: command.RetrieveUploadJobCommand
+    ) -> model.UploadJob:
+        """Retrieve an upload job submitted by the requesting user.
+
+        A job of another user, or of another job type than requested, is reported
+        as non-existent so that its existence is not disclosed.
+
+        Args:
+            cmd: Command identifying the job.
+
+        Returns:
+            The job, reported as FAILED if its worker has stopped.
+
+        Raises:
+            UnauthorizedAuthError: If there is no user.
+            InvalidIdsError: If the job does not exist, belongs to another user or
+                is of another job type.
+        """
+        user = cmd.user
+        if user is None or user.id is None:
+            raise exc.UnauthorizedAuthError("b7f1d5e9", "Upload jobs require a user")
+        try:
+            job = self.upload_job_runner.read(cmd.job_id)
+        except exc.InvalidIdsError as exception:
+            raise exc.InvalidIdsError(
+                "c3e8a6d4", "Upload job not found", ids=[cmd.job_id]
+            ) from exception
+        if job.user_id != user.id or (
+            cmd.job_type is not None and job.job_type != cmd.job_type
+        ):
+            raise exc.InvalidIdsError(
+                "f9b4c2e7", "Upload job not found", ids=[cmd.job_id]
+            )
+        return job
 
     def retrieve_feature_flags(
         self, cmd: command.RetrieveFeatureFlagsCommand

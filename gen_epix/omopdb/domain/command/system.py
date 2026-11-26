@@ -15,6 +15,7 @@ class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
     """Represents a request to delete all OMOP operational data."""
 
     SORTED_OPERATIONAL_DATA_MODEL_CLASSES: ClassVar = [
+        model.UploadJob,  # No links; jobs of a reset application are obsolete
         model.Cohort,
         model.ConditionEra,
         model.ConditionOccurrenceIdentifier,

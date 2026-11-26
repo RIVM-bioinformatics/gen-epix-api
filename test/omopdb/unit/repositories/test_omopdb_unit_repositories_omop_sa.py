@@ -1,5 +1,6 @@
 """Tests for SQLAlchemy OMOP repository result assembly."""
 
+import threading
 from datetime import date
 from test.util.mock_compat import Mock
 from uuid import UUID
@@ -151,6 +152,7 @@ def _omop_session() -> Session:  # type: ignore[misc]
 
 def _make_query_repo(session: Session) -> OmopSARepository:
     repo = OmopSARepository.__new__(OmopSARepository)
+    repo._uow_context_local = threading.local()  # type: ignore[attr-defined]
     repo._uow_context_stack = []  # type: ignore[attr-defined]
     repo.uow = lambda **kwargs: SAUnitOfWork(  # type: ignore[method-assign]
         session, context_stack=repo._uow_context_stack

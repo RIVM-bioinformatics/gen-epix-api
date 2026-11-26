@@ -547,13 +547,17 @@ class TestSeqdbClientHandlers:
         cmd = seqdb_command.UploadSamplesCommand(
             sample_batch=seqdb_model.SampleBatchForUpload(samples=[])
         )
-        response = {"samples": []}
-        with patch.object(client, "request", return_value=response) as request:
+        job = {"id": str(uuid4()), "status": "SUCCEEDED", "result": {"samples": []}}
+        with patch.object(client, "request", return_value=job) as request:
             result = client.upload_samples(cmd)
 
         assert result.samples == []
         request.assert_called_once_with(
-            cmd, HttpMethod.POST, model=cmd, exclude={"user"}
+            cmd,
+            HttpMethod.POST,
+            route=f"{client.get_route(cmd)}/jobs",
+            model=cmd,
+            exclude={"user"},
         )
 
     def test_retrieve_best_seq_per_sample_converts_ids(

@@ -38,7 +38,7 @@ def create_omop_endpoints(
         name="Upload persons",
         description=command.UploadPersonsCommand.__doc__,
     )
-    async def upload__persons(
+    def upload__persons(
         user: registered_user_dependency,  # type: ignore
         cmd: command.UploadPersonsCommand,
     ) -> model.PersonBatchUploadResult:
@@ -61,7 +61,7 @@ def create_omop_endpoints(
         name="Retrieve person IDs by query",
         description=command.RetrievePersonsByQueryCommand.__doc__,
     )
-    async def retrieve__person_ids_by_query(
+    def retrieve__person_ids_by_query(
         user: registered_user_dependency,  # type: ignore
         request_body: model.PersonQuery,
     ) -> model.PersonQueryResult:
@@ -86,7 +86,7 @@ def create_omop_endpoints(
         name="Retrieve persons by IDs",
         description=command.RetrievePersonsByIdCommand.__doc__,
     )
-    async def retrieve__persons_by_ids(
+    def retrieve__persons_by_ids(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrievePersonsByIdsRequestBody,
     ) -> list[model.FullPerson]:
@@ -111,7 +111,7 @@ def create_omop_endpoints(
         name="Retrieve specimen IDs by cohort IDs",
         description=command.RetrieveSpecimenIdsByCohortIdsCommand.__doc__,
     )
-    async def retrieve__specimen_ids_by_cohort_ids(
+    def retrieve__specimen_ids_by_cohort_ids(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrieveSpecimenIdsByCohortIdsRequestBody,
     ) -> model.SpecimenIdsByCohortResult:

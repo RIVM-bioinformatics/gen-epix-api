@@ -58,24 +58,22 @@ def _create_endpoint(
     return endpoint, app, error_handler, user
 
 
-@pytest.mark.asyncio
-async def test_anonymize_endpoint_accepts_none_result() -> None:
+def test_anonymize_endpoint_accepts_none_result() -> None:
     """Accept the endpoint's required no-content command result."""
     endpoint, app, error_handler, user = _create_anonymize_endpoint(None)
 
-    result = await endpoint(user, uuid4())
+    result = endpoint(user, uuid4())
 
     assert result is None
     error_handler.assert_not_called()
     assert app.handle.call_args.args[0].user == user
 
 
-@pytest.mark.asyncio
-async def test_anonymize_endpoint_reports_non_none_result() -> None:
+def test_anonymize_endpoint_reports_non_none_result() -> None:
     """Send an invalid command result to the configured API error handler."""
     endpoint, _, error_handler, user = _create_anonymize_endpoint(object())
 
-    await endpoint(user, uuid4())
+    endpoint(user, uuid4())
 
     error_handler.assert_called_once()
     error = error_handler.call_args.args[2]
@@ -83,13 +81,12 @@ async def test_anonymize_endpoint_reports_non_none_result() -> None:
     assert str(error) == "AnonymizeUserCommand must not return a value"
 
 
-@pytest.mark.asyncio
-async def test_user_me_endpoint_returns_the_result_of_the_own_user_command() -> None:
+def test_user_me_endpoint_returns_the_result_of_the_own_user_command() -> None:
     """Answer with what RetrieveOwnUserCommand returns for the requesting user."""
     endpoint, app, error_handler, user = _create_endpoint("user_me__get_one", None)
     app.handle.return_value = user
 
-    result = await endpoint(user)
+    result = endpoint(user)
 
     assert result is user
     error_handler.assert_not_called()
@@ -98,8 +95,7 @@ async def test_user_me_endpoint_returns_the_result_of_the_own_user_command() -> 
     assert sent_command.user == user
 
 
-@pytest.mark.asyncio
-async def test_user_me_endpoint_reports_a_failed_command() -> None:
+def test_user_me_endpoint_reports_a_failed_command() -> None:
     """Send a command failure to the configured API error handler."""
     endpoint, app, error_handler, user = _create_endpoint("user_me__get_one", None)
     failure = RuntimeError("no user")
@@ -108,13 +104,12 @@ async def test_user_me_endpoint_reports_a_failed_command() -> None:
     error_handler.side_effect = failure
 
     with pytest.raises(RuntimeError, match="no user"):
-        await endpoint(user)
+        endpoint(user)
 
     error_handler.assert_called_once_with("5d0e7a41", user, failure)
 
 
-@pytest.mark.asyncio
-async def test_invite_user_endpoint_builds_invitation_command() -> None:
+def test_invite_user_endpoint_builds_invitation_command() -> None:
     endpoint, app, error_handler, user = _create_endpoint("invite_user", object())
     organization_id = uuid4()
     request_body = InviteUserRequestBody(
@@ -124,7 +119,7 @@ async def test_invite_user_endpoint_builds_invitation_command() -> None:
         organization_id=organization_id,
     )
 
-    result = await endpoint(user, request_body)
+    result = endpoint(user, request_body)
 
     sent_command = app.handle.call_args.args[0]
     assert isinstance(sent_command, command.InviteUserCommand)
@@ -137,8 +132,7 @@ async def test_invite_user_endpoint_builds_invitation_command() -> None:
     error_handler.assert_not_called()
 
 
-@pytest.mark.asyncio
-async def test_invite_user_endpoint_reports_command_failure() -> None:
+def test_invite_user_endpoint_reports_command_failure() -> None:
     endpoint, app, error_handler, user = _create_endpoint("invite_user", None)
     failure = RuntimeError("invitation failed")
     app.handle.side_effect = failure
@@ -151,19 +145,18 @@ async def test_invite_user_endpoint_reports_command_failure() -> None:
     )
 
     with pytest.raises(RuntimeError, match="invitation failed"):
-        await endpoint(user, request_body)
+        endpoint(user, request_body)
 
     error_handler.assert_called_once_with("e088de91", None, failure)
 
 
-@pytest.mark.asyncio
-async def test_invite_user_constraints_endpoint_dispatches_command() -> None:
+def test_invite_user_constraints_endpoint_dispatches_command() -> None:
     constraints = object()
     endpoint, app, error_handler, user = _create_endpoint(
         "invite_user__constraints", constraints
     )
 
-    result = await endpoint(user)
+    result = endpoint(user)
 
     sent_command = app.handle.call_args.args[0]
     assert isinstance(sent_command, command.RetrieveInviteUserConstraintsCommand)
@@ -172,14 +165,13 @@ async def test_invite_user_constraints_endpoint_dispatches_command() -> None:
     error_handler.assert_not_called()
 
 
-@pytest.mark.asyncio
-async def test_register_invited_user_endpoint_dispatches_token() -> None:
+def test_register_invited_user_endpoint_dispatches_token() -> None:
     endpoint, app, error_handler, user = _create_endpoint(
         "user_registrations__post_one", user_result := object()
     )
     token = "invite-token"
 
-    result = await endpoint(user, token)
+    result = endpoint(user, token)
 
     sent_command = app.handle.call_args.args[0]
     assert isinstance(sent_command, command.RegisterInvitedUserCommand)
@@ -189,8 +181,7 @@ async def test_register_invited_user_endpoint_dispatches_token() -> None:
     error_handler.assert_not_called()
 
 
-@pytest.mark.asyncio
-async def test_organization_set_members_endpoint_dispatches_associations() -> None:
+def test_organization_set_members_endpoint_dispatches_associations() -> None:
     endpoint, app, error_handler, user = _create_endpoint(
         "organization_sets__put__organizations", []
     )
@@ -199,7 +190,7 @@ async def test_organization_set_members_endpoint_dispatches_associations() -> No
         organization_set_members=[]
     )
 
-    result = await endpoint(user, organization_set_id, request_body)
+    result = endpoint(user, organization_set_id, request_body)
 
     sent_command = app.handle.call_args.args[0]
     assert isinstance(
@@ -213,8 +204,7 @@ async def test_organization_set_members_endpoint_dispatches_associations() -> No
     error_handler.assert_not_called()
 
 
-@pytest.mark.asyncio
-async def test_data_collection_set_members_endpoint_dispatches_associations() -> None:
+def test_data_collection_set_members_endpoint_dispatches_associations() -> None:
     endpoint, app, error_handler, user = _create_endpoint(
         "data_collection_sets__put__data_collections", []
     )
@@ -223,7 +213,7 @@ async def test_data_collection_set_members_endpoint_dispatches_associations() ->
         data_collection_set_members=[]
     )
 
-    result = await endpoint(user, data_collection_set_id, request_body)
+    result = endpoint(user, data_collection_set_id, request_body)
 
     sent_command = app.handle.call_args.args[0]
     assert isinstance(
@@ -237,8 +227,7 @@ async def test_data_collection_set_members_endpoint_dispatches_associations() ->
     error_handler.assert_not_called()
 
 
-@pytest.mark.asyncio
-async def test_association_endpoint_reports_command_failure() -> None:
+def test_association_endpoint_reports_command_failure() -> None:
     endpoint, app, error_handler, user = _create_endpoint(
         "organization_sets__put__organizations", None
     )
@@ -250,13 +239,12 @@ async def test_association_endpoint_reports_command_failure() -> None:
     )
 
     with pytest.raises(RuntimeError, match="association failed"):
-        await endpoint(user, uuid4(), request_body)
+        endpoint(user, uuid4(), request_body)
 
     error_handler.assert_called_once_with("c026628e", user, failure)
 
 
-@pytest.mark.asyncio
-async def test_user_permissions_endpoint_converts_permissions_to_api_models() -> None:
+def test_user_permissions_endpoint_converts_permissions_to_api_models() -> None:
     permission = Permission(
         command_name=next(iter(CommandName)).value,
         permission_type=PermissionType.READ,
@@ -265,7 +253,7 @@ async def test_user_permissions_endpoint_converts_permissions_to_api_models() ->
         "user_me__retrieve_permissions", {permission}
     )
 
-    result = await endpoint(user)
+    result = endpoint(user)
 
     sent_command = app.handle.call_args.args[0]
     assert isinstance(sent_command, command.RetrieveOwnPermissionsCommand)
@@ -292,8 +280,7 @@ async def test_user_permissions_endpoint_converts_permissions_to_api_models() ->
     ],
     ids=["register", "permissions", "update-user", "own-organization"],
 )
-@pytest.mark.asyncio
-async def test_user_command_endpoints_report_failures(
+def test_user_command_endpoints_report_failures(
     operation_id: str,
     exception_code: str,
     call_kind: str,
@@ -305,30 +292,29 @@ async def test_user_command_endpoints_report_failures(
     error_handler.side_effect = failure
 
     if call_kind == "register":
-        endpoint_call = endpoint(user, "invite-token")
+        endpoint_call = lambda: endpoint(user, "invite-token")
     elif call_kind == "permissions":
-        endpoint_call = endpoint(user)
+        endpoint_call = lambda: endpoint(user)
     elif call_kind == "update_user":
-        endpoint_call = endpoint(
+        endpoint_call = lambda: endpoint(
             user,
             uuid4(),
             UpdateUserRequestBody(is_active=None, roles=None, organization_id=None),
         )
     else:
-        endpoint_call = endpoint(
+        endpoint_call = lambda: endpoint(
             user, UpdateUserOwnOrganizationRequestBody(organization_id=uuid4())
         )
 
     with pytest.raises(RuntimeError, match="command failed"):
-        await endpoint_call
+        endpoint_call()
 
     error_handler.assert_called_once_with(
         exception_code, user if error_user == "user" else None, failure
     )
 
 
-@pytest.mark.asyncio
-async def test_update_user_endpoint_builds_update_command() -> None:
+def test_update_user_endpoint_builds_update_command() -> None:
     user_result = object()
     endpoint, app, error_handler, user = _create_endpoint("update_user", user_result)
     target_user_id = uuid4()
@@ -339,7 +325,7 @@ async def test_update_user_endpoint_builds_update_command() -> None:
         organization_id=organization_id,
     )
 
-    result = await endpoint(user, target_user_id, request_body)
+    result = endpoint(user, target_user_id, request_body)
 
     sent_command = app.handle.call_args.args[0]
     assert isinstance(sent_command, command.UpdateUserCommand)
@@ -352,8 +338,7 @@ async def test_update_user_endpoint_builds_update_command() -> None:
     error_handler.assert_not_called()
 
 
-@pytest.mark.asyncio
-async def test_update_user_own_organization_endpoint_builds_command() -> None:
+def test_update_user_own_organization_endpoint_builds_command() -> None:
     user_result = object()
     endpoint, app, error_handler, user = _create_endpoint(
         "update_user_own_organization", user_result
@@ -361,7 +346,7 @@ async def test_update_user_own_organization_endpoint_builds_command() -> None:
     organization_id = uuid4()
     request_body = UpdateUserOwnOrganizationRequestBody(organization_id=organization_id)
 
-    result = await endpoint(user, request_body)
+    result = endpoint(user, request_body)
 
     sent_command = app.handle.call_args.args[0]
     assert isinstance(sent_command, command.UpdateUserOwnOrganizationCommand)
@@ -371,8 +356,7 @@ async def test_update_user_own_organization_endpoint_builds_command() -> None:
     error_handler.assert_not_called()
 
 
-@pytest.mark.asyncio
-async def test_organization_identifier_issuers_dispatch_associations() -> None:
+def test_organization_identifier_issuers_dispatch_associations() -> None:
     endpoint, app, error_handler, user = _create_endpoint(
         "organizations__put__identifier_issuers", []
     )
@@ -381,7 +365,7 @@ async def test_organization_identifier_issuers_dispatch_associations() -> None:
         organization_identifier_issuer_links=[]
     )
 
-    result = await endpoint(user, organization_id, request_body)
+    result = endpoint(user, organization_id, request_body)
 
     sent_command = app.handle.call_args.args[0]
     assert isinstance(
@@ -395,8 +379,7 @@ async def test_organization_identifier_issuers_dispatch_associations() -> None:
     error_handler.assert_not_called()
 
 
-@pytest.mark.asyncio
-async def test_retrieve_organization_contacts_dispatches_id() -> None:
+def test_retrieve_organization_contacts_dispatches_id() -> None:
     contacts = object()
     endpoint, app, error_handler, user = _create_endpoint(
         "retrieve__organization_contacts", contacts
@@ -406,7 +389,7 @@ async def test_retrieve_organization_contacts_dispatches_id() -> None:
         organization_id=organization_id
     )
 
-    result = await endpoint(user, request_body)
+    result = endpoint(user, request_body)
 
     sent_command = app.handle.call_args.args[0]
     assert isinstance(sent_command, command.RetrieveOrganizationContactsCommand)

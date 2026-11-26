@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import StreamingResponse
 
+from gen_epix.commondb.api.upload_job_schema import UploadJobResponse
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
@@ -90,7 +91,7 @@ def create_seq_endpoints(
         name="RetrievePhylogeneticTree",
         description=command.CalculatePhylogeneticTreeCommand.__doc__,
     )
-    async def retrieve__phylogenetic_tree(
+    def retrieve__phylogenetic_tree(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: CalculatePhylogeneticTreeRequestBody,
     ) -> model.PhylogeneticTree:
@@ -117,7 +118,7 @@ def create_seq_endpoints(
         name="RetrieveSimilarProfiles",
         description=command.RetrieveSimilarProfilesCommand.__doc__,
     )
-    async def retrieve__similar_profiles(
+    def retrieve__similar_profiles(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSimilarProfilesRequestBody,
     ) -> list[UUID]:
@@ -143,7 +144,7 @@ def create_seq_endpoints(
         name="RetrieveSampleIDsByQuery",
         description=command.RetrieveSamplesByQueryCommand.__doc__,
     )
-    async def retrieve__sample_ids_by_query(
+    def retrieve__sample_ids_by_query(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: model.SampleQuery,
     ) -> model.SampleQueryResult:
@@ -166,7 +167,7 @@ def create_seq_endpoints(
         name="RetrieveSamplesByIDs",
         description=command.RetrieveSamplesByIdCommand.__doc__,
     )
-    async def retrieve__samples_by_ids(
+    def retrieve__samples_by_ids(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSamplesByIdsRequestBody,
     ) -> list[model.FullSample]:
@@ -190,7 +191,7 @@ def create_seq_endpoints(
         name="RetrieveSampleIdentifiersByIDs",
         description=command.RetrieveSampleIdentifiersByIdCommand.__doc__,
     )
-    async def retrieve__sample_identifiers_by_ids(
+    def retrieve__sample_identifiers_by_ids(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSampleIdentifiersByIdsRequestBody,
     ) -> list[model.SampleIdentifier]:
@@ -214,7 +215,7 @@ def create_seq_endpoints(
         name="RetrieveSeqDistancesBySeqProfiles",
         description=command.RetrieveSeqDistancesBySeqProfilesCommand.__doc__,
     )
-    async def retrieve__seq_distances_by_seq_profiles(
+    def retrieve__seq_distances_by_seq_profiles(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSeqDistancesBySeqProfilesRequestBody,
     ) -> list[model.SeqDistance]:
@@ -237,7 +238,7 @@ def create_seq_endpoints(
         name="RetrieveSeqFasta",
         description=command.RetrieveSeqFastaCommand.__doc__,
     )
-    async def retrieve__seq_fasta(
+    def retrieve__seq_fasta(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSeqFastaRequestBody,
     ) -> StreamingResponse:
@@ -268,7 +269,7 @@ def create_seq_endpoints(
         name="ConvertSeqFormat",
         description=command.ConvertSeqFormatCommand.__doc__,
     )
-    async def convert__seq_format(
+    def convert__seq_format(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: ConvertSeqFormatRequestBody,
     ) -> list[UUID]:
@@ -294,7 +295,7 @@ def create_seq_endpoints(
         name="RetrieveSeqDistanceLastModified",
         description=command.RetrieveSeqDistanceLastModifiedCommand.__doc__,
     )
-    async def retrieve__seq_distance_last_modified(
+    def retrieve__seq_distance_last_modified(
         user: registered_user_dependency,  # type: ignore[valid-type]
         protocol_id: UUID,
     ) -> datetime | None:
@@ -317,7 +318,7 @@ def create_seq_endpoints(
         name="UpdateSeqDistances",
         description=command.UpdateSeqDistancesCommand.__doc__,
     )
-    async def update__seq_distances(
+    def update__seq_distances(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: UpdateSeqDistancesRequestBody,
     ) -> list[model.CalculateSeqDistancesEtlResult]:
@@ -343,7 +344,7 @@ def create_seq_endpoints(
         name="UploadSamples",
         description=command.UploadSamplesCommand.__doc__,
     )
-    async def upload__samples(
+    def upload__samples(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: UploadSamplesRequestBody,
     ) -> model.SampleBatchUploadResult:
@@ -359,6 +360,65 @@ def create_seq_endpoints(
             ),
         )
         return retval
+
+    @router.post(
+        "/upload/samples/jobs",
+        operation_id="upload__samples__jobs",
+        name="Submit sample upload job",
+        description=(
+            "Accept a sample upload for processing in the background and return "
+            "the upload job (HTTP 202). Poll GET /upload/samples/jobs/{job_id} "
+            "until its status is SUCCEEDED or FAILED. Takes the same request body "
+            "as POST /upload/samples: "
+            f"{command.UploadSamplesCommand.__doc__}"
+        ),
+        status_code=202,
+    )
+    def upload__samples__jobs(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: UploadSamplesRequestBody,
+    ) -> UploadJobResponse[model.SampleBatchUploadResult]:
+        """See router description."""
+        job: model.UploadJob = _handle_seq_command(
+            app,
+            handle_exception,
+            "e1c5a9d3",
+            user,
+            command.SubmitUploadJobCommand(
+                user=user,
+                upload_command=command.UploadSamplesCommand(
+                    user=user,
+                    **request_body.model_dump(exclude={"user"}),
+                ),
+            ),
+        )
+        return UploadJobResponse[model.SampleBatchUploadResult].from_job(job)
+
+    @router.get(
+        "/upload/samples/jobs/{job_id}",
+        operation_id="retrieve__upload_samples_job",
+        name="Retrieve sample upload job",
+        description=command.RetrieveUploadJobCommand.__doc__,
+    )
+    def retrieve__upload_samples_job(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        job_id: UUID,
+    ) -> UploadJobResponse[model.SampleBatchUploadResult]:
+        """See router description."""
+        job: model.UploadJob = _handle_seq_command(
+            app,
+            handle_exception,
+            "b6d0f4a8",
+            user,
+            command.RetrieveUploadJobCommand(
+                user=user,
+                job_id=job_id,
+                job_type=command.UploadSamplesCommand.__name__,
+            ),
+        )
+        return UploadJobResponse[model.SampleBatchUploadResult].from_job(
+            job, model.SampleBatchUploadResult
+        )
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(
@@ -376,7 +436,7 @@ def create_seq_endpoints(
         name="RetrieveBestSeqPerSample",
         description=command.RetrieveBestSeqPerSampleCommand.__doc__,
     )
-    async def retrieve__best_seq_per_sample(
+    def retrieve__best_seq_per_sample(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveBestSeqPerSampleRequestBody,
     ) -> dict[UUID, UUID]:
@@ -401,7 +461,7 @@ def create_seq_endpoints(
         name="RetrieveBestSeqProfilePerSample",
         description=command.RetrieveBestSeqProfilePerSampleCommand.__doc__,
     )
-    async def retrieve__best_seq_profile_per_sample(
+    def retrieve__best_seq_profile_per_sample(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveBestSeqProfilePerSampleRequestBody,
     ) -> dict[UUID, UUID]:
@@ -426,7 +486,7 @@ def create_seq_endpoints(
         name="RetrieveBestSeqClassificationPerSample",
         description=command.RetrieveBestSeqClassificationPerSampleCommand.__doc__,
     )
-    async def retrieve__best_seq_classification_per_sample(
+    def retrieve__best_seq_classification_per_sample(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveBestSeqClassificationPerSampleRequestBody,
     ) -> dict[UUID, UUID]:

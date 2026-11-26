@@ -83,6 +83,10 @@ from gen_epix.commondb.repositories.sa_model.organization import (
 from gen_epix.commondb.repositories.sa_model.organization import UserMixin as UserMixin
 from gen_epix.commondb.repositories.sa_model.system import Outage as Outage
 from gen_epix.commondb.repositories.sa_model.system import OutageMixin as OutageMixin
+from gen_epix.commondb.repositories.sa_model.system import UploadJob as UploadJob
+from gen_epix.commondb.repositories.sa_model.system import (
+    UploadJobMixin as UploadJobMixin,
+)
 from gen_epix.commondb.repositories.sa_model.util import (
     create_composite_primary_key_mapper_args as create_composite_primary_key_mapper_args,
 )
@@ -122,6 +126,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
     },
     enum.ServiceType.SYSTEM: {
         model.Outage: Outage,
+        model.UploadJob: UploadJob,
     },
 }
 

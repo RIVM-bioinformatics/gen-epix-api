@@ -13,6 +13,7 @@ class DeleteAllOperationalDataCommand(CommonDeleteAllOperationalDataCommand):
     """Represents a request to delete all CASEDB operational data."""
 
     SORTED_OPERATIONAL_DATA_MODEL_CLASSES = [
+        model.UploadJob,  # No links; jobs of a reset application are obsolete
         model.CaseSetDataCollectionLink,
         model.CaseDataCollectionLink,
         model.CaseSetMember,

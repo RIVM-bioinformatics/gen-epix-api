@@ -120,6 +120,15 @@ from gen_epix.commondb.domain.command.system import (
 from gen_epix.commondb.domain.command.system import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
+from gen_epix.commondb.domain.command.system import (
+    RetrieveUploadJobCommand as RetrieveUploadJobCommand,
+)
+from gen_epix.commondb.domain.command.system import (
+    SubmitUploadJobCommand as SubmitUploadJobCommand,
+)
+from gen_epix.commondb.domain.command.system import (
+    UploadJobCrudCommand as UploadJobCrudCommand,
+)
 from gen_epix.fastapp.services.auth import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
@@ -172,7 +181,9 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
             RetrieveFeatureFlagsCommand,
             RetrieveOutagesCommand,
             RetrieveLicensesCommand,
-            DeleteAllOperationalDataCommand,
+            RetrieveUploadJobCommand,
+            SubmitUploadJobCommand,
+            UploadJobCrudCommand,
         }
     ),
     enum.ServiceType.ABAC: frozenset(

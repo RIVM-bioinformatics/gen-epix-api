@@ -1,6 +1,6 @@
 # casedb — Simplified Entity-Relationship Diagram
 
-Auto-generated from domain model definitions.  Contains **49** persistable entities — relationships only, no field details.
+Auto-generated from domain model definitions.  Contains **50** persistable entities — relationships only, no field details.
 
 ```mermaid
 erDiagram
@@ -80,6 +80,9 @@ erDiagram
     CaseDataCollectionLink }o--|| DataCollection : "data_collection_id"
 
     Outage {
+    }
+
+    UploadJob {
     }
 
 ```

@@ -115,6 +115,7 @@ from gen_epix.commondb.domain.model import (
 )
 from gen_epix.commondb.domain.model import Outage as Outage
 from gen_epix.commondb.domain.model import Site as Site
+from gen_epix.commondb.domain.model import UploadJob as UploadJob
 from gen_epix.commondb.domain.model import User as User
 from gen_epix.commondb.domain.model import UserInvitation as UserInvitation
 from gen_epix.commondb.domain.model import (

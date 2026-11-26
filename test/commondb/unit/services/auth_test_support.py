@@ -142,7 +142,7 @@ class InMemoryOrganizationRepository:
         return key in self._users_by_key
 
     @contextmanager
-    def uow(self) -> Generator[object, None, None]:
+    def uow(self, **_kwargs: object) -> Generator[object, None, None]:
         yield object()
 
     def crud(

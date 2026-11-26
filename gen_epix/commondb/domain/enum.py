@@ -117,6 +117,15 @@ class UploadAction(Enum):
     SKIP = "SKIP"
 
 
+class UploadJobStatus(Enum):
+    """Encapsulates the lifecycle state of an upload job processed in the background."""
+
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+
+
 class RepositoryType(Enum):
     """Encapsulates persistence implementations available to composed applications."""
 
