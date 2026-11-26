@@ -1,6 +1,7 @@
 """SQLAlchemy repository implementation."""
 
 import re
+import threading
 import uuid
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
@@ -398,7 +399,10 @@ class SARepository(BaseRepository):
         # Initialize remaining properties
         self._mapper_by_model: dict[type[Any], BaseSAMapper] = {}
         self._mapper_by_row: dict[type[Any], BaseSAMapper] = {}
-        self._uow_context_stack: list[BaseUnitOfWork] = []
+        # Per-thread stack of active units of work. Request handlers run
+        # concurrently in FastAPI's threadpool; a shared stack would make one
+        # request reuse (and close) another request's session as if nested.
+        self._uow_context_local = threading.local()
 
         # Register mappers if necessary
         if register_mappers:
@@ -431,6 +435,22 @@ class SARepository(BaseRepository):
         """Set the default isolation level for new sessions."""
         self._default_isolation_level = value
 
+    @property
+    def _uow_context_stack(self) -> list[BaseUnitOfWork]:
+        """Return the stack of active units of work for the current thread."""
+        stack: list[BaseUnitOfWork] | None = getattr(
+            self._uow_context_local, "stack", None
+        )
+        if stack is None:
+            stack = []
+            self._uow_context_local.stack = stack
+        return stack
+
+    @_uow_context_stack.setter
+    def _uow_context_stack(self, value: list[BaseUnitOfWork]) -> None:
+        """Replace the stack of active units of work for the current thread."""
+        self._uow_context_local.stack = value
+
     def uow(
         self,
         **kwargs: Any,
@@ -439,7 +459,23 @@ class SARepository(BaseRepository):
         Return a unit-of-work context manager backed by an SA session.
 
         Nests within the active UoW when already inside a context.
+
+        Pass ``detached=True`` for a unit of work that may be entered and exited
+        on different threads, such as one held open by a generator that a
+        ``StreamingResponse`` iterates in the threadpool. A detached unit of work
+        is never nested into, and never nests into another one.
         """
+        if kwargs.pop("detached", False):
+            return SAUnitOfWork(
+                self.get_session(
+                    isolation_level=kwargs.pop(
+                        "isolation_level", self._default_isolation_level
+                    ),
+                    expire_on_commit=kwargs.pop("expire_on_commit", True),
+                    **kwargs,
+                ),
+                context_stack=None,
+            )
         if self._uow_context_stack:
             # Nested within another context -> reuse the session of that context
             if kwargs:

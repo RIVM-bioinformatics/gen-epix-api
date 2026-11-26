@@ -4,6 +4,7 @@ import datetime
 import gzip
 import json
 import pickle
+import threading
 import zipfile
 from collections.abc import Callable, Hashable, Iterable
 from functools import partial
@@ -23,6 +24,11 @@ from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
 
 class DictRepository(BaseRepository):
     """Encapsulates a repository that stores models in an in-memory dict, keyed by model class."""
+
+    # Request handlers run concurrently in FastAPI's threadpool. The in-memory
+    # dicts are not safe for concurrent iteration and mutation, so CRUD calls
+    # are serialized. Reentrant because CRUD helpers may call each other.
+    _CRUD_LOCK = threading.RLock()
 
     @staticmethod
     def _create_empty_db_for_entities(
@@ -293,6 +299,36 @@ class DictRepository(BaseRepository):
         **kwargs: Any,
     ) -> Any:
         """Dispatch a CRUD operation to the appropriate read/write helper."""
+        with DictRepository._CRUD_LOCK:
+            return self._crud(
+                uow,
+                user_id,
+                model_class,
+                operation,
+                objs=objs,
+                obj_ids=obj_ids,
+                return_id=return_id,
+                filter=filter,
+                limit=limit,
+                offset=offset,
+                **kwargs,
+            )
+
+    def _crud(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: Hashable | None,
+        model_class: type[Model],
+        operation: CrudOperation,
+        objs: Model | Iterable[Model] | None = None,
+        obj_ids: Hashable | Iterable[Hashable] | None = None,
+        return_id: bool = False,
+        filter: Filter | None = None,
+        limit: int = 0,
+        offset: int = 0,
+        **kwargs: Any,
+    ) -> Any:
+        """Dispatch a CRUD operation without taking the CRUD lock."""
         BaseRepository.verify_crud_args(model_class, objs, obj_ids, operation)
         match operation:
             case CrudOperation.READ_ALL:
