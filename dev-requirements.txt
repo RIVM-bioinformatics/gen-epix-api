@@ -5,7 +5,7 @@ polars==2.2.0
 xlsxwriter==3.3.4
 pytest
 pytest-asyncio
-pytest-gremlins==1.14.3
+pytest-gremlins==1.15.0
 pytest-xdist
 pytest-mock==3.17.*
 pytest-dependency==0.6.*
