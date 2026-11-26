@@ -395,3 +395,38 @@ def test_retrieve_reports_a_missing_job_as_invalid_id(repository: Any) -> None:
         service.retrieve_upload_job(
             command.RetrieveUploadJobCommand(user=_user(), job_id=uuid.uuid4())
         )
+
+
+def test_clean_up_deletes_jobs_older_than_the_retention_period(repository: Any) -> None:
+    """Delete old jobs, finished or not, and keep recent ones."""
+    runner = _make_runner(repository, lambda cmd: None, retention_seconds=3600)
+    old_finished = _store_job(repository, status=enum.UploadJobStatus.SUCCEEDED)
+    old_unfinished = _store_job(repository, status=enum.UploadJobStatus.RUNNING)
+    recent = _store_job(repository, status=enum.UploadJobStatus.SUCCEEDED)
+    two_hours_ago = _now() - datetime.timedelta(hours=2)
+    for job in (old_finished, old_unfinished):
+        with repository.uow() as uow:
+            repository.crud(
+                uow,
+                None,
+                model.UploadJob,
+                CrudOperation.UPDATE_ONE,
+                objs=job.model_copy(update={"submitted_at": two_hours_ago}),
+            )
+
+    assert runner.clean_up() == 2
+
+    with repository.uow() as uow:
+        remaining = repository.crud(uow, None, model.UploadJob, CrudOperation.READ_ALL)
+    assert [x.id for x in remaining] == [recent.id]
+
+
+def test_clean_up_runs_at_most_once_per_interval(repository: Any) -> None:
+    """Throttle the clean-up so that submissions do not scan the table each time."""
+    runner = _make_runner(repository, lambda cmd: None)
+    runner.clean_up = Mock(return_value=0)  # type: ignore[method-assign]
+
+    runner._clean_up_if_due()
+    runner._clean_up_if_due()
+
+    runner.clean_up.assert_called_once_with()

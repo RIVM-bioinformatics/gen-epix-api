@@ -188,11 +188,11 @@ class CasedbClient(CommondbClient):
         self,
         cmd: command.UploadCasesCommand,
     ) -> model.CaseBatchUploadResult:
-        """Upload a batch of cases."""
-        response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
-            cmd, HttpMethod.POST, model=cmd, exclude={"user"}
+        """Upload a batch of cases as a background job and wait for its result."""
+        result: model.CaseBatchUploadResult = self.upload_via_job(
+            cmd, model.CaseBatchUploadResult, exclude={"user"}
         )
-        return model.CaseBatchUploadResult(**response_body)
+        return result
 
     def update_case_created_in_data_collection(
         self,

@@ -19,6 +19,8 @@ Configuration, per process, through environment variables:
   (default 30).
 - ``UPLOAD_JOB_STALE_SECONDS``: age of the last heartbeat after which an
   unfinished job is reported as FAILED (default 300).
+- ``UPLOAD_JOB_RETENTION_DAYS``: age after which jobs are deleted (default 7).
+  Every process deletes old jobs at most once per hour.
 """
 
 from __future__ import annotations
@@ -44,6 +46,10 @@ DEFAULT_MAX_WORKERS = int(os.environ.get("UPLOAD_JOB_MAX_WORKERS", "2"))
 DEFAULT_MAX_ACTIVE = int(os.environ.get("UPLOAD_JOB_MAX_ACTIVE", "20"))
 DEFAULT_HEARTBEAT_SECONDS = float(os.environ.get("UPLOAD_JOB_HEARTBEAT_SECONDS", "30"))
 DEFAULT_STALE_SECONDS = float(os.environ.get("UPLOAD_JOB_STALE_SECONDS", "300"))
+DEFAULT_RETENTION_SECONDS = (
+    float(os.environ.get("UPLOAD_JOB_RETENTION_DAYS", "7")) * 24 * 3600
+)
+CLEANUP_INTERVAL_SECONDS = 3600.0
 
 INTERRUPTED_JOB_DETAIL = (
     "The upload job was interrupted because its worker stopped. Resubmit the upload."
@@ -114,6 +120,7 @@ class UploadJobRunner:
         max_active: int = DEFAULT_MAX_ACTIVE,
         heartbeat_seconds: float = DEFAULT_HEARTBEAT_SECONDS,
         stale_seconds: float = DEFAULT_STALE_SECONDS,
+        retention_seconds: float = DEFAULT_RETENTION_SECONDS,
     ) -> None:
         """Initialize the runner; threads are started on the first submission.
 
@@ -127,6 +134,7 @@ class UploadJobRunner:
             max_active: Number of queued plus running jobs accepted.
             heartbeat_seconds: Interval of the heartbeat of active jobs.
             stale_seconds: Heartbeat age after which an unfinished job is stale.
+            retention_seconds: Age after which a job is deleted.
         """
         self.app = app
         self.repository = repository
@@ -137,6 +145,8 @@ class UploadJobRunner:
         self.max_active = max_active
         self.heartbeat_seconds = heartbeat_seconds
         self.stale_seconds = stale_seconds
+        self.retention_seconds = retention_seconds
+        self._last_cleanup_at: datetime.datetime | None = None
         self.worker_id = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:8]}"
         self._executor: ThreadPoolExecutor | None = None
         self._heartbeat_thread: threading.Thread | None = None
@@ -166,6 +176,7 @@ class UploadJobRunner:
             ServiceUnavailableError: If this process already has the maximum number
                 of active jobs.
         """
+        self._clean_up_if_due()
         with self._lock:
             if len(self._active_job_ids) >= self.max_active:
                 raise exc.ServiceUnavailableError(
@@ -230,6 +241,57 @@ class UploadJobRunner:
         self._stop_event.set()
         if self._executor is not None:
             self._executor.shutdown(wait=wait, cancel_futures=not wait)
+
+    def clean_up(self) -> int:
+        """Delete the jobs submitted longer ago than the retention period.
+
+        Jobs that are still active in this process are kept.
+
+        Returns:
+            The number of deleted jobs.
+        """
+        cutoff = _as_utc(self.generate_timestamp()) - datetime.timedelta(
+            seconds=self.retention_seconds
+        )
+        active_job_ids = self.active_job_ids
+        with self.repository.uow() as uow:
+            job_ids = [
+                job_id
+                for job_id, submitted_at in self.repository.read_fields(
+                    uow, None, model.UploadJob, ["id", "submitted_at"]
+                )
+                if _as_utc(submitted_at) < cutoff and job_id not in active_job_ids
+            ]
+            if job_ids:
+                self.repository.crud(
+                    uow,
+                    None,
+                    model.UploadJob,
+                    CrudOperation.DELETE_SOME,
+                    obj_ids=job_ids,
+                )
+        return len(job_ids)
+
+    def _clean_up_if_due(self) -> None:
+        """Delete old jobs if the last clean-up was over an interval ago."""
+        now = _as_utc(self.generate_timestamp())
+        with self._lock:
+            if (
+                self._last_cleanup_at is not None
+                and (now - self._last_cleanup_at).total_seconds()
+                < CLEANUP_INTERVAL_SECONDS
+            ):
+                return
+            self._last_cleanup_at = now
+        try:
+            self.clean_up()
+        except Exception as exception:  # pylint: disable=broad-except
+            if self.logger:
+                self.logger.warning(
+                    self.app.create_log_message(
+                        "d5a1f9c3", "UPLOAD_JOB_CLEANUP_ERROR", exception=exception
+                    )
+                )
 
     def _is_stale(self, job: model.UploadJob) -> bool:
         """Return whether an unfinished job's worker has stopped sending heartbeats."""
@@ -314,6 +376,7 @@ class UploadJobRunner:
     def _heartbeat_loop(self) -> None:
         """Periodically refresh the heartbeat of the jobs active in this process."""
         while not self._stop_event.wait(self.heartbeat_seconds):
+            self._clean_up_if_due()
             for job_id in self.active_job_ids:
                 try:
                     self._update(

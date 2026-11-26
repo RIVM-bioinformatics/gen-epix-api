@@ -6,13 +6,16 @@ NONE-mode default headers or OAuth2 client-credentials authentication.
 
 import importlib
 import math
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from enum import Enum
 from logging import Logger
 from typing import Any, ClassVar, Literal
 
+import httpx
 import jwt
+from pydantic import BaseModel
 
 from gen_epix.commondb import api
 from gen_epix.commondb.domain import command, enum, model, util
@@ -36,6 +39,16 @@ class CommondbClient(Client):
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
     DEFAULT_HTTP_TIMEOUTS: ClassVar[dict[type[Command], float]] = {}
+
+    # Upload jobs: submit uploads to the background job endpoint of the remote
+    # app and poll the job, instead of waiting for the upload in one request
+    USE_UPLOAD_JOBS: ClassVar[bool] = True
+    UPLOAD_JOB_TIMEOUT: ClassVar[float] = 3600.0  # seconds
+    UPLOAD_JOB_POLL_INITIAL: ClassVar[float] = 0.5  # seconds
+    UPLOAD_JOB_POLL_MAX: ClassVar[float] = 10.0  # seconds
+    UPLOAD_JOB_POLL_RETRY_STATUS_CODES: ClassVar[frozenset[int]] = frozenset(
+        {502, 503, 504}
+    )
 
     ROUTE_MAP: ClassVar[dict[type[Command], str]] = {
         command.DeleteAllOperationalDataCommand: "/operational_data",
@@ -107,6 +120,11 @@ class CommondbClient(Client):
             oauth_scope: OAuth2 scope requested for client credentials.
             oauth_token_endpoint: Optional OAuth2 token endpoint override.
             oauth_token_refresh_margin: Seconds before expiry to refresh a token.
+            use_upload_jobs: Passed as keyword argument; whether uploads are
+                submitted as background jobs and polled (default True). Falls back
+                to the synchronous endpoint if the remote app has no job endpoint.
+            upload_job_timeout: Passed as keyword argument; seconds to wait for an
+                upload job to finish (default 3600).
             token_provider: Optional callable returning a bearer token, used instead
                 of the OAuth2 client-credentials flow, e.g. for a token of a human
                 user. Must be combined with ``auth_protocol=NONE``. The token is
@@ -123,6 +141,10 @@ class CommondbClient(Client):
                 with the OAuth2 settings or an ``Authorization`` default header.
         """
         self._check_token_provider(token_provider, auth_protocol, default_headers)
+        self.use_upload_jobs: bool = kwargs.pop("use_upload_jobs", self.USE_UPLOAD_JOBS)
+        self.upload_job_timeout: float = kwargs.pop(
+            "upload_job_timeout", self.UPLOAD_JOB_TIMEOUT
+        )
         if isinstance(auth_protocol, str):
             auth_protocol = AuthProtocol(auth_protocol)
         if isinstance(oauth_flow, str):
@@ -249,6 +271,100 @@ class CommondbClient(Client):
         self._oauth_token_refresh_margin = oauth_token_refresh_margin
         self._token_provider = token_provider
         self._oauth_header_cache: tuple[float, dict[str, str]] | None = None
+
+    def upload_via_job(
+        self,
+        cmd: Command,
+        result_class: type[BaseModel],
+        exclude: set[str] | None = None,
+    ) -> Any:
+        """Upload through the remote app's job endpoint, waiting for the job.
+
+        Submits the upload to ``<route>/jobs`` (HTTP 202) and polls
+        ``<route>/jobs/{job_id}`` with increasing intervals until the job finishes.
+        A failed job raises the same error as a failed synchronous upload. Without
+        job endpoints on the remote app (404 or 405), or with
+        ``use_upload_jobs=False``, the synchronous endpoint is used.
+
+        Args:
+            cmd: Upload command; its registered route is the synchronous endpoint.
+            result_class: Model class of the upload result.
+            exclude: Command fields left out of the request body.
+
+        Returns:
+            The upload result.
+
+        Raises:
+            RemoteServiceError: If the job failed; its status is the status the
+                synchronous endpoint would have returned.
+            ServiceUnavailableError: If the job did not finish in time.
+        """
+        route = self.get_route(cmd)
+        if self.use_upload_jobs:
+            try:
+                job: dict[str, Any] = self.request(  # type: ignore[assignment]
+                    cmd,
+                    HttpMethod.POST,
+                    route=f"{route}/jobs",
+                    model=cmd,
+                    exclude=exclude,
+                )
+            except httpx.HTTPStatusError as exception:
+                if exception.response.status_code not in {404, 405}:
+                    raise
+                # Remote app without job endpoints
+                self.use_upload_jobs = False
+            else:
+                return self._wait_for_upload_job(cmd, route, job, result_class)
+        response_body: dict[str, Any] = self.request(  # type: ignore[assignment]
+            cmd, HttpMethod.POST, route=route, model=cmd, exclude=exclude
+        )
+        return result_class(**response_body)
+
+    def _wait_for_upload_job(
+        self,
+        cmd: Command,
+        route: str,
+        job: dict[str, Any],
+        result_class: type[BaseModel],
+    ) -> Any:
+        """Poll an upload job until it finishes and return its result."""
+        deadline = time.monotonic() + self.upload_job_timeout
+        delay = self.UPLOAD_JOB_POLL_INITIAL
+        job_route = f"{route}/jobs/{job['id']}"
+        while job["status"] in {
+            enum.UploadJobStatus.QUEUED.value,
+            enum.UploadJobStatus.RUNNING.value,
+        }:
+            if time.monotonic() + delay > deadline:
+                raise exc.ServiceUnavailableError(
+                    "e7b3d1a5",
+                    f"Upload job {job['id']} for remote command {cmd.NAME} did not "
+                    f"finish within {self.upload_job_timeout} seconds",
+                )
+            time.sleep(delay)
+            delay = min(delay * 1.5, self.UPLOAD_JOB_POLL_MAX)
+            try:
+                job = self.request(  # type: ignore[assignment]
+                    cmd, HttpMethod.GET, route=job_route
+                )
+            except httpx.TransportError:
+                continue  # E.g. a replica restarting; the job lives on
+            except httpx.HTTPStatusError as exception:
+                if (
+                    exception.response.status_code
+                    not in self.UPLOAD_JOB_POLL_RETRY_STATUS_CODES
+                ):
+                    raise
+        if job["status"] == enum.UploadJobStatus.FAILED.value:
+            status_code = job.get("error_status_code") or 500
+            raise exc.RemoteServiceError(
+                "c8f2a6e4",
+                f"HTTP status {status_code} error when handling remote command "
+                f"{cmd.NAME}: upload job {job['id']} failed: {job.get('error_detail')}",
+                http_props={"status_code": status_code},
+            )
+        return result_class(**job["result"])
 
     @staticmethod
     def _check_token_provider(

@@ -17,6 +17,7 @@ from uuid import uuid4
 
 import pytest
 
+import gen_epix.commondb.services.client as commondb_client
 import gen_epix.fastapp.client as fastapp_client
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.services.client import CasedbClient
@@ -413,7 +414,11 @@ class TestNonCrudHandlers:
         assert json_body == json.loads(case_query.model_dump_json())
         assert result == model.CaseQueryResult(**data)
 
-    def test_upload_cases(self, app: CasedbClient, mock_client: Any) -> None:
+    def test_upload_cases(
+        self, app: CasedbClient, mock_client: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Submit the upload as a job and poll it until it has a result."""
+        monkeypatch.setattr(commondb_client.time, "sleep", lambda _seconds: None)
         case_type_id = uuid4()
         created_in_data_collection_id = uuid4()
         case_batch = model.CaseBatchForUpload(cases=[])
@@ -424,16 +429,25 @@ class TestNonCrudHandlers:
             case_batch=case_batch,
         )
         batch_id = uuid4()
-        data: dict[str, Any] = {"batch_id": str(batch_id), "cases": []}
-        mock_client.request.return_value = _mock_response(data)
+        job_id = str(uuid4())
+        mock_client.request.side_effect = [
+            _mock_response({"id": job_id, "status": "QUEUED"}, 202),
+            _mock_response(
+                {
+                    "id": job_id,
+                    "status": "SUCCEEDED",
+                    "result": {"batch_id": str(batch_id), "cases": []},
+                }
+            ),
+        ]
 
         result = app.upload_cases(cmd)
 
-        method, url = mock_client.request.call_args.args
-        json_body = mock_client.request.call_args.kwargs["json"]
-        assert method == "POST"
-        assert url == app._routes[command.UploadCasesCommand]
-        assert json_body == cmd.model_dump(mode="json", exclude={"user"})
+        route = app._routes[command.UploadCasesCommand]
+        submit, poll = mock_client.request.call_args_list
+        assert submit.args == ("POST", f"{route}/jobs")
+        assert submit.kwargs["json"] == cmd.model_dump(mode="json", exclude={"user"})
+        assert poll.args == ("GET", f"{route}/jobs/{job_id}")
         assert result.batch_id == batch_id
         assert result.cases == []
 

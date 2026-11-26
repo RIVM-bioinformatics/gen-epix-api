@@ -263,9 +263,11 @@ class SeqdbClient(CommondbClient):
         self,
         cmd: command.UploadSamplesCommand,
     ) -> model.SampleBatchUploadResult:
-        """Upload a batch of samples."""
-        response_body: dict[str, Any] = self.request(cmd, HttpMethod.POST, model=cmd, exclude={"user"})  # type: ignore[assignment]
-        return model.SampleBatchUploadResult(**response_body)
+        """Upload a batch of samples as a background job and wait for its result."""
+        result: model.SampleBatchUploadResult = self.upload_via_job(
+            cmd, model.SampleBatchUploadResult, exclude={"user"}
+        )
+        return result
 
     def retrieve_best_seq_per_sample(
         self,
