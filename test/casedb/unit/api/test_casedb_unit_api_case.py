@@ -580,3 +580,82 @@ def test_ref_col_validation_rules_delegates_construction_error(
 
     handle_exception.assert_called_once()
     assert handle_exception.call_args.args[0] == "f2a4b8c6"
+
+
+def _route(router: APIRouter, path: str, method: str) -> APIRoute:
+    return next(
+        route
+        for route in router.routes
+        if isinstance(route, APIRoute)
+        and route.path == path
+        and method in route.methods
+    )
+
+
+def _upload_job(**fields: Any) -> Any:
+    from datetime import UTC, datetime
+
+    from gen_epix.casedb.domain import model as casedb_model
+    from gen_epix.commondb.domain import enum as casedb_enum
+
+    return casedb_model.UploadJob(
+        id=uuid4(),
+        user_id=uuid4(),
+        job_type="UploadCasesCommand",
+        submitted_at=datetime.now(UTC),
+        **({"status": casedb_enum.UploadJobStatus.QUEUED} | fields),
+    )
+
+
+def test_upload_cases_job_submits_the_upload_command_in_the_background(
+    registered_case_endpoints: tuple[APIRouter, Mock],
+) -> None:
+    """Wrap the upload in a job submission and answer 202 with the queued job."""
+    from gen_epix.casedb.domain import model as casedb_model
+
+    router, handle_command = registered_case_endpoints
+    user = casedb_model.User.model_construct(id=uuid4())
+    upload_command = command.UploadCasesCommand.model_construct()
+    job = _upload_job()
+    handle_command.return_value = job
+    route = _route(router, "/upload/cases/jobs", "POST")
+
+    response = route.endpoint(user=user, cmd=upload_command)
+
+    assert route.status_code == 202
+    input_command = _get_input_command(handle_command)
+    assert isinstance(input_command, command.SubmitUploadJobCommand)
+    assert input_command.user is user
+    assert input_command.upload_command is upload_command
+    assert upload_command.user is user
+    assert response.id == job.id
+    assert response.status == job.status
+    assert response.result is None
+
+
+def test_retrieve_upload_cases_job_returns_the_parsed_result(
+    registered_case_endpoints: tuple[APIRouter, Mock],
+) -> None:
+    """Return the stored result as the same model the synchronous upload returns."""
+    from gen_epix.casedb.domain import model as casedb_model
+    from gen_epix.commondb.domain import enum as casedb_enum
+
+    router, handle_command = registered_case_endpoints
+    user = casedb_model.User.model_construct(id=uuid4())
+    result = casedb_model.CaseBatchUploadResult(cases=[])
+    job = _upload_job(
+        status=casedb_enum.UploadJobStatus.SUCCEEDED,
+        result_json=result.model_dump_json(),
+    )
+    handle_command.return_value = job
+
+    response = _route(router, "/upload/cases/jobs/{job_id}", "GET").endpoint(
+        user=user, job_id=job.id
+    )
+
+    input_command = _get_input_command(handle_command)
+    assert isinstance(input_command, command.RetrieveUploadJobCommand)
+    assert input_command.job_id == job.id
+    assert input_command.job_type == "UploadCasesCommand"
+    assert response.status == casedb_enum.UploadJobStatus.SUCCEEDED
+    assert response.result == result

@@ -1,6 +1,6 @@
 # omopdb — Simplified Entity-Relationship Diagram
 
-Auto-generated from domain model definitions.  Contains **69** persistable entities — relationships only, no field details.
+Auto-generated from domain model definitions.  Contains **70** persistable entities — relationships only, no field details.
 
 ```mermaid
 erDiagram
@@ -226,6 +226,9 @@ erDiagram
     MeasurementRelationIdentifier }o--|| MeasurementRelation : "internal_id"
 
     Outage {
+    }
+
+    UploadJob {
     }
 
     CdmSource {

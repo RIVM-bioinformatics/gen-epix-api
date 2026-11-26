@@ -1,6 +1,6 @@
 # commondb — Simplified Entity-Relationship Diagram
 
-Auto-generated from domain model definitions.  Contains **14** persistable entities — relationships only, no field details.
+Auto-generated from domain model definitions.  Contains **15** persistable entities — relationships only, no field details.
 
 ```mermaid
 erDiagram
@@ -22,6 +22,9 @@ erDiagram
     OrganizationAdminPolicy }o--|| User : "user_id"
 
     Outage {
+    }
+
+    UploadJob {
     }
 
 ```

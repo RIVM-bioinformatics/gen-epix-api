@@ -1,6 +1,7 @@
 """Define SQLAlchemy rows and mixins for commondb system persistence."""
 
 import datetime
+from uuid import UUID
 
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped, declarative_mixin
@@ -50,3 +51,44 @@ class Outage(Base, OutageMixin):
     """Encapsulates persistence of the commondb Outage domain model."""
 
     __tablename__, __table_args__ = create_table_args(model.Outage)
+
+
+@declarative_mixin
+class UploadJobMixin(RowMetadataMixin):
+    """Encapsulates SQLAlchemy columns for UploadJob-derived row models."""
+
+    user_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.UploadJob, "user_id")
+    job_type: Mapped[str] = create_mapped_column(DOMAIN, model.UploadJob, "job_type")
+    status: Mapped[enum.UploadJobStatus] = create_mapped_column(
+        DOMAIN, model.UploadJob, "status"
+    )
+    submitted_at: Mapped[datetime.datetime] = create_mapped_column(
+        DOMAIN, model.UploadJob, "submitted_at"
+    )
+    started_at: Mapped[datetime.datetime | None] = create_mapped_column(
+        DOMAIN, model.UploadJob, "started_at"
+    )
+    finished_at: Mapped[datetime.datetime | None] = create_mapped_column(
+        DOMAIN, model.UploadJob, "finished_at"
+    )
+    heartbeat_at: Mapped[datetime.datetime | None] = create_mapped_column(
+        DOMAIN, model.UploadJob, "heartbeat_at"
+    )
+    worker_id: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.UploadJob, "worker_id"
+    )
+    result_json: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.UploadJob, "result_json"
+    )
+    error_status_code: Mapped[int | None] = create_mapped_column(
+        DOMAIN, model.UploadJob, "error_status_code"
+    )
+    error_detail: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.UploadJob, "error_detail"
+    )
+
+
+class UploadJob(Base, UploadJobMixin):
+    """Encapsulates persistence of the commondb UploadJob domain model."""
+
+    __tablename__, __table_args__ = create_table_args(model.UploadJob)

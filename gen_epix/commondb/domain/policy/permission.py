@@ -31,6 +31,14 @@ NO_RBAC_PERMISSIONS: set[tuple[type[fastapp.Command], PermissionType]] = {
     (command.RetrieveLicensesCommand, PermissionType.EXECUTE),
     # Used to retrieve feature flags, which is a public operation.
     (command.RetrieveFeatureFlagsCommand, PermissionType.EXECUTE),
+    # Used to process an upload in the background. Requires no RBAC of its own:
+    # the system service authorizes the wrapped upload command for the submitting
+    # user before accepting the job, and the worker dispatches it again with all
+    # its policies.
+    (command.SubmitUploadJobCommand, PermissionType.EXECUTE),
+    # Used to poll an upload job. The system service only returns jobs submitted
+    # by the requesting user.
+    (command.RetrieveUploadJobCommand, PermissionType.EXECUTE),
 }
 
 
@@ -74,6 +82,7 @@ class RoleGenerator:
             (command.DeleteAllOperationalDataCommand, PermissionTypeSet.E),
             (command.DeleteAllRefDataCommand, PermissionTypeSet.E),
             (command.OutageCrudCommand, PermissionTypeSet.CRUD),
+            (command.UploadJobCrudCommand, PermissionTypeSet.R),
         },
         Role.REFDATA_ADMIN: {
             # organization

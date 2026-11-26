@@ -66,6 +66,7 @@ from gen_epix.commondb.domain.model.system import (
 )
 from gen_epix.commondb.domain.model.system import Outage as Outage
 from gen_epix.commondb.domain.model.system import PackageMetadata as PackageMetadata
+from gen_epix.commondb.domain.model.system import UploadJob as UploadJob
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload as BaseBatchForUpload,
 )
@@ -96,6 +97,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
     ],
     enum.ServiceType.SYSTEM: [
         Outage,
+        UploadJob,
         PackageMetadata,
         DeleteAllOperationalDataResult,
         DeleteAllRefDataResult,

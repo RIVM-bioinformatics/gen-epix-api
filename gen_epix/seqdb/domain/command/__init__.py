@@ -63,13 +63,22 @@ from gen_epix.commondb.domain.command import (
 from gen_epix.commondb.domain.command import (
     RetrieveOwnUserCommand as RetrieveOwnUserCommand,
 )
+from gen_epix.commondb.domain.command import (
+    RetrieveUploadJobCommand as RetrieveUploadJobCommand,
+)
 from gen_epix.commondb.domain.command import SiteCrudCommand as SiteCrudCommand
+from gen_epix.commondb.domain.command import (
+    SubmitUploadJobCommand as SubmitUploadJobCommand,
+)
 from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand as UpdateAssociationCommand,
 )
 from gen_epix.commondb.domain.command import UpdateUserCommand as UpdateUserCommand
 from gen_epix.commondb.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
+)
+from gen_epix.commondb.domain.command import (
+    UploadJobCrudCommand as UploadJobCrudCommand,
 )
 from gen_epix.commondb.domain.command import UserCrudCommand as UserCrudCommand
 from gen_epix.commondb.domain.command import (

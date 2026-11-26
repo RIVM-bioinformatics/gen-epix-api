@@ -1,7 +1,7 @@
 """Define the shared commondb system service contract.
 
 `BaseSystemService` extends the application service lifecycle with handlers for
-data resets, outages, package licenses, and feature flags. Concrete services
+data resets, outages, package licenses, feature flags, and upload jobs. Concrete services
 implement these operations; command dispatch and persistence remain with the
 application and repository layers.
 """
@@ -34,6 +34,8 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
         f(command.RetrieveOutagesCommand, self.retrieve_outages)
         f(command.RetrieveLicensesCommand, self.retrieve_licenses)
         f(command.RetrieveFeatureFlagsCommand, self.retrieve_feature_flags)
+        f(command.SubmitUploadJobCommand, self.submit_upload_job)
+        f(command.RetrieveUploadJobCommand, self.retrieve_upload_job)
 
     @abc.abstractmethod
     def register_policies(self) -> None:
@@ -89,6 +91,38 @@ class BaseSystemService(BaseService[BaseSystemRepository]):
 
         Returns:
             Feature flags keyed by their names.
+
+        Raises:
+            NotImplementedError: Always; concrete services implement retrieval.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def submit_upload_job(self, cmd: command.SubmitUploadJobCommand) -> model.UploadJob:
+        """Accept an upload command for processing in the background.
+
+        Args:
+            cmd: Command wrapping the upload command.
+
+        Returns:
+            The accepted job, with status QUEUED.
+
+        Raises:
+            NotImplementedError: Always; concrete services implement submission.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_upload_job(
+        self, cmd: command.RetrieveUploadJobCommand
+    ) -> model.UploadJob:
+        """Retrieve an upload job submitted by the requesting user.
+
+        Args:
+            cmd: Command identifying the job.
+
+        Returns:
+            The job, including its result once it has finished.
 
         Raises:
             NotImplementedError: Always; concrete services implement retrieval.

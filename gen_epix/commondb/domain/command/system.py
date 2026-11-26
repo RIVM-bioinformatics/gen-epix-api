@@ -7,6 +7,9 @@ module.
 """
 
 from typing import ClassVar
+from uuid import UUID
+
+from pydantic import Field, SerializeAsAny
 
 from gen_epix.commondb.domain import model
 from gen_epix.commondb.domain.command.base import Command, CrudCommand
@@ -73,6 +76,35 @@ class RetrieveFeatureFlagsCommand(Command):
     pass
 
 
+class SubmitUploadJobCommand(Command):
+    """Represents a request to process an upload command in the background.
+
+    The upload command is authorized for the submitting user before the job is
+    accepted, and is dispatched again as an initial command, with all its policies,
+    when a background worker processes it. A job can therefore do nothing that the
+    user could not do by executing the upload command directly. The upload command
+    must be issued by the same user as this command.
+    """
+
+    upload_command: SerializeAsAny[Command] = Field(
+        description="The upload command to process in the background."
+    )
+
+
+class RetrieveUploadJobCommand(Command):
+    """Represents a request to retrieve the status and result of an upload job.
+
+    Only the user that submitted the job can retrieve it.
+    """
+
+    job_id: UUID = Field(description="The ID of the upload job.")
+    job_type: str | None = Field(
+        default=None,
+        description="If given, the job is only returned if it processes this upload command.",
+        max_length=100,
+    )
+
+
 # CRUD commands
 
 
@@ -80,3 +112,13 @@ class OutageCrudCommand(CrudCommand):
     """Represents a request to execute CRUD operations on system outage windows."""
 
     MODEL_CLASS: ClassVar = model.Outage
+
+
+class UploadJobCrudCommand(CrudCommand):
+    """Represents a request to execute CRUD operations on upload jobs.
+
+    Jobs are created and updated by the system service; this command gives
+    administrators read access for monitoring.
+    """
+
+    MODEL_CLASS: ClassVar = model.UploadJob

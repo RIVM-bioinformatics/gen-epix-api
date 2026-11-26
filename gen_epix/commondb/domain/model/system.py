@@ -8,10 +8,13 @@ non-persisted metadata about installed application packages.
 """
 
 import datetime
-from typing import ClassVar
+import json
+from typing import Any, ClassVar
+from uuid import UUID
 
 from pydantic import Field
 
+from gen_epix.commondb.domain.enum import UploadJobStatus
 from gen_epix.commondb.domain.model.base import Model, ModelNoId
 from gen_epix.fastapp import Entity
 
@@ -48,6 +51,76 @@ class Outage(Model):
         default=None,
         description="Whether the system outage is currently visible, this overrides visible_from and visible_to.",
     )
+
+
+class UploadJob(Model):
+    """Represents an upload processed in the background and its outcome.
+
+    An upload job is created when a client submits an upload asynchronously. The
+    application returns the job immediately and processes the upload on a
+    background worker in the same process; the client polls the job until its
+    status is SUCCEEDED or FAILED. The job row is persisted so that any replica
+    can answer status requests. A job whose worker stops sending heartbeats (e.g.
+    because its pod was restarted) is reported as FAILED.
+    """
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="upload_jobs",
+        table_name="upload_job",
+        persistable=True,
+    )
+    user_id: UUID = Field(description="The ID of the user that submitted the job.")
+    job_type: str = Field(
+        description="The name of the upload command processed by the job.",
+        max_length=100,
+    )
+    status: UploadJobStatus = Field(description="The lifecycle state of the job.")
+    submitted_at: datetime.datetime = Field(
+        description="The date-time when the job was submitted."
+    )
+    started_at: datetime.datetime | None = Field(
+        default=None, description="The date-time when processing of the job started."
+    )
+    finished_at: datetime.datetime | None = Field(
+        default=None, description="The date-time when processing of the job finished."
+    )
+    heartbeat_at: datetime.datetime | None = Field(
+        default=None,
+        description="The date-time when the worker last reported that the job is alive.",
+    )
+    worker_id: str | None = Field(
+        default=None,
+        description="The ID of the worker process that owns the job.",
+        max_length=255,
+    )
+    result_json: str | None = Field(
+        default=None,
+        description="The JSON-serialized upload result, when the job SUCCEEDED.",
+    )
+    error_status_code: int | None = Field(
+        default=None,
+        description="The HTTP status code the synchronous upload would have returned, when the job FAILED.",
+    )
+    error_detail: str | None = Field(
+        default=None,
+        description="A description of the error, when the job FAILED.",
+        max_length=2000,
+    )
+
+    @property
+    def is_finished(self) -> bool:
+        """Return whether the job has reached a final status."""
+        return self.status in {UploadJobStatus.SUCCEEDED, UploadJobStatus.FAILED}
+
+    def get_result(self) -> Any:
+        """Return the deserialized upload result, or None if there is none.
+
+        Returns:
+            The upload result as JSON-compatible data.
+        """
+        if self.result_json is None:
+            return None
+        return json.loads(self.result_json)
 
 
 class PackageMetadata(Model):

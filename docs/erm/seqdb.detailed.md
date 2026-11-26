@@ -1,6 +1,6 @@
 # seqdb — Detailed Entity-Relationship Diagram
 
-Auto-generated from domain model definitions.  Contains **46** persistable entities with their field definitions.
+Auto-generated from domain model definitions.  Contains **47** persistable entities with their field definitions.
 
 ```mermaid
 erDiagram
@@ -87,6 +87,24 @@ erDiagram
         timestamp visible_to
         bool is_active
         bool is_visible
+    }
+
+    UploadJob {
+        timestamp created_at
+        timestamp modified_at
+        UUID modified_by
+        UUID id PK
+        UUID user_id
+        string job_type
+        enum status
+        timestamp submitted_at
+        timestamp started_at
+        timestamp finished_at
+        timestamp heartbeat_at
+        string worker_id
+        string result_json
+        int error_status_code
+        string error_detail
     }
 
     Organization {
@@ -453,7 +471,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         UUID protocol_id FK
         UUID sample_id FK
         timestamp created_at
@@ -478,7 +496,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         FormatType format
         UUID content_hash
         string content
@@ -496,7 +514,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         FormatType format
         UUID content_hash
         string content
@@ -524,12 +542,14 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         UUID sample_id FK
         timestamp created_at
         timestamp modified_at
         UUID modified_by
         UUID id PK
+        string code
+        UUID seq_hash
         string uri
         UUID file_id FK
         enum file_format
@@ -539,8 +559,6 @@ erDiagram
         UUID read_set2_id FK
         UUID protocol_id FK
         list[Contig] contigs
-        UUID seq_hash
-        string code
         any qc_result
         any is_available
         any n_contigs
@@ -565,7 +583,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         FormatType format
         UUID content_hash
         string content
@@ -585,7 +603,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         FormatType format
         UUID content_hash
         string content
@@ -604,7 +622,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         FormatType format
         UUID content_hash
         string content
@@ -624,7 +642,7 @@ erDiagram
         enum qc_result_machine
         enum qc_result_human
         float qc_score
-        Json qc_report
+        JsonValue qc_report
         enum format
         UUID content_hash
         string content

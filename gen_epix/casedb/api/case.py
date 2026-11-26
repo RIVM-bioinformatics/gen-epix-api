@@ -61,6 +61,7 @@ from gen_epix.casedb.api.case_schema import (
 )
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.api.exc import handle_command
+from gen_epix.commondb.api.upload_job_schema import UploadJobResponse
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
@@ -206,6 +207,68 @@ def create_case_endpoints(
                 input_handle_exception=handle_exception,
                 input_command=cmd,
             ),
+        )
+
+    @router.post(
+        "/upload/cases/jobs",
+        operation_id="upload__cases__jobs",
+        name="Submit case upload job",
+        description=(
+            "Accept a case upload for processing in the background and return the "
+            "upload job (HTTP 202). Poll GET /upload/cases/jobs/{job_id} until its "
+            "status is SUCCEEDED or FAILED. Takes the same request body as POST "
+            "/upload/cases: "
+            f"{command.UploadCasesCommand.__doc__}"
+        ),
+        status_code=202,
+    )
+    def upload__cases__jobs(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        cmd: command.UploadCasesCommand,
+    ) -> UploadJobResponse[model.CaseBatchUploadResult]:
+        """See router description."""
+        cmd.user = user
+        job = cast(
+            model.UploadJob,
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="d8e2b6f4",
+                input_handle_exception=handle_exception,
+                input_command=command.SubmitUploadJobCommand(
+                    user=user, upload_command=cmd
+                ),
+            ),
+        )
+        return UploadJobResponse[model.CaseBatchUploadResult].from_job(job)
+
+    @router.get(
+        "/upload/cases/jobs/{job_id}",
+        operation_id="retrieve__upload_cases_job",
+        name="Retrieve case upload job",
+        description=command.RetrieveUploadJobCommand.__doc__,
+    )
+    def retrieve__upload_cases_job(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        job_id: UUID,
+    ) -> UploadJobResponse[model.CaseBatchUploadResult]:
+        """See router description."""
+        job = cast(
+            model.UploadJob,
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="a3f7c1e9",
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveUploadJobCommand(
+                    user=user,
+                    job_id=job_id,
+                    job_type=command.UploadCasesCommand.__name__,
+                ),
+            ),
+        )
+        return UploadJobResponse[model.CaseBatchUploadResult].from_job(
+            job, model.CaseBatchUploadResult
         )
 
     @router.post(

@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import StreamingResponse
 
+from gen_epix.commondb.api.upload_job_schema import UploadJobResponse
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
@@ -359,6 +360,65 @@ def create_seq_endpoints(
             ),
         )
         return retval
+
+    @router.post(
+        "/upload/samples/jobs",
+        operation_id="upload__samples__jobs",
+        name="Submit sample upload job",
+        description=(
+            "Accept a sample upload for processing in the background and return "
+            "the upload job (HTTP 202). Poll GET /upload/samples/jobs/{job_id} "
+            "until its status is SUCCEEDED or FAILED. Takes the same request body "
+            "as POST /upload/samples: "
+            f"{command.UploadSamplesCommand.__doc__}"
+        ),
+        status_code=202,
+    )
+    def upload__samples__jobs(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        request_body: UploadSamplesRequestBody,
+    ) -> UploadJobResponse[model.SampleBatchUploadResult]:
+        """See router description."""
+        job: model.UploadJob = _handle_seq_command(
+            app,
+            handle_exception,
+            "e1c5a9d3",
+            user,
+            command.SubmitUploadJobCommand(
+                user=user,
+                upload_command=command.UploadSamplesCommand(
+                    user=user,
+                    **request_body.model_dump(exclude={"user"}),
+                ),
+            ),
+        )
+        return UploadJobResponse[model.SampleBatchUploadResult].from_job(job)
+
+    @router.get(
+        "/upload/samples/jobs/{job_id}",
+        operation_id="retrieve__upload_samples_job",
+        name="Retrieve sample upload job",
+        description=command.RetrieveUploadJobCommand.__doc__,
+    )
+    def retrieve__upload_samples_job(
+        user: registered_user_dependency,  # type: ignore[valid-type]
+        job_id: UUID,
+    ) -> UploadJobResponse[model.SampleBatchUploadResult]:
+        """See router description."""
+        job: model.UploadJob = _handle_seq_command(
+            app,
+            handle_exception,
+            "b6d0f4a8",
+            user,
+            command.RetrieveUploadJobCommand(
+                user=user,
+                job_id=job_id,
+                job_type=command.UploadSamplesCommand.__name__,
+            ),
+        )
+        return UploadJobResponse[model.SampleBatchUploadResult].from_job(
+            job, model.SampleBatchUploadResult
+        )
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(
