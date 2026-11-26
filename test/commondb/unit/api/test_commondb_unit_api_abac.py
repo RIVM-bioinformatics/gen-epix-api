@@ -116,7 +116,7 @@ async def test_admin_names_route_dispatches_command_for_registered_user() -> Non
         is_active=True,
     )
 
-    response = await route.endpoint(user)
+    response = route.endpoint(user)
 
     assert response is result
     assert route.path == "/retrieve_organization_admin_name_emails"

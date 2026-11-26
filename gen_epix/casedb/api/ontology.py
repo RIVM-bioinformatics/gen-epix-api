@@ -47,7 +47,7 @@ def create_ontology_endpoints(
         name="Disease_EtiologicalAgent",
         description=command.DiseaseEtiologicalAgentUpdateAssociationCommand.__doc__,
     )
-    async def diseases__put__concepts(
+    def diseases__put__concepts(
         user: registered_user_dependency,  # type: ignore[valid-type]
         disease_id: UUID,
         request_body: DiseaseEtiologicalAgentUpdateAssociationRequestBody,
