@@ -15,6 +15,7 @@ from uuid import UUID
 
 from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes
+from starlette.concurrency import run_in_threadpool
 
 from gen_epix.fastapp import App, enum, exc, model
 from gen_epix.fastapp.services.auth.base import BaseAuthService
@@ -650,6 +651,18 @@ class AuthService(BaseAuthService):
     ) -> model.User:
         """Construct a new application user from provider claims.
 
+        Runs in the threadpool: the userinfo request and user construction are
+        synchronous and would otherwise block the event loop.
+        """
+        return await run_in_threadpool(
+            self._get_new_user_from_claims_sync, claims, request_userinfo
+        )
+
+    def _get_new_user_from_claims_sync(
+        self, claims: Claims, request_userinfo: bool = True
+    ) -> model.User:
+        """Construct a new application user from provider claims.
+
         Optionally enriches claims from the provider userinfo endpoint before asking
         the configured user manager to construct the user.
 
@@ -737,7 +750,20 @@ class AuthService(BaseAuthService):
     async def get_existing_user_from_claims(
         self, claims: Claims, request_userinfo: bool = True
     ) -> model.User:
-        """Return existing user from claims."""
+        """Return existing user from claims.
+
+        Runs in the threadpool: this is called by the auth dependency on every
+        request and performs synchronous database (and possibly userinfo) calls,
+        which would otherwise block the event loop.
+        """
+        return await run_in_threadpool(
+            self._get_existing_user_from_claims_sync, claims, request_userinfo
+        )
+
+    def _get_existing_user_from_claims_sync(
+        self, claims: Claims, request_userinfo: bool = True
+    ) -> model.User:
+        """Return existing user from claims, synchronously."""
         issuer: str = claims.claims["iss"]  # type: ignore
         sub: str = claims.claims["sub"]  # type: ignore
         user_manager: BaseUserManager = self.app.user_manager
@@ -755,9 +781,11 @@ class AuthService(BaseAuthService):
                     updated_user = user_manager.update_user_name(user, new_user_name)
                     if updated_user:
                         user = updated_user
-            except exc.DomainException as exception:
+            except Exception as exception:  # pylint: disable=broad-exception-caught
+                # The user was found; a failing name sync (e.g. a database
+                # conflict) must not fail authentication of the request.
                 if self._logger:
-                    self._logger.error(
+                    self._logger.warning(
                         self.create_log_message(
                             "a7d93f8c",
                             "Failed to update user name from claims",

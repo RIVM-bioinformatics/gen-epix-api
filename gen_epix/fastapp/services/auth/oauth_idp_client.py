@@ -15,6 +15,7 @@ from fastapi.security import OAuth2
 # from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
 from fastapi.security.open_id_connect_url import OpenIdConnect
 from fastapi.security.utils import get_authorization_scheme_param
+from starlette.concurrency import run_in_threadpool
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
@@ -178,7 +179,8 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
 
         key: jwt.PyJWK | None = self._signing_keys.get(key_id)
         if not key:
-            self._refresh_signing_keys()
+            # Synchronous HTTP request to the JWKS endpoint; keep it off the loop
+            await run_in_threadpool(self._refresh_signing_keys)
             key = self._signing_keys.get(key_id)
             if not key:
                 self._log_keys_fetch_failure(key_id)
@@ -266,7 +268,10 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
 
         # optionally apply token introspection
         if self.server_cfg.enable_introspection:
-            self.token_introspection_manager.introspect_token(jwt_token, claims)
+            # Synchronous HTTP request to the IDP; keep it off the event loop
+            await run_in_threadpool(
+                self.token_introspection_manager.introspect_token, jwt_token, claims
+            )
 
         if self.logger and self.logger.level <= logging.DEBUG:
             self.logger.debug(
