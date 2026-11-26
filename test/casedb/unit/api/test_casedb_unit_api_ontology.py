@@ -1,4 +1,3 @@
-import asyncio
 from test.util.mock_compat import Mock, patch
 from typing import NoReturn
 from uuid import UUID, uuid4
@@ -175,9 +174,7 @@ def test_put_endpoint_handles_command_and_returns_result(
         etiologies=etiologies
     )
 
-    result = asyncio.run(
-        endpoint(user=user, disease_id=disease_id, request_body=request_body)
-    )
+    result = endpoint(user=user, disease_id=disease_id, request_body=request_body)
 
     assert result == etiologies
     cmd = app.handle.call_args.args[0]
@@ -206,6 +203,6 @@ def test_put_endpoint_delegates_exceptions_to_handler(
     )
 
     with pytest.raises(Handled):
-        asyncio.run(endpoint(user=user, disease_id=uuid4(), request_body=request_body))
+        endpoint(user=user, disease_id=uuid4(), request_body=request_body)
 
     handle_exception.assert_called_once_with("d5459ee4", user, error)

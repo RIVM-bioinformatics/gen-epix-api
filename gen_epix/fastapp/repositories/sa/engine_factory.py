@@ -1,5 +1,6 @@
 """Thread-safe SQLAlchemy engine factory."""
 
+import os
 import threading
 from collections.abc import Mapping
 
@@ -10,6 +11,17 @@ from sqlalchemy import Engine
 # Setting should be lower than any Firewall in the network path; recycle
 # connections before that to avoid stale-connection errors on pool checkout.
 DEFAULT_POOL_RECYCLE = 230
+
+# Connection pool size per engine (per worker process). Request handlers run in
+# FastAPI's threadpool (up to 40 threads), but every connection in use is a
+# concurrently executing request on the database, which is capped by the
+# database's worker limit (Azure SQL GP_S_Gen5_1: 75 workers). Keep
+# max replicas x (size + overflow) below that limit: threads beyond the pool
+# then wait for a connection (pool_timeout) in the app instead of the database
+# rejecting requests (error 10928). Defaults are SQLAlchemy's; set per
+# environment with SA_POOL_SIZE and SA_POOL_MAX_OVERFLOW.
+DEFAULT_POOL_SIZE = int(os.environ.get("SA_POOL_SIZE", "5"))
+DEFAULT_POOL_MAX_OVERFLOW = int(os.environ.get("SA_POOL_MAX_OVERFLOW", "10"))
 
 
 class EngineFactory:
@@ -53,12 +65,20 @@ class EngineFactory:
         )
         with cls._LOCK:
             if key not in cls._ENGINE_MAP:
+                pool_kwargs: dict = {}
+                if not connection_string.startswith("sqlite"):
+                    # SQLite uses pool classes that do not accept these
+                    pool_kwargs = {
+                        "pool_size": DEFAULT_POOL_SIZE,
+                        "max_overflow": DEFAULT_POOL_MAX_OVERFLOW,
+                    }
                 engine = sa.create_engine(
                     connection_string,
                     echo=echo,
                     pool_recycle=pool_recycle,
                     pool_pre_ping=True,
                     connect_args=connect_args or {},
+                    **pool_kwargs,
                 )
                 cls._ENGINE_MAP[key] = engine
             return cls._ENGINE_MAP[key]

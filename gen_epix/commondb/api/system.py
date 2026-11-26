@@ -113,7 +113,7 @@ def create_system_endpoints(
         name="Feature Flags",
         description=command.RetrieveFeatureFlagsCommand.__doc__,
     )
-    async def retrieve__feature_flags() -> FeatureFlagsResponseBody:
+    def retrieve__feature_flags() -> FeatureFlagsResponseBody:
         """Return the application's feature flags."""
         feature_flags: dict[Hashable, bool] = _handle_system_command(
             app,
@@ -134,7 +134,7 @@ def create_system_endpoints(
         name="Licenses",
         description=command.RetrieveLicensesCommand.__doc__,
     )
-    async def retrieve__licenses(
+    def retrieve__licenses(
         idp_user: idp_user_dependency,  # type: ignore
     ) -> list[model.PackageMetadata]:
         """Return package license metadata available to an IDP-authenticated user.
@@ -158,7 +158,7 @@ def create_system_endpoints(
 
     # Log
     @router.post("/log", operation_id="log")
-    async def log(user: registered_user_dependency, request_body: LogRequestBody) -> None:  # type: ignore
+    def log(user: registered_user_dependency, request_body: LogRequestBody) -> None:  # type: ignore
         """Log the provided log items."""
         try:
             _log_external_items(app, user, request_body)
@@ -172,7 +172,7 @@ def create_system_endpoints(
         name="Outages",
         description=command.RetrieveOutagesCommand.__doc__,
     )
-    async def retrieve__outages(
+    def retrieve__outages(
         idp_user: idp_user_dependency,  # type: ignore
     ) -> list[model.Outage]:
         """Retrieve configured system outage records."""
@@ -197,7 +197,7 @@ def create_system_endpoints(
             description=delete_all_operational_data_command_class.__doc__,
             status_code=200,
         )
-        async def operational_data__delete(
+        def operational_data__delete(
             user: registered_user_dependency,  # type: ignore[valid-type]
         ) -> model.DeleteAllOperationalDataResult:
             """Delete operational data using the authenticated command lifecycle."""
@@ -222,7 +222,7 @@ def create_system_endpoints(
             description=delete_all_ref_data_command_class.__doc__,
             status_code=200,
         )
-        async def ref_data__delete(
+        def ref_data__delete(
             user: registered_user_dependency,  # type: ignore[valid-type]
         ) -> model.DeleteAllRefDataResult:
             """Delete application reference data after operational data is reset."""

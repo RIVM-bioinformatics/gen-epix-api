@@ -1,6 +1,5 @@
 """Verify command dispatch and exception forwarding for sequence API adapters."""
 
-import asyncio
 from test.util.mock_compat import Mock
 from typing import Annotated, Any
 from uuid import UUID, uuid4
@@ -81,7 +80,7 @@ def test_retrieve_seq_fasta_route_forwards_wrap() -> None:
         seq_ids=[uuid4()], wrap=0, file_name="sequences.fasta"
     )
 
-    asyncio.run(route.endpoint(None, request))
+    route.endpoint(None, request)
 
     command = app.handle.call_args.args[0]
     assert command.wrap == 0

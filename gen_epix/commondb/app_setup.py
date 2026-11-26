@@ -22,6 +22,9 @@ from gen_epix.fastapp.middleware import limiter
 from gen_epix.fastapp.middleware.handle_auth_exception import (
     HandleAuthExceptionMiddleware,
 )
+from gen_epix.fastapp.middleware.log_unhandled_exception import (
+    create_unhandled_exception_handler,
+)
 from gen_epix.fastapp.middleware.update_response_header import (
     UpdateResponseHeaderMiddleware,
 )
@@ -137,6 +140,12 @@ def create_fast_api(
             fast_app=app,
             logger=api_logger,
         )
+
+    # Log unhandled exceptions as structured log items instead of plain text
+    fast_api.add_exception_handler(
+        Exception,
+        create_unhandled_exception_handler(fast_app=app, logger=api_logger),
+    )
 
     # Add routers
     app_handle_exception = handle_exception or generate_handle_exception_function(

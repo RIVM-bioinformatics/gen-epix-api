@@ -75,7 +75,7 @@ def create_organization_endpoints(
         name="Invite a user",
         description=invite_user_command_class.__doc__,
     )
-    async def invite_user(
+    def invite_user(
         user: registered_user_dependency, user_invitation: InviteUserRequestBody  # type: ignore[valid-type]
     ) -> user_invitation_class:  # type: ignore[valid-type]
         """See router description."""
@@ -101,7 +101,7 @@ def create_organization_endpoints(
         name="The constraints for inviting a user",
         description=retrieve_invite_user_constraints_command_class.__doc__,
     )
-    async def invite_user__constraints(
+    def invite_user__constraints(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> model.UserInvitationConstraints:
         """See router description."""
@@ -122,7 +122,7 @@ def create_organization_endpoints(
         name="Register InvitedUser",
         description=command.RegisterInvitedUserCommand.__doc__,
     )
-    async def user_registrations__post_one(
+    def user_registrations__post_one(
         user: new_user_dependency, token: str  # type: ignore[valid-type]
     ) -> user_class:  # type: ignore[valid-type]
         """See router description."""
@@ -142,7 +142,7 @@ def create_organization_endpoints(
         name="OrganizationSet_Organization",
         description=command.OrganizationSetOrganizationUpdateAssociationCommand.__doc__,
     )
-    async def organization_sets__put__organizations(
+    def organization_sets__put__organizations(
         user: registered_user_dependency,  # type: ignore[valid-type]
         organization_set_id: UUID,
         request_body: OrganizationSetOrganizationUpdateAssociationRequestBody,
@@ -170,7 +170,7 @@ def create_organization_endpoints(
         name="DataCollectionSet_DataCollection",
         description=command.DataCollectionSetDataCollectionUpdateAssociationCommand.__doc__,
     )
-    async def data_collection_sets__put__data_collections(
+    def data_collection_sets__put__data_collections(
         user: registered_user_dependency,  # type: ignore[valid-type]
         data_collection_set_id: UUID,
         request_body: DataCollectionSetDataCollectionUpdateAssociationRequestBody,
@@ -198,7 +198,7 @@ def create_organization_endpoints(
         name="UserMe",
         description=command.RetrieveOwnUserCommand.__doc__,
     )
-    async def user_me__get_one(
+    def user_me__get_one(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> user_class:  # type: ignore[valid-type]
         """See router description."""
@@ -216,7 +216,7 @@ def create_organization_endpoints(
         name="UserMe_Permissions",
         description=command.RetrieveOwnPermissionsCommand.__doc__,
     )
-    async def user_me__retrieve_permissions(
+    def user_me__retrieve_permissions(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> set[api_permission_class]:  # type: ignore[valid-type]
         """See router description."""
@@ -234,7 +234,7 @@ def create_organization_endpoints(
         name="AnonymizeUser",
         description=command.AnonymizeUserCommand.__doc__,
     )
-    async def anonymize_user(
+    def anonymize_user(
         user: registered_user_dependency,  # type: ignore[valid-type]
         user_id: UUID,
     ) -> None:
@@ -253,7 +253,7 @@ def create_organization_endpoints(
         name="UpdateUser",
         description=update_user_command_class.__doc__,
     )
-    async def update_user(
+    def update_user(
         user: registered_user_dependency, object_id: UUID, request_body: UpdateUserRequestBody  # type: ignore[valid-type]
     ) -> user_class:  # type: ignore[valid-type]
         """See router description."""
@@ -276,7 +276,7 @@ def create_organization_endpoints(
         name="UpdateUserOwnOrganizationCommand",
         description=command.UpdateUserOwnOrganizationCommand.__doc__,
     )
-    async def update_user_own_organization(
+    def update_user_own_organization(
         user: registered_user_dependency, data: UpdateUserOwnOrganizationRequestBody  # type: ignore[valid-type]
     ) -> user_class:  # type: ignore[valid-type]
         """See router description."""
@@ -296,7 +296,7 @@ def create_organization_endpoints(
         name="Update association between Organization and IdentifierIssuer",
         description=command.OrganizationIdentifierIssuerUpdateAssociationCommand.__doc__,
     )
-    async def organizations__put__identifier_issuers(
+    def organizations__put__identifier_issuers(
         user: registered_user_dependency,  # type: ignore[valid-type]
         organization_id: UUID,
         request_body: OrganizationIdentifierIssuerUpdateAssociationRequestBody,
@@ -324,7 +324,7 @@ def create_organization_endpoints(
         name="Retrieve organization contacts",
         description=command.RetrieveOrganizationContactsCommand.__doc__,
     )
-    async def retrieve__organization_contacts(
+    def retrieve__organization_contacts(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveOrganizationContactsRequestBody,
     ) -> model.OrganizationContacts:

@@ -25,6 +25,7 @@ import pytest
 
 from gen_epix.commondb.domain import exc, model
 from gen_epix.commondb.services.user_manager import UserManager
+from gen_epix.fastapp import IsolationLevel
 from gen_epix.fastapp.enum import CrudOperation
 
 
@@ -766,6 +767,23 @@ class TestUpdateUserName:
         returned = env.user_manager.update_user_name(user, "")
         assert returned is not None
         assert returned.name == ""
+
+    def test_name_update_runs_under_read_committed(self) -> None:
+        """Under SERIALIZABLE, parallel first requests of a user deadlocked (S -> X)."""
+        user = make_cdb_user(name="John")
+        env = self.make_env_with_user(user)
+        uow_kwargs: list[dict] = []
+        uow = env.repo.uow
+
+        def recording_uow(**kwargs: object) -> object:
+            uow_kwargs.append(kwargs)
+            return uow(**kwargs)
+
+        env.repo.uow = recording_uow  # type: ignore[method-assign]
+
+        env.user_manager.update_user_name(user, "Johnny")
+
+        assert uow_kwargs == [{"isolation_level": IsolationLevel.READ_COMMITTED}]
 
     def test_name_change_is_persisted(self) -> None:
         user = make_cdb_user(name="Original Name")

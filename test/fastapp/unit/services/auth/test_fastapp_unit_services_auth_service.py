@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from datetime import datetime, timedelta, timezone
 from math import floor
 from test.commondb.unit.services.auth_test_support import (
@@ -543,6 +544,54 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         retval = self.run_async(self.service.get_existing_user_from_claims(claims))
         # Verify
         assert retval is self.user
+
+    def test_get_existing_user_update_name_database_error_is_not_fatal(self) -> None:
+        """Update user name raises a database error -> warning, returns user.
+
+        Parallel first requests of a user could deadlock on the name update; the
+        user was found, so authentication must not fail because of it.
+        """
+        # Create input
+        claims: Claims = self.create_claims(uuid4(), {"email": "u@example.com"})
+        # Set up mocks
+        self.service._logger = Mock()
+        self.user_manager.get_user_key_from_claims.return_value = "key"
+        self.user_manager.retrieve_user_by_key.return_value = self.user
+        self.user_manager.get_user_name_from_claims.return_value = "New Name"
+        self.user_manager.update_user_name.side_effect = ValueError(
+            "Statement error: ('40001', '... deadlock victim ... (1205)')"
+        )
+        # Execute
+        retval = self.run_async(self.service.get_existing_user_from_claims(claims))
+        # Verify
+        assert retval is self.user
+        self.service._logger.warning.assert_called_once()
+        self.service._logger.error.assert_not_called()
+
+    def test_get_existing_user_runs_lookup_off_the_event_loop(self) -> None:
+        """The synchronous user lookup must not block the event loop thread."""
+        # Create input
+        claims: Claims = self.create_claims(uuid4(), {"email": "u@example.com"})
+        lookup_threads: list[threading.Thread] = []
+
+        def retrieve_user_by_key(_key: str) -> object:
+            lookup_threads.append(threading.current_thread())
+            return self.user
+
+        # Set up mocks
+        self.user_manager.get_user_key_from_claims.return_value = "key"
+        self.user_manager.retrieve_user_by_key.side_effect = retrieve_user_by_key
+        self.user_manager.get_user_name_from_claims.return_value = None
+
+        async def call_and_get_loop_thread() -> threading.Thread:
+            await self.service.get_existing_user_from_claims(claims)
+            return threading.current_thread()
+
+        # Execute
+        loop_thread = self.run_async(call_and_get_loop_thread())
+        # Verify
+        assert len(lookup_threads) == 1
+        assert lookup_threads[0] is not loop_thread
 
     def test_get_existing_user_key_from_userinfo_then_found(self) -> None:
         """No user key initially; after userinfo, key resolves -> returns user."""

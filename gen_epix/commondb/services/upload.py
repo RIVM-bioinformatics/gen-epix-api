@@ -1,5 +1,7 @@
 """Orchestrate validation, upsert, and result reporting for commondb batch uploads."""
 
+import random
+import time
 from collections import defaultdict
 from typing import Generator, cast
 from uuid import UUID
@@ -17,8 +19,18 @@ from gen_epix.commondb.domain.model.upload import (
     UploadResultWithIdentifiers,
 )
 from gen_epix.etl.enum import EtlStatus
-from gen_epix.fastapp import BaseService, BaseUnitOfWork, CrudOperation, Model
-from gen_epix.fastapp.exc import DuplicateIdsError
+from gen_epix.fastapp import (
+    BaseService,
+    BaseUnitOfWork,
+    CrudOperation,
+    IsolationLevel,
+    Model,
+)
+from gen_epix.fastapp.exc import (
+    ConcurrentModificationError,
+    DuplicateIdsError,
+    UniqueConstraintViolationError,
+)
 from gen_epix.filter import (
     CompositeFilter,
     LogicalOperator,
@@ -29,6 +41,9 @@ from gen_epix.filter import (
 
 class BatchUploader:
     """Encapsulates coordination of batch-upload validation, persistence, rollback, and result status."""
+
+    # Attempts per batch when the transaction conflicts with a concurrent one
+    MAX_UPLOAD_ATTEMPTS = 3
 
     def __init__(
         self,
@@ -151,6 +166,67 @@ class BatchUploader:
         #  Check user rights
         self.verify_user_rights(cmd)
 
+        if not self.can_retry_batch(cmd):
+            return self._upload_batch_once(cmd)
+        # The upload mutates the batch in the command, so each retry starts from a
+        # pristine copy of the batch. Only the batch is copied: other command
+        # fields (such as the user) are not mutated and may not be copyable.
+        pristine_batch = getattr(cmd, self.cmd_batch_field_name).model_copy(deep=True)
+        attempt = 1
+        while True:
+            try:
+                return self._upload_batch_once(cmd)
+            except (
+                ConcurrentModificationError,
+                UniqueConstraintViolationError,
+            ) as exception:
+                # Deadlock victim, or a concurrent upload inserted the same id
+                # between verification and insert. The transaction was rolled
+                # back; a new attempt verifies against the now-committed data.
+                if attempt >= self.MAX_UPLOAD_ATTEMPTS:
+                    raise
+                self._log_upload_retry(cmd, attempt, exception)
+                time.sleep(random.uniform(0.05, 0.25) * attempt)
+                attempt += 1
+                cmd = cmd.model_copy(  # type: ignore[attr-defined]
+                    update={
+                        self.cmd_batch_field_name: pristine_batch.model_copy(deep=True)
+                    }
+                )
+
+    def can_retry_batch(self, cmd: command.UploadBatchCommandMixin) -> bool:
+        """Return whether a failed batch transaction may be retried as a whole.
+
+        Override when the upload has side effects outside its own transaction
+        that a retry would repeat.
+        """
+        return True
+
+    def _log_upload_retry(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        attempt: int,
+        exception: Exception,
+    ) -> None:
+        """Log a retried upload attempt."""
+        logger = getattr(self.service, "_logger", None)
+        if logger:
+            logger.warning(
+                self.service.create_log_message(
+                    "9adb67f6",
+                    "Upload transaction conflict, retrying",
+                    command_id=str(cmd.id),  # type: ignore[attr-defined]
+                    attempt=attempt,
+                    max_attempts=self.MAX_UPLOAD_ATTEMPTS,
+                    exception=exception,
+                )
+            )
+
+    def _upload_batch_once(
+        self,
+        cmd: command.UploadBatchCommandMixin,
+    ) -> BaseBatchUploadResult:
+        """Verify and upsert the batch in a single transaction."""
         # Initialize the upload result
         self._stored_objs = {}
         batch_result = self.init_batch_upload_result(cmd)
@@ -159,7 +235,15 @@ class BatchUploader:
             message="Upload started",
         )
 
-        with self.service.repository.uow() as uow:
+        # READ COMMITTED instead of the repository default SERIALIZABLE: the
+        # existence checks during verification would otherwise take range locks
+        # on every new id, and concurrent uploads inserting into each other's
+        # ranges deadlock (SQL Server 1205). Duplicate ids are still prevented
+        # by the primary key; a race on the same id raises a unique constraint
+        # violation, which is retried above.
+        with self.service.repository.uow(
+            isolation_level=IsolationLevel.READ_COMMITTED
+        ) as uow:
             # Verify batch
             batch_result.add_info(
                 code="8b4c2f91",

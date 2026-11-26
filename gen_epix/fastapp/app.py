@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import uuid
 from collections.abc import Callable, Hashable
 from datetime import datetime
@@ -122,7 +123,12 @@ class App:
         self._command_listeners: dict[
             EventTiming, dict[type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
-        self._command_stack: list[Command] = []
+        # Per-thread stack of commands being handled. Request handlers run
+        # concurrently in FastAPI's threadpool, and the stack depth decides
+        # whether a command is initial and thus subject to policy enforcement:
+        # a shared stack would let one request's command skip authorization
+        # because another request's command is on the stack.
+        self._command_stack_local = threading.local()
         self._cache_invalidator_map: dict[
             type[Command], list[Callable[[Command], None]]
         ] = {}
@@ -139,6 +145,20 @@ class App:
                     app={"created_at": self.created_at},
                 )
             )
+
+    @property
+    def _command_stack(self) -> list[Command]:
+        """Return the stack of commands being handled on the current thread."""
+        stack: list[Command] | None = getattr(self._command_stack_local, "stack", None)
+        if stack is None:
+            stack = []
+            self._command_stack_local.stack = stack
+        return stack
+
+    @_command_stack.setter
+    def _command_stack(self, value: list[Command]) -> None:
+        """Replace the stack of commands being handled on the current thread."""
+        self._command_stack_local.stack = value
 
     @property
     def id(self) -> str:
