@@ -25,7 +25,7 @@ requires-python = ">=3.14"
 # Needed to use the domain models and to call the applications as a remote client.
 # Running an application additionally needs the `server` extra below.
 dependencies = [
-    "httpx==0.28.1",
+    "httpx==0.29.0",
     "httpx2==2.16.2",
     "pyjwt==2.15.1",
     "urllib3==2.8.0",
