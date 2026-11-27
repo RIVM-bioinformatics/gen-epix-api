@@ -19,10 +19,7 @@ def _configure_url() -> None:
     )
     if not url:
         raise ValueError("Provide the database URL with -x url=... or ALEMBIC_URL")
-    # TODO: LSP-3893 A URL with percent-encoded credentials such as `%40` should be
-    # accepted, but ConfigParser interpolation may reject it here; confirm whether
-    # callers must escape percent signs or this module should preserve URLs verbatim.
-    config.set_main_option("sqlalchemy.url", url)
+    config.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:

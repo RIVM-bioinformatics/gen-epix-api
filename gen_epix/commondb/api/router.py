@@ -19,7 +19,7 @@ from gen_epix.fastapp.api.router import RouterData
 
 
 def create_routers(
-    app: App | None = None,
+    app: App,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
@@ -32,11 +32,12 @@ def create_routers(
 
     Returns:
         Tagged routers for the commondb API surface.
+
+    Raises:
+        ValueError: If the application is explicitly None.
     """
-    # TODO: LSP-3893 Omitting `app` or passing None is allowed by this signature,
-    # but the assertion rejects it; clarify whether `app` should be required or
-    # router creation is expected to support an absent application.
-    assert app
+    if app is None:
+        raise ValueError("app is required to create commondb routers")
     router_data: list[RouterData] = [
         # Common routers
         {

@@ -30,6 +30,7 @@ class RoleGenerator(CommonRoleGenerator):
     ROLE_PERMISSION_SETS: ClassVar[
         dict[Enum, set[tuple[type[fastapp.Command], PermissionTypeSet]]]
     ] = {
+        Role.ROOT: {(command.RefSeqCrudCommand, PermissionTypeSet.UD)},
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN] | set(),
         Role.REFDATA_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.REFDATA_ADMIN]
         | {

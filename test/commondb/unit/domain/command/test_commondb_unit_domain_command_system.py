@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 
 from gen_epix.commondb.domain import model
@@ -29,6 +31,13 @@ def test_system_command_uses_shared_command_base(
 
     assert isinstance(command, Command)
     assert command.user is None
+
+
+def test_command_created_at_is_utc_aware_and_serialized_with_offset() -> None:
+    command = Command()
+
+    assert command.created_at.utcoffset() == datetime.timedelta(0)
+    assert command.model_dump()["created_at"].endswith("+00:00")
 
 
 def test_delete_all_commands_defer_model_selection_to_application() -> None:

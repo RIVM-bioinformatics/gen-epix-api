@@ -22,9 +22,6 @@ class RoleGenerator(CommonRoleGenerator):
     )
 
     ROLE_PERMISSION_SETS = {
-        # TODO: LSP-3893 A non-root request for an OMOP command/permission omitted from
-        # every role set is denied; confirm whether such commands should be granted to
-        # a role or intentionally remain unavailable before completing this map.
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN]
         | {
             (command.ConceptClassCrudCommand, PermissionTypeSet.CRU),

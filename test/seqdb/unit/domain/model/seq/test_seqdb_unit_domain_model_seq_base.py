@@ -1,23 +1,37 @@
 """Tests for sequence representation helpers."""
 
 import base64
-import gzip
 import hashlib
 import json
-from pathlib import Path
-from typing import Any
+from typing import Any, Self
 from uuid import UUID, uuid4
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError, model_validator
 
-from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.seqdb.domain import model
+from gen_epix.seqdb.domain.literal import NEXTCLADE_REQUIRED_SEQ_KEYS
 from gen_epix.seqdb.domain.model.seq.base import (
+    ContentMixin,
+    QualityMixin,
     decode_ascii_from_gzip_base64,
     encode_ascii_as_gzip_base64,
+    str_uuid4,
 )
+
+
+class _ContentMixinProbe(BaseModel, ContentMixin[model.enum.SeqFormat]):
+    @model_validator(mode="after")
+    def _validate_content(self) -> Self:
+        return self
+
+
+def _nextclade_sequence(**overrides: Any) -> str:
+    payload: dict[str, Any] = {key: [] for key in NEXTCLADE_REQUIRED_SEQ_KEYS}
+    payload["alignment_start"] = 1
+    payload["alignment_end"] = 8
+    payload.update(overrides)
+    return json.dumps(payload)
 
 
 @pytest.mark.parametrize("value", ["", "ACGTN", "line one\nline two"])
@@ -29,11 +43,38 @@ def test_gzip_base64_round_trip_is_deterministic(value: str) -> None:
     assert decode_ascii_from_gzip_base64(encoded) == value
 
 
-@pytest.mark.parametrize("value", ["not base64!", "", "YWJj"])
+@pytest.mark.parametrize("value", ["not base64!", "", "YWJj", "é"])
 def test_decode_rejects_invalid_or_non_gzip_payloads(value: str) -> None:
     """Normalize malformed base64 and gzip data to a consistent ValueError."""
     with pytest.raises(ValueError, match="not a valid base64-encoded gzip archive"):
         decode_ascii_from_gzip_base64(value)
+
+
+def test_decode_rejects_invalid_deflate_data() -> None:
+    """Normalize decompressor errors from a malformed gzip payload."""
+    payload = base64.b64encode(bytes.fromhex("1f8b0800" + "00" * 24)).decode("ascii")
+
+    with pytest.raises(ValueError, match="not a valid base64-encoded gzip archive"):
+        decode_ascii_from_gzip_base64(payload)
+
+
+def test_uuid_default_factory_returns_uuid4_text() -> None:
+    generated_id = UUID(str_uuid4())
+
+    assert generated_id.version == 4
+
+
+def test_content_mixin_converts_and_serializes_format() -> None:
+    content = _ContentMixinProbe(
+        format=2,
+        content_hash=uuid4(),
+        content="payload",
+    )
+
+    assert content.format == model.enum.SeqFormat.STR_DNA
+    assert content.model_dump()["format"] == model.enum.SeqFormat.STR_DNA.value
+    with pytest.raises(NotImplementedError, match="must be implemented"):
+        ContentMixin._validate_content(content)
 
 
 """
@@ -178,6 +219,85 @@ class TestModelBaseSeq:
         assert base_seq.length == 42
         assert base_seq.seq_format == model.enum.SeqFormat.HASH_ONLY
         assert base_seq.seq == "opaque_data"
+        with pytest.raises(
+            NotImplementedError, match="Getting the nucleotide sequence"
+        ):
+            base_seq.get_nucleotide_seq()
+
+        with pytest.raises(ValidationError, match="Unable to calculate sequence hash"):
+            model.BaseSeq(
+                seq="opaque_data",
+                seq_format=model.enum.SeqFormat.HASH_ONLY,
+                length=42,
+            )
+
+    def test_nextclade_sequence_metadata_uses_alignment_bounds_and_hash(self) -> None:
+        sequence_hash = uuid4()
+        base_seq = model.BaseSeq(
+            seq=_nextclade_sequence(),
+            seq_format=model.enum.SeqFormat.NEXTCLADE,
+            id=sequence_hash,
+        )
+
+        assert base_seq.length == 8
+        assert base_seq.id == sequence_hash
+
+    @pytest.mark.parametrize(
+        ("sequence", "sequence_hash", "message"),
+        [
+            ("{}", uuid4(), "Missing required NextClade sequence fields"),
+            (
+                _nextclade_sequence(alignment_start=3, alignment_end=2),
+                uuid4(),
+                "alignment_end must be greater than or equal to alignment_start",
+            ),
+            (
+                _nextclade_sequence(),
+                None,
+                "Unable to calculate sequence hash",
+            ),
+        ],
+        ids=["missing-required-keys", "invalid-alignment", "missing-hash"],
+    )
+    def test_nextclade_sequence_metadata_rejects_invalid_values(
+        self, sequence: str, sequence_hash: UUID | None, message: str
+    ) -> None:
+        with pytest.raises(ValidationError, match=message):
+            model.BaseSeq(
+                seq=sequence,
+                seq_format=model.enum.SeqFormat.NEXTCLADE,
+                id=sequence_hash,
+            )
+
+    def test_nextclade_nucleotide_reconstruction_checks_reference_and_positions(
+        self,
+    ) -> None:
+        sequence_hash = uuid4()
+        missing_reference = model.BaseSeq(
+            seq=_nextclade_sequence(substitutions=[{"pos": 1, "alt": "T"}]),
+            seq_format=model.enum.SeqFormat.NEXTCLADE,
+            id=sequence_hash,
+        )
+        with pytest.raises(
+            ValueError, match="Reference sequence string must be provided"
+        ):
+            missing_reference.get_nucleotide_seq()
+
+        out_of_bounds = model.BaseSeq(
+            seq=_nextclade_sequence(substitutions=[{"pos": 9, "alt": "T"}]),
+            seq_format=model.enum.SeqFormat.NEXTCLADE,
+            id=sequence_hash,
+        )
+        with pytest.raises(ValueError, match="out of bounds"):
+            out_of_bounds.get_nucleotide_seq("ACGT")
+
+        supported_substitution = model.BaseSeq(
+            seq=_nextclade_sequence(substitutions=[{"pos": 2, "alt": "T"}]),
+            seq_format=model.enum.SeqFormat.NEXTCLADE,
+            id=sequence_hash,
+        )
+        with pytest.raises(NotImplementedError, match="Handling of insertions"):
+            supported_substitution.get_nucleotide_seq("ACGT")
 
     @pytest.mark.parametrize(
         ("seq_format", "expected_alphabet"),
@@ -272,6 +392,34 @@ class TestQualityMixinQcReport:
     """Test cases for the qc_report field of QualityMixin."""
 
     REPORT = {"coverage": 31.5, "flags": ["low_depth"], "nested": {"ok": True}}
+
+    def test_quality_defaults_precedence_sort_key_and_serialization(self) -> None:
+        pending = model.Contig(
+            seq="ATCG",
+            qc_result_machine=None,
+            qc_result_human=None,
+            qc_score=None,
+        )
+        assert pending.qc_result == model.enum.QualityControlResult.PENDING
+        assert pending.model_dump()["qc_result_machine"] == (
+            model.enum.QualityControlResult.PENDING.value
+        )
+        assert QualityMixin.get_sort_key(pending) == (
+            model.enum.QualityControlResult.PENDING.value,
+            float("-inf"),
+        )
+
+        manually_reviewed = model.Contig(
+            seq="ATCG",
+            qc_result_machine=model.enum.QualityControlResult.FAIL,
+            qc_result_human=model.enum.QualityControlResult.PASS,
+            qc_score=0.75,
+        )
+        assert manually_reviewed.qc_result == model.enum.QualityControlResult.PASS
+        assert QualityMixin.get_sort_key(manually_reviewed) == (
+            model.enum.QualityControlResult.PASS.value,
+            0.75,
+        )
 
     @pytest.mark.parametrize(
         "value", [REPORT, json.dumps(REPORT), None], ids=["object", "string", "none"]

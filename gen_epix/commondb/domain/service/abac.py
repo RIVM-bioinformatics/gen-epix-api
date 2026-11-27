@@ -122,9 +122,6 @@ class BaseAbacService(BaseService[BaseAbacRepository]):
             Updated user.
 
         Raises:
-            NotImplementedError: Always; concrete services implement the update.
+            NotImplementedError: If this service does not support the update.
         """
-        # TODO: LSP-3893 A concrete subclass missing this override still registers
-        # the command, which then raises NotImplementedError; clarify whether this
-        # hook must be abstract or conditionally registered.
         raise NotImplementedError()

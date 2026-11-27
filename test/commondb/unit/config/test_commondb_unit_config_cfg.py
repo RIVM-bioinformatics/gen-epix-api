@@ -5,20 +5,25 @@ import os
 import tempfile
 import textwrap
 import tomllib
+from enum import Enum
 from pathlib import Path
 from typing import Any, Iterator, cast
 
 import pytest
 from dynaconf.validator import ValidationError
 
-from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.config import cfg as cfg_module
+from gen_epix.commondb.config.cfg import AppCfg, BaseAppCfg
 from gen_epix.commondb.domain.enum import (
     AppType,
     DevIdpConfig,
     DevRepositoryConfig,
 )
 from gen_epix.commondb.domain.enum import FeatureFlag as CommonFeatureFlag
-from gen_epix.commondb.domain.enum import RepositoryType, ServiceType
+from gen_epix.commondb.domain.enum import (
+    RepositoryType,
+    ServiceType,
+)
 from gen_epix.commondb.domain.service import BaseAuthService
 from gen_epix.commondb.domain.util import get_app_cfg_class, set_env_variables
 from gen_epix.commondb.env import AppComposer
@@ -163,12 +168,30 @@ _EXPORTABLE_TOP_LEVEL_KEYS = (
 )
 
 
-def _build_app_cfg() -> AppCfg:
+def _build_app_cfg(*, setup_logger_level: str | int | None = None) -> AppCfg:
     set_env_variables(
         AppType.COMMONDB, DevIdpConfig.NONE, DevRepositoryConfig.DICT_EMPTY
     )
     os.environ["COMMONDB_LOG_LEVEL"] = "WARNING"
-    return AppCfg("COMMONDB", ServiceType, RepositoryType, log_any=False)
+    return AppCfg(
+        "COMMONDB",
+        ServiceType,
+        RepositoryType,
+        log_any=False,
+        setup_logger_level=setup_logger_level,
+    )
+
+
+def _build_repository_file_cfg(
+    service_type: ServiceType, file_path: Path | None
+) -> AppCfg:
+    props: dict[str, str] = {}
+    if file_path is not None:
+        props["file"] = str(file_path)
+    app_cfg = AppCfg.__new__(AppCfg)
+    app_cfg._service_type_enum = ServiceType
+    app_cfg._cfg = {"repository": {service_type.value.lower(): {"props": props}}}
+    return app_cfg
 
 
 class _DummyHandler:
@@ -770,6 +793,170 @@ def test_find_unrecognised_keys_helper() -> None:
         "service.auth.props.b",
         "sevice",
     ]
+
+
+def test_base_app_cfg_properties_and_abstract_copy_contract() -> None:
+    class ConcreteBaseAppCfg(BaseAppCfg):
+        def copy_repository_files(
+            self,
+            tgt_dir: Path | str,
+            service_type: Enum | None = None,
+            on_exist: str = "skip",
+        ) -> None:
+            return None
+
+    app_cfg = ConcreteBaseAppCfg()
+    logger = logging.getLogger("test.base-app-cfg")
+    app_cfg._name = None
+    app_cfg._app_name = "sample"
+    app_cfg._service_type_enum = ServiceType
+    app_cfg._repository_type_enum = RepositoryType
+    app_cfg._log_setup = False
+    app_cfg._cfg = {}
+    app_cfg._setup_logger = logger
+    app_cfg._api_logger = logger
+    app_cfg._app_logger = logger
+    app_cfg._service_logger = logger
+
+    with pytest.raises(ValueError, match="name is not set"):
+        _ = app_cfg.name
+    app_cfg._name = "sample-config"
+    assert app_cfg.name == "sample-config"
+    assert app_cfg.app_name == "sample"
+    assert app_cfg.service_type_enum is ServiceType
+    assert app_cfg.repository_type_enum is RepositoryType
+    assert app_cfg.log_setup is False
+    assert app_cfg.cfg == {}
+    assert app_cfg.setup_logger is logger
+    assert app_cfg.api_logger is logger
+    assert app_cfg.app_logger is logger
+    assert app_cfg.service_logger is logger
+    with pytest.raises(NotImplementedError):
+        BaseAppCfg.copy_repository_files(app_cfg, Path("."))
+
+
+def test_prefix_helpers_support_prefixed_and_unprefixed_names() -> None:
+    assert AppCfg._prefix_envvar("APP", "PORT") == "APP_PORT"
+    assert AppCfg._prefix_envvar(None, "PORT") == "PORT"
+    assert AppCfg._prefix_envvar("APP", "PORT", delimiter="__") == "APP__PORT"
+    assert AppCfg._prefix_logger("app", "setup") == "app.setup"
+    assert AppCfg._prefix_logger(None, "setup") == "setup"
+    assert AppCfg._prefix_logger("app", "setup", delimiter="/") == "app/setup"
+
+
+def test_constructor_applies_explicit_setup_logger_level(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    applied_levels: list[str | int] = []
+    monkeypatch.setattr(cfg_module._NULL_LOGGER, "setLevel", applied_levels.append)
+
+    _build_app_cfg(setup_logger_level=logging.ERROR)
+
+    assert applied_levels == [logging.ERROR]
+
+
+def test_repository_resolution_failure_raises_repository_initialization_error(
+    override_tmp_dir: Path,
+) -> None:
+    override_file = _write_override_file(
+        override_tmp_dir,
+        "bad_repository_module.toml",
+        """\
+        [repository.organization]
+        module = "gen_epix.nonexistent_repository_module"
+        class_name = "OrganizationRepository"
+        """,
+    )
+
+    with pytest.raises(exc.RepositoryInitializationServiceError):
+        _read_config("COMMONDB", extra_settings_files=[override_file])
+
+
+def test_copy_repository_files_applies_destination_policies(tmp_path: Path) -> None:
+    service_type = next(iter(ServiceType))
+    source_dir = tmp_path / "source"
+    source_dir.mkdir()
+    source_file = source_dir / "repository.pkl"
+    source_file.write_bytes(b"repository contents")
+    target_dir = tmp_path / "target"
+    target_dir.mkdir()
+    target_file = target_dir / source_file.name
+    target_file.write_bytes(b"existing contents")
+
+    skip_cfg = _build_repository_file_cfg(service_type, source_file)
+    skip_cfg.copy_repository_files(str(target_dir))
+    assert target_file.read_bytes() == b"existing contents"
+    assert skip_cfg._cfg["repository"][service_type.value.lower()]["props"][
+        "file"
+    ] == str(target_file)
+
+    overwrite_cfg = _build_repository_file_cfg(service_type, source_file)
+    overwrite_cfg.copy_repository_files(target_dir, service_type, on_exist="overwrite")
+    assert target_file.read_bytes() == b"repository contents"
+
+    raise_cfg = _build_repository_file_cfg(service_type, source_file)
+    with pytest.raises(FileExistsError, match="Destination file already exists"):
+        raise_cfg.copy_repository_files(target_dir, service_type, on_exist="raise")
+
+
+def test_copy_repository_files_validates_paths_and_handles_missing_files(
+    tmp_path: Path,
+) -> None:
+    service_type = next(iter(ServiceType))
+    app_cfg = _build_repository_file_cfg(service_type, tmp_path / "missing.pkl")
+
+    with pytest.raises(ValueError, match="is not a directory"):
+        app_cfg.copy_repository_files(tmp_path / "missing-directory")
+    with pytest.raises(ValueError, match="on_exist must be"):
+        app_cfg.copy_repository_files(tmp_path, on_exist="invalid")
+
+    with pytest.raises(FileNotFoundError, match="Source file not found"):
+        app_cfg._copy_single_repository_file(service_type, tmp_path, "skip")
+    no_file_cfg = _build_repository_file_cfg(service_type, None)
+    no_file_cfg._copy_single_repository_file(service_type, tmp_path, "skip")
+    no_file_cfg._cfg = {"repository": {}}
+    no_file_cfg.copy_repository_files(tmp_path, service_type)
+
+    source_file = tmp_path / "source.pkl"
+    source_file.write_bytes(b"source")
+    destination_file = tmp_path / "destination.pkl"
+    destination_file.write_bytes(b"destination")
+    with pytest.raises(NotImplementedError, match="not implemented"):
+        app_cfg._handle_file_copy(source_file, destination_file, "copy")
+
+
+@pytest.mark.parametrize(
+    "unavailable_cfg", [{}, None], ids=["missing-log", "invalid-cfg"]
+)
+def test_resolve_log_level_tolerates_unavailable_settings(
+    monkeypatch: pytest.MonkeyPatch, unavailable_cfg: Any
+) -> None:
+    app_cfg, _, _ = _build_test_fixture(shared_handler=False, log_setup=False)
+    app_cfg._cfg = unavailable_cfg
+    monkeypatch.delenv("CASEDB_LOG_LEVEL", raising=False)
+
+    assert app_cfg._resolve_log_level(None) == (
+        None,
+        "none",
+        "CASEDB_LOG_LEVEL",
+        None,
+        None,
+    )
+
+
+def test_set_log_level_without_any_available_level_emits_diagnostic(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app_cfg, logger_map, _ = _build_test_fixture(shared_handler=False, log_setup=True)
+    app_cfg._cfg = {}
+    monkeypatch.delenv("CASEDB_LOG_LEVEL", raising=False)
+    _patch_logging_get_logger(monkeypatch, logger_map)
+
+    app_cfg.set_log_level()
+
+    diagnostic = _extract_diagnostic_payload(logger_map["casedb.setup"])
+    assert diagnostic["resolved_level"] is None
+    assert diagnostic["source"] == "none"
 
 
 @pytest.mark.scenario_ids("TC-LOG-01-01")

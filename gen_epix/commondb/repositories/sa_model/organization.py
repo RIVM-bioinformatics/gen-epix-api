@@ -116,12 +116,9 @@ class SiteMixin(RowMetadataMixin):
 class ContactMixin(RowMetadataMixin):
     """Encapsulates SQLAlchemy columns and site relationship for contact rows."""
 
-    # TODO: LSP-3893 Assigning None to Contact.site_id is permitted by this
-    # optional annotation, but the domain field is required and the mapped SQL
-    # column is non-nullable; clarify whether site-less contacts should persist.
     @declared_attr
-    def site_id(cls) -> Mapped[UUID | None]:
-        """Map the optional site ID column."""
+    def site_id(cls) -> Mapped[UUID]:
+        """Map the required site ID column."""
         return create_mapped_column(DOMAIN, model.Contact, "site_id")
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.Contact, "name")
@@ -129,8 +126,8 @@ class ContactMixin(RowMetadataMixin):
     phone: Mapped[str | None] = create_mapped_column(DOMAIN, model.Contact, "phone")
 
     @declared_attr
-    def site(cls) -> Mapped[SiteMixin | None]:
-        """Map the optional site relationship."""
+    def site(cls) -> Mapped[SiteMixin]:
+        """Map the required site relationship."""
         return relationship("Site", foreign_keys="Contact.site_id")
 
 

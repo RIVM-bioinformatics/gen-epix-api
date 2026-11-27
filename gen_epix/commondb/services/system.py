@@ -364,7 +364,7 @@ class SystemService(BaseSystemService):
                 name="gen-epix-api",
                 version=pyproject_data["project"].get("version", None),
                 license=pyproject_data["project"].get("license", None),
-                homepage=pyproject_data["project"]["urls"].get("Homepage", None),
+                homepage=pyproject_data["project"].get("urls", {}).get("Homepage"),
             )
         )
 

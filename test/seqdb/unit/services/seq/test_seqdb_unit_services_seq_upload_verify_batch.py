@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import UploadAction
+from gen_epix.commondb.domain.enum import RoleSet, UploadAction
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import UploadResult, User
 from gen_epix.commondb.domain.model.upload import ParentUploadResult
@@ -95,6 +95,11 @@ class BaseUploadTestCase:
         self.service = Mock(spec=BaseSeqService)
         self.service.generate_id = Mock(side_effect=uuid4)
         self.service.repository = Mock()
+        self.service.role_set_map = {
+            RoleSet.GE_ORG_USER: frozenset(
+                Role[role.name].value for role in RoleSet.GE_ORG_USER.value
+            )
+        }
 
         # Mock UOW context manager
         self.uow = Mock(spec=BaseUnitOfWork)
@@ -460,6 +465,20 @@ class BaseUploadTestCase:
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
+class TestSampleBatchUploadAuthorization(BaseUploadTestCase):
+    """Test sample upload authorization before collection-level ABAC exists."""
+
+    def test_non_admin_user_is_not_rejected_by_upload_hook(self) -> None:
+        """Leave non-admin authorization to App policies until collection ABAC exists."""
+        self.user.roles = {Role.ORG_USER.value}
+        cmd = command.UploadSamplesCommand(
+            user=self.user,
+            sample_batch=model.SampleBatchForUpload(samples=[]),
+        )
+
+        self.batch_uploader.verify_user_rights(cmd)
+
+
 class TestVerifyProtocol(BaseUploadTestCase):
     """Test the _verify_protocol helper."""
 

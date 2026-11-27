@@ -302,6 +302,17 @@ class IsolationLevelSet(Enum):
         }
     )
 
+    @property
+    def sqlalchemy_value(self) -> str:
+        """Return the isolation-level name accepted by SQLAlchemy."""
+        return {
+            IsolationLevel.READ_UNCOMMITTED: "READ UNCOMMITTED",
+            IsolationLevel.READ_COMMITTED: "READ COMMITTED",
+            IsolationLevel.REPEATABLE_READ: "REPEATABLE READ",
+            IsolationLevel.SERIALIZABLE: "SERIALIZABLE",
+            IsolationLevel.SNAPSHOT: "SNAPSHOT",
+        }[self]
+
 
 class LogLevel(Enum):
     """Encapsulates specifying a supported logging severity."""
