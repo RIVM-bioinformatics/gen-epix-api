@@ -148,7 +148,7 @@ class CrudEndpointGenerator:
         if read_api_model_class is None:
             raise ValueError(_READ_API_MODEL_REQUIRED)
 
-        async def endpoint_function(user: user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore[valid-type]
+        def endpoint_function(user: user_dependency, limit: int | None = None, offset: int | None = None) -> Any:  # type: ignore[valid-type]
             """Endpoint function."""
             obj_ids = None
             try:
@@ -209,7 +209,7 @@ class CrudEndpointGenerator:
         if read_api_model_class is None:
             raise ValueError(_READ_API_MODEL_REQUIRED)
 
-        async def endpoint_function(user: user_dependency, ids: str) -> Any:  # type: ignore[valid-type]
+        def endpoint_function(user: user_dependency, ids: str) -> Any:  # type: ignore[valid-type]
             """Endpoint function."""
             obj_ids, invalid_obj_ids = CrudEndpointGenerator.convert_ids_string_to_list(
                 id_class, ids
@@ -276,7 +276,7 @@ class CrudEndpointGenerator:
             raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(user: user_dependency, ids: str) -> Any:  # type: ignore[valid-type]
+        def endpoint_function(user: user_dependency, ids: str) -> Any:  # type: ignore[valid-type]
             """Endpoint function."""
             obj_ids, invalid_obj_ids = CrudEndpointGenerator.convert_ids_string_to_list(
                 id_class, ids
@@ -357,7 +357,7 @@ class CrudEndpointGenerator:
             raise ValueError(_READ_API_MODEL_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(
+        def endpoint_function(
             user: user_dependency,  # type: ignore[valid-type]
             filter: FilterUnion | CompositeFilter,
             limit: int | None = None,
@@ -427,7 +427,7 @@ class CrudEndpointGenerator:
         if read_api_model_class is None:
             raise ValueError(_READ_API_MODEL_REQUIRED)
 
-        async def endpoint_function(
+        def endpoint_function(
             user: user_dependency,  # type: ignore[valid-type]
             object_id: id_class,  # type: ignore[valid-type]
         ) -> Any:
@@ -481,7 +481,7 @@ class CrudEndpointGenerator:
             raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(
+        def endpoint_function(
             user: user_dependency,  # type: ignore[valid-type]
             object_id: id_class,  # type: ignore[valid-type]
         ) -> Any:
@@ -535,7 +535,7 @@ class CrudEndpointGenerator:
             raise ValueError(_READ_API_MODEL_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(
+        def endpoint_function(
             user: user_dependency, create_obj: create_api_model_class  # type: ignore[valid-type]
         ) -> Any:
             """Endpoint function."""
@@ -604,7 +604,7 @@ class CrudEndpointGenerator:
             raise ValueError(_READ_API_MODEL_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(
+        def endpoint_function(
             user: user_dependency, create_objs: list[create_api_model_class]  # type: ignore[valid-type]
         ) -> Any:
             """Endpoint function."""
@@ -682,7 +682,7 @@ class CrudEndpointGenerator:
         if read_api_model_class is None:
             raise ValueError(_READ_API_MODEL_REQUIRED)
 
-        async def endpoint_function(
+        def endpoint_function(
             user: user_dependency,  # type: ignore[valid-type]
             object_id: id_class,  # type: ignore[valid-type]
             update_obj: create_api_model_class,  # type: ignore[valid-type]
@@ -756,7 +756,7 @@ class CrudEndpointGenerator:
             raise ValueError(_READ_API_MODEL_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(
+        def endpoint_function(
             user: user_dependency,  # type: ignore[valid-type]
             update_objs: list[create_api_model_class],  # type: ignore[valid-type]
         ) -> Any:
@@ -810,7 +810,7 @@ class CrudEndpointGenerator:
             raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(user: user_dependency, object_id: id_class) -> Any:  # type: ignore[valid-type]
+        def endpoint_function(user: user_dependency, object_id: id_class) -> Any:  # type: ignore[valid-type]
             # TODO: distinguish between soft and hard delete through hard_delete:
             #  bool = False parameter
             """Endpoint function."""
@@ -856,7 +856,7 @@ class CrudEndpointGenerator:
             raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(user: user_dependency) -> Any:  # type: ignore[valid-type]
+        def endpoint_function(user: user_dependency) -> Any:  # type: ignore[valid-type]
             """Endpoint function."""
             obj_ids = None
             try:
@@ -903,7 +903,7 @@ class CrudEndpointGenerator:
             raise ValueError(_USER_DEPENDENCY_REQUIRED)
         id_class = route.id_class
 
-        async def endpoint_function(
+        def endpoint_function(
             user: user_dependency,  # type: ignore[valid-type]
             ids: str,
         ) -> Any:

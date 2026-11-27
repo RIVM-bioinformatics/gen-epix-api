@@ -5,6 +5,7 @@ from collections.abc import Callable
 from typing import Annotated, Any, NoReturn, cast
 from uuid import UUID
 
+from anyio.from_thread import run as run_on_event_loop
 from fastapi import APIRouter, FastAPI, Form
 from fastapi.responses import StreamingResponse
 
@@ -86,7 +87,7 @@ def create_case_endpoints(
         name="Update association between CaseTypeSet and CaseType",
         description=command.CaseTypeSetCaseTypeUpdateAssociationCommand.__doc__,
     )
-    async def case_type_sets__put__case_types(
+    def case_type_sets__put__case_types(
         user: registered_user_dependency,  # type: ignore[valid-type]
         case_type_set_id: UUID,
         request_body: CaseTypeSetCaseTypeUpdateAssociationRequestBody,
@@ -113,7 +114,7 @@ def create_case_endpoints(
         name="Update association between ColSet and Col",
         description=command.ColSetColUpdateAssociationCommand.__doc__,
     )
-    async def col_sets__put__cols(
+    def col_sets__put__cols(
         user: registered_user_dependency,  # type: ignore[valid-type]
         col_set_id: UUID,
         request_body: ColSetColUpdateAssociationRequestBody,
@@ -140,7 +141,7 @@ def create_case_endpoints(
         name="Retrieve complete CaseType",
         description=command.RetrieveCompleteCaseTypeCommand.__doc__,
     )
-    async def complete_case_types__get_one(
+    def complete_case_types__get_one(
         user: registered_user_dependency,  # type: ignore[valid-type]
         case_type_id: UUID,
     ) -> model.CompleteCaseType:
@@ -164,7 +165,7 @@ def create_case_endpoints(
         name="Update cases' creating data collection",
         description=command.UpdateCaseCreatedInDataCollectionCommand.__doc__,
     )
-    async def update__case_created_in_data_collection(
+    def update__case_created_in_data_collection(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: UpdateCaseCreatedInDataCollectionRequestBody,
     ) -> list[UUID]:
@@ -190,7 +191,7 @@ def create_case_endpoints(
         name="Upload cases",
         description=command.UploadCasesCommand.__doc__,
     )
-    async def upload__cases(
+    def upload__cases(
         user: registered_user_dependency,  # type: ignore[valid-type]
         cmd: command.UploadCasesCommand,
     ) -> model.CaseBatchUploadResult:
@@ -213,7 +214,7 @@ def create_case_endpoints(
         name="Create case set",
         description=command.CreateCaseSetCommand.__doc__,
     )
-    async def create__case_set(
+    def create__case_set(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: CreateCaseSetRequestBody,
     ) -> model.CaseSet:
@@ -240,7 +241,7 @@ def create_case_endpoints(
         name="Retrieve CaseType statistics",
         description=command.RetrieveCaseTypeStatsCommand.__doc__,
     )
-    async def retrieve__case_type_stats(
+    def retrieve__case_type_stats(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCaseTypeStatsRequestBody,
     ) -> list[model.CaseStats]:
@@ -264,7 +265,7 @@ def create_case_endpoints(
         name="Retrieve case set statistics",
         description=command.RetrieveCaseSetStatsCommand.__doc__,
     )
-    async def retrieve__case_set_stats(
+    def retrieve__case_set_stats(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCaseSetStatsRequestBody,
     ) -> list[model.CaseStats]:
@@ -288,7 +289,7 @@ def create_case_endpoints(
         name="Retrieve case IDs by query",
         description=command.RetrieveCasesByQueryCommand.__doc__,
     )
-    async def retrieve__case_ids_by_query(
+    def retrieve__case_ids_by_query(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: model.CaseQuery,
     ) -> model.CaseQueryResult:
@@ -313,7 +314,7 @@ def create_case_endpoints(
         name="Retrieve case cohort IDs by case type",
         description=command.RetrieveCaseCohortLinksByCaseTypeCommand.__doc__,
     )
-    async def retrieve__case_cohort_links_by_case_type(
+    def retrieve__case_cohort_links_by_case_type(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCaseCohortLinksByCaseTypeRequestBody,
     ) -> list[model.CaseCohortLink]:
@@ -339,7 +340,7 @@ def create_case_endpoints(
         name="Retrieve cases by IDs",
         description=command.RetrieveCasesByIdCommand.__doc__,
     )
-    async def retrieve__cases_by_ids(
+    def retrieve__cases_by_ids(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCasesByIdRequestBody,
     ) -> list[model.Case]:
@@ -365,7 +366,7 @@ def create_case_endpoints(
         name="Retrieve case rights",
         description=command.RetrieveCaseRightsCommand.__doc__,
     )
-    async def retrieve__case_rights(
+    def retrieve__case_rights(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCaseRightsRequestBody,
     ) -> list[model.CaseRights]:
@@ -391,7 +392,7 @@ def create_case_endpoints(
         name="Retrieve case set rights",
         description=command.RetrieveCaseSetRightsCommand.__doc__,
     )
-    async def retrieve__case_set_rights(
+    def retrieve__case_set_rights(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: list[UUID],
     ) -> list[model.CaseSetRights]:
@@ -418,7 +419,7 @@ def create_case_endpoints(
         name="Retrieve phylogenetic tree",
         description=command.RetrievePhylogeneticTreeByCasesCommand.__doc__,
     )
-    async def retrieve__phylogenetic_tree(
+    def retrieve__phylogenetic_tree(
         user: registered_user_dependency, request_body: RetrievePhylogeneticTreeRequestBody  # type: ignore[valid-type]
     ) -> model.PhylogeneticTree:
         """See router description."""
@@ -445,7 +446,7 @@ def create_case_endpoints(
         name="Retrieve sequence distances",
         description=command.RetrieveSeqDistancesByCasesCommand.__doc__,
     )
-    async def retrieve__seq_distances_by_cases(
+    def retrieve__seq_distances_by_cases(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveSeqDistancesByCasesRequestBody,
     ) -> list[model.CaseSeqDistance]:
@@ -473,7 +474,7 @@ def create_case_endpoints(
         name="Retrieve similar cases",
         description=command.RetrieveSimilarCasesCommand.__doc__,
     )
-    async def retrieve__similar_cases(
+    def retrieve__similar_cases(
         user: registered_user_dependency, request_body: RetrieveSimilarCasesRequestBody  # type: ignore[valid-type]
     ) -> RetrieveSimilarCasesResponseBody:
         """See router description."""
@@ -500,7 +501,7 @@ def create_case_endpoints(
         name="Retrieve genetic sequence by case, in fasta format and streamed",
         description=command.RetrieveGeneticSequenceFastaByCaseCommand.__doc__,
     )
-    async def retrieve__genetic_sequence_fasta(
+    def retrieve__genetic_sequence_fasta(
         token: Annotated[str, Form()],
         case_type_id: Annotated[UUID, Form()],
         genetic_sequence_col_id: Annotated[UUID, Form()],
@@ -514,7 +515,7 @@ def create_case_endpoints(
             auth_service: AuthService = app_impl.services[
                 enum.ServiceType.AUTH
             ]  # type: ignore[assignment]
-            user = await auth_service.get_existing_user_from_token(token=token)  # type: ignore[assignment]
+            user = run_on_event_loop(auth_service.get_existing_user_from_token, token)  # type: ignore[assignment]
             fasta_iterable = app.handle(
                 command.RetrieveGeneticSequenceFastaByCaseCommand(
                     user=user,
@@ -542,7 +543,7 @@ def create_case_endpoints(
         name="Create file for reads set",
         description=command.CreateFileForReadSetCommand.__doc__,
     )
-    async def create_file_for_read_set(
+    def create_file_for_read_set(
         user: registered_user_dependency,  # type: ignore[valid-type]
         case_id: UUID,
         col_id: UUID,
@@ -574,7 +575,7 @@ def create_case_endpoints(
         name="Create file for sequence",
         description=command.CreateFileForSeqCommand.__doc__,
     )
-    async def create_file_for_seq(
+    def create_file_for_seq(
         user: registered_user_dependency,  # type: ignore[valid-type]
         case_id: UUID,
         col_id: UUID,
@@ -605,7 +606,7 @@ def create_case_endpoints(
         name="Retrieve sequencing protocols",
         description=command.RetrieveProtocolsCommand.__doc__,
     )
-    async def retrieve__sequencing_protocols(
+    def retrieve__sequencing_protocols(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> list[seqdb_model.Protocol]:
         """See router description."""
@@ -629,7 +630,7 @@ def create_case_endpoints(
         name="Retrieve assembly protocols",
         description=command.RetrieveProtocolsCommand.__doc__,
     )
-    async def retrieve__assembly_protocols(
+    def retrieve__assembly_protocols(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> list[seqdb_model.Protocol]:
         """See router description."""
@@ -653,7 +654,7 @@ def create_case_endpoints(
         name="Retrieve whether the user owns the cases",
         description=command.RetrieveIsOwnCasesCommand.__doc__,
     )
-    async def retrieve__is_own_cases(
+    def retrieve__is_own_cases(
         user: registered_user_dependency,  # type: ignore[valid-type]
         request_body: RetrieveCasesByIdRequestBody,
     ) -> dict[UUID, bool]:
@@ -682,7 +683,7 @@ def create_case_endpoints(
         name="RefCol validation rules",
         description=RefColValidationRulesResponseBody.__doc__,
     )
-    async def ref_col__validation_rules__get(
+    def ref_col__validation_rules__get(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> RefColValidationRulesResponseBody:
         """See router description."""
