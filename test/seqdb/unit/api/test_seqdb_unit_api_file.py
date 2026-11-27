@@ -1,6 +1,5 @@
 """Verify file API command dispatch and exception forwarding."""
 
-import asyncio
 from test.util.mock_compat import Mock
 from typing import Annotated, Any
 
@@ -43,6 +42,6 @@ def test_create_file_forwards_dispatch_failure_to_exception_handler(
     request = CreateFileRequestBody(content="", format=enum.FileFormat.FASTA)
 
     with pytest.raises(LookupError, match="handled"):
-        asyncio.run(route.endpoint(None, request))
+        route.endpoint(None, request)
 
     handle_exception.assert_called_once_with("a8f9d24e", None, dispatch_error)
