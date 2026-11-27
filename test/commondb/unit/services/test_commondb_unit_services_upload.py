@@ -106,11 +106,7 @@ from test.commondb.unit.upload.model import (
 from test.commondb.unit.upload.model import (
     ParentUploadResult as FixtureParentUploadResult,
 )
-from test.commondb.unit.upload.model import (
-    Ref1,
-    Ref2,
-    UploadParentsCommand,
-)
+from test.commondb.unit.upload.model import Ref1, Ref2, UploadParentsCommand
 from test.util.mock_compat import Mock
 from typing import Any
 from uuid import UUID, uuid4
