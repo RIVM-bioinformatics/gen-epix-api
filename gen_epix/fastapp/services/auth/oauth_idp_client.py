@@ -9,6 +9,7 @@ from uuid import UUID
 import httpx
 import jwt
 from fastapi import Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.openapi.models import OAuthFlowAuthorizationCode, OAuthFlows, SecurityBase
 from fastapi.security import OAuth2
 
@@ -178,7 +179,7 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
 
         key: jwt.PyJWK | None = self._signing_keys.get(key_id)
         if not key:
-            self._refresh_signing_keys()
+            await run_in_threadpool(self._refresh_signing_keys)
             key = self._signing_keys.get(key_id)
             if not key:
                 self._log_keys_fetch_failure(key_id)
@@ -266,7 +267,9 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
 
         # optionally apply token introspection
         if self.server_cfg.enable_introspection:
-            self.token_introspection_manager.introspect_token(jwt_token, claims)
+            await run_in_threadpool(
+                self.token_introspection_manager.introspect_token, jwt_token, claims
+            )
 
         if self.logger and self.logger.level <= logging.DEBUG:
             self.logger.debug(
@@ -453,10 +456,11 @@ class OauthIdpClient(OauthTokenClient, IdpClient, OpenIdConnect):
             raise exc.ServiceUnavailableError("611dcc58") from exception
 
         # verify keys
-        self._signing_keys = {}
+        signing_keys = {}
         for key_data in response_dict["keys"]:
             if key_data.get("use") in ["sig"] and key_data.get("kty") == "RSA":
-                self._signing_keys[key_data["kid"]] = jwt.PyJWK.from_dict(key_data)
+                signing_keys[key_data["kid"]] = jwt.PyJWK.from_dict(key_data)
+        self._signing_keys = signing_keys
 
     def _log_auth_error(self, exception: exc.AuthException) -> None:
         """Log auth error."""

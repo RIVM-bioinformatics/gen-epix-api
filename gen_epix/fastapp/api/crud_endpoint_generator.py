@@ -171,6 +171,7 @@ class CrudEndpointGenerator:
                 retval = await run_in_threadpool(route.app.handle, cmd)
                 if route.model_class is not route.read_api_model_class:
                     retval = [read_api_model_class.from_model(x) for x in retval]  # type: ignore[attr-defined]
+                return retval
             except Exception as exception:
                 handle_exception_fn(
                     "79d26f4f" + route.endpoint_basename,
@@ -238,6 +239,7 @@ class CrudEndpointGenerator:
                 retval = await run_in_threadpool(route.app.handle, cmd)
                 if route.model_class is not route.read_api_model_class:
                     retval = [read_api_model_class.from_model(x) for x in retval]  # type: ignore[attr-defined]
+                return retval
 
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
@@ -301,7 +303,7 @@ class CrudEndpointGenerator:
                 operation=CrudOperation.EXISTS_SOME,
             )
             try:
-                return route.app.handle(cmd)
+                return await run_in_threadpool(route.app.handle, cmd)
 
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
@@ -491,7 +493,7 @@ class CrudEndpointGenerator:
                     operation=CrudOperation.EXISTS_ONE,
                     obj_ids=object_id,
                 )
-                return route.app.handle(cmd)
+                return await run_in_threadpool(route.app.handle, cmd)
 
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:

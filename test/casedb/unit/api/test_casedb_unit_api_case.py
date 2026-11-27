@@ -18,7 +18,7 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 @pytest.fixture
 def registered_case_endpoints(
     monkeypatch: pytest.MonkeyPatch,
-) -> tuple[APIRouter, Mock]:
+) -> tuple[APIRouter, AsyncMock]:
     app = Mock()
     app_impl = Mock()
     app_impl.registered_user_dependency = str
@@ -34,7 +34,7 @@ def registered_case_endpoints(
         "generate_endpoints",
         lambda *_args, **_kwargs: None,
     )
-    handle_command = Mock(return_value=[])
+    handle_command = AsyncMock(return_value=[])
     handle_exception = Mock()
     handle_command.handle_exception = handle_exception
     handle_command.app = app
@@ -56,12 +56,13 @@ def _get_endpoint(router: APIRouter, path: str) -> Callable[..., Any]:
     )
 
 
-def _get_input_command(handle_command: Mock) -> Any:
-    return handle_command.call_args.kwargs["input_command"]
+def _get_input_command(handle_command: AsyncMock) -> Any:
+    handle_command.assert_awaited_once()
+    return handle_command.await_args.kwargs["input_command"]
 
 
 def test_retrieve_case_cohort_links_forwards_include_missing(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     endpoint = _get_endpoint(router, "/retrieve/case_cohort_links_by_case_type")
@@ -77,7 +78,7 @@ def test_retrieve_case_cohort_links_forwards_include_missing(
 
 
 def test_create_file_for_read_set_forwards_format_and_compression(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     endpoint = _get_endpoint(router, "/create_file_for_read_set/{case_id}/{col_id}")
@@ -109,7 +110,7 @@ def test_create_file_for_read_set_forwards_format_and_compression(
 
 
 def test_create_file_for_seq_forwards_format_and_compression(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     endpoint = _get_endpoint(router, "/create_file_for_seq/{case_id}/{col_id}")
@@ -139,7 +140,7 @@ def test_create_file_for_seq_forwards_format_and_compression(
 
 
 def test_case_type_set_case_type_association_forwards_members(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     case_type_set_id = uuid4()
@@ -165,7 +166,7 @@ def test_case_type_set_case_type_association_forwards_members(
 
 
 def test_col_set_col_association_forwards_members(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     col_set_id = uuid4()
@@ -187,7 +188,7 @@ def test_col_set_col_association_forwards_members(
 
 
 def test_complete_case_type_forwards_case_type_id(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     case_type_id = uuid4()
@@ -204,7 +205,7 @@ def test_complete_case_type_forwards_case_type_id(
 
 
 def test_update_case_created_in_data_collection_forwards_fields(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     case_ids = [uuid4()]
@@ -227,7 +228,7 @@ def test_update_case_created_in_data_collection_forwards_fields(
 
 
 def test_upload_cases_sets_authenticated_user_on_command(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     user = object()
@@ -240,7 +241,7 @@ def test_upload_cases_sets_authenticated_user_on_command(
 
 
 def test_create_case_set_forwards_request_fields(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     case_set = casedb_api_case.model.CaseSet.model_construct(
@@ -287,7 +288,7 @@ def test_create_case_set_forwards_request_fields(
     ],
 )
 def test_retrieve_stats_forwards_request_fields(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
     path: str,
     request_body: Any,
     command_type: type,
@@ -304,7 +305,7 @@ def test_retrieve_stats_forwards_request_fields(
 
 
 def test_retrieve_cases_by_query_forwards_query(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     case_query = casedb_api_case.model.CaseQuery.model_construct()
@@ -328,7 +329,7 @@ def test_retrieve_cases_by_query_forwards_query(
     ],
 )
 def test_retrieve_cases_or_rights_forwards_ids(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
     path: str,
     command_type: type,
 ) -> None:
@@ -348,7 +349,7 @@ def test_retrieve_cases_or_rights_forwards_ids(
 
 
 def test_retrieve_case_set_rights_forwards_ids(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     case_set_ids = [uuid4()]
@@ -365,7 +366,7 @@ def test_retrieve_case_set_rights_forwards_ids(
 
 
 def test_retrieve_phylogenetic_tree_forwards_parameters(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     case_type_id = uuid4()
@@ -394,7 +395,7 @@ def test_retrieve_phylogenetic_tree_forwards_parameters(
 
 
 def test_retrieve_sequence_distances_forwards_parameters(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     case_type_id = uuid4()
@@ -422,7 +423,7 @@ def test_retrieve_sequence_distances_forwards_parameters(
 
 
 def test_retrieve_similar_cases_forwards_parameters(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     case_type_id = uuid4()
@@ -450,7 +451,7 @@ def test_retrieve_similar_cases_forwards_parameters(
 
 
 def test_retrieve_genetic_sequence_fasta_streams_authenticated_result(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     app = handle_command.app
@@ -487,7 +488,7 @@ def test_retrieve_genetic_sequence_fasta_streams_authenticated_result(
 
 
 def test_retrieve_genetic_sequence_fasta_delegates_errors(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     app = handle_command.app
@@ -524,7 +525,7 @@ def test_retrieve_genetic_sequence_fasta_delegates_errors(
     ],
 )
 def test_retrieve_protocols_forwards_protocol_type(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
     path: str,
     expected_protocol_type: seqdb_enum.ProtocolType,
 ) -> None:
@@ -538,7 +539,7 @@ def test_retrieve_protocols_forwards_protocol_type(
 
 
 def test_retrieve_is_own_cases_forwards_ids(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, handle_command = registered_case_endpoints
     case_type_id = uuid4()
@@ -560,7 +561,7 @@ def test_retrieve_is_own_cases_forwards_ids(
 
 
 def test_ref_col_validation_rules_returns_schema(
-    registered_case_endpoints: tuple[APIRouter, Mock],
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
 ) -> None:
     router, _ = registered_case_endpoints
 
@@ -573,7 +574,8 @@ def test_ref_col_validation_rules_returns_schema(
 
 
 def test_ref_col_validation_rules_delegates_construction_error(
-    registered_case_endpoints: tuple[APIRouter, Mock], monkeypatch: pytest.MonkeyPatch
+    registered_case_endpoints: tuple[APIRouter, AsyncMock],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     router, handle_command = registered_case_endpoints
     handle_exception = handle_command.handle_exception

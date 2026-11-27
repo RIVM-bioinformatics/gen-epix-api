@@ -124,7 +124,6 @@ class App:
             EventTiming, dict[type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
         self._command_stack_local = threading.local()
-        self._command_stack: list[Command] = []
         self._cache_invalidator_map: dict[
             type[Command], list[Callable[[Command], None]]
         ] = {}
@@ -545,17 +544,16 @@ class App:
             "6ce523f9", f"No handler set for {command_class} or any of its superclasses"
         )
 
-    def _get_command_stack(self) -> list[Command]:
-        command_stack = getattr(self._command_stack_local, "value", None)
+    @property
+    def _command_stack(self) -> list[Command]:
+        """Return the active command stack for the current worker thread."""
+        command_stack: list[Command] | None = getattr(
+            self._command_stack_local, "value", None
+        )
         if command_stack is None:
             command_stack = []
             self._command_stack_local.value = command_stack
         return command_stack
-
-    def _pop_command_stack(self) -> None:
-        command_stack = self._get_command_stack()
-        if command_stack:
-            command_stack.pop()
 
     def handle(self, cmd: Command) -> Any:
         """Dispatch a command through its complete application lifecycle.
@@ -581,25 +579,22 @@ class App:
                 error.
             Exception: If command processing raises an unexpected error.
         """
-        command_stack = self._get_command_stack()
+        command_stack = self._command_stack
         command_stack.append(cmd)
-        is_initial_command = len(command_stack) == 1
-        if self._logger:
-            self._log_command_start(cmd, is_initial_command)
-        # Policy Enforcement Point 1: apply policies from PDP, resulting in
-        # unauthorized error. Only applied to the initial command: subsequent commands
-        # issued by this command are trusted since requested by a service rather than
-        # a user.
-        if is_initial_command:
-            self._handle_initial_command(cmd)
-        # Get handler
-        handler: Callable = self._get_command_handler(cmd)
-        # Execute command
-        retval = self._execute_command(cmd, is_initial_command, handler)
-        if self._logger:
-            self._log_command_finish(cmd, is_initial_command)
-        self._pop_command_stack()
-        return retval
+        try:
+            is_initial_command = len(command_stack) == 1
+            if self._logger:
+                self._log_command_start(cmd, is_initial_command)
+            # Policy Enforcement Point 1: nested commands are trusted service calls.
+            if is_initial_command:
+                self._handle_initial_command(cmd)
+            handler = self._get_command_handler(cmd)
+            retval = self._execute_command(cmd, is_initial_command, handler)
+            if self._logger:
+                self._log_command_finish(cmd, is_initial_command)
+            return retval
+        finally:
+            command_stack.pop()
 
     def _log_command_finish(self, cmd: Command, is_initial_command: bool) -> None:
         """Log command finish."""
@@ -676,7 +671,6 @@ class App:
                     ),
                     exc_info=not self._is_exempted_from_stack_trace(exception),
                 )
-            self._pop_command_stack()
             raise exception
         except exc.DomainException as exception:
             # Other domain exceptions are expected; log without stack trace to reduce noise.
@@ -690,7 +684,6 @@ class App:
                         exception=exception,
                     )
                 )
-            self._pop_command_stack()
             raise exception
         except Exception as exception:
             # Any other unexpected error: add stack trace, unless a registered
@@ -708,7 +701,6 @@ class App:
                     exc_info=has_stack_trace,
                     stack_info=has_stack_trace,
                 )
-            self._pop_command_stack()
             raise exception
         return retval
 
@@ -770,7 +762,6 @@ class App:
                     exc_info=True,
                     stack_info=True,
                 )
-            self._pop_command_stack()
             raise exception
         return handler
 
@@ -794,7 +785,6 @@ class App:
                         "fd923dbf", "NOT_AUTHORIZED", add_debug_info=False, cmd=cmd
                     )
                 )
-            self._pop_command_stack()
             raise exception
         except Exception as exception:
             # Any other error: add stack trace
@@ -810,7 +800,6 @@ class App:
                     exc_info=True,
                     stack_info=True,
                 )
-            self._pop_command_stack()
             raise exception
 
     def _log_command_start(self, cmd: Command, is_initial_command: bool) -> None:
@@ -898,7 +887,7 @@ class App:
             "app": kwargs.pop("app", {}) | {"id": self._id, "name": self.name}
         }
         if cmd:
-            is_initial_command = len(self._command_stack) < 2
+            command_stack = self._command_stack
             cmd_object = json.loads(cmd.model_dump_json(exclude_none=True))
             if self._log_summarization_enabled:
                 cmd_object = self._summarise_command_object_for_log(cmd_object)
@@ -906,10 +895,10 @@ class App:
                 "class": cmd.__class__.__name__,
                 "object": cmd_object,
                 "parent_command_id": (
-                    None if is_initial_command else f"{self._command_stack[-2].id}"
+                    None if len(command_stack) < 2 else f"{command_stack[-2].id}"
                 ),
                 "stack_trace": "->".join(
-                    [f"{item.__class__.__name__}" for item in self._command_stack]
+                    [f"{item.__class__.__name__}" for item in command_stack]
                 ),
             }
         if kwargs:

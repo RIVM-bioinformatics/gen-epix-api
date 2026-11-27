@@ -1,6 +1,7 @@
 """Verify command dispatch and exception forwarding for sequence API adapters."""
 
 import asyncio
+import threading
 from test.util.mock_compat import Mock
 from typing import Annotated, Any
 from uuid import UUID, uuid4
@@ -11,11 +12,26 @@ from fastapi.routing import APIRoute
 from pydantic import ValidationError
 
 from gen_epix.seqdb.api.seq import (
+    RetrieveSeqDistancesBySeqProfilesRequestBody,
     RetrieveSeqFastaRequestBody,
     UpdateSeqDistancesRequestBody,
     _handle_seq_command,
     create_seq_endpoints,
 )
+from gen_epix.seqdb.domain import command
+
+
+@pytest.fixture
+def seq_routes() -> tuple[dict[str, APIRoute], Mock]:
+    """Register the real route functions with a mock dispatcher."""
+    router = APIRouter()
+    app = Mock()
+    app.impl.registered_user_dependency = Annotated[Any, Depends(lambda: None)]
+    app.domain.get_dag_sorted_entities.return_value = []
+    create_seq_endpoints(router, app, Mock())
+    return {
+        route.path: route for route in router.routes if isinstance(route, APIRoute)
+    }, app
 
 
 def test_handle_seq_command_returns_app_result() -> None:
@@ -59,32 +75,62 @@ def test_retrieve_seq_fasta_request_defaults_wrap() -> None:
     assert request.wrap == 80
 
 
-def test_retrieve_seq_fasta_route_forwards_wrap() -> None:
+def test_retrieve_seq_fasta_route_forwards_wrap(
+    seq_routes: tuple[dict[str, APIRoute], Mock],
+) -> None:
     """Forward the request's wrapping width in the dispatched command."""
 
-    def get_user() -> None:
-        """Supply an unauthenticated user value for direct endpoint invocation."""
-        return None
-
-    router = APIRouter()
-    app = Mock()
-    app.impl.registered_user_dependency = Annotated[Any, Depends(get_user)]
-    app.domain.get_dag_sorted_entities.return_value = []
+    routes, app = seq_routes
     app.handle.return_value = iter([">sequence\nacgt\n"])
-    create_seq_endpoints(router, app, Mock())
-    route = next(
-        route
-        for route in router.routes
-        if isinstance(route, APIRoute) and route.name == "RetrieveSeqFasta"
-    )
+    route = routes["/retrieve/seq_fasta"]
     request = RetrieveSeqFastaRequestBody(
         seq_ids=[uuid4()], wrap=0, file_name="sequences.fasta"
     )
 
     asyncio.run(route.endpoint(None, request))
 
-    command = app.handle.call_args.args[0]
-    assert command.wrap == 0
+    assert app.handle.call_args.args[0].wrap == 0
+
+
+@pytest.mark.parametrize(
+    ("path", "request_class", "command_class", "extra_fields"),
+    [
+        (
+            "/retrieve/seq_distances_by_seq_profiles",
+            RetrieveSeqDistancesBySeqProfilesRequestBody,
+            command.RetrieveSeqDistancesBySeqProfilesCommand,
+            {"seq_profile_ids": [uuid4()]},
+        ),
+        (
+            "/update/seq_distances",
+            UpdateSeqDistancesRequestBody,
+            command.UpdateSeqDistancesCommand,
+            {"limit": 4, "existing_chunk_size": 20},
+        ),
+    ],
+)
+def test_distance_routes_dispatch_on_worker(
+    seq_routes: tuple[dict[str, APIRoute], Mock],
+    path: str,
+    request_class: type,
+    command_class: type,
+    extra_fields: dict[str, Any],
+) -> None:
+    """Forward the distance command and its fields from a worker thread."""
+    routes, app = seq_routes
+    request_fields = {"protocol_id": uuid4(), **extra_fields}
+    request = request_class(**request_fields)
+    event_loop_thread = threading.get_ident()
+
+    def dispatch(cmd: Any) -> list[Any]:
+        assert threading.get_ident() != event_loop_thread
+        assert isinstance(cmd, command_class)
+        for field, value in request_fields.items():
+            assert getattr(cmd, field) == value
+        return []
+
+    app.handle.side_effect = dispatch
+    assert asyncio.run(routes[path].endpoint(None, request)) == []
 
 
 def test_retrieve_seq_fasta_request_rejects_negative_wrap() -> None:

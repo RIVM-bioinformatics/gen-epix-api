@@ -4,6 +4,7 @@ import base64
 import datetime
 import logging
 import ssl
+import threading
 import urllib.parse
 from typing import Any, TypedDict
 
@@ -76,6 +77,7 @@ class TokenIntrospectionManager:
             endpoint: str | None
             last_checked: int
 
+        self._introspection_cache_lock = threading.Lock()
         self._introspection_cache: dict[str, IntrospectionCacheEntry] = {}
         self._introspection_endpoint_cache: IntrospectionEndpointRetrievalCacheEntry = {
             "endpoint": None,
@@ -122,8 +124,9 @@ class TokenIntrospectionManager:
     def _get_cached_introspection_endpoint(self) -> str:
         """Return cached introspection endpoint."""
         now = self._now()
-        endpoint = self._introspection_endpoint_cache.get("endpoint")
-        last_checked = self._introspection_endpoint_cache.get("last_checked", 0)
+        cached = self._introspection_endpoint_cache
+        endpoint = cached["endpoint"]
+        last_checked = cached["last_checked"]
         if endpoint and (now - last_checked) < self.INTROSPECTION_ENDPOINT_TTL:
             return endpoint
         # fetch fresh and update cache; let exceptions propagate to caller
@@ -137,8 +140,11 @@ class TokenIntrospectionManager:
     def introspect_token(self, jwt_token: str, claims: dict[str, Any]) -> None:
         """Introspect token."""
         now = self._now()
-        self._prune_expired_introspection_cache(now)
-        if self._is_cached_introspection_token_inactive(jwt_token):
+        with self._introspection_cache_lock:
+            self._prune_expired_introspection_cache(now)
+            cached_inactive = self._is_cached_introspection_token_inactive(jwt_token)
+            recheck = self._is_recheck_introspection(jwt_token, now)
+        if cached_inactive:
             if self.logger:
                 self.logger.warning(
                     self._log_item_class(
@@ -149,7 +155,7 @@ class TokenIntrospectionManager:
             raise exc.CredentialsAuthError(
                 "cd6f91e8", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             )
-        if self._is_recheck_introspection(jwt_token, now):
+        if recheck:
             if self.logger:
                 self.logger.info(
                     self._log_item_class(
@@ -162,10 +168,14 @@ class TokenIntrospectionManager:
                     "026ae562", http_props={"headers": {"WWW-Authenticate": "Bearer"}}
                 )
             exp_val = int(claims.get("exp", now))
-            if is_active:
-                self._update_introspection_cache(jwt_token, True, exp_val, now)
-            else:
-                self._update_introspection_cache(jwt_token, False, exp_val, now)
+            with self._introspection_cache_lock:
+                # A concurrent inactive result takes precedence over this response.
+                is_active = (
+                    is_active
+                    and not self._is_cached_introspection_token_inactive(jwt_token)
+                )
+                self._update_introspection_cache(jwt_token, is_active, exp_val, now)
+            if not is_active:
                 if self.logger:
                     self.logger.warning(
                         self._log_item_class(

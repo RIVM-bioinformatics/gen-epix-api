@@ -172,7 +172,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[UUID],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="a7c1e5f9",
@@ -453,7 +453,7 @@ def create_case_endpoints(
         """See router description."""
         return cast(
             list[model.CaseSeqDistance],
-            handle_command(
+            await handle_command(
                 app=app,
                 user=user,
                 exception_code="b983141b",

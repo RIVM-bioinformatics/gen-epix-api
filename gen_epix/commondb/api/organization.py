@@ -207,8 +207,9 @@ def create_organization_endpoints(
     ) -> user_class:  # type: ignore[valid-type]
         """See router description."""
         try:
-            retval: user_class = app.handle(  # type: ignore[valid-type]
-                command.RetrieveOwnUserCommand(user=user)
+            retval: user_class = await run_in_threadpool(  # type: ignore[valid-type]
+                app.handle,
+                command.RetrieveOwnUserCommand(user=user),
             )
         except Exception as exception:
             handle_exception("5d0e7a41", user, exception)

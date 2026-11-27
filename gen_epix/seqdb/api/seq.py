@@ -195,7 +195,8 @@ def create_seq_endpoints(
         request_body: RetrieveSampleIdentifiersByIdsRequestBody,
     ) -> list[model.SampleIdentifier]:
         """See router description."""
-        retval: list[model.SampleIdentifier] = _handle_seq_command(
+        retval: list[model.SampleIdentifier] = await run_in_threadpool(
+            _handle_seq_command,
             app,
             handle_exception,
             "b3f91a2e",
@@ -220,11 +221,12 @@ def create_seq_endpoints(
     ) -> list[model.SeqDistance]:
         """See router description."""
         try:
-            retval: list[model.SampleIdentifier] = await run_in_threadpool(
+            retval: list[model.SeqDistance] = await run_in_threadpool(
                 app.handle,
-                command.RetrieveSampleIdentifiersByIdCommand(
+                command.RetrieveSeqDistancesBySeqProfilesCommand(
                     user=user,
-                    sample_ids=request_body.sample_ids,
+                    seq_profile_ids=request_body.seq_profile_ids,
+                    protocol_id=request_body.protocol_id,
                 ),
             )
         except Exception as exception:
@@ -248,6 +250,7 @@ def create_seq_endpoints(
                 command.RetrieveSeqFastaCommand(
                     user=user,
                     seq_ids=request_body.seq_ids,
+                    wrap=request_body.wrap,
                 ),
             )
         except Exception as exception:
@@ -272,7 +275,8 @@ def create_seq_endpoints(
         request_body: ConvertSeqFormatRequestBody,
     ) -> list[UUID]:
         """See router description."""
-        retval: list[UUID] = _handle_seq_command(
+        retval: list[UUID] = await run_in_threadpool(
+            _handle_seq_command,
             app,
             handle_exception,
             "b8c4d2e1",
@@ -324,15 +328,14 @@ def create_seq_endpoints(
         try:
             retval: list[model.CalculateSeqDistancesEtlResult] = (
                 await run_in_threadpool(
-                    app.handle(
-                        command.UpdateSeqDistancesCommand(
-                            user=user,
-                            protocol_id=request_body.protocol_id,
-                            limit=request_body.limit,
-                            existing_chunk_size=request_body.existing_chunk_size,
-                            use_numpy_allele_distance=request_body.use_numpy_allele_distance,
-                        ),
-                    )
+                    app.handle,
+                    command.UpdateSeqDistancesCommand(
+                        user=user,
+                        protocol_id=request_body.protocol_id,
+                        limit=request_body.limit,
+                        existing_chunk_size=request_body.existing_chunk_size,
+                        use_numpy_allele_distance=request_body.use_numpy_allele_distance,
+                    ),
                 )
             )
         except Exception as exception:
