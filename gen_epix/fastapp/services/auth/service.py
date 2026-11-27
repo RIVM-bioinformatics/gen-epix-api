@@ -14,6 +14,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, Request, Security
+from fastapi.concurrency import run_in_threadpool
 from fastapi.security import SecurityScopes
 
 from gen_epix.fastapp import App, enum, exc, model
@@ -663,6 +664,14 @@ class AuthService(BaseAuthService):
         Raises:
             UnauthorizedAuthError: If the user manager cannot construct a user.
         """
+        return await run_in_threadpool(
+            self._get_new_user_from_claims_sync, claims, request_userinfo
+        )
+
+    def _get_new_user_from_claims_sync(
+        self, claims: Claims, request_userinfo: bool
+    ) -> model.User:
+        """Perform userinfo retrieval and user construction in one worker."""
         # Get userinfo
         if request_userinfo:
             claims.claims.update(
@@ -737,7 +746,15 @@ class AuthService(BaseAuthService):
     async def get_existing_user_from_claims(
         self, claims: Claims, request_userinfo: bool = True
     ) -> model.User:
-        """Return existing user from claims."""
+        """Resolve a user from claims without blocking the event loop."""
+        return await run_in_threadpool(
+            self._get_existing_user_from_claims_sync, claims, request_userinfo
+        )
+
+    def _get_existing_user_from_claims_sync(
+        self, claims: Claims, request_userinfo: bool
+    ) -> model.User:
+        """Perform the complete user lookup or creation in one worker."""
         issuer: str = claims.claims["iss"]  # type: ignore
         sub: str = claims.claims["sub"]  # type: ignore
         user_manager: BaseUserManager = self.app.user_manager

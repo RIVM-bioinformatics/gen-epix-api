@@ -7,6 +7,7 @@ from functools import partial
 from typing import Any, NoReturn
 
 from fastapi import HTTPException
+from fastapi.concurrency import run_in_threadpool
 
 from gen_epix.commondb.domain import command, model
 from gen_epix.fastapp import App, LogLevel, exc
@@ -263,12 +264,14 @@ def log_and_raise_invalid_ids_exception(
     raise http_exception_fmap[http_status_code](detail=detail) from exception
 
 
-def handle_command(
+async def handle_command(
     app: App,
     user: model.User,
     exception_code: str,
     input_command: command.Command,
-    input_handle_exception: Callable[[str, Any, Exception], NoReturn] | None,
+    input_handle_exception: (
+        Callable[[str, model.User | None, Exception], NoReturn] | None
+    ),
 ) -> Any:
     """Dispatch a command and translate any exception through an API error handler.
 
@@ -288,7 +291,7 @@ def handle_command(
             exception handler.
     """
     try:
-        return app.handle(input_command)
+        return await run_in_threadpool(app.handle, input_command)
     except Exception as exception:
         if input_handle_exception is None:
             handle_exception(app, None, exception_code, user, exception)

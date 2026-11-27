@@ -179,6 +179,22 @@ def test_uow_nested_and_invalid_nested_kwargs(repo: SARepository) -> None:
     close.assert_called_once_with()
 
 
+def test_detached_uow_neither_reuses_nor_exposes_its_session(
+    repo: SARepository,
+) -> None:
+    """Keep a suspended stream's transaction independent of worker transactions."""
+    with repo.uow(detached=True) as stream_uow:
+        assert isinstance(stream_uow, SAUnitOfWork)
+        with repo.uow() as worker_uow:
+            assert isinstance(worker_uow, SAUnitOfWork)
+            assert worker_uow.session is not stream_uow.session
+            with repo.uow(detached=True) as other_stream_uow:
+                assert isinstance(other_stream_uow, SAUnitOfWork)
+                assert other_stream_uow.session is not worker_uow.session
+                assert other_stream_uow.session is not stream_uow.session
+                assert cast(SAUnitOfWork, repo.uow()).session is worker_uow.session
+
+
 def test_register_get_mapper_and_duplicate_errors(repo: SARepository) -> None:
     mapper = repo.get_mapper(RepoModel)
     assert mapper.model_class is RepoModel

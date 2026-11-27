@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from datetime import datetime, timedelta, timezone
 from math import floor
 from test.commondb.unit.services.auth_test_support import (
@@ -457,7 +458,13 @@ class TestGetNewUserFromClaims(BaseAuthServiceTestCase):
         claims: Claims = self.create_claims(idp_client.id)
         # Set up mocks
         self.service._idp_client_by_id[idp_client.id] = idp_client
-        idp_client.get_claims_from_userinfo.return_value = {"email": "user@example.com"}
+        event_loop_thread = threading.get_ident()
+
+        def get_userinfo(_token: str) -> dict[str, str]:
+            assert threading.get_ident() != event_loop_thread
+            return {"email": "user@example.com"}
+
+        idp_client.get_claims_from_userinfo.side_effect = get_userinfo
         self.user_manager.construct_user_instance_from_claims.return_value = self.user
         # Execute
         new_user = self.run_async(self.service.get_new_user_from_claims(claims))
@@ -516,7 +523,13 @@ class TestGetExistingUserFromClaims(BaseAuthServiceTestCase):
         claims: Claims = self.create_claims(uuid4(), {"email": "u@example.com"})
         # Set up mocks
         self.user_manager.get_user_key_from_claims.return_value = "key"
-        self.user_manager.retrieve_user_by_key.return_value = self.user
+        event_loop_thread = threading.get_ident()
+
+        def retrieve_user(_key: str) -> model.User:
+            assert threading.get_ident() != event_loop_thread
+            return self.user
+
+        self.user_manager.retrieve_user_by_key.side_effect = retrieve_user
         self.user_manager.get_user_name_from_claims.return_value = "New Name"
         self.user_manager.update_user_name.return_value = self.updated_user
 

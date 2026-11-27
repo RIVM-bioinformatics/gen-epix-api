@@ -63,9 +63,7 @@ from gen_epix.seqdb.services.seq.crud_seq_distance import seq_service_crud_seq_d
 from gen_epix.seqdb.services.seq.crud_seq_identifier import (
     seq_service_crud_seq_identifier,
 )
-from gen_epix.seqdb.services.seq.crud_seq_profile import (
-    seq_service_crud_seq_profile,
-)
+from gen_epix.seqdb.services.seq.crud_seq_profile import seq_service_crud_seq_profile
 from gen_epix.seqdb.services.seq.crud_seq_profile_identifier import (
     seq_service_crud_seq_profile_identifier,
 )
@@ -143,7 +141,8 @@ class SeqService(BaseSeqService):
         """Stream repository contigs as wrapped or unwrapped FASTA records."""
         wrap = cmd.wrap
         self.repository: BaseSeqRepository
-        with self.repository.uow() as uow:
+        # A streaming response returns the worker to the pool between chunks.
+        with self.repository.uow(detached=True) as uow:
             for seq_id, contigs in self.repository.retrieve_seq_fasta(uow, cmd.seq_ids):
                 for contig_seq_hash, raw_seq in contigs:
                     header = f">{seq_id}:{contig_seq_hash}\n"

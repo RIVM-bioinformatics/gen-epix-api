@@ -678,6 +678,21 @@ def test_handle_unwinds_stack_after_policy_handler_and_resolution_errors() -> No
     assert app._command_stack == []
 
 
+def test_handle_unwinds_stack_when_start_logging_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Release the worker's command stack even if logging raises."""
+    app = App(logger=logging.getLogger(__name__))
+    monkeypatch.setattr(
+        app, "_log_command_start", Mock(side_effect=RuntimeError("logging failed"))
+    )
+
+    with pytest.raises(RuntimeError, match="logging failed"):
+        app.handle(_CacheCommand())
+
+    assert app._command_stack == []
+
+
 def test_create_minimal_and_static_log_messages_include_command_identity() -> None:
     app = App(logger=None, log_item_class=LogItem)
     cmd = _CacheCommand(user=_make_user())

@@ -20,10 +20,7 @@ from gen_epix.commondb.domain.enum import (
     DevRepositoryConfig,
 )
 from gen_epix.commondb.domain.enum import FeatureFlag as CommonFeatureFlag
-from gen_epix.commondb.domain.enum import (
-    RepositoryType,
-    ServiceType,
-)
+from gen_epix.commondb.domain.enum import RepositoryType, ServiceType
 from gen_epix.commondb.domain.service import BaseAuthService
 from gen_epix.commondb.domain.util import get_app_cfg_class, set_env_variables
 from gen_epix.commondb.env import AppComposer

@@ -12,7 +12,8 @@ class _RepositoryStub:
     def __init__(self, records: list[tuple[UUID, list[tuple[UUID, str]]]]) -> None:
         self.records = records
 
-    def uow(self) -> Self:
+    def uow(self, *, detached: bool = False) -> Self:
+        assert detached
         return self
 
     def __enter__(self) -> Self:

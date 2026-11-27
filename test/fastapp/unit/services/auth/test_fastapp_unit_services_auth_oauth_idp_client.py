@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import logging
+import threading
 import time
 from test.fastapp.auth_test_client import AuthTestClient
 from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
@@ -357,7 +358,13 @@ class TestJwkFetching(BaseOauthIdpClientTestCase):
                 ]
             }
             response_mock.raise_for_status.return_value = None
-            http_client.get.return_value = response_mock
+            event_loop_thread = threading.get_ident()
+
+            def get_jwks(_url: str) -> Mock:
+                assert threading.get_ident() != event_loop_thread
+                return response_mock
+
+            http_client.get.side_effect = get_jwks
             jwk_obj: object = object()
             from_dict.side_effect = [jwk_obj]
 
@@ -781,8 +788,10 @@ class TestOauthIdpClientIntrospection:
 
     def test_introspection_populates_cache(self) -> None:
         counter: dict[str, int] = {"n": 0}
+        event_loop_thread = threading.get_ident()
 
         def fake_introspect(_token: str) -> bool:
+            assert threading.get_ident() != event_loop_thread
             counter["n"] += 1
             return True
 

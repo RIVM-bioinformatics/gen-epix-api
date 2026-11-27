@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime, timezone
 from test.util.mock_compat import MagicMock, Mock, patch
 from types import SimpleNamespace
@@ -13,7 +14,7 @@ def _fake_app_init(self: object, domain: object, **kwargs: object) -> None:
     setattr(self, "_logger", None)
     setattr(self, "_command_handler_map", {})
     setattr(self, "_command_listeners", {})
-    setattr(self, "_command_stack", [])
+    setattr(self, "_command_stack_local", threading.local())
 
 
 def _make_app() -> OmopdbClient:

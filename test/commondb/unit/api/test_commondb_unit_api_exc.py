@@ -57,12 +57,13 @@ def test_plain_service_exception_keeps_its_own_status() -> None:
     assert e.value.status_code == 409
 
 
-def test_handle_command_uses_builtin_handler_when_callback_is_omitted() -> None:
+@pytest.mark.asyncio
+async def test_handle_command_uses_builtin_handler_when_callback_is_omitted() -> None:
     app = _app()
     app.handle.side_effect = ValueError("command failed")
 
     with pytest.raises(HTTPException) as error:
-        handle_command(app, None, "log-id", object(), None)
+        await handle_command(app, None, "log-id", object(), None)
 
     assert error.value.status_code == 500
     app.create_log_message.assert_called_once()
