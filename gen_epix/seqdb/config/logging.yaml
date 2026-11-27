@@ -19,37 +19,37 @@ handlers:
   console:
     class: logging.StreamHandler
     # startup normalises handler level to NOTSET; cfg.py set_log_level() controls filtering via logger levels
-    level: INFO
+    level: DEBUG
     formatter: json
     stream: ext://sys.stdout
 
 loggers:
   seqdb.setup:
-    level: INFO
+    level: DEBUG
     handlers: [console]
     propagate: false
   seqdb.service:
-    level: INFO
+    level: DEBUG
     handlers: [console]
     propagate: false
   seqdb.app:
-    level: INFO
+    level: DEBUG
     handlers: [console]
     propagate: false
   seqdb.api:
-    level: INFO
+    level: DEBUG
     handlers: [console]
     propagate: false
   seqdb.external:
-    level: INFO
+    level: DEBUG
     handlers: [console]
     propagate: false
   uvicorn.error:
-    level: INFO
+    level: DEBUG
     handlers: [console]
     propagate: false
   uvicorn.access:
-    level: INFO
+    level: DEBUG
     handlers: [console]
     filters: [uvicorn_access_structured]
     propagate: false
