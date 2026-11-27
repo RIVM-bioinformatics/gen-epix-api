@@ -102,8 +102,7 @@ def test_create_abac_endpoints_generates_crud_routes(
     )
 
 
-@pytest.mark.asyncio
-async def test_admin_names_route_dispatches_command_for_registered_user() -> None:
+def test_admin_names_route_dispatches_command_for_registered_user() -> None:
     result: list[model.UserNameEmail] = []
     router, app, _, _, _ = _create_abac_routes(result)
     route = _get_admin_names_route(router)
@@ -116,7 +115,7 @@ async def test_admin_names_route_dispatches_command_for_registered_user() -> Non
         is_active=True,
     )
 
-    response = await route.endpoint(user)
+    response = route.endpoint(user)
 
     assert response is result
     assert route.path == "/retrieve_organization_admin_name_emails"
@@ -129,15 +128,14 @@ async def test_admin_names_route_dispatches_command_for_registered_user() -> Non
     assert dispatched_command.user is user
 
 
-@pytest.mark.asyncio
-async def test_admin_names_route_delegates_dispatch_errors() -> None:
+def test_admin_names_route_delegates_dispatch_errors() -> None:
     router, app, handle_exception, _, _ = _create_abac_routes([])
     app.handle.side_effect = ValueError("dispatch failed")
     translated_error = RuntimeError("translated")
     handle_exception.side_effect = translated_error
 
     with pytest.raises(RuntimeError, match="translated"):
-        await _get_admin_names_route(router).endpoint(Mock())
+        _get_admin_names_route(router).endpoint(Mock())
 
     handle_exception.assert_called_once()
     assert handle_exception.call_args.args[0] == "fd6a9c3e"

@@ -41,7 +41,7 @@ def create_auth_endpoints(
         name="IdentityProvider",
         description="Get all public identity providers",
     )
-    async def identity_providers__get_all() -> list[model.IdentityProvider]:
+    def identity_providers__get_all() -> list[model.IdentityProvider]:
         """Retrieve publicly available identity-provider configuration."""
         try:
             cmd = command.GetIdentityProvidersCommand(user=None, public=True)

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from test.util.mock_compat import MagicMock
 from typing import Any, ClassVar
@@ -865,7 +864,7 @@ class TestGeneratedEndpointExecution:
             route,
         )
 
-        result = asyncio.run(endpoint(test_user, 10, 5))
+        result = endpoint(test_user, 10, 5)
 
         assert result == [ItemResponse(id=item_id, name="one")]
         command = app.handle.call_args.args[0]
@@ -891,7 +890,7 @@ class TestGeneratedEndpointExecution:
             lambda *args, **kwargs: errors.append(args),
         )
 
-        assert asyncio.run(endpoint(User(id="test-user"))) is None
+        assert endpoint(User(id="test-user")) is None
         assert len(errors) == 1
         assert errors[0][2].message == "invalid pagination"
 
@@ -911,7 +910,7 @@ class TestGeneratedEndpointExecution:
             route,
         )
 
-        result = asyncio.run(endpoint(test_user, str(item_id)))
+        result = endpoint(test_user, str(item_id))
 
         assert result == [ItemResponse(id=item_id, name="two")]
         command = app.handle.call_args.args[0]
@@ -934,7 +933,7 @@ class TestGeneratedEndpointExecution:
         )
 
         with pytest.raises(NotImplementedError, match="handler expected to raise"):
-            asyncio.run(endpoint(User(id="test-user"), "not-a-uuid"))
+            endpoint(User(id="test-user"), "not-a-uuid")
 
         app.handle.assert_not_called()
         assert errors[0][2].ids == ["not-a-uuid"]
@@ -954,7 +953,7 @@ class TestGeneratedEndpointExecution:
             route_factory(app=app),
         )
 
-        assert asyncio.run(endpoint(test_user, str(item_id))) == [True]
+        assert endpoint(test_user, str(item_id)) == [True]
         assert app.handle.call_args.args[0].operation == CrudOperation.EXISTS_SOME
 
     def test_post_query_validates_filter_and_returns_models(
@@ -973,7 +972,7 @@ class TestGeneratedEndpointExecution:
             route_factory(app=app),
         )
 
-        result = asyncio.run(endpoint(test_user, query_filter, 4, 2))
+        result = endpoint(test_user, query_filter, 4, 2)
 
         assert result == [ItemResponse(id=item_id, name="four")]
         command = app.handle.call_args.args[0]
@@ -1005,7 +1004,7 @@ class TestGeneratedEndpointExecution:
         )
 
         with pytest.raises(NotImplementedError, match="handler expected to raise"):
-            asyncio.run(endpoint("user", nested_filter))
+            endpoint("user", nested_filter)
 
         app.handle.assert_not_called()
         assert errors[0][2].message == "Invalid filter"
@@ -1026,8 +1025,8 @@ class TestGeneratedEndpointExecution:
             validate_query_filter=None,
         )
 
-        assert asyncio.run(
-            endpoint(User(id="test-user"), EqualsNumberFilter(key="id", value=1))
+        assert endpoint(
+            User(id="test-user"), EqualsNumberFilter(key="id", value=1)
         ) == [item_id]
         assert app.handle.call_args.args[0].return_id is True
         assert fastapi_app.routes[-1].path == "/items/query/ids"
@@ -1047,9 +1046,7 @@ class TestGeneratedEndpointExecution:
             route_factory(app=app),
         )
 
-        assert asyncio.run(get_one(test_user, item_id)) == ItemResponse(
-            id=item_id, name="six"
-        )
+        assert get_one(test_user, item_id) == ItemResponse(id=item_id, name="six")
         command = app.handle.call_args.args[0]
         assert command.operation == CrudOperation.READ_ONE
         assert command.obj_ids == item_id
@@ -1060,7 +1057,7 @@ class TestGeneratedEndpointExecution:
             CrudEndpointGenerator.generate_get_exists_one,
             route_factory(app=app),
         )
-        assert asyncio.run(exists_one(test_user, item_id)) is True
+        assert exists_one(test_user, item_id) is True
         assert app.handle.call_args.args[0].operation == CrudOperation.EXISTS_ONE
 
     def test_post_one_and_post_some_convert_write_models(
@@ -1079,9 +1076,7 @@ class TestGeneratedEndpointExecution:
             route_factory(app=app),
         )
 
-        assert asyncio.run(post_one(test_user, write_obj)) == ItemResponse(
-            id=item_id, name="seven"
-        )
+        assert post_one(test_user, write_obj) == ItemResponse(id=item_id, name="seven")
         command = app.handle.call_args.args[0]
         assert command.operation == CrudOperation.CREATE_ONE
         assert command.objs == ItemModel(id=item_id, name="seven")
@@ -1092,7 +1087,7 @@ class TestGeneratedEndpointExecution:
             CrudEndpointGenerator.generate_post_some,
             route_factory(app=app, post_returns_id=True),
         )
-        assert asyncio.run(post_some(test_user, [write_obj])) == [
+        assert post_some(test_user, [write_obj]) == [
             ItemModel(id=item_id, name="seven")
         ]
         command = app.handle.call_args.args[0]
@@ -1115,17 +1110,15 @@ class TestGeneratedEndpointExecution:
         )
 
         with pytest.raises(api_exc.BadRequest400HTTPException):
-            asyncio.run(
-                endpoint(
-                    test_user,
-                    item_id,
-                    ItemCreateRequest(id=UUID(int=9), name="wrong id"),
-                )
+            endpoint(
+                test_user,
+                item_id,
+                ItemCreateRequest(id=UUID(int=9), name="wrong id"),
             )
         app.handle.assert_not_called()
 
-        assert asyncio.run(
-            endpoint(test_user, item_id, ItemCreateRequest(id=item_id, name="updated"))
+        assert endpoint(
+            test_user, item_id, ItemCreateRequest(id=item_id, name="updated")
         ) == ItemResponse(id=item_id, name="updated")
         command = app.handle.call_args.args[0]
         assert command.operation == CrudOperation.UPDATE_ONE
@@ -1146,9 +1139,9 @@ class TestGeneratedEndpointExecution:
             route_factory(app=app),
         )
 
-        assert asyncio.run(
-            endpoint(test_user, [ItemCreateRequest(id=item_id, name="updated")])
-        ) == [ItemResponse(id=item_id, name="updated")]
+        assert endpoint(test_user, [ItemCreateRequest(id=item_id, name="updated")]) == [
+            ItemResponse(id=item_id, name="updated")
+        ]
         command = app.handle.call_args.args[0]
         assert command.operation == CrudOperation.UPDATE_SOME
         assert command.objs == [ItemModel(id=item_id, name="updated")]
@@ -1167,7 +1160,7 @@ class TestGeneratedEndpointExecution:
             CrudEndpointGenerator.generate_delete_one,
             route_factory(app=app),
         )
-        assert asyncio.run(delete_one(test_user, item_id)) == [item_id]
+        assert delete_one(test_user, item_id) == [item_id]
         assert app.handle.call_args.args[0].operation == CrudOperation.DELETE_ONE
 
         delete_all = _register_endpoint(
@@ -1175,7 +1168,7 @@ class TestGeneratedEndpointExecution:
             CrudEndpointGenerator.generate_delete_all,
             route_factory(app=app, delete_all_returns_id=True),
         )
-        assert asyncio.run(delete_all(test_user)) == [item_id]
+        assert delete_all(test_user) == [item_id]
         command = app.handle.call_args.args[0]
         assert command.operation == CrudOperation.DELETE_ALL
         assert command.return_id is True
@@ -1197,13 +1190,13 @@ class TestGeneratedEndpointExecution:
             lambda *args, **kwargs: errors.append(args),
         )
 
-        assert asyncio.run(endpoint(User(id="test-user"), str(item_id))) == [item_id]
+        assert endpoint(User(id="test-user"), str(item_id)) == [item_id]
         command = app.handle.call_args.args[0]
         assert command.operation == CrudOperation.DELETE_SOME
         assert command.obj_ids == [item_id]
 
         with pytest.raises(NotImplementedError, match="handler expected to raise"):
-            asyncio.run(endpoint(User(id="test-user"), "invalid-id"))
+            endpoint(User(id="test-user"), "invalid-id")
         app.handle.assert_called_once()
         assert errors[-1][2].ids == ["invalid-id"]
 
@@ -1224,7 +1217,7 @@ class TestGeneratedEndpointExecution:
         item_id = UUID("00000000-0000-0000-0000-000000000012")
 
         with pytest.raises(NotImplementedError, match="handler expected to raise"):
-            asyncio.run(endpoint(User(id="test-user"), item_id))
+            endpoint(User(id="test-user"), item_id)
 
         assert len(errors) == 1
         assert errors[0][2].args == ("storage failure",)
@@ -1300,7 +1293,7 @@ class TestGeneratedEndpointExecution:
         }
 
         with pytest.raises(NotImplementedError, match="handler expected to raise"):
-            asyncio.run(endpoint(*args_by_generator[generator_name]))
+            endpoint(*args_by_generator[generator_name])
 
         assert errors[-1][2].args == ("storage failure",)
 
@@ -1319,7 +1312,7 @@ class TestGeneratedEndpointExecution:
         )
 
         with pytest.raises(NotImplementedError, match="handler expected to raise"):
-            asyncio.run(endpoint(User(id="test-user"), "invalid-id"))
+            endpoint(User(id="test-user"), "invalid-id")
 
         app.handle.assert_not_called()
         assert errors[0][2].ids == ["invalid-id"]

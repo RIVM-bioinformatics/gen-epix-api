@@ -43,7 +43,7 @@ def create_file_endpoints(
         name="CreateFile",
         description=command.CreateFileCommand.__doc__,
     )
-    async def create__file(
+    def create__file(
         user: registered_user_dependency,
         request_body: CreateFileRequestBody,  # type: ignore
     ) -> UUID:

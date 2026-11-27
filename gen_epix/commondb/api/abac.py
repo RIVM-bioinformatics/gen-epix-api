@@ -40,7 +40,7 @@ def create_abac_endpoints(
         name="RetrieveOrganizationAdminNameEmailsCommand",
         description=command.RetrieveOrganizationAdminNameEmailsCommand.__doc__,
     )
-    async def retrieve_organization_admin_name_emails(
+    def retrieve_organization_admin_name_emails(
         user: registered_user_dependency,  # type: ignore[valid-type]
     ) -> list[model.UserNameEmail]:
         """Retrieve names and email addresses of the user's organization admins."""

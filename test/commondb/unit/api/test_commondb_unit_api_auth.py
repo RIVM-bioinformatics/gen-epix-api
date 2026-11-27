@@ -52,12 +52,11 @@ def _get_identity_providers_route(router: APIRouter) -> APIRoute:
     )
 
 
-@pytest.mark.asyncio
-async def test_public_identity_provider_route_dispatches_public_command() -> None:
+def test_public_identity_provider_route_dispatches_public_command() -> None:
     providers: list[object] = []
     router, app, _, _, _ = _create_auth_routes(providers)
 
-    result = await _get_identity_providers_route(router).endpoint()
+    result = _get_identity_providers_route(router).endpoint()
 
     assert result is providers
     dispatched_command = app.handle.call_args.args[0]
@@ -67,15 +66,14 @@ async def test_public_identity_provider_route_dispatches_public_command() -> Non
     assert _get_identity_providers_route(router).path == "/identity_providers"
 
 
-@pytest.mark.asyncio
-async def test_identity_provider_route_delegates_dispatch_errors() -> None:
+def test_identity_provider_route_delegates_dispatch_errors() -> None:
     router, app, handle_exception, _, _ = _create_auth_routes([])
     app.handle.side_effect = ValueError("dispatch failed")
     translated_error = RuntimeError("translated")
     handle_exception.side_effect = translated_error
 
     with pytest.raises(RuntimeError, match="translated"):
-        await _get_identity_providers_route(router).endpoint()
+        _get_identity_providers_route(router).endpoint()
 
     handle_exception.assert_called_once()
     assert handle_exception.call_args.args[0] == "3ddf8ebb"
@@ -83,8 +81,7 @@ async def test_identity_provider_route_delegates_dispatch_errors() -> None:
     assert isinstance(handle_exception.call_args.args[2], ValueError)
 
 
-@pytest.mark.asyncio
-async def test_identity_provider_route_uses_default_exception_adapter() -> None:
+def test_identity_provider_route_uses_default_exception_adapter() -> None:
     router = APIRouter()
     app = Mock()
     app.impl.registered_user_dependency = _registered_user_dependency
@@ -101,7 +98,7 @@ async def test_identity_provider_route_uses_default_exception_adapter() -> None:
         create_auth_endpoints(router, app)
 
     with pytest.raises(HTTPException) as error:
-        await _get_identity_providers_route(router).endpoint()
+        _get_identity_providers_route(router).endpoint()
 
     assert error.value.status_code == 500
 
