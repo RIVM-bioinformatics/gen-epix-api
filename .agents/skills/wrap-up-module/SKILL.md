@@ -47,7 +47,7 @@ path described in Step 6.
    repository root. Reject directories, test files, paths outside `gen_epix/`, and
    multiple module paths.
 2. Derive the module's canonical unit-test path using
-   [create-unit-test](../create-unit-test/SKILL.md). Keep the source module and
+   the `create-unit-test` skill. Keep the source module and
    that test as the primary scope; include other files only when they are
    necessary consequences of work on this module.
 3. Do not edit `.vscode/launch.json`, contrary to what the create-unit-test task 
@@ -107,7 +107,7 @@ module clean while scoped gates remain unmet.
 
 ## 4. Update Docstrings
 
-Use [write-docstring](../write-docstring/SKILL.md) for the target actual-code
+Use the `write-docstring` skill for the target actual-code
 module and any necessary in-scope code changes. Follow its bottom-up review,
 Google-style requirements, and preservation of accurate existing
 documentation. Review in-scope definitions, not only changed lines; do not
@@ -126,7 +126,7 @@ current settings and exact file selections; avoid unrelated formatting changes.
 
 ## 6. Draft and Write the Commit Message Snippet
 
-Use the message conventions in [commit](../commit/SKILL.md), but do not execute
+Use the message conventions in the `commit` skill, but do not execute
 its staging or commit steps. Inspect the final intended module diff, branch
 name, and previous two commit subjects. Use the intended module changes rather
 than only staged changes. Do not include unrelated work or deferred launch-file
